@@ -4,8 +4,8 @@
 """Who sees which compliance records.
 
 Compliance Managers, Auditors and System Managers see everything. Anyone else reaches
-an item or a statutory task only as its Responsible person or its Reviewer, and a
-renewal only through its item.
+an item, a statutory task or a legal case only as its Responsible person or its
+Reviewer, and a renewal or a Legal Date only through the record it belongs to.
 """
 
 import frappe
@@ -55,6 +55,28 @@ def has_item_permission(doc, ptype: str | None = None, user: str | None = None) 
 
 
 has_task_permission = has_item_permission
+has_legal_case_permission = has_item_permission
+
+
+def legal_case_query_conditions(user: str | None = None) -> str:
+	return holder_conditions("Legal Case", user)
+
+
+def legal_date_query_conditions(user: str | None = None) -> str:
+	return holder_conditions("Legal Date", user)
+
+
+def has_legal_date_permission(doc, ptype: str | None = None, user: str | None = None) -> bool:
+	"""A Legal Date is reached through the case or trademark it belongs to."""
+	user = user or frappe.session.user
+	if not is_restricted(user):
+		return True
+	if not (doc.reference_doctype and doc.reference_name):
+		return True
+	holders = frappe.db.get_value(
+		doc.reference_doctype, doc.reference_name, ["responsible", "reviewer"], as_dict=True
+	)
+	return bool(holders) and user in (holders.responsible, holders.reviewer)
 
 
 def has_renewal_permission(doc, ptype: str | None = None, user: str | None = None) -> bool:

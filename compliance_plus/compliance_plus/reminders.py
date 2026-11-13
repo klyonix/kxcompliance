@@ -173,6 +173,18 @@ def send_digests(today):
 		row = digest_row("Compliance Task", task.name, title, task.status, task.effective_due_date)
 		for user in {task.responsible, task.reviewer} - {None, ""}:
 			by_user.setdefault(user, []).append(row)
+	legal_dates = frappe.get_all(
+		"Legal Date",
+		filters={"status": "Scheduled", "date": ("<=", horizon)},
+		fields=["name", "kind", "reference_title", "status", "date", "is_overdue", "responsible", "reviewer"],
+		order_by="date asc",
+	)
+	for legal_date in legal_dates:
+		title = f"{_(legal_date.kind)}: {legal_date.reference_title}"
+		status = "Outcome Not Recorded" if legal_date.is_overdue else legal_date.status
+		row = digest_row("Legal Date", legal_date.name, title, status, legal_date.date)
+		for user in {legal_date.responsible, legal_date.reviewer} - {None, ""}:
+			by_user.setdefault(user, []).append(row)
 
 	keys = {user: f"digest|{user}|{today}" for user in by_user}
 	sent = already_sent(list(keys.values()))
@@ -296,6 +308,7 @@ def write_log(
 	*,
 	item: str | None = None,
 	task: str | None = None,
+	legal_date: str | None = None,
 	rule_days: int | None = None,
 	due_date=None,
 ):
@@ -304,6 +317,7 @@ def write_log(
 			"doctype": "Compliance Reminder Log",
 			"compliance_item": item,
 			"compliance_task": task,
+			"legal_date": legal_date,
 			"kind": kind,
 			"rule_days": rule_days,
 			"due_date": due_date,

@@ -153,7 +153,6 @@ scheduler_events = {
 	# 		"compliance_plus.tasks.all"
 	# 	],
 	"daily": [
-		"compliance_plus.compliance_plus.custom.license_tracker_cron.send_license_expiry_reminders",
 		"compliance_plus.compliance_plus.reminders.run_daily",
 		"compliance_plus.compliance_plus.statutory.run_daily",
 		"compliance_plus.compliance_plus.legal.run_daily",
@@ -268,3 +267,52 @@ has_permission = {
 }
 
 calendars = ["Compliance Item", "Compliance Task", "Legal Date"]
+
+doc_events = {
+	"Quotation": {
+		"validate": "compliance_plus.compliance_plus.party_licences.check_document",
+		"on_submit": "compliance_plus.compliance_plus.party_licences.check_document",
+	},
+	"Sales Order": {
+		"validate": "compliance_plus.compliance_plus.party_licences.check_document",
+		"on_submit": "compliance_plus.compliance_plus.party_licences.check_document",
+	},
+	"Delivery Note": {
+		"validate": "compliance_plus.compliance_plus.party_licences.check_document",
+		"on_submit": "compliance_plus.compliance_plus.party_licences.check_document",
+	},
+	"Sales Invoice": {
+		"validate": "compliance_plus.compliance_plus.party_licences.check_document",
+		"on_submit": "compliance_plus.compliance_plus.party_licences.check_document",
+	},
+	"Purchase Order": {
+		"validate": "compliance_plus.compliance_plus.party_licences.check_document",
+		"on_submit": "compliance_plus.compliance_plus.party_licences.check_document",
+	},
+	"Purchase Receipt": {
+		"validate": "compliance_plus.compliance_plus.party_licences.check_document",
+		"on_submit": "compliance_plus.compliance_plus.party_licences.check_document",
+	},
+	"Purchase Invoice": {
+		"validate": "compliance_plus.compliance_plus.party_licences.check_document",
+		"on_submit": "compliance_plus.compliance_plus.party_licences.check_document",
+	},
+}
+
+override_doctype_dashboards = {
+	"Customer": "compliance_plus.compliance_plus.party_dashboards.customer",
+	"Supplier": "compliance_plus.compliance_plus.party_dashboards.supplier",
+}
+
+fixtures = [
+	{
+		"dt": "Custom Field",
+		"filters": [
+			[
+				"name",
+				"in",
+				["Sales Invoice-customer_licence_numbers", "Delivery Note-customer_licence_numbers"],
+			]
+		],
+	}
+]

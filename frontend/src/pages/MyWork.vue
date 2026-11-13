@@ -62,12 +62,7 @@
 			>
 				{{ group.label }}<span class="text-ink-gray-4">{{ group.rows.length }}</span>
 			</h2>
-			<WorkRow
-				v-for="row in group.rows"
-				:key="row.key"
-				:row="row"
-				:compact="tweaks.density === 'compact'"
-			/>
+			<WorkRow v-for="row in group.rows" :key="row.key" :row="row" />
 		</section>
 
 		<p v-if="asOf" class="px-3 text-sm text-ink-gray-5">Updated {{ asOf }}</p>
@@ -80,8 +75,7 @@ import { Button, Skeleton, TabButtons } from "frappe-ui";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import WorkRow from "@/components/WorkRow.vue";
-import { BUCKETS, KINDS } from "@/pages/myWork";
-import { tweaks } from "@/stores/tweaks";
+import { BUCKETS } from "@/pages/myWork";
 import { counts, loadWork, rows, work } from "@/stores/work";
 
 const filter = ref("all");
@@ -98,23 +92,14 @@ const shown = computed(() =>
 	filter.value === "all" ? rows.value : rows.value.filter((row) => row.bucket === filter.value)
 );
 
-const groups = computed(() => {
-	const sets =
-		tweaks.grouping === "kind"
-			? Object.entries(KINDS).map(([key, kind]) => ({
-					key,
-					label: kind.label,
-					match: (row) => row.kind === key,
-			  }))
-			: BUCKETS.map((bucket) => ({
-					key: bucket.key,
-					label: bucket.label,
-					match: (row) => row.bucket === bucket.key,
-			  }));
-	return sets
-		.map((set) => ({ ...set, rows: shown.value.filter(set.match) }))
-		.filter((set) => set.rows.length);
-});
+// Grouped by when things are due (RK chose this over grouping by kind).
+const groups = computed(() =>
+	BUCKETS.map((bucket) => ({
+		key: bucket.key,
+		label: bucket.label,
+		rows: shown.value.filter((row) => row.bucket === bucket.key),
+	})).filter((group) => group.rows.length)
+);
 
 const greeting = computed(() => {
 	const hour = new Date().getHours();

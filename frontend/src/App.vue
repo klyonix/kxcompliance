@@ -31,8 +31,6 @@
 		<ConnectionBanner />
 		<RouterView />
 	</DesktopShell>
-
-	<TweakPanel v-if="tweaksEnabled" />
 </template>
 
 <script setup>
@@ -47,10 +45,8 @@ import {
 import { boot } from "./boot";
 import AppSidebar from "./components/AppSidebar.vue";
 import ConnectionBanner from "./components/ConnectionBanner.vue";
-import TweakPanel from "./components/TweakPanel.vue";
 import { useIsMobile } from "./composables/useIsMobile";
 import { sections } from "./navigation";
-import { tweaksEnabled } from "./stores/tweaks";
 
 // Paint the app light or dark as chosen on the Account page, following the system by default.
 useColorScheme();

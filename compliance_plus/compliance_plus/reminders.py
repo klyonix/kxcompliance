@@ -45,7 +45,10 @@ ITEM_FIELDS = [
 	"is_cancelled",
 	"responsible",
 	"reviewer",
+	"holder_type",
+	"holder",
 ]
+PARTY_EMAIL_FIELDS = {"Customer": "email_id", "Supplier": "email_id"}
 
 
 def run_daily():
@@ -54,6 +57,7 @@ def run_daily():
 	if not get_settings().enabled:
 		return
 	send_reminders(today)
+	send_party_reminders(today)
 	send_escalations(today)
 	if today.strftime("%A") == (get_settings().digest_day or "Monday"):
 		send_digests(today)
@@ -113,6 +117,68 @@ def remind(item, days: int, key: str):
 	)
 	write_log("Reminder", key, [item.responsible], item=item.name, rule_days=days, due_date=item.valid_until)
 	notify([item.responsible], subject, message, "Compliance Item", item.name)
+
+
+def send_party_reminders(today):
+	"""Email a customer or supplier before a licence they hold expires, from the template in Settings."""
+	template_name = get_settings().party_email_template
+	if not template_name or not get_settings().email_account:
+		return
+	items = frappe.get_all(
+		"Compliance Item",
+		filters={
+			"holder_type": ("in", list(PARTY_EMAIL_FIELDS)),
+			"status": ("not in", QUIET_STATUSES),
+			"valid_until": (">=", today),
+		},
+		fields=ITEM_FIELDS,
+	)
+	rules = reminder_days_by_item([item.name for item in items])
+	due = []
+	for item in items:
+		days_left = date_diff(item.valid_until, today)
+		passed = [days for days in rules.get(item.name, []) if days >= days_left]
+		if passed:
+			days = min(passed)
+			due.append((item, days, f"{item.name}|party|{days}|{item.valid_until}"))
+	sent = already_sent([key for _item, _days, key in due])
+	template = frappe.get_doc("Email Template", template_name)
+	for item, days, key in due:
+		if key not in sent:
+			run_for_item(
+				item.name, lambda item=item, days=days, key=key: remind_party(item, days, key, template)
+			)
+
+
+def remind_party(item, days: int, key: str, template):
+	email = frappe.db.get_value(item.holder_type, item.holder, PARTY_EMAIL_FIELDS[item.holder_type])
+	if not email:
+		return
+	context = {
+		"doc": item,
+		"party": item.holder,
+		"party_name": frappe.db.get_value(
+			item.holder_type, item.holder, frappe.scrub(item.holder_type) + "_name"
+		),
+		"valid_until": formatdate(item.valid_until),
+		"days_left": date_diff(item.valid_until, nowdate()),
+	}
+	# Only a System Manager can write an Email Template, and Frappe renders it in its sandboxed Jinja,
+	# as it does its own notification templates.
+	subject = frappe.render_template(template.subject, context)
+	message = frappe.render_template(
+		template.response_html if template.use_html else template.response, context
+	)
+	write_log("Party Reminder", key, [email], item=item.name, rule_days=days, due_date=item.valid_until)
+	sender = frappe.db.get_value("Email Account", get_settings().email_account, "email_id")
+	frappe.sendmail(
+		recipients=[email],
+		sender=sender,
+		subject=subject,
+		message=message,
+		reference_doctype="Compliance Item",
+		reference_name=item.name,
+	)
 
 
 def send_escalations(today):

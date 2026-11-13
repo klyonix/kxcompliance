@@ -1,0 +1,218 @@
+{
+ "actions": [],
+ "autoname": "LR-.#####",
+ "creation": "2026-11-14 21:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "item_type",
+  "party_type",
+  "action",
+  "column_break_main",
+  "is_active",
+  "grace_days",
+  "section_when",
+  "item_groups",
+  "column_break_when",
+  "party_groups",
+  "section_documents",
+  "check_quotation",
+  "check_sales_order",
+  "check_delivery_note",
+  "check_sales_invoice",
+  "column_break_documents",
+  "check_purchase_order",
+  "check_purchase_receipt",
+  "check_purchase_invoice"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Licence",
+   "options": "Compliance Item Type",
+   "reqd": 1
+  },
+  {
+   "default": "Customer",
+   "fieldname": "party_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Held By",
+   "options": "Customer\nSupplier",
+   "reqd": 1
+  },
+  {
+   "default": "Block",
+   "fieldname": "action",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "When Missing or Expired",
+   "options": "Block\nWarn",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Active"
+  },
+  {
+   "description": "How long after expiry the licence still counts.",
+   "fieldname": "grace_days",
+   "fieldtype": "Int",
+   "label": "Grace Days",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "section_when",
+   "fieldtype": "Section Break",
+   "label": "When It Applies"
+  },
+  {
+   "description": "The document has an item in one of these groups. Leave empty for every item.",
+   "fieldname": "item_groups",
+   "fieldtype": "Table",
+   "label": "Item Groups",
+   "options": "Licence Requirement Item Group"
+  },
+  {
+   "fieldname": "column_break_when",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Leave empty for every customer or supplier.",
+   "fieldname": "party_groups",
+   "fieldtype": "Table",
+   "label": "Customer or Supplier Groups",
+   "options": "Licence Requirement Party Group"
+  },
+  {
+   "fieldname": "section_documents",
+   "fieldtype": "Section Break",
+   "label": "Documents Checked"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.party_type == 'Customer'",
+   "fieldname": "check_quotation",
+   "fieldtype": "Check",
+   "label": "Quotation"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.party_type == 'Customer'",
+   "fieldname": "check_sales_order",
+   "fieldtype": "Check",
+   "label": "Sales Order"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.party_type == 'Customer'",
+   "fieldname": "check_delivery_note",
+   "fieldtype": "Check",
+   "label": "Delivery Note"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.party_type == 'Customer'",
+   "fieldname": "check_sales_invoice",
+   "fieldtype": "Check",
+   "label": "Sales Invoice"
+  },
+  {
+   "fieldname": "column_break_documents",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.party_type == 'Supplier'",
+   "fieldname": "check_purchase_order",
+   "fieldtype": "Check",
+   "label": "Purchase Order"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.party_type == 'Supplier'",
+   "fieldname": "check_purchase_receipt",
+   "fieldtype": "Check",
+   "label": "Purchase Receipt"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.party_type == 'Supplier'",
+   "fieldname": "check_purchase_invoice",
+   "fieldtype": "Check",
+   "label": "Purchase Invoice"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-14 21:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Compliance Plus",
+ "name": "Licence Requirement",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance User",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Auditor",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "item_type",
+ "track_changes": 1
+}

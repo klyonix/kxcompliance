@@ -13,6 +13,7 @@
   "escalate_after_days",
   "digest_day",
   "generation_horizon_days",
+  "party_email_template",
   "renewal_notification_tab",
   "renewal_notifications_section",
   "email_template",
@@ -76,46 +77,61 @@
    "non_negative": 1
   },
   {
+   "description": "Emailed to a customer or supplier before a licence they hold expires. Blank sends none.",
+   "fieldname": "party_email_template",
+   "fieldtype": "Link",
+   "label": "Licence Reminder to Customers and Suppliers",
+   "options": "Email Template"
+  },
+  {
    "fieldname": "renewal_notification_tab",
    "fieldtype": "Tab Break",
+   "hidden": 1,
    "label": "Customer Licence Notifications"
   },
   {
    "fieldname": "email_template",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Email Template",
    "options": "Email Template"
   },
   {
    "fieldname": "renewal_notifications_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Renewal Notifications"
   },
   {
    "fetch_from": "sender_id.email_id",
    "fieldname": "sender",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Sender Email"
   },
   {
    "fieldname": "column_break_xxxx",
-   "fieldtype": "Column Break"
+   "fieldtype": "Column Break",
+   "hidden": 1
   },
   {
    "default": "30",
    "fieldname": "expiry_threshold",
    "fieldtype": "Int",
+   "hidden": 1,
    "label": "Expiry Threshold"
   },
   {
    "default": "15",
    "fieldname": "set_interval",
    "fieldtype": "Int",
+   "hidden": 1,
    "label": "Set Interval"
   },
   {
    "fieldname": "sender_id",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Sender",
    "options": "Email Account"
   }
@@ -124,7 +140,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-14 12:00:00.000000",
+ "modified": "2026-11-14 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Plus Settings",

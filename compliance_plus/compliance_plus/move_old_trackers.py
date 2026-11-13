@@ -4,7 +4,8 @@
 """Move the old trackers' rows into the records that replace them.
 
 Compliance, Licence, Insurance and Subscription Tracker rows become Compliance Items;
-Hearing Tracker rows become Legal Cases; Trademark Tracker rows become Trademarks.
+Hearing Tracker rows become Legal Cases; Trademark Tracker rows become Trademarks;
+Drug License and FSSAI rows on Customer become Compliance Items held by the customer.
 
 The old rows are left in place, read-only, to check against. Each new item records the
 row it came from under a unique key, so running this again moves only what is left.
@@ -13,6 +14,7 @@ A row that cannot be moved is logged and skipped, and the summary says so.
     bench --site SITE execute compliance_plus.compliance_plus.move_old_trackers.move_all
     bench --site SITE execute compliance_plus.compliance_plus.move_old_trackers.move_hearings
     bench --site SITE execute compliance_plus.compliance_plus.move_old_trackers.move_trademarks
+    bench --site SITE execute compliance_plus.compliance_plus.move_old_trackers.move_customer_licences
 """
 
 import re
@@ -54,6 +56,47 @@ def move_trademarks() -> dict[str, int]:
 	if not frappe.db.exists("DocType", "Trademark Tracker"):
 		return {"total": 0, "moved": 0, "already_moved": 0, "failed": 0}
 	return move_rows("Trademark Tracker", "Trademark", move_trademark_row)
+
+
+# The old customer licence tables another app adds to Customer, and the type each becomes.
+CUSTOMER_LICENCE_TABLES = {"Drug License Details": "Drug Licence", "FSSAI Details": "FSSAI Licence"}
+
+
+def move_customer_licences() -> dict[str, dict[str, int]]:
+	"""Drug License and FSSAI rows on Customer become Compliance Items held by that customer."""
+	return {
+		doctype: move_rows(doctype, "Compliance Item", move_customer_licence_row)
+		for doctype in CUSTOMER_LICENCE_TABLES
+		if frappe.db.exists("DocType", doctype)
+	}
+
+
+def move_customer_licence_row(doctype: str, row, company: str) -> str:
+	item_type = CUSTOMER_LICENCE_TABLES[doctype]
+	customer_name = frappe.db.get_value("Customer", row.parent, "customer_name") or row.parent
+	notes = ""
+	if row.get("component"):
+		notes = f"<p><strong>{_('Component')}:</strong> {escape_html(str(row.component))}</p>"
+	item = frappe.get_doc(
+		{
+			"doctype": "Compliance Item",
+			"title": f"{item_type} - {customer_name}",
+			"item_type": item_type,
+			"company": company,
+			"holder_type": "Customer",
+			"holder": row.parent,
+			"reference_number": row.license_number,
+			"valid_until": row.expiry_date,
+			"responsible": responsible_for(row),
+			"notes": notes,
+			"source_doctype": doctype,
+			"source_name": row.name,
+			"source_key": source_key(doctype, row.name),
+		}
+	)
+	item.flags.ignore_permissions = True  # a data move run by migrate, not by a person
+	item.insert()
+	return item.name
 
 
 def move_rows(doctype: str, target: str, mover) -> dict[str, int]:

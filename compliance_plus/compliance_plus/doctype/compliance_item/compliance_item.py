@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate, nowdate
 
+from compliance_plus.compliance_plus.doctype.trademark.trademark import follow_renewal
 from compliance_plus.compliance_plus.register import (
 	compute_status,
 	due_soon_days,
@@ -68,6 +69,10 @@ class ComplianceItem(Document):
 			today=nowdate(),
 			soon_days=due_soon_days(),
 		)
+
+	def on_update(self):
+		if self.has_value_changed("valid_until"):
+			follow_renewal(self)
 
 	@frappe.whitelist(methods=["POST"])
 	def cancel_item(self, reason: str):

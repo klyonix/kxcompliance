@@ -255,6 +255,7 @@ permission_query_conditions = {
 	"Compliance Task": "compliance_plus.permissions.task_query_conditions",
 	"Legal Case": "compliance_plus.permissions.legal_case_query_conditions",
 	"Legal Date": "compliance_plus.permissions.legal_date_query_conditions",
+	"Trademark": "compliance_plus.permissions.trademark_query_conditions",
 }
 
 has_permission = {
@@ -263,6 +264,7 @@ has_permission = {
 	"Compliance Task": "compliance_plus.permissions.has_task_permission",
 	"Legal Case": "compliance_plus.permissions.has_legal_case_permission",
 	"Legal Date": "compliance_plus.permissions.has_legal_date_permission",
+	"Trademark": "compliance_plus.permissions.has_trademark_permission",
 }
 
 calendars = ["Compliance Item", "Compliance Task", "Legal Date"]

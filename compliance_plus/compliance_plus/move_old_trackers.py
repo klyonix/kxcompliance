@@ -4,7 +4,7 @@
 """Move the old trackers' rows into the records that replace them.
 
 Compliance, Licence, Insurance and Subscription Tracker rows become Compliance Items;
-Hearing Tracker rows become Legal Cases.
+Hearing Tracker rows become Legal Cases; Trademark Tracker rows become Trademarks.
 
 The old rows are left in place, read-only, to check against. Each new item records the
 row it came from under a unique key, so running this again moves only what is left.
@@ -12,7 +12,10 @@ A row that cannot be moved is logged and skipped, and the summary says so.
 
     bench --site SITE execute compliance_plus.compliance_plus.move_old_trackers.move_all
     bench --site SITE execute compliance_plus.compliance_plus.move_old_trackers.move_hearings
+    bench --site SITE execute compliance_plus.compliance_plus.move_old_trackers.move_trademarks
 """
+
+import re
 
 import frappe
 from frappe import _
@@ -44,6 +47,13 @@ def move_hearings() -> dict[str, int]:
 	if not frappe.db.exists("DocType", "Hearing Tracker"):
 		return {"total": 0, "moved": 0, "already_moved": 0, "failed": 0}
 	return move_rows("Hearing Tracker", "Legal Case", move_hearing_row)
+
+
+def move_trademarks() -> dict[str, int]:
+	"""Trademark Tracker rows become Trademarks, their activity and deadline a Legal Date."""
+	if not frappe.db.exists("DocType", "Trademark Tracker"):
+		return {"total": 0, "moved": 0, "already_moved": 0, "failed": 0}
+	return move_rows("Trademark Tracker", "Trademark", move_trademark_row)
 
 
 def move_rows(doctype: str, target: str, mover) -> dict[str, int]:
@@ -138,6 +148,76 @@ def move_hearing_row(doctype: str, row, company: str) -> str:
 		hearing.insert()
 	copy_attachments(doctype, row.name, case.name, target="Legal Case")
 	return case.name
+
+
+TRADEMARK_STATUSES = {
+	"Applied": "New Application",
+	"Formality Check Pass": "Formalities Check Pass",
+	"Marked For Exam": "Marked for Exam",
+	"Objected": "Objected",
+	"Advertised": "Accepted and Advertised",
+	"Opposed": "Opposed",
+	"Abandoned": "Abandoned",
+	"Registered": "Registered",
+}
+
+
+def move_trademark_row(doctype: str, row, company: str) -> str:
+	classes = sorted(
+		{int(number) for number in re.findall(r"\d+", row.get("class") or "") if 1 <= int(number) <= 45}
+	)
+	notes = notes_for(row)
+	for label, fieldname in (
+		("Agent", "vendor"),
+		("Agent contact", "vendor_point_of_contact"),
+		("Agent phone", "vendor_contact_number"),
+		("Follow-up", "follow_up_status"),
+		("Class as recorded", "class"),
+	):
+		if row.get(fieldname):
+			notes += f"<p><strong>{_(label)}:</strong> {escape_html(str(row.get(fieldname)))}</p>"
+	trademark = frappe.get_doc(
+		{
+			"doctype": "Trademark",
+			"mark": row.document_name,
+			"brand": row.brand,
+			"status": TRADEMARK_STATUSES.get(row.status, "New Application"),
+			"classes": [{"class_number": number} for number in classes],
+			"application_number": row.application_number,
+			"filing_date": row.issue_date,
+			"applicant": company,
+			"responsible": responsible_for(row),
+			"notes": notes,
+			"source_doctype": doctype,
+			"source_name": row.name,
+			"source_key": source_key(doctype, row.name),
+		}
+	)
+	trademark.flags.ignore_permissions = True  # a data move run by migrate, not by a person
+	trademark.flags.moving = True  # old rows have no registration number to check
+	trademark.insert()
+	if row.expiry_date and trademark.renewal_item:
+		item = frappe.get_doc("Compliance Item", trademark.renewal_item)
+		item.valid_until = row.expiry_date
+		item.flags.ignore_permissions = True
+		item.save()
+	if row.activity_deadline:
+		past = getdate(row.activity_deadline) < getdate(nowdate())
+		deadline = frappe.get_doc(
+			{
+				"doctype": "Legal Date",
+				"reference_doctype": "Trademark",
+				"reference_name": trademark.name,
+				"kind": "Other",
+				"date": row.activity_deadline,
+				"purpose": row.activity,
+				"status": "Done" if past else "Scheduled",
+			}
+		)
+		deadline.flags.ignore_permissions = True
+		deadline.insert()
+	copy_attachments(doctype, row.name, trademark.name, target="Trademark")
+	return trademark.name
 
 
 def item_type_for(doctype: str, row) -> str:

@@ -56,6 +56,11 @@ def has_item_permission(doc, ptype: str | None = None, user: str | None = None) 
 
 has_task_permission = has_item_permission
 has_legal_case_permission = has_item_permission
+has_trademark_permission = has_item_permission
+
+
+def trademark_query_conditions(user: str | None = None) -> str:
+	return holder_conditions("Trademark", user)
 
 
 def legal_case_query_conditions(user: str | None = None) -> str:

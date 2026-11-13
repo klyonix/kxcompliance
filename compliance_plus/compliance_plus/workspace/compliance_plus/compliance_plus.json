@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"w7nAVW68cs\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Compliance Plus</span>\",\"col\":12}},{\"id\":\"1pQhggfQHi\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Insurance Tracker\",\"col\":3}},{\"id\":\"L-qHHFdsJi\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Compliance Tracker\",\"col\":3}},{\"id\":\"Q44mO2hHEg\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Licence Tracker\",\"col\":3}},{\"id\":\"ybvSkb9hKE\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Trademark Tracker\",\"col\":3}},{\"id\":\"8E_b9a80pH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Subscription Tracker\",\"col\":3}},{\"id\":\"YuvHBSoqtl\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"DURwVOjKRv\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
+ "content": "[{\"id\": \"hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Compliance Plus</span>\", \"col\": 12}}, {\"id\": \"nc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Due for Renewal\", \"col\": 3}}, {\"id\": \"nc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Expired Items\", \"col\": 3}}, {\"id\": \"nc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Renewals in Progress\", \"col\": 3}}, {\"id\": \"nc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Items\", \"col\": 3}}, {\"id\": \"sp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"sc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Item\", \"col\": 3}}, {\"id\": \"sc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Renewal\", \"col\": 3}}, {\"id\": \"sc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Expiry Calendar\", \"col\": 3}}, {\"id\": \"sc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Register\", \"col\": 3}}, {\"id\": \"sp2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Setup\", \"col\": 4}}, {\"id\": \"cd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd2\", \"type\": \"card\", \"data\": {\"card_name\": \"Other Trackers\", \"col\": 4}}]",
  "creation": "2025-06-06 11:15:50.059168",
  "custom_blocks": [],
  "docstatus": 0,
@@ -16,8 +16,8 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Settings",
-   "link_count": 1,
+   "label": "Setup",
+   "link_count": 2,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -25,19 +25,154 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Compliance Category",
+   "label": "Compliance Item Type",
    "link_count": 0,
-   "link_to": "Compliance Category",
+   "link_to": "Compliance Item Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Compliance Plus Settings",
+   "link_count": 0,
+   "link_to": "Compliance Plus Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Compliance Register",
+   "link_count": 0,
+   "link_to": "Compliance Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Compliance Cost",
+   "link_count": 0,
+   "link_to": "Compliance Cost",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Compliance Reminder Log",
+   "link_count": 0,
+   "link_to": "Compliance Reminder Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Other Trackers",
+   "link_count": 6,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Trademark Tracker",
+   "link_count": 0,
+   "link_to": "Trademark Tracker",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Hearing Tracker",
+   "link_count": 0,
+   "link_to": "Hearing Tracker",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Licence Tracker",
+   "link_count": 0,
+   "link_to": "Licence Tracker",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Insurance Tracker",
+   "link_count": 0,
+   "link_to": "Insurance Tracker",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Subscription Tracker",
+   "link_count": 0,
+   "link_to": "Subscription Tracker",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Compliance Tracker",
+   "link_count": 0,
+   "link_to": "Compliance Tracker",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
   }
  ],
- "modified": "2025-08-26 15:25:25.731295",
+ "modified": "2026-11-13 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Plus",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Due for Renewal",
+   "number_card_name": "Due for Renewal"
+  },
+  {
+   "label": "Expired Items",
+   "number_card_name": "Expired Items"
+  },
+  {
+   "label": "Renewals in Progress",
+   "number_card_name": "Renewals in Progress"
+  },
+  {
+   "label": "Active Items",
+   "number_card_name": "Active Items"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -48,42 +183,32 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Insurance Tracker",
-   "link_to": "Insurance Tracker",
+   "label": "Compliance Item",
+   "link_to": "Compliance Item",
    "stats_filter": "[]",
    "type": "DocType"
   },
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Subscription Tracker",
-   "link_to": "Subscription Tracker",
+   "label": "Compliance Renewal",
+   "link_to": "Compliance Renewal",
    "stats_filter": "[]",
    "type": "DocType"
   },
   {
    "color": "Grey",
-   "doc_view": "List",
-   "label": "Compliance Tracker",
-   "link_to": "Compliance Tracker",
+   "doc_view": "Calendar",
+   "label": "Expiry Calendar",
+   "link_to": "Compliance Item",
    "stats_filter": "[]",
    "type": "DocType"
   },
   {
    "color": "Grey",
-   "doc_view": "List",
-   "label": "Licence Tracker",
-   "link_to": "Licence Tracker",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Trademark Tracker",
-   "link_to": "Trademark Tracker",
-   "stats_filter": "[]",
-   "type": "DocType"
+   "label": "Compliance Register",
+   "link_to": "Compliance Register",
+   "type": "Report"
   }
  ],
  "title": "Compliance Plus"

@@ -1,0 +1,277 @@
+# Copyright (c) 2026, KlyONIX Tech Consulting Pvt Ltd and contributors
+# For license information, please see license.txt
+
+"""The daily job: keep statuses current, then remind, escalate and summarise.
+
+Each item is handled inside its own savepoint, so one bad record is logged and
+skipped without undoing the others. Every message sent is recorded in a
+Compliance Reminder Log before it goes out. Its key is unique, so a second run, or two
+runs at once, fail on the log and send nothing.
+"""
+
+import frappe
+from frappe import _
+from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
+from frappe.utils import (
+	add_days,
+	date_diff,
+	escape_html,
+	formatdate,
+	get_url_to_form,
+	getdate,
+	now_datetime,
+	nowdate,
+)
+
+from compliance_plus.compliance_plus.register import (
+	compute_status,
+	due_soon_days,
+	escalate_after_days,
+	get_settings,
+	get_type_rules,
+	items_with_applied_renewal,
+)
+
+QUIET_STATUSES = ("Cancelled", "Renewal in Progress")
+OVERDUE_STATUSES = ("Expired", "Lapsed")
+ITEM_FIELDS = [
+	"name",
+	"title",
+	"status",
+	"item_type",
+	"valid_until",
+	"certificate",
+	"is_cancelled",
+	"responsible",
+	"reviewer",
+]
+
+
+def run_daily():
+	today = getdate(nowdate())
+	refresh_statuses(today)
+	if not get_settings().enabled:
+		return
+	send_reminders(today)
+	send_escalations(today)
+	if today.strftime("%A") == (get_settings().digest_day or "Monday"):
+		send_digests(today)
+
+
+def refresh_statuses(today):
+	items = frappe.get_all("Compliance Item", filters={"is_cancelled": 0}, fields=ITEM_FIELDS)
+	rules = get_type_rules([item.item_type for item in items])
+	applied = items_with_applied_renewal([item.name for item in items])
+	soon = due_soon_days()
+
+	for item in items:
+		type_rules = rules.get(item.item_type) or frappe._dict()
+		status = compute_status(
+			is_cancelled=False,
+			valid_until=item.valid_until,
+			has_certificate=bool(item.certificate),
+			requires_document=bool(type_rules.requires_document),
+			renewal_applied=item.name in applied,
+			grace_days=type_rules.grace_days or 0,
+			today=today,
+			soon_days=soon,
+		)
+		if status != item.status:
+			run_for_item(item.name, lambda name=item.name: frappe.get_doc("Compliance Item", name).save())
+
+
+def send_reminders(today):
+	items = frappe.get_all(
+		"Compliance Item",
+		filters={"status": ("not in", QUIET_STATUSES), "valid_until": (">=", today)},
+		fields=ITEM_FIELDS,
+	)
+	rules = reminder_days_by_item([item.name for item in items])
+	due = []
+	for item in items:
+		days_left = date_diff(item.valid_until, today)
+		passed = [days for days in rules.get(item.name, []) if days >= days_left]
+		if passed:
+			days = min(passed)
+			due.append((item, days, f"{item.name}|reminder|{days}|{item.valid_until}"))
+
+	sent = already_sent([key for _item, _days, key in due])
+	for item, days, key in due:
+		if key in sent:
+			continue
+		run_for_item(item.name, lambda item=item, days=days, key=key: remind(item, days, key))
+
+
+def remind(item, days: int, key: str):
+	subject = _("{0} expires on {1}").format(item.title, formatdate(item.valid_until))
+	message = _("{0} ({1}) expires on {2}, in {3} days. Start its renewal.").format(
+		escape_html(item.title),
+		item.name,
+		formatdate(item.valid_until),
+		date_diff(item.valid_until, nowdate()),
+	)
+	write_log(item.name, "Reminder", key, [item.responsible], rule_days=days, due_date=item.valid_until)
+	notify([item.responsible], subject, message, item.name)
+
+
+def send_escalations(today):
+	cut_off = add_days(today, -escalate_after_days())
+	items = frappe.get_all(
+		"Compliance Item",
+		filters={"status": ("in", OVERDUE_STATUSES), "valid_until": ("<=", cut_off)},
+		fields=ITEM_FIELDS,
+	)
+	due = [(item, f"{item.name}|escalation|{item.valid_until}") for item in items]
+	sent = already_sent([key for _item, key in due])
+	managers = compliance_managers()
+	for item, key in due:
+		if key in sent:
+			continue
+		run_for_item(item.name, lambda item=item, key=key: escalate(item, key, managers))
+
+
+def escalate(item, key: str, managers: list[str]):
+	recipients = [user for user in [item.reviewer, *managers] if user]
+	subject = _("Overdue: {0} expired on {1}").format(item.title, formatdate(item.valid_until))
+	message = _("{0} ({1}) expired on {2} and has not been renewed. It is held by {3}.").format(
+		escape_html(item.title), item.name, formatdate(item.valid_until), escape_html(item.responsible)
+	)
+	write_log(item.name, "Escalation", key, recipients, due_date=item.valid_until)
+	notify(recipients, subject, message, item.name)
+
+
+def send_digests(today):
+	horizon = add_days(today, due_soon_days())
+	items = frappe.get_all(
+		"Compliance Item",
+		filters={"status": ("not in", ("Cancelled", "Draft")), "valid_until": ("<=", horizon)},
+		fields=ITEM_FIELDS,
+		order_by="valid_until asc",
+	)
+	by_user: dict[str, list] = {}
+	for item in items:
+		for user in {item.responsible, item.reviewer} - {None, ""}:
+			by_user.setdefault(user, []).append(item)
+
+	keys = {user: f"digest|{user}|{today}" for user in by_user}
+	sent = already_sent(list(keys.values()))
+	for user, user_items in by_user.items():
+		if keys[user] in sent:
+			continue
+		run_for_item(user, lambda user=user, user_items=user_items: digest(user, user_items, keys[user]))
+
+
+def digest(user: str, items: list, key: str):
+	rows = "".join(
+		"<tr><td><a href='{url}'>{title}</a></td><td>{status}</td><td>{until}</td></tr>".format(
+			url=get_url_to_form("Compliance Item", item.name),
+			title=escape_html(item.title),
+			status=escape_html(_(item.status)),
+			until=formatdate(item.valid_until),
+		)
+		for item in items
+	)
+	message = "<p>{}</p><table><tr><th>{}</th><th>{}</th><th>{}</th></tr>{}</table>".format(
+		_("These compliance items need attention."), _("Item"), _("Status"), _("Valid Until"), rows
+	)
+	write_log(None, "Digest", key, [user])
+	send_email([user], _("Compliance items needing attention: {0}").format(len(items)), message)
+
+
+def run_for_item(label: str, work):
+	savepoint = "compliance_item_job"
+	frappe.db.savepoint(savepoint)
+	try:
+		work()
+	except Exception:
+		frappe.db.rollback(save_point=savepoint)
+		frappe.log_error(title=_("Compliance reminder job failed for {0}").format(label))
+
+
+def reminder_days_by_item(items: list[str]) -> dict[str, list[int]]:
+	if not items:
+		return {}
+	rows = frappe.get_all(
+		"Compliance Reminder Rule",
+		filters={"parenttype": "Compliance Item", "parent": ("in", items)},
+		fields=["parent", "days_before"],
+	)
+	result: dict[str, list[int]] = {}
+	for row in rows:
+		result.setdefault(row.parent, []).append(row.days_before)
+	return result
+
+
+def already_sent(keys: list[str]) -> set[str]:
+	if not keys:
+		return set()
+	return set(frappe.get_all("Compliance Reminder Log", filters={"log_key": ("in", keys)}, pluck="log_key"))
+
+
+def compliance_managers() -> list[str]:
+	has_role = frappe.qb.DocType("Has Role")
+	user = frappe.qb.DocType("User")
+	return (
+		frappe.qb.from_(has_role)
+		.join(user)
+		.on(user.name == has_role.parent)
+		.select(user.name)
+		.distinct()
+		.where(
+			(has_role.parenttype == "User")
+			& (has_role.role == "Compliance Manager")
+			& (user.enabled == 1)
+			& (user.user_type == "System User")
+		)
+	).run(pluck=True)
+
+
+def notify(users: list[str], subject: str, message: str, item: str):
+	users = list(dict.fromkeys(user for user in users if user))
+	if not users:
+		return
+	enqueue_create_notification(
+		users,
+		{
+			"type": "Alert",
+			"subject": escape_html(subject),
+			"email_content": message,
+			"document_type": "Compliance Item",
+			"document_name": item,
+			"from_user": "Administrator",
+		},
+	)
+	send_email(users, subject, message, item)
+
+
+def send_email(users: list[str], subject: str, message: str, item: str | None = None):
+	account = get_settings().email_account
+	if not account:
+		return
+	sender = frappe.db.get_value("Email Account", account, "email_id")
+	recipients = frappe.get_all("User", filters={"name": ("in", users), "enabled": 1}, pluck="email")
+	if not sender or not recipients:
+		return
+	frappe.sendmail(
+		recipients=recipients,
+		sender=sender,
+		subject=subject,
+		message=message,
+		reference_doctype="Compliance Item" if item else None,
+		reference_name=item,
+	)
+
+
+def write_log(item: str | None, kind: str, key: str, recipients: list[str], rule_days=None, due_date=None):
+	frappe.get_doc(
+		{
+			"doctype": "Compliance Reminder Log",
+			"compliance_item": item,
+			"kind": kind,
+			"rule_days": rule_days,
+			"due_date": due_date,
+			"sent_to": "\n".join(recipients),
+			"sent_on": now_datetime(),
+			"log_key": key,
+		}
+	).insert(ignore_permissions=True)  # written by the scheduler, not by a person

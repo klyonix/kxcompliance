@@ -1,0 +1,22 @@
+{
+ "color": "Blue",
+ "creation": "2026-11-13 12:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Number Card",
+ "document_type": "Compliance Item",
+ "dynamic_filters_json": "[]",
+ "filters_json": "[[\"Compliance Item\",\"status\",\"=\",\"Renewal in Progress\"]]",
+ "function": "Count",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Renewals in Progress",
+ "modified": "2026-11-13 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Compliance Plus",
+ "name": "Renewals in Progress",
+ "owner": "Administrator",
+ "show_percentage_stats": 0,
+ "stats_time_interval": "Daily",
+ "type": "Document Type"
+}

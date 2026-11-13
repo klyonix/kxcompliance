@@ -1,0 +1,92 @@
+# Copyright (c) 2026, KlyONIX Tech Consulting Pvt Ltd and contributors
+# For license information, please see license.txt
+
+"""Records the compliance tests build for themselves."""
+
+import frappe
+from frappe.utils import add_days, nowdate
+
+TEST_COMPANY = "Compliance Test Company"
+MANAGER = "compliance-manager@example.com"
+HOLDER = "compliance-holder@example.com"
+OTHER_HOLDER = "compliance-other@example.com"
+AUDITOR = "compliance-auditor@example.com"
+REVIEWER = "compliance-reviewer@example.com"
+
+
+def make_company() -> str:
+	if not frappe.db.exists("Company", TEST_COMPANY):
+		frappe.get_doc(
+			{
+				"doctype": "Company",
+				"company_name": TEST_COMPANY,
+				"abbr": "CTCO",
+				"default_currency": "INR",
+				"country": "India",
+			}
+		).insert()
+	return TEST_COMPANY
+
+
+def make_user(email: str, roles: tuple[str, ...]) -> str:
+	if frappe.db.exists("User", email):
+		user = frappe.get_doc("User", email)
+	else:
+		user = frappe.get_doc(
+			{"doctype": "User", "email": email, "first_name": email.split("@")[0], "send_welcome_email": 0}
+		).insert()
+	user.add_roles(*roles)
+	return email
+
+
+def make_users():
+	make_user(MANAGER, ("Compliance Manager",))
+	make_user(HOLDER, ("Compliance User",))
+	make_user(OTHER_HOLDER, ("Compliance User",))
+	make_user(REVIEWER, ("Compliance User",))
+	make_user(AUDITOR, ("Compliance Auditor",))
+
+
+def make_item_type(
+	name: str, *, cycle: int = 12, grace: int = 10, requires_document: int = 0, reminders=(30, 7)
+):
+	if frappe.db.exists("Compliance Item Type", name):
+		frappe.delete_doc("Compliance Item Type", name, force=True)
+	return frappe.get_doc(
+		{
+			"doctype": "Compliance Item Type",
+			"type_name": name,
+			"category": "Licence",
+			"renewal_cycle_months": cycle,
+			"grace_days": grace,
+			"requires_document": requires_document,
+			"reminders": [{"days_before": days} for days in reminders],
+		}
+	).insert()
+
+
+def make_item(item_type: str, *, valid_until=None, days: int | None = 200, **fields):
+	if valid_until is None and days is not None:
+		valid_until = add_days(nowdate(), days)
+	doc = frappe.get_doc(
+		{
+			"doctype": "Compliance Item",
+			"title": fields.pop("title", "Test licence"),
+			"item_type": item_type,
+			"company": TEST_COMPANY,
+			"valid_until": valid_until,
+			"responsible": fields.pop("responsible", HOLDER),
+			**fields,
+		}
+	)
+	return doc.insert()
+
+
+def make_file(name: str = "certificate.txt") -> str:
+	return (
+		frappe.get_doc(
+			{"doctype": "File", "file_name": name, "content": b"test certificate", "is_private": 1}
+		)
+		.insert()
+		.file_url
+	)

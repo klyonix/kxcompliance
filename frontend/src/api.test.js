@@ -45,4 +45,11 @@ describe("the API client", () => {
 		).catch((err) => err);
 		expect(error.isNetwork).toBe(true);
 	});
+
+	it("never shows the server's raw exception text", async () => {
+		const body = { exception: "pypdf.errors.PdfReadError: startxref not found" };
+		const error = await call("x.y", {}, { fetcher: answer(500, body) }).catch((err) => err);
+		expect(error.message).not.toContain("pypdf");
+		expect(error.message).toContain("could not complete");
+	});
 });

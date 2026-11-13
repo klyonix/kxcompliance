@@ -57,6 +57,7 @@ describe("My Work rows", () => {
 			"item-CI-2",
 		]);
 		expect(rows[1].href).toBe("/Legal Date/LD-1");
+		expect(rows[0].to).toEqual({ name: "ComplianceItem", params: { name: "CI-1" } });
 	});
 
 	it("puts each row in a bucket and says when it is due", () => {

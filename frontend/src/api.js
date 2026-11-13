@@ -49,7 +49,7 @@ export async function call(method, params = {}, { httpMethod = "GET", fetcher = 
 		headers["Content-Type"] = "application/json";
 		init.body = JSON.stringify(params);
 	}
-	return send(url, init, fetcher);
+	return (await send(url, init, fetcher)).message;
 }
 
 export async function upload(file, { doctype, docname, fileName, fetcher = fetch }) {
@@ -64,7 +64,7 @@ export async function upload(file, { doctype, docname, fileName, fetcher = fetch
 		credentials: "same-origin",
 		body: form,
 	};
-	return send("/api/method/upload_file", init, fetcher);
+	return (await send("/api/method/upload_file", init, fetcher)).message;
 }
 
 async function send(url, init, fetcher) {
@@ -81,14 +81,21 @@ async function send(url, init, fetcher) {
 		body = {};
 	}
 	if (!response.ok) {
+		// Version 1 answers carry _server_messages and exc_type; version 2 an errors list.
+		const v2Error = (body.errors || [])[0] || {};
 		const message =
 			plain(serverMessage(body)) ||
-			body.exception ||
-			response.statusText ||
-			"The request failed";
-		throw new ApiError(message, { status: response.status, excType: body.exc_type || "" });
+			plain(v2Error.message || "") ||
+			// Frappe's raw exception text is for the Error Log, not for people.
+			(response.status >= 500
+				? "The server could not complete this. Try again, or tell your administrator."
+				: "This could not be saved. Check the details and try again.");
+		throw new ApiError(message, {
+			status: response.status,
+			excType: body.exc_type || v2Error.type || "",
+		});
 	}
-	return body.message;
+	return body;
 }
 
 export const saveChanges = (doctype, name, values, baseModified, options) =>
@@ -97,3 +104,39 @@ export const saveChanges = (doctype, name, values, baseModified, options) =>
 		{ doctype, name, values, base_modified: baseModified },
 		{ httpMethod: "POST", ...options }
 	);
+
+// Frappe's version 2 REST API, which applies the same permissions as the Desk.
+const json = (method, body) => ({
+	method,
+	headers: {
+		Accept: "application/json",
+		"Content-Type": "application/json",
+		"X-Frappe-CSRF-Token": window.csrf_token || "",
+	},
+	credentials: "same-origin",
+	body: body === undefined ? undefined : JSON.stringify(body),
+});
+
+const documentPath = (doctype, name) =>
+	`/api/v2/document/${encodeURIComponent(doctype)}` + (name ? `/${encodeURIComponent(name)}/` : "");
+
+export async function getList(doctype, { fields, filters, orderBy, start = 0, limit = 20, fetcher = fetch } = {}) {
+	const query = new URLSearchParams({ start: String(start), limit: String(limit) });
+	if (fields) query.set("fields", JSON.stringify(fields));
+	if (filters) query.set("filters", JSON.stringify(filters));
+	if (orderBy) query.set("order_by", orderBy);
+	const body = await send(`${documentPath(doctype)}?${query}`, json("GET"), fetcher);
+	return { rows: body.data || [], hasMore: Boolean(body.has_next_page) };
+}
+
+export async function getDoc(doctype, name, { fetcher = fetch } = {}) {
+	return (await send(documentPath(doctype, name), json("GET"), fetcher)).data;
+}
+
+export async function createDoc(doctype, values, { fetcher = fetch } = {}) {
+	return (await send(documentPath(doctype), json("POST", values), fetcher)).data;
+}
+
+export async function runMethod(doctype, name, method, args = {}, { fetcher = fetch } = {}) {
+	return (await send(`${documentPath(doctype, name)}method/${method}/`, json("POST", args), fetcher)).data;
+}

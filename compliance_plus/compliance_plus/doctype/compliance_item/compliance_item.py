@@ -16,10 +16,12 @@ from compliance_plus.compliance_plus.register import (
 
 class ComplianceItem(Document):
 	def validate(self):
+		rules = get_type_rules([self.item_type]).get(self.item_type) or frappe._dict()
 		self.set_holder()
-		self.copy_reminders_from_type()
-		self.validate_dates()
-		self.status = self.get_status()
+		if self.is_new():
+			self.copy_reminders_from_type()
+		self.validate_dates(rules)
+		self.status = self.get_status(rules)
 
 	def set_holder(self):
 		if self.holder_type == "Company":
@@ -32,9 +34,8 @@ class ComplianceItem(Document):
 		for rule in type_doc.reminders:
 			self.append("reminders", {"days_before": rule.days_before})
 
-	def validate_dates(self):
-		rules = get_type_rules([self.item_type]).get(self.item_type)
-		if rules and rules.renewal_cycle_months and not self.valid_until:
+	def validate_dates(self, rules: frappe._dict):
+		if rules.renewal_cycle_months and not self.valid_until:
 			frappe.throw(
 				_("Valid Until is required, because items of type {0} expire.").format(
 					frappe.bold(self.item_type)
@@ -53,8 +54,7 @@ class ComplianceItem(Document):
 					)
 				)
 
-	def get_status(self, today=None) -> str:
-		rules = get_type_rules([self.item_type]).get(self.item_type) or frappe._dict()
+	def get_status(self, rules: frappe._dict) -> str:
 		renewal_applied = not self.is_new() and self.name in items_with_applied_renewal([self.name])
 		return compute_status(
 			is_cancelled=bool(self.is_cancelled),
@@ -63,7 +63,7 @@ class ComplianceItem(Document):
 			requires_document=bool(rules.requires_document),
 			renewal_applied=renewal_applied,
 			grace_days=rules.grace_days or 0,
-			today=today or nowdate(),
+			today=nowdate(),
 			soon_days=due_soon_days(),
 		)
 

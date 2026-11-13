@@ -5,6 +5,10 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate
 
+from compliance_plus.compliance_plus.report.compliance_cost.compliance_cost import execute as cost_report
+from compliance_plus.compliance_plus.report.compliance_register.compliance_register import (
+	execute as register_report,
+)
 from compliance_plus.compliance_plus.test_utils import (
 	AUDITOR,
 	HOLDER,
@@ -66,6 +70,13 @@ class TestComplianceItem(IntegrationTestCase):
 		item = make_item("Test Expiring Licence")
 		self.assertEqual(sorted(rule.days_before for rule in item.reminders), [7, 30])
 
+	def test_cleared_reminders_stay_cleared(self):
+		item = make_item("Test Expiring Licence")
+		item.reminders = []
+		item.save()
+		item.reload()
+		self.assertEqual(item.reminders, [])
+
 	def test_a_company_holder_is_the_company(self):
 		item = make_item("Test Expiring Licence")
 		self.assertEqual(item.holder_type, "Company")
@@ -98,3 +109,21 @@ class TestComplianceItem(IntegrationTestCase):
 		with self.set_user(AUDITOR):
 			self.assertTrue(frappe.has_permission("Compliance Item", "read", item))
 			self.assertFalse(frappe.has_permission("Compliance Item", "write", item))
+
+	def test_the_register_report_lists_only_what_the_user_may_see(self):
+		mine = make_item("Test Expiring Licence", responsible=HOLDER).name
+		theirs = make_item("Test Expiring Licence", responsible=OTHER_HOLDER).name
+		with self.set_user(HOLDER):
+			_columns, rows = register_report({"company": TEST_COMPANY})
+		names = {row.name for row in rows}
+		self.assertIn(mine, names)
+		self.assertNotIn(theirs, names)
+
+	def test_the_cost_report_gives_a_yearly_figure(self):
+		make_item_type("Test Costed Subscription", reminders=())
+		make_item("Test Costed Subscription", cost=1000, billing_cycle="Monthly")
+		make_item("Test Costed Subscription", cost=5000, billing_cycle="Yearly")
+		_columns, rows = cost_report({"company": TEST_COMPANY})
+		row = next(row for row in rows if row.item_type == "Test Costed Subscription")
+		self.assertEqual(row.item_count, 2)
+		self.assertEqual(row.annual_cost, 17000)

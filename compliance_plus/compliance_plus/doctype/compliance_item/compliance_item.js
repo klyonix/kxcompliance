@@ -3,7 +3,7 @@
 
 frappe.ui.form.on("Compliance Item", {
 	refresh(frm) {
-		if (frm.is_new() || frm.doc.is_cancelled) {
+		if (frm.is_new() || frm.doc.is_cancelled || !frm.has_perm("write")) {
 			return;
 		}
 		frm.add_custom_button(__("Start Renewal"), () => {

@@ -29,7 +29,7 @@ def get_columns():
 			"options": "Supplier",
 			"width": 200,
 		},
-		{"label": _("Items"), "fieldname": "items", "fieldtype": "Int", "width": 80},
+		{"label": _("Items"), "fieldname": "item_count", "fieldtype": "Int", "width": 80},
 		{
 			"label": _("Cost per Year"),
 			"fieldname": "annual_cost",
@@ -66,10 +66,10 @@ def get_data(filters: frappe._dict):
 				item_type=item.item_type,
 				supplier=item.supplier,
 				currency=item.currency,
-				items=0,
+				item_count=0,
 				annual_cost=0,
 			),
 		)
-		row.items += 1
+		row.item_count += 1
 		row.annual_cost += flt(item.cost) * CYCLES_PER_YEAR.get(item.billing_cycle, 1)
 	return sorted(totals.values(), key=lambda row: row.annual_cost, reverse=True)

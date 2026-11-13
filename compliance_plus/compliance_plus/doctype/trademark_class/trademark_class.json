@@ -1,0 +1,41 @@
+{
+ "actions": [],
+ "creation": "2026-11-14 18:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "class_number",
+  "goods_or_services"
+ ],
+ "fields": [
+  {
+   "columns": 1,
+   "fieldname": "class_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Class",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "goods_or_services",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Goods or Services"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-14 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Compliance Plus",
+ "name": "Trademark Class",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

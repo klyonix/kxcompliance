@@ -1,0 +1,387 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-11-14 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "mark",
+  "mark_type",
+  "logo",
+  "brand",
+  "column_break_main",
+  "status",
+  "next_date",
+  "valid_until",
+  "renewal_item",
+  "section_classes",
+  "classes",
+  "section_application",
+  "application_number",
+  "filing_date",
+  "user_claim",
+  "used_since",
+  "column_break_application",
+  "applicant",
+  "agent",
+  "section_events",
+  "examination_report_on",
+  "journal_number",
+  "journal_date",
+  "column_break_events",
+  "opposition_notice_on",
+  "opposition_number",
+  "section_registration",
+  "registration_number",
+  "column_break_registration",
+  "registration_date",
+  "registration_certificate",
+  "section_people",
+  "responsible",
+  "column_break_people",
+  "reviewer",
+  "section_notes",
+  "notes",
+  "section_source",
+  "source_doctype",
+  "source_name",
+  "source_key"
+ ],
+ "fields": [
+  {
+   "default": "TM-.YY.-.#####",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Series",
+   "no_copy": 1,
+   "options": "TM-.YY.-.#####",
+   "print_hide": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "mark",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "Mark",
+   "reqd": 1
+  },
+  {
+   "default": "Word",
+   "fieldname": "mark_type",
+   "fieldtype": "Select",
+   "label": "Mark Type",
+   "options": "Word\nDevice\nCombined\nShape\nSound\nCollective\nCertification",
+   "reqd": 1
+  },
+  {
+   "fieldname": "logo",
+   "fieldtype": "Attach Image",
+   "label": "Logo"
+  },
+  {
+   "fieldname": "brand",
+   "fieldtype": "Link",
+   "label": "Brand",
+   "options": "Brand"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "New Application",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "New Application\nFormalities Check Pass\nMarked for Exam\nObjected\nAccepted and Advertised\nOpposed\nRegistered\nRefused\nAbandoned\nWithdrawn\nRemoved",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "next_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Next Date",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "description": "Ten years from the filing date; after registration it follows the renewal record.",
+   "fieldname": "valid_until",
+   "fieldtype": "Date",
+   "label": "Valid Until",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "renewal_item",
+   "fieldtype": "Link",
+   "label": "Renewal Record",
+   "no_copy": 1,
+   "options": "Compliance Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_classes",
+   "fieldtype": "Section Break",
+   "label": "Classes"
+  },
+  {
+   "fieldname": "classes",
+   "fieldtype": "Table",
+   "label": "Classes",
+   "options": "Trademark Class",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_application",
+   "fieldtype": "Section Break",
+   "label": "Application"
+  },
+  {
+   "fieldname": "application_number",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "Application Number"
+  },
+  {
+   "fieldname": "filing_date",
+   "fieldtype": "Date",
+   "label": "Filing Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "user_claim",
+   "fieldtype": "Select",
+   "label": "Use",
+   "options": "Proposed to be used\nUsed since"
+  },
+  {
+   "depends_on": "eval:doc.user_claim == 'Used since'",
+   "fieldname": "used_since",
+   "fieldtype": "Date",
+   "label": "Used Since"
+  },
+  {
+   "fieldname": "column_break_application",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "applicant",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Applicant",
+   "options": "Company",
+   "remember_last_selected_value": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "agent",
+   "fieldtype": "Link",
+   "label": "Agent",
+   "options": "Supplier"
+  },
+  {
+   "description": "Entering a date here adds the matching deadline as a Legal Date.",
+   "fieldname": "section_events",
+   "fieldtype": "Section Break",
+   "label": "Examination and Opposition"
+  },
+  {
+   "fieldname": "examination_report_on",
+   "fieldtype": "Date",
+   "label": "Examination Report Received On"
+  },
+  {
+   "fieldname": "journal_number",
+   "fieldtype": "Data",
+   "label": "Journal Number"
+  },
+  {
+   "fieldname": "journal_date",
+   "fieldtype": "Date",
+   "label": "Advertised On"
+  },
+  {
+   "fieldname": "column_break_events",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "opposition_notice_on",
+   "fieldtype": "Date",
+   "label": "Notice of Opposition Received On"
+  },
+  {
+   "fieldname": "opposition_number",
+   "fieldtype": "Data",
+   "label": "Opposition Number"
+  },
+  {
+   "depends_on": "eval:doc.status == 'Registered'",
+   "fieldname": "section_registration",
+   "fieldtype": "Section Break",
+   "label": "Registration"
+  },
+  {
+   "fieldname": "registration_number",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "Registration Number"
+  },
+  {
+   "fieldname": "column_break_registration",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "registration_date",
+   "fieldtype": "Date",
+   "label": "Registration Date"
+  },
+  {
+   "fieldname": "registration_certificate",
+   "fieldtype": "Attach",
+   "label": "Registration Certificate"
+  },
+  {
+   "fieldname": "section_people",
+   "fieldtype": "Section Break",
+   "label": "People"
+  },
+  {
+   "default": "__user",
+   "fieldname": "responsible",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Responsible",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_people",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reviewer",
+   "fieldtype": "Link",
+   "label": "Reviewer",
+   "options": "User"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text Editor",
+   "label": "Notes"
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "eval:doc.source_doctype",
+   "fieldname": "section_source",
+   "fieldtype": "Section Break",
+   "label": "Moved From"
+  },
+  {
+   "fieldname": "source_doctype",
+   "fieldtype": "Link",
+   "label": "Source Type",
+   "no_copy": 1,
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Source Record",
+   "no_copy": 1,
+   "options": "source_doctype",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Source Key",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1,
+   "unique": 1
+  }
+ ],
+ "image_field": "logo",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-14 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Compliance Plus",
+ "name": "Trademark",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Auditor",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "application_number,status,applicant",
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "mark",
+ "track_changes": 1
+}

@@ -18,6 +18,9 @@ from compliance_plus.compliance_plus.test_utils import (
 	make_users,
 )
 
+# These tests build their own records; skip ERPNext's generated ones.
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Compliance Task", "Legal Date"]
+
 SETTINGS = "Compliance Plus Settings"
 
 

@@ -4,6 +4,7 @@
  "autoname": "naming_series:",
  "creation": "2025-07-25 10:42:27.718198",
  "default_view": "List",
+ "description": "Read-only. Its records have moved to Legal Case.",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -122,7 +123,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-25 10:43:12.254982",
+ "modified": "2026-11-14 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Hearing Tracker",
@@ -130,16 +131,40 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
+   "create": 0,
+   "delete": 0,
+   "email": 0,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "System Manager",
-   "share": 1,
-   "write": 1
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Manager",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Auditor",
+   "share": 0,
+   "write": 0
   }
  ],
  "row_format": "Dynamic",

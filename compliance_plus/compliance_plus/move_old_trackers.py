@@ -1,18 +1,22 @@
 # Copyright (c) 2026, KlyONIX Tech Consulting Pvt Ltd and contributors
 # For license information, please see license.txt
 
-"""Move Compliance, Licence, Insurance and Subscription Tracker rows into Compliance Item.
+"""Move the old trackers' rows into the records that replace them.
+
+Compliance, Licence, Insurance and Subscription Tracker rows become Compliance Items;
+Hearing Tracker rows become Legal Cases.
 
 The old rows are left in place, read-only, to check against. Each new item records the
 row it came from under a unique key, so running this again moves only what is left.
 A row that cannot be moved is logged and skipped, and the summary says so.
 
     bench --site SITE execute compliance_plus.compliance_plus.move_old_trackers.move_all
+    bench --site SITE execute compliance_plus.compliance_plus.move_old_trackers.move_hearings
 """
 
 import frappe
 from frappe import _
-from frappe.utils import cint, escape_html
+from frappe.utils import cint, escape_html, getdate, nowdate
 
 GENERIC_TYPES = {
 	"Licence Tracker": ("Licence", "Licence"),
@@ -32,10 +36,19 @@ def move_all() -> dict[str, dict[str, int]]:
 
 
 def move_doctype(doctype: str) -> dict[str, int]:
+	return move_rows(doctype, "Compliance Item", move_row)
+
+
+def move_hearings() -> dict[str, int]:
+	"""Hearing Tracker rows become Legal Cases, each with its hearing as a Legal Date."""
+	if not frappe.db.exists("DocType", "Hearing Tracker"):
+		return {"total": 0, "moved": 0, "already_moved": 0, "failed": 0}
+	return move_rows("Hearing Tracker", "Legal Case", move_hearing_row)
+
+
+def move_rows(doctype: str, target: str, mover) -> dict[str, int]:
 	rows = frappe.get_all(doctype, fields=["*"], order_by="creation asc")
-	moved_keys = set(
-		frappe.get_all("Compliance Item", filters={"source_doctype": doctype}, pluck="source_key")
-	)
+	moved_keys = set(frappe.get_all(target, filters={"source_doctype": doctype}, pluck="source_key"))
 	counts = {"total": len(rows), "moved": 0, "already_moved": 0, "failed": 0}
 	if not rows:
 		return counts
@@ -47,11 +60,11 @@ def move_doctype(doctype: str) -> dict[str, int]:
 			continue
 		frappe.db.savepoint(SAVEPOINT)
 		try:
-			move_row(doctype, row, company)
+			mover(doctype, row, company)
 			counts["moved"] += 1
 		except Exception:
 			frappe.db.rollback(save_point=SAVEPOINT)
-			frappe.log_error(title=f"Could not move {doctype} {row.name} to Compliance Item")
+			frappe.log_error(title=f"Could not move {doctype} {row.name} to {target}")
 			counts["failed"] += 1
 
 	assert counts["moved"] + counts["already_moved"] + counts["failed"] == counts["total"]
@@ -83,6 +96,48 @@ def move_row(doctype: str, row, company: str) -> str:
 	item.insert()
 	copy_attachments(doctype, row.name, item.name)
 	return item.name
+
+
+def move_hearing_row(doctype: str, row, company: str) -> str:
+	case = frappe.get_doc(
+		{
+			"doctype": "Legal Case",
+			"title": row.document_name,
+			"case_type": "Litigation",
+			"forum": "Other",
+			"forum_name": row.issuer_supplier,
+			"filing_date": row.issue_date,
+			"company": company,
+			"our_role": "Respondent",
+			"responsible": responsible_for(row),
+			"summary": notes_for(row)
+			+ "<p>{}</p>".format(_("Our role was not recorded in the Hearing Tracker; check it.")),
+			"source_doctype": doctype,
+			"source_name": row.name,
+			"source_key": source_key(doctype, row.name),
+		}
+	)
+	case.flags.ignore_permissions = True  # a data move run by migrate, not by a person
+	case.insert()
+	if row.expiry_date:
+		past = getdate(row.expiry_date) < getdate(nowdate())
+		hearing = frappe.get_doc(
+			{
+				"doctype": "Legal Date",
+				"reference_doctype": "Legal Case",
+				"reference_name": case.name,
+				"kind": "Hearing",
+				"date": row.expiry_date,
+				"status": "Done" if past else "Scheduled",
+				"proceedings": _("Moved from the Hearing Tracker; the outcome was not recorded there.")
+				if past
+				else None,
+			}
+		)
+		hearing.flags.ignore_permissions = True
+		hearing.insert()
+	copy_attachments(doctype, row.name, case.name, target="Legal Case")
+	return case.name
 
 
 def item_type_for(doctype: str, row) -> str:
@@ -130,7 +185,7 @@ def notes_for(row) -> str:
 	return "".join(lines)
 
 
-def copy_attachments(doctype: str, source: str, item: str):
+def copy_attachments(doctype: str, source: str, item: str, target: str = "Compliance Item"):
 	files = frappe.get_all(
 		"File",
 		filters={"attached_to_doctype": doctype, "attached_to_name": source, "is_folder": 0},
@@ -143,7 +198,7 @@ def copy_attachments(doctype: str, source: str, item: str):
 				"file_name": file.file_name,
 				"file_url": file.file_url,
 				"is_private": file.is_private,
-				"attached_to_doctype": "Compliance Item",
+				"attached_to_doctype": target,
 				"attached_to_name": item,
 			}
 		).insert(ignore_permissions=True)  # links the same stored file; nothing is copied

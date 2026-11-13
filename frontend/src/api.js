@@ -118,9 +118,13 @@ const json = (method, body) => ({
 });
 
 const documentPath = (doctype, name) =>
-	`/api/v2/document/${encodeURIComponent(doctype)}` + (name ? `/${encodeURIComponent(name)}/` : "");
+	`/api/v2/document/${encodeURIComponent(doctype)}` +
+	(name ? `/${encodeURIComponent(name)}/` : "");
 
-export async function getList(doctype, { fields, filters, orderBy, start = 0, limit = 20, fetcher = fetch } = {}) {
+export async function getList(
+	doctype,
+	{ fields, filters, orderBy, start = 0, limit = 20, fetcher = fetch } = {}
+) {
 	const query = new URLSearchParams({ start: String(start), limit: String(limit) });
 	if (fields) query.set("fields", JSON.stringify(fields));
 	if (filters) query.set("filters", JSON.stringify(filters));
@@ -138,5 +142,7 @@ export async function createDoc(doctype, values, { fetcher = fetch } = {}) {
 }
 
 export async function runMethod(doctype, name, method, args = {}, { fetcher = fetch } = {}) {
-	return (await send(`${documentPath(doctype, name)}method/${method}/`, json("POST", args), fetcher)).data;
+	return (
+		await send(`${documentPath(doctype, name)}method/${method}/`, json("POST", args), fetcher)
+	).data;
 }

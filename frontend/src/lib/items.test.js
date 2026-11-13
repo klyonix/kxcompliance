@@ -30,7 +30,12 @@ describe("compliance items in the app", () => {
 		expect(itemRow({ name: "CI-1", title: "PAN", status: "Active" }).due.text).toBe(
 			"No expiry"
 		);
-		const cancelled = { name: "CI-2", title: "Old", status: "Cancelled", valid_until: "2027-01-01" };
+		const cancelled = {
+			name: "CI-2",
+			title: "Old",
+			status: "Cancelled",
+			valid_until: "2027-01-01",
+		};
 		expect(itemRow(cancelled).due.text).toBe("");
 	});
 

@@ -24,6 +24,7 @@ from frappe.utils import (
 )
 
 from compliance_plus.compliance_plus.register import (
+	CLOSED_TASK_STATUSES,
 	compute_status,
 	due_soon_days,
 	escalate_after_days,
@@ -110,8 +111,8 @@ def remind(item, days: int, key: str):
 		formatdate(item.valid_until),
 		date_diff(item.valid_until, nowdate()),
 	)
-	write_log(item.name, "Reminder", key, [item.responsible], rule_days=days, due_date=item.valid_until)
-	notify([item.responsible], subject, message, item.name)
+	write_log("Reminder", key, [item.responsible], item=item.name, rule_days=days, due_date=item.valid_until)
+	notify([item.responsible], subject, message, "Compliance Item", item.name)
 
 
 def send_escalations(today):
@@ -136,8 +137,8 @@ def escalate(item, key: str, managers: list[str]):
 	message = _("{0} ({1}) expired on {2} and has not been renewed. It is held by {3}.").format(
 		escape_html(item.title), item.name, formatdate(item.valid_until), escape_html(item.responsible)
 	)
-	write_log(item.name, "Escalation", key, recipients, due_date=item.valid_until)
-	notify(recipients, subject, message, item.name)
+	write_log("Escalation", key, recipients, item=item.name, due_date=item.valid_until)
+	notify(recipients, subject, message, "Compliance Item", item.name)
 
 
 def send_digests(today):
@@ -148,10 +149,30 @@ def send_digests(today):
 		fields=ITEM_FIELDS,
 		order_by="valid_until asc",
 	)
+	tasks = frappe.get_all(
+		"Compliance Task",
+		filters={"status": ("not in", CLOSED_TASK_STATUSES), "effective_due_date": ("<=", horizon)},
+		fields=[
+			"name",
+			"obligation_template",
+			"period_label",
+			"status",
+			"effective_due_date",
+			"responsible",
+			"reviewer",
+		],
+		order_by="effective_due_date asc",
+	)
 	by_user: dict[str, list] = {}
 	for item in items:
+		row = digest_row("Compliance Item", item.name, item.title, item.status, item.valid_until)
 		for user in {item.responsible, item.reviewer} - {None, ""}:
-			by_user.setdefault(user, []).append(item)
+			by_user.setdefault(user, []).append(row)
+	for task in tasks:
+		title = f"{task.obligation_template} ({task.period_label})"
+		row = digest_row("Compliance Task", task.name, title, task.status, task.effective_due_date)
+		for user in {task.responsible, task.reviewer} - {None, ""}:
+			by_user.setdefault(user, []).append(row)
 
 	keys = {user: f"digest|{user}|{today}" for user in by_user}
 	sent = already_sent(list(keys.values()))
@@ -161,21 +182,25 @@ def send_digests(today):
 		run_for_item(user, lambda user=user, user_items=user_items: digest(user, user_items, keys[user]))
 
 
-def digest(user: str, items: list, key: str):
-	rows = "".join(
-		"<tr><td><a href='{url}'>{title}</a></td><td>{status}</td><td>{until}</td></tr>".format(
-			url=get_url_to_form("Compliance Item", item.name),
-			title=escape_html(item.title),
-			status=escape_html(_(item.status)),
-			until=formatdate(item.valid_until),
-		)
-		for item in items
+def digest_row(doctype: str, name: str, title: str, status: str, date) -> str:
+	return "<tr><td><a href='{url}'>{title}</a></td><td>{status}</td><td>{date}</td></tr>".format(
+		url=get_url_to_form(doctype, name),
+		title=escape_html(title),
+		status=escape_html(_(status)),
+		date=formatdate(date),
 	)
+
+
+def digest(user: str, rows: list[str], key: str):
 	message = "<p>{}</p><table><tr><th>{}</th><th>{}</th><th>{}</th></tr>{}</table>".format(
-		_("These compliance items need attention."), _("Item"), _("Status"), _("Valid Until"), rows
+		_("These compliance items and filings need attention."),
+		_("Item"),
+		_("Status"),
+		_("Date"),
+		"".join(rows),
 	)
-	write_log(None, "Digest", key, [user])
-	send_email([user], _("Compliance items needing attention: {0}").format(len(items)), message)
+	write_log("Digest", key, [user])
+	send_email([user], _("Compliance items needing attention: {0}").format(len(rows)), message)
 
 
 def run_for_item(label: str, work):
@@ -226,7 +251,7 @@ def compliance_managers() -> list[str]:
 	).run(pluck=True)
 
 
-def notify(users: list[str], subject: str, message: str, item: str):
+def notify(users: list[str], subject: str, message: str, doctype: str, name: str):
 	users = list(dict.fromkeys(user for user in users if user))
 	if not users:
 		return
@@ -236,15 +261,17 @@ def notify(users: list[str], subject: str, message: str, item: str):
 			"type": "Alert",
 			"subject": escape_html(subject),
 			"email_content": message,
-			"document_type": "Compliance Item",
-			"document_name": item,
+			"document_type": doctype,
+			"document_name": name,
 			"from_user": "Administrator",
 		},
 	)
-	send_email(users, subject, message, item)
+	send_email(users, subject, message, doctype, name)
 
 
-def send_email(users: list[str], subject: str, message: str, item: str | None = None):
+def send_email(
+	users: list[str], subject: str, message: str, doctype: str | None = None, name: str | None = None
+):
 	account = get_settings().email_account
 	if not account:
 		return
@@ -257,16 +284,26 @@ def send_email(users: list[str], subject: str, message: str, item: str | None = 
 		sender=sender,
 		subject=subject,
 		message=message,
-		reference_doctype="Compliance Item" if item else None,
-		reference_name=item,
+		reference_doctype=doctype,
+		reference_name=name,
 	)
 
 
-def write_log(item: str | None, kind: str, key: str, recipients: list[str], rule_days=None, due_date=None):
+def write_log(
+	kind: str,
+	key: str,
+	recipients: list[str],
+	*,
+	item: str | None = None,
+	task: str | None = None,
+	rule_days: int | None = None,
+	due_date=None,
+):
 	frappe.get_doc(
 		{
 			"doctype": "Compliance Reminder Log",
 			"compliance_item": item,
+			"compliance_task": task,
 			"kind": kind,
 			"rule_days": rule_days,
 			"due_date": due_date,

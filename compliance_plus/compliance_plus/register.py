@@ -10,6 +10,7 @@ DEFAULT_DUE_SOON_DAYS = 30
 DEFAULT_ESCALATE_AFTER_DAYS = 7
 
 OPEN_RENEWAL_STATUSES = ("Planned", "Applied")
+CLOSED_TASK_STATUSES = ("Filed", "Filed Late", "Not Applicable", "Cancelled")
 APPROVER_ROLES = frozenset({"System Manager", "Compliance Manager"})
 
 

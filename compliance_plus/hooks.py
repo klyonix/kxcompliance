@@ -155,6 +155,7 @@ scheduler_events = {
 	"daily": [
 		"compliance_plus.compliance_plus.custom.license_tracker_cron.send_license_expiry_reminders",
 		"compliance_plus.compliance_plus.reminders.run_daily",
+		"compliance_plus.compliance_plus.statutory.run_daily",
 	],
 	# 	"hourly": [
 	# 		"compliance_plus.tasks.hourly"
@@ -245,15 +246,18 @@ scheduler_events = {
 
 
 after_install = "compliance_plus.install.after_install"
+after_migrate = "compliance_plus.install.after_migrate"
 
 permission_query_conditions = {
 	"Compliance Item": "compliance_plus.permissions.item_query_conditions",
 	"Compliance Renewal": "compliance_plus.permissions.renewal_query_conditions",
+	"Compliance Task": "compliance_plus.permissions.task_query_conditions",
 }
 
 has_permission = {
 	"Compliance Item": "compliance_plus.permissions.has_item_permission",
 	"Compliance Renewal": "compliance_plus.permissions.has_renewal_permission",
+	"Compliance Task": "compliance_plus.permissions.has_task_permission",
 }
 
-calendars = ["Compliance Item"]
+calendars = ["Compliance Item", "Compliance Task"]

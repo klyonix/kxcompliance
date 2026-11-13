@@ -1,13 +1,15 @@
 import frappe
-from datetime import datetime, timedelta
+from frappe.utils import add_days, getdate
+
+LICENSE_CHILD_DOCTYPES = ("Drug License Details", "FSSAI Details")
 
 def already_sent_recently(customer, interval_days):
-    threshold_date = datetime.today() - timedelta(days=interval_days)
+    threshold_date = add_days(getdate(), -interval_days)
     return frappe.db.exists("Communication", {
         "reference_doctype": "Customer",
         "reference_name": customer,
         "communication_type": "Automated Message",
-        "creation": [">", threshold_date.strftime("%Y-%m-%d")]
+        "creation": [">", threshold_date]
     })
 
 def log_communication(customer, subject):
@@ -23,6 +25,11 @@ def log_communication(customer, subject):
 
 def send_license_expiry_reminders():
 
+    missing = [dt for dt in LICENSE_CHILD_DOCTYPES if not frappe.db.exists("DocType", dt)]
+    if missing:
+        frappe.log_error("License Expiry Cron skipped", f"Missing DocTypes: {', '.join(missing)}")
+        return
+
     settings = frappe.get_single("Compliance Plus Settings")
     expiry_threshold = settings.expiry_threshold or 15
     set_interval = settings.set_interval or 15
@@ -35,12 +42,12 @@ def send_license_expiry_reminders():
 
     try:
         template = frappe.get_doc("Email Template", template_name)
-    except Exception as e:
+    except Exception:
         frappe.log_error("Invalid Email Template", frappe.get_traceback())
         return
 
-    today = datetime.today().date()
-    target_expiry_date = today + timedelta(days=expiry_threshold)
+    today = getdate()
+    target_expiry_date = add_days(today, expiry_threshold)
 
     customers = frappe.get_all(
         "Customer",

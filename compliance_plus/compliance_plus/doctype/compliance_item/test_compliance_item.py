@@ -77,6 +77,10 @@ class TestComplianceItem(IntegrationTestCase):
 		item.reload()
 		self.assertEqual(item.reminders, [])
 
+	def test_a_customer_or_supplier_holder_must_be_named(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "Choose the Customer"):
+			make_item("Test Expiring Licence", holder_type="Customer")
+
 	def test_a_company_holder_is_the_company(self):
 		item = make_item("Test Expiring Licence")
 		self.assertEqual(item.holder_type, "Company")

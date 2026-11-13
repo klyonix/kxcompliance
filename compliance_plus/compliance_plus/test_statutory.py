@@ -93,3 +93,16 @@ class TestStatutoryRules(IntegrationTestCase):
 		)
 		self.assertEqual(len(templates), 38)
 		self.assertTrue(all(row.checked_on is None for row in templates))
+
+	def test_a_template_due_after_the_agm_needs_its_days(self):
+		template = frappe.get_doc(
+			{
+				"doctype": "Compliance Obligation Template",
+				"template_name": "Test AGM filing",
+				"law": "Companies Act",
+				"frequency": "Yearly",
+				"due_after_event": 1,
+			}
+		)
+		with self.assertRaisesRegex(frappe.ValidationError, "days after the AGM"):
+			template.insert()

@@ -5,6 +5,13 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "register_tab",
+  "enabled",
+  "email_account",
+  "column_break_register",
+  "due_soon_days",
+  "escalate_after_days",
+  "digest_day",
   "renewal_notification_tab",
   "renewal_notifications_section",
   "email_template",
@@ -16,9 +23,53 @@
  ],
  "fields": [
   {
+   "fieldname": "register_tab",
+   "fieldtype": "Tab Break",
+   "label": "Compliance Register"
+  },
+  {
+   "default": "0",
+   "description": "Daily reminders, escalations and the weekly summary are sent only while this is on.",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Send Reminders"
+  },
+  {
+   "description": "Outgoing email account. Without one, people are notified in the app only.",
+   "fieldname": "email_account",
+   "fieldtype": "Link",
+   "label": "Send From",
+   "options": "Email Account"
+  },
+  {
+   "fieldname": "column_break_register",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "30",
+   "fieldname": "due_soon_days",
+   "fieldtype": "Int",
+   "label": "Due for Renewal Within (Days)",
+   "non_negative": 1
+  },
+  {
+   "default": "7",
+   "fieldname": "escalate_after_days",
+   "fieldtype": "Int",
+   "label": "Escalate When Expired For (Days)",
+   "non_negative": 1
+  },
+  {
+   "default": "Monday",
+   "fieldname": "digest_day",
+   "fieldtype": "Select",
+   "label": "Weekly Summary On",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
+  },
+  {
    "fieldname": "renewal_notification_tab",
    "fieldtype": "Tab Break",
-   "label": "Renewal Notification"
+   "label": "Customer Licence Notifications"
   },
   {
    "fieldname": "email_template",
@@ -64,7 +115,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-07-09 15:57:18.900768",
+ "modified": "2026-11-13 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Plus Settings",
@@ -78,6 +129,16 @@
    "read": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Compliance Manager",
+   "share": 0,
    "write": 1
   }
  ],

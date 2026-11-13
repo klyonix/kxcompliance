@@ -149,21 +149,22 @@ required_apps = ["erpnext"]
 # ---------------
 
 scheduler_events = {
-# 	"all": [
-# 		"compliance_plus.tasks.all"
-# 	],
+	# 	"all": [
+	# 		"compliance_plus.tasks.all"
+	# 	],
 	"daily": [
-		"compliance_plus.compliance_plus.custom.license_tracker_cron.send_license_expiry_reminders"
+		"compliance_plus.compliance_plus.custom.license_tracker_cron.send_license_expiry_reminders",
+		"compliance_plus.compliance_plus.reminders.run_daily",
 	],
-# 	"hourly": [
-# 		"compliance_plus.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"compliance_plus.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"compliance_plus.tasks.monthly"
-# 	],
+	# 	"hourly": [
+	# 		"compliance_plus.tasks.hourly"
+	# 	],
+	# 	"weekly": [
+	# 		"compliance_plus.tasks.weekly"
+	# 	],
+	# 	"monthly": [
+	# 		"compliance_plus.tasks.monthly"
+	# 	],
 }
 
 # Testing
@@ -242,3 +243,17 @@ scheduler_events = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+
+after_install = "compliance_plus.install.after_install"
+
+permission_query_conditions = {
+	"Compliance Item": "compliance_plus.permissions.item_query_conditions",
+	"Compliance Renewal": "compliance_plus.permissions.renewal_query_conditions",
+}
+
+has_permission = {
+	"Compliance Item": "compliance_plus.permissions.has_item_permission",
+	"Compliance Renewal": "compliance_plus.permissions.has_renewal_permission",
+}
+
+calendars = ["Compliance Item"]

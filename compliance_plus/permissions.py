@@ -4,7 +4,8 @@
 """Who sees which compliance records.
 
 Compliance Managers, Auditors and System Managers see everything. Anyone else reaches
-an item only as its Responsible person or its Reviewer, and a renewal only through its item.
+an item or a statutory task only as its Responsible person or its Reviewer, and a
+renewal only through its item.
 """
 
 import frappe
@@ -18,13 +19,21 @@ def is_restricted(user: str) -> bool:
 	return not (UNRESTRICTED_ROLES & set(frappe.get_roles(user)))
 
 
-def item_query_conditions(user: str | None = None) -> str:
+def holder_conditions(doctype: str, user: str | None) -> str:
 	user = user or frappe.session.user
 	if not is_restricted(user):
 		return ""
 	# permission_query_conditions must return SQL; the user is quoted by frappe.db.escape.
 	quoted = frappe.db.escape(user)
-	return f"(`tabCompliance Item`.`responsible` = {quoted} or `tabCompliance Item`.`reviewer` = {quoted})"
+	return f"(`tab{doctype}`.`responsible` = {quoted} or `tab{doctype}`.`reviewer` = {quoted})"
+
+
+def item_query_conditions(user: str | None = None) -> str:
+	return holder_conditions("Compliance Item", user)
+
+
+def task_query_conditions(user: str | None = None) -> str:
+	return holder_conditions("Compliance Task", user)
 
 
 def renewal_query_conditions(user: str | None = None) -> str:
@@ -43,6 +52,9 @@ def has_item_permission(doc, ptype: str | None = None, user: str | None = None) 
 	if not is_restricted(user):
 		return True
 	return user in (doc.responsible, doc.reviewer)
+
+
+has_task_permission = has_item_permission
 
 
 def has_renewal_permission(doc, ptype: str | None = None, user: str | None = None) -> bool:

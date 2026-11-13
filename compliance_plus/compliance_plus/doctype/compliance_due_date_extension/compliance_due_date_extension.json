@@ -1,0 +1,122 @@
+{
+ "actions": [],
+ "autoname": "EXT-.YY.-.#####",
+ "creation": "2026-11-14 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "obligation_template",
+  "periods_ending_from",
+  "periods_ending_to",
+  "column_break_main",
+  "new_due_date",
+  "notification_reference",
+  "issued_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "obligation_template",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Obligation",
+   "options": "Compliance Obligation Template",
+   "reqd": 1
+  },
+  {
+   "fieldname": "periods_ending_from",
+   "fieldtype": "Date",
+   "label": "Periods Ending From",
+   "reqd": 1
+  },
+  {
+   "fieldname": "periods_ending_to",
+   "fieldtype": "Date",
+   "label": "Periods Ending To",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "new_due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "New Due Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "notification_reference",
+   "fieldtype": "Data",
+   "label": "Notification Reference",
+   "reqd": 1
+  },
+  {
+   "fieldname": "issued_on",
+   "fieldtype": "Date",
+   "label": "Issued On"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-14 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Compliance Plus",
+ "name": "Compliance Due Date Extension",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance User",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Auditor",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

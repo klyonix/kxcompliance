@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "autoname": "field:company",
+ "creation": "2026-11-14 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "company_type",
+  "column_break_main",
+  "default_responsible",
+  "default_reviewer",
+  "section_registrations",
+  "registrations",
+  "section_agm",
+  "agm_dates",
+  "section_obligations",
+  "obligations"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "company_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Company Type",
+   "options": "Private Limited\nPublic Limited\nOne Person Company\nLLP\nPartnership\nProprietorship",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_responsible",
+   "fieldtype": "Link",
+   "label": "Default Responsible",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "default_reviewer",
+   "fieldtype": "Link",
+   "label": "Default Reviewer",
+   "options": "User"
+  },
+  {
+   "fieldname": "section_registrations",
+   "fieldtype": "Section Break",
+   "label": "Registrations"
+  },
+  {
+   "fieldname": "registrations",
+   "fieldtype": "Table",
+   "label": "Registrations",
+   "options": "Compliance Registration"
+  },
+  {
+   "fieldname": "section_agm",
+   "fieldtype": "Section Break",
+   "label": "Annual General Meetings"
+  },
+  {
+   "fieldname": "agm_dates",
+   "fieldtype": "Table",
+   "label": "AGM Dates",
+   "options": "Compliance AGM Date"
+  },
+  {
+   "fieldname": "section_obligations",
+   "fieldtype": "Section Break",
+   "label": "Obligations"
+  },
+  {
+   "fieldname": "obligations",
+   "fieldtype": "Table",
+   "label": "Obligations",
+   "options": "Company Obligation"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-14 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Compliance Plus",
+ "name": "Company Compliance Profile",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance User",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Auditor",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "company",
+ "track_changes": 1
+}

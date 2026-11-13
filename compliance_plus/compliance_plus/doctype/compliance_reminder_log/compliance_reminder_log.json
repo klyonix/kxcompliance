@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "compliance_item",
+  "compliance_task",
   "kind",
   "rule_days",
   "due_date",
@@ -22,6 +23,14 @@
    "in_standard_filter": 1,
    "label": "Compliance Item",
    "options": "Compliance Item",
+   "search_index": 1
+  },
+  {
+   "fieldname": "compliance_task",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Compliance Task",
+   "options": "Compliance Task",
    "search_index": 1
   },
   {
@@ -68,7 +77,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-13 23:30:00.000000",
+ "modified": "2026-11-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Reminder Log",

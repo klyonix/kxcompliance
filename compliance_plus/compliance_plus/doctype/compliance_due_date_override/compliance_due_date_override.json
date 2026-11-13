@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "creation": "2026-11-14 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "period_end_month",
+  "months_after_period",
+  "due_day"
+ ],
+ "fields": [
+  {
+   "description": "1 for January to 12 for December.",
+   "fieldname": "period_end_month",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Period Ending In Month",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "months_after_period",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Months After Period",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "due_day",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Due Day",
+   "non_negative": 1,
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-14 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Compliance Plus",
+ "name": "Compliance Due Date Override",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

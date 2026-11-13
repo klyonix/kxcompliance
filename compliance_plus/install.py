@@ -3,6 +3,8 @@
 
 import frappe
 
+from compliance_plus.compliance_plus.obligation_library import sync_standard_templates
+
 ROLES = ("Compliance Manager", "Compliance User", "Compliance Auditor")
 
 # (name, category, renewal cycle in months or 0 if it does not expire, grace days,
@@ -25,11 +27,26 @@ STANDARD_ITEM_TYPES = (
 	("Annual Maintenance Contract", "Contract", 12, 0, 1, (60, 30)),
 )
 
-SETTINGS_DEFAULTS = {"due_soon_days": 30, "escalate_after_days": 7, "digest_day": "Monday"}
+SETTINGS_DEFAULTS = {
+	"due_soon_days": 30,
+	"escalate_after_days": 7,
+	"digest_day": "Monday",
+	"generation_horizon_days": 45,
+}
 
 
 def after_install():
 	setup()
+	sync_standard_templates()
+
+
+def after_migrate():
+	try:
+		sync_standard_templates()
+	except Exception as error:
+		raise Exception(
+			f"Compliance Plus could not update its standard obligation library: {error}"
+		) from error
 
 
 def setup():

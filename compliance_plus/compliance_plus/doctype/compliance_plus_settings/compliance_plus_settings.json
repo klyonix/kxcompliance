@@ -12,6 +12,7 @@
   "due_soon_days",
   "escalate_after_days",
   "digest_day",
+  "generation_horizon_days",
   "renewal_notification_tab",
   "renewal_notifications_section",
   "email_template",
@@ -67,6 +68,14 @@
    "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
   },
   {
+   "default": "45",
+   "description": "How long before a period ends its filing task appears.",
+   "fieldname": "generation_horizon_days",
+   "fieldtype": "Int",
+   "label": "Show Statutory Tasks Ahead (Days)",
+   "non_negative": 1
+  },
+  {
    "fieldname": "renewal_notification_tab",
    "fieldtype": "Tab Break",
    "label": "Customer Licence Notifications"
@@ -115,7 +124,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-13 12:00:00.000000",
+ "modified": "2026-11-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Plus Settings",

@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\": \"hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Compliance Plus</span>\", \"col\": 12}}, {\"id\": \"nc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Due for Renewal\", \"col\": 3}}, {\"id\": \"nc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Expired Items\", \"col\": 3}}, {\"id\": \"nc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Renewals in Progress\", \"col\": 3}}, {\"id\": \"nc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Items\", \"col\": 3}}, {\"id\": \"sp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"sc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Item\", \"col\": 3}}, {\"id\": \"sc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Renewal\", \"col\": 3}}, {\"id\": \"sc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Expiry Calendar\", \"col\": 3}}, {\"id\": \"sc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Register\", \"col\": 3}}, {\"id\": \"sp2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Setup\", \"col\": 4}}, {\"id\": \"cd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd2\", \"type\": \"card\", \"data\": {\"card_name\": \"Other Trackers\", \"col\": 4}}]",
+ "content": "[{\"id\": \"hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Compliance Plus</span>\", \"col\": 12}}, {\"id\": \"nc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Due for Renewal\", \"col\": 3}}, {\"id\": \"nc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Expired Items\", \"col\": 3}}, {\"id\": \"nc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Renewals in Progress\", \"col\": 3}}, {\"id\": \"nc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Items\", \"col\": 3}}, {\"id\": \"sp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"sc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Item\", \"col\": 3}}, {\"id\": \"sc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Renewal\", \"col\": 3}}, {\"id\": \"sc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Expiry Calendar\", \"col\": 3}}, {\"id\": \"sc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Register\", \"col\": 3}}, {\"id\": \"sp2\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"hdr2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Statutory Calendar</span>\", \"col\": 12}}, {\"id\": \"snc0\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Filings Due This Week\", \"col\": 3}}, {\"id\": \"snc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Overdue Filings\", \"col\": 3}}, {\"id\": \"snc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Filings Awaiting Review\", \"col\": 3}}, {\"id\": \"snc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Filed Late\", \"col\": 3}}, {\"id\": \"ssc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Task\", \"col\": 3}}, {\"id\": \"ssc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Filing Calendar\", \"col\": 3}}, {\"id\": \"ssc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Company Compliance Profile\", \"col\": 3}}, {\"id\": \"ssc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Compliance Calendar\", \"col\": 3}}, {\"id\": \"sp3\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0\", \"type\": \"card\", \"data\": {\"card_name\": \"Setup\", \"col\": 4}}, {\"id\": \"cd1\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd2\", \"type\": \"card\", \"data\": {\"card_name\": \"Other Trackers\", \"col\": 4}}, {\"id\": \"cd3\", \"type\": \"card\", \"data\": {\"card_name\": \"Statutory Setup\", \"col\": 4}}]",
  "creation": "2025-06-06 11:15:50.059168",
  "custom_blocks": [],
  "docstatus": 0,
@@ -109,9 +109,58 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Statutory Setup",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Compliance Obligation Template",
+   "link_count": 0,
+   "link_to": "Compliance Obligation Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Company Compliance Profile",
+   "link_count": 0,
+   "link_to": "Company Compliance Profile",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Compliance Due Date Extension",
+   "link_count": 0,
+   "link_to": "Compliance Due Date Extension",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "On-time Filing",
+   "link_count": 0,
+   "link_to": "On-time Filing",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-11-14 10:00:00.000000",
+ "modified": "2026-11-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Plus",
@@ -131,6 +180,22 @@
   {
    "label": "Active Items",
    "number_card_name": "Active Items"
+  },
+  {
+   "label": "Filings Due This Week",
+   "number_card_name": "Filings Due This Week"
+  },
+  {
+   "label": "Overdue Filings",
+   "number_card_name": "Overdue Filings"
+  },
+  {
+   "label": "Filings Awaiting Review",
+   "number_card_name": "Filings Awaiting Review"
+  },
+  {
+   "label": "Filed Late",
+   "number_card_name": "Filed Late"
   }
  ],
  "owner": "Administrator",
@@ -168,6 +233,36 @@
    "color": "Grey",
    "label": "Compliance Register",
    "link_to": "Compliance Register",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Compliance Task",
+   "link_to": "Compliance Task",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "Calendar",
+   "label": "Filing Calendar",
+   "link_to": "Compliance Task",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Company Compliance Profile",
+   "link_to": "Company Compliance Profile",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Compliance Calendar",
+   "link_to": "Compliance Calendar",
    "type": "Report"
   }
  ],

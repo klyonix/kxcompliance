@@ -53,7 +53,7 @@ export function workRows(work, { link, today = new Date() }) {
 			status: item.status,
 			date: item.valid_until,
 			overdue: OVERDUE_ITEM_STATUSES.includes(item.status),
-			href: link("Compliance Item", item.name),
+			to: { name: "ComplianceItem", params: { name: item.name } },
 		})),
 		...work.tasks.map((task) => ({
 			key: `task-${task.name}`,

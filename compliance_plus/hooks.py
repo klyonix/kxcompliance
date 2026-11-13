@@ -316,3 +316,9 @@ fixtures = [
 		],
 	}
 ]
+
+# Every page of the app at /compliance is served by www/compliance.py, so a reload or a
+# link into /compliance/account opens the app rather than a 404.
+website_route_rules = [
+	{"from_route": "/compliance/<path:app_path>", "to_route": "compliance"},
+]

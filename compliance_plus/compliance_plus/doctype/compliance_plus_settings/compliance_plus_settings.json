@@ -14,6 +14,9 @@
   "digest_day",
   "generation_horizon_days",
   "party_email_template",
+  "app_tab",
+  "app_name",
+  "app_logo",
   "renewal_notification_tab",
   "renewal_notifications_section",
   "email_template",
@@ -84,6 +87,24 @@
    "options": "Email Template"
   },
   {
+   "fieldname": "app_tab",
+   "fieldtype": "Tab Break",
+   "label": "App"
+  },
+  {
+   "default": "Compliance Plus",
+   "description": "Shown in the app's header and when it is installed on a phone.",
+   "fieldname": "app_name",
+   "fieldtype": "Data",
+   "label": "App Name"
+  },
+  {
+   "description": "A square image, at least 512 by 512 pixels, attached as a public file.",
+   "fieldname": "app_logo",
+   "fieldtype": "Attach Image",
+   "label": "App Logo"
+  },
+  {
    "fieldname": "renewal_notification_tab",
    "fieldtype": "Tab Break",
    "hidden": 1,
@@ -140,7 +161,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-14 21:00:00.000000",
+ "modified": "2026-11-15 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Plus Settings",

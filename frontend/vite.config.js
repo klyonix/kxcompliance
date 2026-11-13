@@ -29,6 +29,10 @@ export default defineConfig({
 			injectRegister: false,
 			filename: "sw.js",
 			workbox: {
+				// The worker is served from /compliance_sw.js, so each built file needs its full
+				// path; index.html is only the template Frappe renders as /compliance.
+				modifyURLPrefix: { '': '/assets/compliance_plus/frontend/' },
+				globIgnores: ['**/index.html'],
 				inlineWorkboxRuntime: true,
 				cleanupOutdatedCaches: true,
 				navigateFallback: null,

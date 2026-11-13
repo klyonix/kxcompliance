@@ -1,0 +1,11 @@
+{
+  "name": "compliance_plus",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Builds the Compliance Plus app at /compliance when the app is installed or built on a server.",
+  "scripts": {
+    "postinstall": "cd frontend && yarn install --check-files",
+    "dev": "cd frontend && yarn dev",
+    "build": "cd frontend && yarn build"
+  }
+}

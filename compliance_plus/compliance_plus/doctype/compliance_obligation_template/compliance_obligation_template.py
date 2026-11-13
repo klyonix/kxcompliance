@@ -11,6 +11,8 @@ class ComplianceObligationTemplate(Document):
 		if self.due_after_event:
 			self.frequency = "Yearly"
 			self.period_basis = "Financial Year"
+			if not self.days_after_event:
+				frappe.throw(_("Set how many days after the AGM {0} is due.").format(self.template_name))
 		elif not 1 <= (self.due_day or 0) <= 31:
 			frappe.throw(_("Due Day must be between 1 and 31, not {0}.").format(self.due_day))
 		for row in self.overrides:

@@ -26,6 +26,8 @@ class ComplianceItem(Document):
 	def set_holder(self):
 		if self.holder_type == "Company":
 			self.holder = self.company
+		elif not self.holder:
+			frappe.throw(_("Choose the {0} that holds this item.").format(_(self.holder_type)))
 
 	def copy_reminders_from_type(self):
 		if self.reminders or not self.item_type:

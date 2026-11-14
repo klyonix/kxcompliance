@@ -37,6 +37,31 @@
 					</span>
 				</div>
 				<p class="text-base text-ink-gray-6">{{ row.detail }}</p>
+				<ol
+					v-if="showSteps"
+					class="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1 text-sm"
+					aria-label="Where this filing is"
+				>
+					<li
+						v-for="(step, index) in steps.steps"
+						:key="step"
+						class="flex items-center gap-2"
+					>
+						<span
+							class="flex items-center gap-1.5"
+							:class="stepClass(index)"
+							:aria-current="index === steps.current ? 'step' : undefined"
+						>
+							<span :class="stepIcon(index)" class="size-4" aria-hidden="true" />
+							{{ step }}
+						</span>
+						<span
+							v-if="index < steps.steps.length - 1"
+							class="lucide-chevron-right size-3.5 text-ink-gray-4"
+							aria-hidden="true"
+						/>
+					</li>
+				</ol>
 				<p
 					v-if="waiting"
 					class="flex items-center gap-2 rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-4"
@@ -75,7 +100,7 @@
 			<section class="flex flex-col gap-4" aria-labelledby="filing-heading">
 				<h2 id="filing-heading" class="text-base font-semibold text-ink-gray-8">Filing</h2>
 
-				<template v-if="editable">
+				<template v-if="formShown">
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<FormControl
 							v-model="form.filed_on"
@@ -171,6 +196,16 @@
 					/>
 				</template>
 
+				<div
+					v-else-if="editable && !inReview"
+					class="flex flex-col gap-2 rounded-lg bg-surface-gray-1 px-4 py-3"
+				>
+					<p class="text-base text-ink-gray-8">{{ howTo }}</p>
+					<p v-if="task.remarks" class="text-sm text-ink-gray-6">
+						Note: {{ task.remarks }}
+					</p>
+				</div>
+
 				<dl v-else class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
 					<div
 						v-for="fact in filingFacts"
@@ -193,6 +228,14 @@
 						Nothing recorded yet.
 					</p>
 				</dl>
+				<Button
+					v-if="editable && inReview && !formShown"
+					class="self-start"
+					variant="ghost"
+					icon-left="lucide-pencil"
+					label="Correct a detail"
+					@click="opened = true"
+				/>
 			</section>
 
 			<section
@@ -297,7 +340,7 @@
 
 	<!-- The actions stay in reach at the foot of the screen, on a phone above the tab bar. -->
 	<div
-		v-if="editable"
+		v-if="footerShown"
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
@@ -308,6 +351,16 @@
 			</p>
 			<!-- Stacked bottom-up on a phone: the main action first, then Send back, then Save. -->
 			<Button
+				v-if="!formShown && !inReview"
+				variant="solid"
+				icon-left="lucide-file-pen-line"
+				label="Record the filing"
+				:size="buttonSize"
+				:disabled="waiting"
+				@click="startRecording"
+			/>
+			<Button
+				v-if="formShown"
 				label="Save"
 				:size="buttonSize"
 				:loading="busy === 'save'"
@@ -322,7 +375,7 @@
 				@click="sendBack"
 			/>
 			<Button
-				v-if="primary"
+				v-if="primary && (formShown || inReview)"
 				variant="solid"
 				:label="primary.label"
 				:size="buttonSize"
@@ -350,11 +403,14 @@ import {
 	CLOSED_STATUSES,
 	FILING_FIELDS,
 	changedValues,
+	filingSteps,
 	formValues,
 	missingDetails,
+	showFilingForm,
 	taskActions,
 	taskRow,
 } from "@/lib/filings";
+import { isoDate } from "@/lib/obligations";
 import { deskActions } from "@/navigation";
 import { SAVED_ON_DEVICE, isWaiting, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
@@ -426,6 +482,51 @@ const buttonSize = computed(() => (isMobile.value ? "md" : "sm"));
 const row = computed(() => taskRow(task.value));
 const actions = computed(() => taskActions(task.value, rules.value, boot));
 const editable = computed(() => actions.value.edit);
+const inReview = computed(() => task.value?.status === "Ready for Review");
+
+// The page unfolds as the filing moves on: what to do while it is open, the filing fields once
+// someone records it, a summary to check in review, and the record once it is done.
+const opened = ref(false);
+const formShown = computed(() =>
+	task.value
+		? showFilingForm(task.value, { editable: editable.value, opened: opened.value })
+		: false
+);
+const footerShown = computed(
+	() => editable.value && (formShown.value || !inReview.value || Boolean(primary.value))
+);
+const steps = computed(() => filingSteps(task.value, rules.value));
+const showSteps = computed(() => !["Not Applicable", "Cancelled"].includes(task.value.status));
+const stepDone = (index) =>
+	index < steps.value.current ||
+	(index === steps.value.current && CLOSED_STATUSES.includes(task.value.status));
+function stepClass(index) {
+	if (stepDone(index)) return "text-ink-green-4";
+	return index === steps.value.current ? "font-medium text-ink-gray-8" : "text-ink-gray-5";
+}
+function stepIcon(index) {
+	if (stepDone(index)) return "lucide-circle-check";
+	return index === steps.value.current ? "lucide-circle-dot" : "lucide-circle";
+}
+const howTo = computed(() => {
+	const rule = rules.value || {};
+	const where = rule.authority ? ` with the ${rule.authority}` : "";
+	const what = [
+		"the date",
+		"the acknowledgement number",
+		rule.requires_proof && "a copy of the acknowledgement or challan",
+		rule.requires_payment && "the amount paid",
+	].filter(Boolean);
+	const record = `${what.slice(0, -1).join(", ")} and ${what[what.length - 1]}`;
+	return `File ${rule.form || task.value.obligation_template}${where} by ${formatDate(
+		task.value.effective_due_date
+	)}, then record it here: ${record}.`;
+});
+
+function startRecording() {
+	if (!form.filed_on) form.filed_on = isoDate(new Date());
+	opened.value = true;
+}
 const hasProof = computed(() => Boolean(proofFile.value || task.value?.proof));
 const dirty = computed(
 	() => Boolean(proofFile.value) || Object.keys(changedValues(form, task.value || {})).length > 0
@@ -541,6 +642,7 @@ const fieldError = (label) =>
 function fillForm() {
 	Object.assign(form, formValues(task.value));
 	proofFile.value = null;
+	opened.value = false;
 	checking.value = false;
 	formError.value = "";
 }

@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
 	changedValues,
+	filingSteps,
 	formValues,
+	hasFilingDetails,
 	missingDetails,
+	showFilingForm,
 	taskActions,
 	taskRow,
 	taskTheme,
@@ -116,5 +119,50 @@ describe("filings in the app", () => {
 			amount_paid: 1250.5,
 		});
 		expect(changedValues({ ...saved, filed_on: "" }, saved)).toEqual({ filed_on: null });
+	});
+});
+
+describe("the filing page's steps", () => {
+	const reviewed = { requires_review: 1 };
+
+	it("shows Review only where the return needs one, and where the filing is", () => {
+		expect(filingSteps({ status: "Open" }, reviewed)).toEqual({
+			steps: ["File", "Review", "Filed"],
+			current: 0,
+		});
+		expect(filingSteps({ status: "Ready for Review" }, reviewed).current).toBe(1);
+		expect(filingSteps({ status: "Filed Late" }, reviewed).current).toBe(2);
+		expect(filingSteps({ status: "In Progress" }, {})).toEqual({
+			steps: ["File", "Filed"],
+			current: 0,
+		});
+	});
+
+	it("opens the filing fields when asked, or when something is already recorded", () => {
+		const open = { status: "Open" };
+		expect(showFilingForm(open, { editable: true, opened: false })).toBe(false);
+		expect(showFilingForm(open, { editable: true, opened: true })).toBe(true);
+		expect(
+			showFilingForm(
+				{ status: "In Progress", acknowledgement_number: "AA1" },
+				{ editable: true, opened: false }
+			)
+		).toBe(true);
+		expect(
+			showFilingForm(
+				{ status: "Open", remarks: "client slow" },
+				{ editable: true, opened: false }
+			)
+		).toBe(false);
+		expect(hasFilingDetails({ amount_paid: "0", interest: 0 })).toBe(false);
+		expect(hasFilingDetails({ late_fee: 200 })).toBe(true);
+	});
+
+	it("keeps a filing in review folded until someone corrects it, and closed ones shut", () => {
+		const review = { status: "Ready for Review", acknowledgement_number: "AA1" };
+		expect(showFilingForm(review, { editable: true, opened: false })).toBe(false);
+		expect(showFilingForm(review, { editable: true, opened: true })).toBe(true);
+		expect(showFilingForm({ status: "Filed" }, { editable: true, opened: true })).toBe(false);
+		expect(showFilingForm({ status: "Open" }, { editable: false, opened: true })).toBe(false);
 	});
 });

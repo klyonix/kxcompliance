@@ -2,7 +2,7 @@ import type { AnyFlow } from "../flow";
 import { account, licenceCheck, myWorkEmpty, overview, salesCheck } from "./more";
 import { myWork } from "./myWork";
 import { filings, legal, register } from "./recordList";
-import { filing, item, legalCase, notice, review, trademark } from "./records";
+import { filing, item, legalCase, notice, recordEvent, review, trademark } from "./records";
 
 /** The canvas lays the flows out in this order. */
 export const flows: AnyFlow[] = [
@@ -14,6 +14,7 @@ export const flows: AnyFlow[] = [
 	...filings,
 	...filing,
 	...review,
+	...recordEvent,
 	...legal,
 	...legalCase,
 	...trademark,

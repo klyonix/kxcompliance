@@ -363,3 +363,102 @@ export const notice = atBothWidths(
 		},
 	})
 );
+
+// ---------------------------------------------------------------------------------------------
+
+/** Recording a company event from Filings, and the filings it makes due. RecordEvent.vue. */
+const eventMachine = setup({}).createMachine({
+	id: "record-event",
+	initial: "blank",
+	states: {
+		blank: {
+			meta: { description: "The form as it opens from Filings: what changed, today's date, what happened and a reference." },
+			on: { OPEN_TYPES: "types", SUBMIT_EMPTY: "missing", GOES_OFFLINE: "offline" },
+		},
+		types: {
+			meta: { description: "The events that call for a filing from this company; LLP events are not offered to a private company." },
+			on: { FILL: "filled" },
+		},
+		missing: { meta: { description: "Record event with nothing chosen: what changed and what happened are asked for." } },
+		filled: {
+			meta: { description: "A change in directors chosen, with its description shown under it, ready to record." },
+			on: { RECORD: "recorded" },
+		},
+		recorded: { meta: { description: "Recorded: the filing it made due (DIR-12, 30 days after the event), with Record another and Back to Filings." } },
+		offline: { meta: { description: "Offline: the form says recording needs a connection and Record event is disabled." } },
+	},
+});
+
+export const recordEvent = atBothWidths(
+	defineFlow<AnyEvent>({
+		id: "record-event",
+		title: "Record an event",
+		source: "frontend/src/pages/RecordEvent.vue, compliance_plus/compliance_plus/company_events.py",
+		machine: eventMachine,
+		async enter(scene) {
+			// Paths run one at a time and each removes its own event, so this pair finds it.
+			const reference = REFERENCE;
+			scene.onClose(async () => {
+				// Recording made an event and its filings; take both away again.
+				const events = await scene.api.get("/api/v2/document/Compliance%20Event", {
+					params: {
+						filters: JSON.stringify([
+							["reference", "=", reference],
+							["description", "=", DESCRIPTION],
+						]),
+					},
+				});
+				for (const { name } of (await events.json()).data) {
+					await scene.page.evaluate(
+						async (event) => {
+							const headers = {
+								"X-Frappe-CSRF-Token": (window as { csrf_token?: string }).csrf_token ?? "",
+							};
+							const tasks = await fetch(
+								`/api/v2/document/Compliance%20Task?filters=${encodeURIComponent(
+									JSON.stringify([["company_event", "=", event]])
+								)}`
+							).then((response) => response.json());
+							for (const task of tasks.data) {
+								await fetch(`/api/v2/document/Compliance%20Task/${task.name}`, { method: "DELETE", headers });
+							}
+							await fetch(`/api/v2/document/Compliance%20Event/${event}`, { method: "DELETE", headers });
+						},
+						name
+					);
+				}
+			});
+			await scene.goto("/filings/event");
+			await expect(scene.page.getByText("Choose the event")).toBeVisible();
+		},
+		events: {
+			async OPEN_TYPES(scene) {
+				await scene.page.getByText("Choose the event").click();
+				await expect(scene.page.getByRole("option", { name: "Change in Directors" })).toBeVisible();
+			},
+			async SUBMIT_EMPTY(scene) {
+				await button(scene, "Record event").click();
+				await expect(scene.page.getByText("Choose what changed.")).toBeVisible();
+			},
+			async FILL(scene) {
+				const page = scene.page;
+				await page.getByRole("option", { name: "Change in Directors" }).click();
+				await page.getByPlaceholder("Asha Rao appointed as an additional director").fill(DESCRIPTION);
+				await page.getByPlaceholder("Board meeting of 10 Nov 2026, resolution 4").fill(REFERENCE);
+				await expect(page.getByText("A director was appointed, resigned")).toBeVisible();
+			},
+			async RECORD(scene) {
+				await button(scene, "Record event").click();
+				await expect(scene.page.getByText("Change in Directors recorded")).toBeVisible();
+				await expect(scene.page.getByText("DIR-12 (Change in Directors)")).toBeVisible();
+			},
+			async GOES_OFFLINE(scene) {
+				await scene.context.setOffline(true);
+				await expect(scene.page.getByText("Recording an event needs a connection")).toBeVisible();
+			},
+		},
+	})
+);
+
+const DESCRIPTION = "Meera Iyer appointed as an independent director";
+const REFERENCE = "Board meeting, resolution 4";

@@ -7,25 +7,28 @@
 
 <script setup>
 import { computed } from "vue";
-import { outbox } from "@/offline/outbox";
-import { server } from "@/offline/reachability";
+import { connection, outbox } from "@/offline/outbox";
 
 const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
+const waiting = (prefix) => (outbox.waiting ? `${prefix}, ${outbox.waiting} waiting` : prefix);
 
-const text = computed(() => {
-	if (outbox.needsLook.length) return `${plural(outbox.needsLook.length, "change")} need a look`;
-	if (!outbox.online) return outbox.waiting ? `Offline, ${outbox.waiting} waiting` : "Offline";
-	if (!server.reachable) {
-		return outbox.waiting
-			? `Server not answering, ${outbox.waiting} waiting`
-			: "Server not answering";
-	}
-	if (outbox.sending || outbox.waiting) return `Sending ${plural(outbox.waiting, "change")}`;
-	return "All changes saved";
-});
-const dot = computed(() => {
-	if (outbox.needsLook.length) return "bg-surface-red-5";
-	if (!outbox.online || !server.reachable || outbox.waiting) return "bg-surface-amber-5";
-	return "bg-surface-green-5";
-});
+const text = computed(
+	() =>
+		({
+			needsLook: `${plural(outbox.needsLook.length, "change")} ${
+				outbox.needsLook.length === 1 ? "needs" : "need"
+			} a look`,
+			offline: waiting("Offline"),
+			serverDown: waiting("Server not answering"),
+			sending: `Sending ${plural(outbox.waiting, "change")}`,
+			saved: "All changes saved",
+		}[connection.value])
+);
+const dot = computed(
+	() =>
+		({
+			needsLook: "bg-surface-red-5",
+			saved: "bg-surface-green-5",
+		}[connection.value] || "bg-surface-amber-5")
+);
 </script>

@@ -46,6 +46,7 @@ import { canAct } from "@/lib/items";
 import { ENDED_MARK_STATUSES, markRow, plainText } from "@/lib/legal";
 import { formatDate } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
+import { learnNames, nameOf } from "@/composables/usePeople";
 
 const props = defineProps({ name: { type: String, required: true } });
 
@@ -103,8 +104,8 @@ const facts = computed(() => {
 				.join(", "),
 		],
 		["Valid until", current.status === "Registered" && formatDate(current.valid_until)],
-		["Responsible", current.responsible],
-		["Reviewer", current.reviewer],
+		["Responsible", nameOf(current.responsible)],
+		["Reviewer", nameOf(current.reviewer)],
 	];
 });
 
@@ -114,6 +115,7 @@ async function load() {
 	error.value = "";
 	try {
 		mark.value = await getDoc("Trademark", props.name);
+		learnNames([mark.value.responsible, mark.value.reviewer]);
 	} catch (err) {
 		error.value = err.isNetwork ? notLoaded("this trademark", "opened") : err.message;
 	}

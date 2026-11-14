@@ -158,17 +158,27 @@ import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { OPEN_RENEWAL_STATUSES, canAct, itemRow, itemTheme } from "@/lib/items";
 import { deskRoute } from "@/navigation";
-import { SAVED_ON_DEVICE, isConnected, refresh as refreshOutbox } from "@/offline/outbox";
+import {
+	SAVED_ON_DEVICE,
+	isConnected,
+	isWaiting,
+	refresh as refreshOutbox,
+} from "@/offline/outbox";
 import { submit } from "@/offline/queue";
 import { formatDate } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
+import { learnNames, nameOf } from "@/composables/usePeople";
 
 const props = defineProps({ name: { type: String, required: true } });
 
 const item = ref(null);
 const renewals = ref([]);
 const error = ref("");
-const pendingCertificate = ref("");
+// The name of a certificate kept on the device, shown until the outbox has sent it.
+const queuedCertificate = ref("");
+const pendingCertificate = computed(() =>
+	isWaiting("Compliance Item", props.name) ? queuedCertificate.value : ""
+);
 const fileInput = ref(null);
 
 const row = computed(() => itemRow(item.value));
@@ -207,8 +217,8 @@ const facts = computed(() =>
 		["Issuing authority", item.value.issuing_authority],
 		["Issued on", formatDate(item.value.issue_date)],
 		["Valid from", formatDate(item.value.valid_from)],
-		["Responsible", item.value.responsible],
-		["Reviewer", item.value.reviewer],
+		["Responsible", nameOf(item.value.responsible)],
+		["Reviewer", nameOf(item.value.reviewer)],
 	]
 		.filter(([, value]) => value)
 		.map(([label, value]) => ({ label, value }))
@@ -256,6 +266,7 @@ async function load() {
 	error.value = "";
 	try {
 		item.value = await getDoc("Compliance Item", props.name);
+		learnNames([item.value.responsible, item.value.reviewer]);
 		renewals.value = (
 			await getList("Compliance Renewal", {
 				fields: [
@@ -290,7 +301,7 @@ async function attachCertificate(event) {
 			files: [{ field: "certificate", blob: file, fileName: file.name }],
 		});
 		if (result.queued) {
-			pendingCertificate.value = file.name;
+			queuedCertificate.value = file.name;
 			toast.info(SAVED_ON_DEVICE);
 		} else {
 			toast.success("Certificate attached");
@@ -351,6 +362,12 @@ function cancelItem() {
 	});
 }
 
+watch(
+	() => isWaiting("Compliance Item", props.name),
+	(now, before) => {
+		if (before && !now) load();
+	}
+);
 watch(() => props.name, load);
 onMounted(load);
 </script>

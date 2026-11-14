@@ -6,6 +6,8 @@ export const boot = {
 	appName: window.app_name || "Compliance Plus",
 	appLogo: window.app_logo || "",
 	companies: window.companies || [],
+	// The site's date format setting, such as "dd-mm-yyyy".
+	dateFormat: window.date_format || "",
 	// Whose licences this person may check: Customer, Supplier or both.
 	partyTypes: window.party_types || [],
 	defaultCompany: window.default_company || "",

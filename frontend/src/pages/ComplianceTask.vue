@@ -58,6 +58,7 @@
 						<FormControl
 							v-model="form.filed_on"
 							type="date"
+							:format="pickerFormat()"
 							label="Filed on"
 							placeholder="Pick a date"
 							:error="fieldError('Filed on')"
@@ -197,19 +198,20 @@
 			<p v-if="footerError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ footerError }}
 			</p>
-			<Button
-				v-if="actions.sendBack"
-				label="Send back"
-				:size="buttonSize"
-				:disabled="Boolean(busy) || waiting"
-				@click="sendBack"
-			/>
+			<!-- Stacked bottom-up on a phone: the main action first, then Send back, then Save. -->
 			<Button
 				label="Save"
 				:size="buttonSize"
 				:loading="busy === 'save'"
 				:disabled="Boolean(busy) || waiting || !dirty"
 				@click="save()"
+			/>
+			<Button
+				v-if="actions.sendBack"
+				label="Send back"
+				:size="buttonSize"
+				:disabled="Boolean(busy) || waiting"
+				@click="sendBack"
 			/>
 			<Button
 				v-if="primary"
@@ -240,10 +242,11 @@ import {
 	taskRow,
 } from "@/lib/filings";
 import { deskRoute } from "@/navigation";
-import { SAVED_ON_DEVICE, refresh as refreshOutbox } from "@/offline/outbox";
+import { SAVED_ON_DEVICE, isWaiting, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
-import { formatDate } from "@/lib/format";
+import { formatDate, pickerFormat } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
+import { learnNames, nameOf } from "@/composables/usePeople";
 
 const props = defineProps({ name: { type: String, required: true } });
 
@@ -254,7 +257,8 @@ const formError = ref("");
 // Set once someone tries to send the filing on; the gaps then show and clear as they are filled.
 const checking = ref(false);
 const busy = ref("");
-const waiting = ref(false);
+// Follows the outbox: true while a change to this filing is kept on the device.
+const waiting = computed(() => isWaiting("Compliance Task", props.name));
 const proofFile = ref(null);
 const fileInput = ref(null);
 const form = reactive(Object.fromEntries(FILING_FIELDS.map((field) => [field, ""])));
@@ -306,7 +310,7 @@ const reviewNote = computed(() => {
 		return "Check the details and proof, then mark it filed or send it back with a remark.";
 	}
 	return `Waiting for ${
-		current.reviewer || "a Compliance Manager"
+		nameOf(current.reviewer) || "a Compliance Manager"
 	} to check it and mark it filed.`;
 });
 
@@ -328,7 +332,7 @@ const filingFacts = computed(() =>
 		["Amount paid", formatAmount(task.value.amount_paid)],
 		["Interest", formatAmount(task.value.interest)],
 		["Late fee", formatAmount(task.value.late_fee)],
-		["Reviewed by", task.value.reviewed_by],
+		["Reviewed by", nameOf(task.value.reviewed_by)],
 		["Remarks", task.value.remarks],
 	]
 		.filter(([, value]) => value)
@@ -350,8 +354,8 @@ const facts = computed(() =>
 				  )})`
 				: formatDate(task.value.due_date),
 		],
-		["Responsible", task.value.responsible],
-		["Reviewer", task.value.reviewer],
+		["Responsible", nameOf(task.value.responsible)],
+		["Reviewer", nameOf(task.value.reviewer)],
 	]
 		.filter(([, value]) => value)
 		.map(([label, value]) => ({ label, value }))
@@ -392,6 +396,7 @@ async function load() {
 	error.value = "";
 	try {
 		task.value = await getDoc("Compliance Task", props.name);
+		learnNames([task.value.responsible, task.value.reviewer, task.value.reviewed_by]);
 		rules.value = await getDoc(
 			"Compliance Obligation Template",
 			task.value.obligation_template
@@ -424,7 +429,6 @@ async function send(values, busyKey) {
 				: [],
 		});
 		if (result.queued) {
-			waiting.value = true;
 			toast.info(SAVED_ON_DEVICE);
 		} else {
 			toast.success(
@@ -456,7 +460,9 @@ function save(status) {
 function sendBack() {
 	dialog.prompt({
 		title: "Send back",
-		message: `${task.value.responsible} gets it back to correct. Say what needs to change.`,
+		message: `${nameOf(
+			task.value.responsible
+		)} gets it back to correct. Say what needs to change.`,
 		confirmLabel: "Send back",
 		fields: [
 			{
@@ -500,12 +506,10 @@ function notApplicable() {
 	});
 }
 
-watch(
-	() => props.name,
-	() => {
-		waiting.value = false;
-		load();
-	}
-);
+// Once a change kept on the device has been sent, show the filing as the server has it.
+watch(waiting, (now, before) => {
+	if (before && !now) load();
+});
+watch(() => props.name, load);
 onMounted(load);
 </script>

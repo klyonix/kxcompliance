@@ -9,3 +9,4 @@ compliance_plus.patches.v1_0.move_old_trackers
 compliance_plus.patches.v1_0.move_hearing_tracker
 compliance_plus.patches.v1_0.move_trademark_tracker
 compliance_plus.patches.v1_0.move_customer_licences
+compliance_plus.patches.v1_0.reword_trademark_deadlines

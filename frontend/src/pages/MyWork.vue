@@ -34,7 +34,7 @@
 			{{ work.error }}
 		</p>
 
-		<div v-else-if="work.loading && !rows.length" class="flex flex-col gap-4" aria-busy="true">
+		<div v-if="phase === 'loading'" class="flex flex-col gap-4" aria-busy="true">
 			<div v-for="index in 5" :key="index" class="flex items-center gap-3 px-3">
 				<Skeleton class="size-8 rounded-full" />
 				<div class="flex flex-1 flex-col gap-1.5">
@@ -45,7 +45,17 @@
 			</div>
 		</div>
 
-		<div v-else-if="!rows.length" class="flex flex-col items-center gap-2 py-16 text-center">
+		<p
+			v-else-if="phase === 'tabEmpty'"
+			class="px-3 py-10 text-center text-base text-ink-gray-5"
+		>
+			{{ TAB_EMPTY[filter] }}
+		</p>
+
+		<div
+			v-else-if="phase === 'empty'"
+			class="flex flex-col items-center gap-2 py-16 text-center"
+		>
 			<span
 				class="flex size-12 items-center justify-center rounded-full bg-surface-gray-2 text-ink-gray-6"
 			>
@@ -85,10 +95,16 @@ import WorkRow from "@/components/WorkRow.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { BUCKETS } from "@/pages/myWork";
 import { counts, loadWork, rows, work } from "@/stores/work";
+import { formatDateTime } from "@/lib/format";
 
 const isMobile = useIsMobile();
 
 const filter = ref("all");
+const TAB_EMPTY = {
+	overdue: "Nothing is overdue.",
+	week: "Nothing falls due in the next seven days.",
+	later: "Nothing further out yet.",
+};
 
 const filterOptions = computed(() => [
 	{ label: `All ${rows.value.length}`, value: "all" },
@@ -118,9 +134,18 @@ const greeting = computed(() => {
 	return first ? `${part}, ${first}` : part;
 });
 
+// What the page is showing, decided once so the summary line and the body always agree.
+const phase = computed(() => {
+	if (rows.value.length) return shown.value.length ? "rows" : "tabEmpty";
+	if (work.error) return "failed";
+	if (work.loading || !work.data) return "loading";
+	return "empty";
+});
+
 const summary = computed(() => {
-	if (!rows.value.length)
-		return work.loading ? "Looking at what is due…" : "You are up to date.";
+	if (phase.value === "failed") return "My Work could not be loaded.";
+	if (phase.value === "loading") return "Looking at what is due…";
+	if (phase.value === "empty") return "You are up to date.";
 	const { overdue, week, later } = counts.value;
 	const parts = [];
 	if (overdue) parts.push(`${overdue} overdue`);
@@ -129,14 +154,7 @@ const summary = computed(() => {
 	return overdue ? `${parts.join(", ")}.` : `Nothing overdue. ${parts.join(", ")}.`;
 });
 
-const asOf = computed(() =>
-	work.data?.as_of
-		? new Date(work.data.as_of.replace(" ", "T")).toLocaleString(undefined, {
-				dateStyle: "medium",
-				timeStyle: "short",
-		  })
-		: ""
-);
+const asOf = computed(() => formatDateTime(work.data?.as_of));
 
 onMounted(loadWork);
 </script>

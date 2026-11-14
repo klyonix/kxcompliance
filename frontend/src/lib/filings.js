@@ -1,5 +1,6 @@
 // Rules for showing a Compliance Task and what each person may do with it, kept apart from
 // the screens so they can be tested. They mirror the checks the server makes on save.
+import { formatDate } from "@/lib/format";
 import { relativeDue } from "@/pages/myWork";
 
 export const CLOSED_STATUSES = ["Filed", "Filed Late", "Not Applicable", "Cancelled"];
@@ -57,15 +58,9 @@ export function taskTheme(status, overdue) {
 	return "gray";
 }
 
-const formatDate = (value) =>
-	new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
-		day: "numeric",
-		month: "short",
-	});
-
 function dueFor(task, midnight) {
 	if (FILED_STATUSES.includes(task.status) && task.filed_on) {
-		return { text: `Filed ${formatDate(task.filed_on)}`, late: false };
+		return { text: `Filed ${formatDate(task.filed_on, { year: false })}`, late: false };
 	}
 	if (CLOSED_STATUSES.includes(task.status)) return { text: "", late: false };
 	return relativeDue(task.effective_due_date, midnight, { overdue: Boolean(task.is_overdue) });

@@ -46,6 +46,7 @@
 			<FormControl
 				v-model="form.reply_by"
 				type="date"
+				:format="pickerFormat()"
 				label="Reply by"
 				placeholder="Pick a date"
 				required
@@ -125,6 +126,7 @@ import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { CASE_TYPES, FORUMS } from "@/lib/legal";
 import { isConnected } from "@/offline/outbox";
+import { pickerFormat } from "@/lib/format";
 
 const router = useRouter();
 const isMobile = useIsMobile();

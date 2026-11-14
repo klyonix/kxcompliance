@@ -6,7 +6,7 @@ import json
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from compliance_plus.api import app_companies, log_notice, my_work, overview, save_changes
+from compliance_plus.api import app_companies, boot, full_names, log_notice, my_work, overview, save_changes
 from compliance_plus.compliance_plus.overview import desk_link, total
 from compliance_plus.compliance_plus.test_utils import (
 	AUDITOR,
@@ -145,6 +145,20 @@ class TestAppApi(IntegrationTestCase):
 		]
 		self.assertEqual(total(rows, status=["Filed", "Filed Late"]), 8)
 		self.assertEqual(total(rows, status="Open"), 1)
+
+	def test_the_app_shows_people_by_name(self):
+		with self.set_user(HOLDER):
+			names = full_names(f"{HOLDER},{REVIEWER},,{HOLDER}")
+			self.assertEqual(set(names), {HOLDER, REVIEWER})
+			self.assertNotIn("@", names[HOLDER])
+			with self.assertRaises(frappe.ValidationError):
+				full_names(",".join(f"user{number}@example.com" for number in range(60)))
+		with self.set_user(OUTSIDER), self.assertRaises(frappe.PermissionError):
+			full_names(HOLDER)
+
+	def test_the_app_is_told_the_sites_date_format(self):
+		with self.set_user(HOLDER):
+			self.assertEqual(boot()["date_format"], frappe.db.get_default("date_format") or "dd-mm-yyyy")
 
 	def test_the_manifest_carries_the_sites_name_and_logo(self):
 		with self.change_settings(

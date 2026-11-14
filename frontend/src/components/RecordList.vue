@@ -105,7 +105,12 @@ const current = computed(() => props.views.find((option) => option.value === vie
 const tabs = computed(() => props.views.map(({ label, value }) => ({ label, value })));
 const emptyState = computed(() => props.empty(view.value, Boolean(search.value.trim())));
 
+// Each load takes a ticket; only the latest one's answer is shown, so a slow answer for a
+// tab or search the person has already left cannot replace the rows they are looking at.
+let latest = 0;
+
 async function load(more = false) {
+	const ticket = ++latest;
 	loading.value = true;
 	error.value = "";
 	try {
@@ -117,12 +122,13 @@ async function load(more = false) {
 			start: more ? records.value.length : 0,
 			limit: PAGE,
 		});
+		if (ticket !== latest) return;
 		records.value = more ? [...records.value, ...page.rows] : page.rows;
 		hasMore.value = page.hasMore;
 	} catch (err) {
-		error.value = err.isNetwork ? notLoaded("this list") : err.message;
+		if (ticket === latest) error.value = err.isNetwork ? notLoaded("this list") : err.message;
 	} finally {
-		loading.value = false;
+		if (ticket === latest) loading.value = false;
 	}
 }
 

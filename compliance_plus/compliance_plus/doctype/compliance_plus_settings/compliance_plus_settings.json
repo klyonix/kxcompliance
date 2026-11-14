@@ -17,6 +17,10 @@
   "app_tab",
   "app_name",
   "app_logo",
+  "section_account",
+  "account_type",
+  "column_break_account",
+  "setup_complete",
   "renewal_notification_tab",
   "renewal_notifications_section",
   "email_template",
@@ -155,13 +159,37 @@
    "hidden": 1,
    "label": "Sender",
    "options": "Email Account"
+  },
+  {
+   "fieldname": "section_account",
+   "fieldtype": "Section Break",
+   "label": "Account"
+  },
+  {
+   "fieldname": "account_type",
+   "fieldtype": "Select",
+   "label": "This Site Is For",
+   "options": "\nOrganisation\nCA/CS Firm",
+   "description": "Chosen during onboarding. A CA/CS firm manages compliance for clients; an organisation for itself."
+  },
+  {
+   "fieldname": "column_break_account",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "setup_complete",
+   "fieldtype": "Check",
+   "label": "Onboarding Done",
+   "read_only": 1,
+   "description": "Set when onboarding in the app finishes. Until then, managers who open the app are taken to it."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-15 10:00:00.000000",
+ "modified": "2026-11-15 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Plus Settings",

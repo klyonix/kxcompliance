@@ -75,6 +75,9 @@ SEARCHES = {
 }
 WORK_HORIZON_DAYS = 30
 WORK_LIMIT = 200
+# Filings that can still be filed or reviewed in bulk, and how many return-and-period choices to offer.
+BULK_STATUSES = ("Open", "In Progress", "Ready for Review")
+BULK_CHOICES_LIMIT = 100
 # The obligation screen's choices, read from the template's own select fields.
 OBLIGATION_CHOICES = ("law", "frequency", "period_basis", "registration_type")
 
@@ -626,6 +629,36 @@ def item_form_options() -> dict:
 		"billing_cycles": [cycle for cycle in meta.get_field("billing_cycle").options.split("\n") if cycle],
 		"people": onboarding.firm_people(),
 	}
+
+
+@frappe.whitelist(methods=["GET"])
+def bulk_filing_choices() -> list[dict]:
+	"""The returns and periods the person has open filings for, soonest due first, for filing in bulk."""
+	check_app_access()
+	rows = frappe.get_list(
+		"Compliance Task",
+		filters={"status": ("in", BULK_STATUSES)},
+		fields=[
+			"obligation_template",
+			"period_end",
+			"period_label",
+			{"MIN": "effective_due_date", "as": "due"},
+			{"COUNT": "*", "as": "filings"},
+		],
+		group_by="obligation_template, period_end, period_label",
+		order_by="due asc",
+		limit=BULK_CHOICES_LIMIT,
+	)
+	return [
+		{
+			"obligation_template": row.obligation_template,
+			"period_end": str(row.period_end),
+			"period_label": row.period_label,
+			"due": str(row.due),
+			"filings": row.filings,
+		}
+		for row in rows
+	]
 
 
 @frappe.whitelist(methods=["GET"])

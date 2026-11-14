@@ -25,6 +25,21 @@
 					:route="{ name: 'Extensions' }"
 				/>
 			</template>
+			<template v-if="mayRecord()">
+				<Button
+					v-if="isMobile"
+					variant="ghost"
+					icon="lucide-list-checks"
+					label="File in bulk"
+					:route="{ name: 'BulkFiling' }"
+				/>
+				<Button
+					v-else
+					icon-left="lucide-list-checks"
+					label="File in bulk"
+					:route="{ name: 'BulkFiling' }"
+				/>
+			</template>
 			<Button
 				v-if="mayRecord()"
 				variant="solid"

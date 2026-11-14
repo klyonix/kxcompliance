@@ -11,7 +11,7 @@ from frappe.desk.doctype.notification_log.notification_log import enqueue_create
 from frappe.handler import ALLOWED_MIMETYPES
 from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
 
-from compliance_plus.compliance_plus import clients, document_requests, onboarding
+from compliance_plus.compliance_plus import clients, document_requests, onboarding, setup_import
 from compliance_plus.compliance_plus.company_events import event_types_for
 from compliance_plus.compliance_plus.overview import get_overview
 from compliance_plus.compliance_plus.party_licences import (
@@ -525,6 +525,17 @@ def client_of_login() -> str:
 		return ""
 	clients = frappe.get_list("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name", limit=1)
 	return clients[0] if clients else ""
+
+
+@frappe.whitelist(methods=["GET"])
+def setup_template():
+	"""The bulk setup sheet to fill in, as an Excel file."""
+	check_app_access()
+	if not is_approver():
+		frappe.throw(_("Only a Compliance Manager can set up companies in bulk."), frappe.PermissionError)
+	frappe.response.filename = "compliance-plus-bulk-setup.xlsx"
+	frappe.response.filecontent = setup_import.template()
+	frappe.response.type = "binary"
 
 
 def app_companies() -> list[str]:

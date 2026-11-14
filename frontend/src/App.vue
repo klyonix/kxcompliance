@@ -7,7 +7,7 @@
 				<MobileNavItem
 					v-for="section in sections"
 					:key="section.route"
-					:label="section.label"
+					:label="section.tabLabel || section.label"
 					:icon="section.icon"
 					:route="{ name: section.route }"
 				/>

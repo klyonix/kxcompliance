@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { checksOnly } from "./boot";
 
 export const routes = [
 	{ path: "/", name: "MyWork", component: () => import("./pages/MyWork.vue") },
@@ -31,7 +32,21 @@ export const routes = [
 		component: () => import("./pages/Trademark.vue"),
 		props: true,
 	},
+	{
+		path: "/licence-check",
+		name: "LicenceCheck",
+		component: () => import("./pages/LicenceCheck.vue"),
+	},
 	{ path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
-export default createRouter({ history: createWebHistory("/compliance"), routes });
+const router = createRouter({ history: createWebHistory("/compliance"), routes });
+
+// Someone here only for the Licence Check is kept to it (the server refuses the rest anyway).
+router.beforeEach((to) => {
+	if (checksOnly() && !["LicenceCheck", "Account"].includes(to.name)) {
+		return { name: "LicenceCheck" };
+	}
+});
+
+export default router;

@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 
-from compliance_plus.api import boot, has_app_access
+from compliance_plus.api import boot, can_open_app
 
 no_cache = 1
 
@@ -14,7 +14,7 @@ def get_context(context):
 		frappe.local.flags.redirect_location = "/login?redirect-to=/compliance"
 		# Temporary, so a browser does not remember it and loop back to login once signed in.
 		raise frappe.Redirect(302)
-	if not has_app_access():
+	if not can_open_app():
 		frappe.throw(_("You do not have access to the compliance app."), frappe.PermissionError)
 	context.boot = boot()
 	# A page render is a GET and is not committed for us; the CSRF token above is stored in the session.

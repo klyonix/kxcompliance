@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_first_day, nowdate
 
+from compliance_plus.compliance_plus.clients import sync_client_access
 from compliance_plus.compliance_plus.statutory import generate_tasks
 
 
@@ -21,6 +22,22 @@ class CompanyComplianceProfile(Document):
 					)
 				)
 			seen.add(key)
+
+	def on_update(self):
+		# A company moving between clients changes who on the firm's team can see it.
+		if not self.has_value_changed("client"):
+			return
+		before = self.get_doc_before_save()
+		previous = before.client if before else None
+		for client in {previous, self.client} - {None, ""}:
+			sync_client_access(client)
+
+	def on_trash(self):
+		self.flags.client_to_sync = self.client
+
+	def after_delete(self):
+		if self.flags.client_to_sync:
+			sync_client_access(self.flags.client_to_sync)
 
 	@frappe.whitelist(methods=["POST"])
 	def find_obligations(self) -> int:

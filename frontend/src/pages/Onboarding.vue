@@ -85,6 +85,14 @@
 
 			<!-- The company -->
 			<div v-else-if="step === 'company'" class="flex flex-col gap-4">
+				<FormControl
+					v-if="answers.account_type === 'CA/CS Firm'"
+					v-model="answers.client_name"
+					label="Client's name"
+					placeholder="Sunrise Group"
+					description="The client this company belongs to; a client can own several companies."
+					:error="errorFor('client_name')"
+				/>
 				<TabButtons
 					v-if="options.can_create_company && openCompanies.length"
 					v-model="companyChoice"
@@ -261,6 +269,7 @@ const companyChoice = ref("new");
 const answers = reactive({
 	account_type: "",
 	firm_name: "",
+	client_name: "",
 	new_company: "",
 	company: "",
 	company_type: "",
@@ -302,6 +311,7 @@ const heading = computed(() => {
 const intro = computed(() => HEADINGS[step.value][1]);
 
 const REQUIRED = {
+	client_name: () => (answers.account_type === "CA/CS Firm" ? answers.client_name : "-"),
 	company: () => (companyChoice.value === "new" ? answers.new_company : answers.company),
 	company_type: () => answers.company_type,
 	responsible: () => answers.responsible,
@@ -339,7 +349,8 @@ function addRegistration() {
 }
 
 function stepIsComplete() {
-	if (step.value === "company") return !errorFor("company") && !errorFor("company_type");
+	if (step.value === "company")
+		return !errorFor("client_name") && !errorFor("company") && !errorFor("company_type");
 	if (step.value === "registrations") return !registrationError.value;
 	if (step.value === "people") return !errorFor("responsible");
 	return true;

@@ -249,6 +249,7 @@ after_install = "compliance_plus.install.after_install"
 after_migrate = "compliance_plus.install.after_migrate"
 
 permission_query_conditions = {
+	"Compliance Client": "compliance_plus.permissions.client_query_conditions",
 	"Compliance Item": "compliance_plus.permissions.item_query_conditions",
 	"Compliance Renewal": "compliance_plus.permissions.renewal_query_conditions",
 	"Compliance Task": "compliance_plus.permissions.task_query_conditions",
@@ -258,6 +259,7 @@ permission_query_conditions = {
 }
 
 has_permission = {
+	"Compliance Client": "compliance_plus.permissions.has_client_permission",
 	"Compliance Item": "compliance_plus.permissions.has_item_permission",
 	"Compliance Renewal": "compliance_plus.permissions.has_renewal_permission",
 	"Compliance Task": "compliance_plus.permissions.has_task_permission",

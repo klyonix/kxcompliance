@@ -39,6 +39,7 @@ describe("onboarding", () => {
 			{
 				account_type: "Organisation",
 				firm_name: "Ignored",
+				client_name: "Ignored too",
 				new_company: " Sunrise Foods Private Limited ",
 				company: "Old Co",
 				company_type: "Private Limited",
@@ -51,6 +52,7 @@ describe("onboarding", () => {
 		expect(setup).toEqual({
 			account_type: "Organisation",
 			firm_name: "",
+			client_name: "",
 			new_company: "Sunrise Foods Private Limited",
 			company: "",
 			company_type: "Private Limited",

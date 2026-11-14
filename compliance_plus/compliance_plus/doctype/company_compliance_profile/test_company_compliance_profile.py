@@ -95,12 +95,17 @@ class TestOnboarding(IntegrationTestCase):
 				answers(
 					account_type="CA/CS Firm",
 					firm_name="Rao & Associates",
+					client_name="Onboarding Test Group",
 					new_company=None,
 					company="Compliance Test Company",
 				)
 			)
 		self.assertEqual(frappe.db.get_single_value(SETTINGS, "account_type"), "CA/CS Firm")
 		self.assertEqual(frappe.db.get_single_value(SETTINGS, "app_name"), "Rao & Associates")
+		self.assertEqual(
+			frappe.db.get_value("Company Compliance Profile", "Compliance Test Company", "client"),
+			"Onboarding Test Group",
+		)
 		frappe.delete_doc("Company Compliance Profile", "Compliance Test Company", force=True)
 
 	def test_answers_are_checked_before_anything_is_made(self):

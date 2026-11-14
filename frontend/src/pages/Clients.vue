@@ -1,6 +1,20 @@
 <template>
 	<AppPageHeader title="Clients">
 		<template #actions>
+			<!-- A phone's header has room for one labelled button. -->
+			<Button
+				v-if="isManager() && isMobile"
+				variant="ghost"
+				icon="lucide-sheet"
+				label="Import from a sheet"
+				:route="{ name: 'BulkSetup' }"
+			/>
+			<Button
+				v-else-if="isManager()"
+				icon-left="lucide-sheet"
+				label="Import from a sheet"
+				:route="{ name: 'BulkSetup' }"
+			/>
 			<Button
 				v-if="isManager()"
 				variant="solid"
@@ -66,8 +80,11 @@ import { Avatar, Button, Skeleton } from "frappe-ui";
 import { call } from "@/api";
 import { isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import { useIsMobile } from "@/composables/useIsMobile";
 import { clientAttention, clientTheme, companiesLine } from "@/lib/clients";
 import { notLoaded } from "@/offline/reachability";
+
+const isMobile = useIsMobile();
 
 const TONE = {
 	red: "font-medium text-ink-red-5",

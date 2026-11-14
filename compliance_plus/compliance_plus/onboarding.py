@@ -123,6 +123,30 @@ def clean_registrations(rows: list) -> list[dict]:
 	return cleaned
 
 
+def set_up_company(
+	company: str,
+	company_type: str,
+	responsible: str,
+	reviewer: str | None,
+	registrations: list[dict],
+	client: str | None = None,
+) -> tuple[int, int]:
+	"""Make the company's compliance profile, find its obligations and make its first filings;
+	returns how many obligations and filings."""
+	profile = frappe.get_doc(
+		{
+			"doctype": "Company Compliance Profile",
+			"company": company,
+			"client": client,
+			"company_type": company_type,
+			"default_responsible": responsible,
+			"default_reviewer": reviewer,
+			"registrations": registrations,
+		}
+	).insert()
+	return profile.find_obligations(), generate_tasks(company=company)
+
+
 def complete(setup: dict) -> dict:
 	"""Set the site up from the onboarding answers; returns what was made."""
 	check_can_onboard()
@@ -171,19 +195,7 @@ def complete(setup: dict) -> dict:
 			.name
 		)
 
-	profile = frappe.get_doc(
-		{
-			"doctype": "Company Compliance Profile",
-			"company": company,
-			"client": client,
-			"company_type": company_type,
-			"default_responsible": responsible,
-			"default_reviewer": reviewer,
-			"registrations": registrations,
-		}
-	).insert()
-	obligations = profile.find_obligations()
-	tasks = generate_tasks(company=company)
+	obligations, tasks = set_up_company(company, company_type, responsible, reviewer, registrations, client)
 
 	settings.account_type = account_type
 	if account_type == "CA/CS Firm" and (setup.get("firm_name") or "").strip():

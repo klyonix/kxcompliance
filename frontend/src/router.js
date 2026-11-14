@@ -24,6 +24,11 @@ export const routes = [
 	},
 	{ path: "/clients", name: "Clients", component: () => import("./pages/Clients.vue") },
 	{
+		path: "/clients/import",
+		name: "BulkSetup",
+		component: () => import("./pages/BulkSetup.vue"),
+	},
+	{
 		path: "/clients/:name",
 		name: "Client",
 		component: () => import("./pages/Client.vue"),
@@ -84,7 +89,7 @@ router.beforeEach((to) => {
 	if (checksOnly() && !["LicenceCheck", "Account"].includes(to.name)) {
 		return { name: "LicenceCheck" };
 	}
-	if (to.name === "Overview" && !isManager()) return { name: "MyWork" };
+	if (["Overview", "BulkSetup"].includes(to.name) && !isManager()) return { name: "MyWork" };
 });
 
 // A screen's code that cannot be fetched means the server is not answering (or the device is offline).

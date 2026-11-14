@@ -15,6 +15,8 @@ export const boot = {
 	// Whose licences this person may check: Customer, Supplier or both.
 	partyTypes: window.party_types || [],
 	defaultCompany: window.default_company || "",
+	// For someone at a firm's client: the client they belong to.
+	client: window.client || "",
 };
 
 const COMPLIANCE_ROLES = [
@@ -24,8 +26,16 @@ const COMPLIANCE_ROLES = [
 	"System Manager",
 ];
 
+const isStaff = () => COMPLIANCE_ROLES.some((role) => boot.roles.includes(role));
+
+// Someone at a CA/CS firm's client: reads their companies' records and uploads documents.
+export const isClientLogin = () => boot.roles.includes("Compliance Client") && !isStaff();
+
 // Sales and Purchase Users without a compliance role see only the Licence Check.
-export const checksOnly = () => !COMPLIANCE_ROLES.some((role) => boot.roles.includes(role));
+export const checksOnly = () => !isStaff() && !isClientLogin();
+
+// Client logins have no Desk.
+export const mayUseDesk = () => !isClientLogin();
 
 export const isManager = () =>
 	boot.roles.includes("Compliance Manager") || boot.roles.includes("System Manager");

@@ -1,10 +1,21 @@
 # Copyright (c) 2026, KlyONIX Tech Consulting Pvt Ltd and contributors
 # For license information, please see license.txt
 
-import frappe
-from frappe.tests import IntegrationTestCase
+from io import BytesIO
 
-from compliance_plus.api import client_detail, clients_overview
+import frappe
+from frappe.model import get_permitted_fields
+from frappe.tests import IntegrationTestCase
+from werkzeug.test import EnvironBuilder
+
+from compliance_plus.api import (
+	add_client_document,
+	app_companies,
+	client_detail,
+	client_of_login,
+	clients_overview,
+	documents,
+)
 from compliance_plus.compliance_plus.test_utils import (
 	HOLDER,
 	MANAGER,
@@ -18,6 +29,7 @@ from compliance_plus.compliance_plus.test_utils import (
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User"]
 
 SECOND_COMPANY = "Client Test Second Company"
+CLIENT_LOGIN = "asha@sunrise-client.example.com"
 OTHER_COMPANY = "Client Test Other Company"
 
 
@@ -83,6 +95,15 @@ def task(company_name: str, responsible: str = MANAGER) -> str:
 	)
 
 
+def with_login(name: str = "Sunrise Group", enabled: int = 1):
+	return client(name, logins=[{"full_name": "Asha Rao", "email": CLIENT_LOGIN, "enabled": enabled}])
+
+
+def uploading(file_name: str, content: bytes = b"date,amount\n2026-10-01,1200\n"):
+	"""A request carrying one file, as the app's upload sends it."""
+	return EnvironBuilder(method="POST", data={"file": (BytesIO(content), file_name)}).get_request()
+
+
 def company_permissions(user: str) -> set[str]:
 	return set(
 		frappe.get_all("User Permission", filters={"user": user, "allow": "Company"}, pluck="for_value")
@@ -105,9 +126,11 @@ class TestComplianceClient(IntegrationTestCase):
 				frappe.delete_doc("Company Compliance Profile", name, force=True)
 		frappe.db.delete("Compliance Client Access")
 		frappe.db.delete("Compliance Client Member")
+		frappe.db.delete("Compliance Client Login")
 		frappe.db.delete("Compliance Client")
 		frappe.db.delete(
-			"User Permission", {"user": ("in", [HOLDER, OTHER_HOLDER, MANAGER]), "allow": "Company"}
+			"User Permission",
+			{"user": ("in", [HOLDER, OTHER_HOLDER, MANAGER, CLIENT_LOGIN]), "allow": "Company"},
 		)
 		frappe.db.delete("Compliance Task", {"task_key": ("like", "client-test|%")})
 
@@ -186,3 +209,104 @@ class TestComplianceClient(IntegrationTestCase):
 		self.assertEqual(detail["due_this_week"], 1)
 		with self.set_user(OTHER_HOLDER), self.assertRaises(frappe.PermissionError):
 			client_detail("Sunrise Group")
+
+	def test_a_login_reads_its_clients_companies_without_the_firms_remarks(self):
+		sunrise = with_login()
+		profile(TEST_COMPANY, sunrise.name)
+		profile(OTHER_COMPANY)
+		theirs = task(TEST_COMPANY)
+		frappe.db.set_value("Compliance Task", theirs, "remarks", "Client is slow to send papers")
+		outside = task(OTHER_COMPANY)
+		user = frappe.get_doc("User", CLIENT_LOGIN)
+		self.assertEqual((user.user_type, user.enabled), ("Website User", 1))
+		self.assertIn("Compliance Client", frappe.get_roles(CLIENT_LOGIN))
+		self.assertEqual(company_permissions(CLIENT_LOGIN), {TEST_COMPANY})
+		with self.set_user(CLIENT_LOGIN):
+			self.assertEqual(set(frappe.get_list("Compliance Task", pluck="name")), {theirs})
+			self.assertNotIn(outside, frappe.get_list("Compliance Task", pluck="name"))
+			self.assertFalse(frappe.has_permission("Compliance Task", "write", doc=theirs))
+			self.assertNotIn("remarks", get_permitted_fields("Compliance Task", user=CLIENT_LOGIN))
+			filing = frappe.get_doc("Compliance Task", theirs)
+			filing.apply_fieldlevel_read_permissions()
+			self.assertIsNone(filing.get("remarks"))
+			self.assertEqual(frappe.get_list("Compliance Client", pluck="name"), ["Sunrise Group"])
+			self.assertEqual(client_of_login(), "Sunrise Group")
+			self.assertEqual(app_companies(), [TEST_COMPANY])
+			self.assertEqual(client_detail("Sunrise Group")["logins"], ["Asha Rao"])
+			with self.assertRaises(frappe.PermissionError):
+				clients_overview()
+
+	def test_turning_a_login_off_disables_the_user_and_removes_access(self):
+		sunrise = with_login()
+		profile(TEST_COMPANY, sunrise.name)
+		sunrise.reload()
+		sunrise.logins[0].enabled = 0
+		sunrise.save()
+		self.assertEqual(frappe.db.get_value("User", CLIENT_LOGIN, "enabled"), 0)
+		self.assertEqual(company_permissions(CLIENT_LOGIN), set())
+		sunrise.logins[0].enabled = 1
+		sunrise.save()
+		self.assertEqual(frappe.db.get_value("User", CLIENT_LOGIN, "enabled"), 1)
+		self.assertEqual(company_permissions(CLIENT_LOGIN), {TEST_COMPANY})
+		sunrise.status = "Left"
+		sunrise.save()
+		self.assertEqual(frappe.db.get_value("User", CLIENT_LOGIN, "enabled"), 0)
+		sunrise.status = "Active"
+		sunrise.save()
+		sunrise.logins = []
+		sunrise.save()
+		self.assertEqual(frappe.db.get_value("User", CLIENT_LOGIN, "enabled"), 0)
+		self.assertEqual(company_permissions(CLIENT_LOGIN), set())
+
+	def test_a_firm_user_cannot_be_a_client_login(self):
+		with self.assertRaises(frappe.ValidationError):
+			client(logins=[{"full_name": "Firm person", "email": HOLDER}])
+		with self.assertRaises(frappe.ValidationError):
+			client(
+				logins=[
+					{"full_name": "Asha Rao", "email": CLIENT_LOGIN},
+					{"full_name": "Asha again", "email": CLIENT_LOGIN.upper()},
+				]
+			)
+
+	def test_a_login_uploads_a_document_and_the_responsible_person_is_told(self):
+		sunrise = with_login()
+		profile(TEST_COMPANY, sunrise.name)
+		profile(OTHER_COMPANY)
+		theirs = task(TEST_COMPANY, responsible=HOLDER)
+		outside = task(OTHER_COMPANY)
+		request = frappe.local.request if hasattr(frappe.local, "request") else None
+		try:
+			with self.set_user(CLIENT_LOGIN):
+				frappe.local.request = uploading("october-sales.csv")
+				added = add_client_document(theirs)
+				frappe.local.request = uploading("october-sales.csv")
+				with self.assertRaises(frappe.PermissionError):
+					add_client_document(outside)
+				frappe.local.request = uploading("run-me.sh", b"echo hi")
+				with self.assertRaises(frappe.ValidationError):
+					add_client_document(theirs)
+			with self.set_user(HOLDER):
+				frappe.local.request = uploading("october-sales.csv")
+				with self.assertRaises(frappe.PermissionError):
+					add_client_document(theirs)
+		finally:
+			frappe.local.request = request
+		document = frappe.get_doc("File", added["name"])
+		self.assertEqual(
+			(document.attached_to_doctype, document.attached_to_name, document.is_private),
+			("Compliance Task", theirs, 1),
+		)
+		self.assertTrue(
+			frappe.db.exists(
+				"Notification Log",
+				{"for_user": HOLDER, "document_type": "Compliance Task", "document_name": theirs},
+			)
+		)
+		with self.set_user(CLIENT_LOGIN):
+			self.assertTrue(frappe.has_permission("File", "read", doc=document))
+			self.assertEqual([row.name for row in documents("Compliance Task", theirs)], [document.name])
+			with self.assertRaises(frappe.PermissionError):
+				documents("Compliance Task", outside)
+			with self.assertRaises(frappe.PermissionError):
+				documents("User", CLIENT_LOGIN)

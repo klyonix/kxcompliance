@@ -6,6 +6,9 @@ import frappe
 from compliance_plus.compliance_plus.obligation_library import sync_standard_templates
 
 ROLES = ("Compliance Manager", "Compliance User", "Compliance Auditor")
+# A CA/CS firm's client who signs in to the app only; without Desk access Frappe makes them
+# a Website User.
+CLIENT_ROLE = "Compliance Client"
 
 # (name, category, renewal cycle in months or 0 if it does not expire, grace days,
 #  certificate required, reminder days)
@@ -57,11 +60,16 @@ def setup():
 
 def create_roles():
 	for role in ROLES:
-		if frappe.db.exists("Role", role):
-			continue
-		frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(
-			ignore_permissions=True  # setup record created during install or migrate
-		)
+		create_role(role, desk_access=1)
+	create_role(CLIENT_ROLE, desk_access=0)
+
+
+def create_role(role: str, desk_access: int):
+	if frappe.db.exists("Role", role):
+		return
+	frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": desk_access}).insert(
+		ignore_permissions=True  # setup record created during install or migrate
+	)
 
 
 def create_standard_item_types():

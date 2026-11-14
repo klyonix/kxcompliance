@@ -1,7 +1,7 @@
 <template>
 	<AppPageHeader :title="title || fallbackTitle">
 		<template #actions>
-			<Dropdown v-if="loaded" :options="menu" align="end">
+			<Dropdown v-if="loaded && menu.length" :options="menu" align="end">
 				<Button variant="ghost" icon="lucide-ellipsis" label="More actions" />
 			</Dropdown>
 		</template>
@@ -94,10 +94,10 @@
 // The page of one case or trademark: where it stands, its dates, its details and documents.
 import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, Dropdown, Skeleton } from "frappe-ui";
-import { getList } from "@/api";
+import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import LegalDates from "@/components/LegalDates.vue";
-import { deskRoute } from "@/navigation";
+import { deskActions } from "@/navigation";
 
 const props = defineProps({
 	doctype: { type: String, required: true },
@@ -124,27 +124,14 @@ const keep = (pairs) =>
 const shownFacts = computed(() => keep(props.facts));
 const shownNotes = computed(() => keep(props.notes));
 
-const menu = computed(() => [
-	{
-		label: "Open in the Desk",
-		icon: "lucide-app-window",
-		onClick: () => (window.location.href = deskRoute(props.doctype, props.name)),
-	},
-]);
+const menu = computed(() => deskActions(props.doctype, props.name));
 
 async function loadDocuments() {
 	try {
-		documents.value = (
-			await getList("File", {
-				fields: ["name", "file_name", "file_url"],
-				filters: [
-					["attached_to_doctype", "=", props.doctype],
-					["attached_to_name", "=", props.name],
-				],
-				orderBy: "creation desc",
-				limit: 20,
-			})
-		).rows;
+		documents.value = await call("compliance_plus.api.documents", {
+			doctype: props.doctype,
+			name: props.name,
+		});
 	} catch {
 		// Documents are extra; the page is still useful without them, offline included.
 		documents.value = [];

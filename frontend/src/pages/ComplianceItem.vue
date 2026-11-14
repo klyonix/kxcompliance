@@ -9,7 +9,7 @@
 				:tooltip="isConnected() ? undefined : 'Starting a renewal needs a connection'"
 				@click="startRenewal"
 			/>
-			<Dropdown v-if="item" :options="menu" align="end">
+			<Dropdown v-if="item && menu.length" :options="menu" align="end">
 				<Button variant="ghost" icon="lucide-ellipsis" label="More actions" />
 			</Dropdown>
 		</template>
@@ -157,7 +157,7 @@ import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { OPEN_RENEWAL_STATUSES, canAct, itemRow, itemTheme } from "@/lib/items";
-import { deskRoute } from "@/navigation";
+import { deskActions } from "@/navigation";
 import {
 	SAVED_ON_DEVICE,
 	isConnected,
@@ -225,11 +225,7 @@ const facts = computed(() =>
 );
 
 const menu = computed(() => [
-	{
-		label: "Open in the Desk",
-		icon: "lucide-app-window",
-		onClick: () => (window.location.href = deskRoute("Compliance Item", props.name)),
-	},
+	...deskActions("Compliance Item", props.name),
 	...(mayAct.value
 		? [
 				{

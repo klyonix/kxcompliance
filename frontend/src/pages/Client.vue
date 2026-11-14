@@ -1,7 +1,7 @@
 <template>
 	<AppPageHeader :title="client?.name || 'Client'">
 		<template #actions>
-			<Dropdown v-if="client" :options="menu" align="end">
+			<Dropdown v-if="client && menu.length" :options="menu" align="end">
 				<Button variant="ghost" icon="lucide-ellipsis" label="More actions" />
 			</Dropdown>
 		</template>
@@ -40,8 +40,13 @@
 					Companies
 				</h2>
 				<p v-if="!client.companies.length" class="text-base text-ink-gray-5">
-					No companies yet. Link a company's compliance profile to this client in the
-					Desk.
+					<template v-if="clientLogin">
+						Your firm has not linked your companies yet.
+					</template>
+					<template v-else>
+						No companies yet. Link a company's compliance profile to this client in the
+						Desk.
+					</template>
 				</p>
 				<ul class="flex flex-col">
 					<li
@@ -87,12 +92,13 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, Dropdown, Skeleton } from "frappe-ui";
 import { call } from "@/api";
+import { isClientLogin } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { clientAttention, clientTheme } from "@/lib/clients";
 import { taskRow } from "@/lib/filings";
-import { deskRoute } from "@/navigation";
+import { deskActions } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({ name: { type: String, required: true } });
@@ -105,22 +111,20 @@ const TONE = {
 
 const client = ref(null);
 const error = ref("");
+const clientLogin = isClientLogin();
 
 const people = computed(() => {
 	const manager = client.value.relationship_manager;
 	const team = client.value.team.filter((user) => user !== manager).map(nameOf);
-	return [manager && `Managed by ${nameOf(manager)}`, team.length && `Team: ${team.join(", ")}`]
-		.filter(Boolean)
-		.join(" · ");
+	const contact = manager
+		? clientLogin
+			? `Your contact at the firm: ${nameOf(manager)}`
+			: `Managed by ${nameOf(manager)}`
+		: "";
+	return [contact, team.length && `Team: ${team.join(", ")}`].filter(Boolean).join(" · ");
 });
 
-const menu = computed(() => [
-	{
-		label: "Open in the Desk",
-		icon: "lucide-app-window",
-		onClick: () => (window.location.href = deskRoute("Compliance Client", props.name)),
-	},
-]);
+const menu = computed(() => deskActions("Compliance Client", props.name));
 
 async function load() {
 	error.value = "";

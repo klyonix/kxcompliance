@@ -1,7 +1,7 @@
 <template>
 	<AppPageHeader :title="task?.obligation_template || 'Filing'">
 		<template #actions>
-			<Dropdown v-if="task" :options="menu" align="end">
+			<Dropdown v-if="task && menu.length" :options="menu" align="end">
 				<Button variant="ghost" icon="lucide-ellipsis" label="More actions" />
 			</Dropdown>
 		</template>
@@ -173,6 +173,60 @@
 				</dl>
 			</section>
 
+			<section
+				v-if="clientLogin || documents.length"
+				class="flex flex-col gap-3"
+				aria-labelledby="documents-heading"
+			>
+				<div class="flex items-center justify-between gap-3">
+					<h2 id="documents-heading" class="text-base font-semibold text-ink-gray-8">
+						Documents
+					</h2>
+					<template v-if="clientLogin">
+						<Button
+							icon-left="lucide-upload"
+							label="Upload"
+							:loading="uploading"
+							@click="documentInput?.click()"
+						/>
+						<input
+							ref="documentInput"
+							type="file"
+							:accept="DOCUMENT_TYPES"
+							class="hidden"
+							@change="sendDocument"
+						/>
+					</template>
+				</div>
+				<p v-if="uploadError" role="alert" class="text-base text-ink-red-4">
+					{{ uploadError }}
+				</p>
+				<p v-if="clientLogin && !documents.length" class="text-base text-ink-gray-5">
+					Upload what your firm needs for this filing, such as a sales register or a bank
+					statement. They are told when you do.
+				</p>
+				<ul class="flex flex-col">
+					<li v-for="document in documents" :key="document.name">
+						<a
+							:href="document.file_url"
+							target="_blank"
+							class="flex items-center gap-3 rounded-lg px-1 py-1.5 hover:bg-surface-gray-2"
+						>
+							<span
+								class="lucide-file-text size-4 shrink-0 text-ink-gray-5"
+								aria-hidden="true"
+							/>
+							<span class="min-w-0 flex-1 truncate text-base text-ink-gray-8">{{
+								document.file_name
+							}}</span>
+							<span class="shrink-0 text-sm text-ink-gray-5">{{
+								formatDate(document.creation)
+							}}</span>
+						</a>
+					</li>
+				</ul>
+			</section>
+
 			<section class="flex flex-col gap-3" aria-labelledby="details-heading">
 				<h2 id="details-heading" class="text-base font-semibold text-ink-gray-8">
 					Details
@@ -229,8 +283,8 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { Badge, Button, Dropdown, FormControl, Skeleton, dialog, toast } from "frappe-ui";
-import { getDoc } from "@/api";
-import { boot } from "@/boot";
+import { call, getDoc, uploadClientDocument } from "@/api";
+import { boot, isClientLogin } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import {
@@ -241,7 +295,7 @@ import {
 	taskActions,
 	taskRow,
 } from "@/lib/filings";
-import { deskRoute } from "@/navigation";
+import { deskActions } from "@/navigation";
 import { SAVED_ON_DEVICE, isWaiting, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
 import { formatDate, pickerFormat } from "@/lib/format";
@@ -261,6 +315,17 @@ const busy = ref("");
 const waiting = computed(() => isWaiting("Compliance Task", props.name));
 const proofFile = ref(null);
 const fileInput = ref(null);
+
+// Files on the filing other than its proof; a client's login uploads them here.
+const DOCUMENT_TYPES = "image/*,application/pdf,.csv,.txt,.doc,.docx,.xls,.xlsx";
+const clientLogin = isClientLogin();
+const allDocuments = ref([]);
+const documents = computed(() =>
+	allDocuments.value.filter((document) => document.file_url !== task.value?.proof)
+);
+const documentInput = ref(null);
+const uploading = ref(false);
+const uploadError = ref("");
 const form = reactive(Object.fromEntries(FILING_FIELDS.map((field) => [field, ""])));
 
 const isMobile = useIsMobile();
@@ -362,11 +427,7 @@ const facts = computed(() =>
 );
 
 const menu = computed(() => [
-	{
-		label: "Open in the Desk",
-		icon: "lucide-app-window",
-		onClick: () => (window.location.href = deskRoute("Compliance Task", props.name)),
-	},
+	...deskActions("Compliance Task", props.name),
 	...(editable.value
 		? [{ label: "Does not apply", icon: "lucide-circle-slash", onClick: notApplicable }]
 		: []),
@@ -390,6 +451,37 @@ function fillForm() {
 	proofFile.value = null;
 	checking.value = false;
 	formError.value = "";
+}
+
+async function loadDocuments() {
+	try {
+		allDocuments.value = await call("compliance_plus.api.documents", {
+			doctype: "Compliance Task",
+			name: props.name,
+		});
+	} catch {
+		// Documents are extra; the filing is still useful without them, offline included.
+		allDocuments.value = [];
+	}
+}
+
+async function sendDocument(event) {
+	const file = event.target.files?.[0];
+	event.target.value = "";
+	if (!file) return;
+	uploading.value = true;
+	uploadError.value = "";
+	try {
+		await uploadClientDocument(file, props.name);
+		toast.success(`${file.name} uploaded`);
+		await loadDocuments();
+	} catch (err) {
+		uploadError.value = err.isNetwork
+			? "The upload did not reach the server. Try again when you are back online."
+			: err.message;
+	} finally {
+		uploading.value = false;
+	}
 }
 
 async function load() {
@@ -510,6 +602,15 @@ function notApplicable() {
 watch(waiting, (now, before) => {
 	if (before && !now) load();
 });
-watch(() => props.name, load);
-onMounted(load);
+watch(
+	() => props.name,
+	() => {
+		load();
+		loadDocuments();
+	}
+);
+onMounted(() => {
+	load();
+	loadDocuments();
+});
 </script>

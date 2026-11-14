@@ -5,7 +5,12 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from compliance_plus.compliance_plus.clients import sync_client_access
+from compliance_plus.compliance_plus.clients import (
+	sync_client_access,
+	sync_client_logins,
+	turn_logins_off,
+	validate_logins,
+)
 
 
 class ComplianceClient(Document):
@@ -15,8 +20,11 @@ class ComplianceClient(Document):
 			if row.user in seen:
 				frappe.throw(_("Team row {0}: {1} is already on the team.").format(row.idx, row.user))
 			seen.add(row.user)
+		validate_logins(self)
 
 	def on_update(self):
+		# Logins first, so their users exist when the access is given.
+		sync_client_logins(self)
 		sync_client_access(self.name)
 
 	def on_trash(self):
@@ -29,3 +37,4 @@ class ComplianceClient(Document):
 
 	def after_delete(self):
 		sync_client_access(self.name)
+		turn_logins_off({row.user for row in self.logins if row.user}, self.name)

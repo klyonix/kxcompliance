@@ -1,4 +1,4 @@
-import { boot, checksOnly, isManager } from "./boot";
+import { boot, checksOnly, isClientLogin, isManager, mayUseDesk } from "./boot";
 
 // The app's sections, in the order they appear in the side bar and the phone's tab bar.
 const ALL_SECTIONS = [
@@ -13,6 +13,8 @@ const ALL_SECTIONS = [
 		managers: true,
 		desktopOnly: true,
 	},
+	// A client's own login lands here: their companies and open filings.
+	{ label: "Home", route: "ClientHome", icon: "lucide-house", clientLogin: true },
 	// CA/CS firms only.
 	{ label: "Clients", route: "Clients", icon: "lucide-users", firm: true },
 	{ label: "Filings", route: "Filings", icon: "lucide-calendar-check" },
@@ -29,18 +31,50 @@ const ALL_SECTIONS = [
 	},
 ];
 
-export const sections = checksOnly()
-	? ALL_SECTIONS.filter((section) => section.route === "LicenceCheck")
-	: ALL_SECTIONS.filter((section) => {
-			const firm = boot.accountType === "CA/CS Firm";
-			if (section.managers && !isManager()) return false;
-			if (section.firm && !firm) return false;
-			return !(section.organisation && firm);
-	  });
+// What a client's login may open: their home, the records of their companies, and search.
+export const CLIENT_ROUTES = [
+	"ClientHome",
+	"Search",
+	"Filings",
+	"ComplianceTask",
+	"Register",
+	"ComplianceItem",
+	"Legal",
+	"LegalCase",
+	"Trademark",
+	"Account",
+];
+const CLIENT_SECTIONS = ["Search", "ClientHome", "Filings", "Register", "Legal"];
+
+export function sectionsFor({ checks, client }) {
+	if (checks) return ALL_SECTIONS.filter((section) => section.route === "LicenceCheck");
+	if (client) return ALL_SECTIONS.filter((section) => CLIENT_SECTIONS.includes(section.route));
+	return ALL_SECTIONS.filter((section) => {
+		const firm = boot.accountType === "CA/CS Firm";
+		if (section.managers && !isManager()) return false;
+		if (section.firm && !firm) return false;
+		if (section.clientLogin) return false;
+		return !(section.organisation && firm);
+	});
+}
+
+export const sections = sectionsFor({ checks: checksOnly(), client: isClientLogin() });
 
 // Where each record opens until it has a screen of its own in the app.
 export const deskRoute = (doctype, name) =>
 	`/app/${doctype.toLowerCase().replace(/ /g, "-")}/${encodeURIComponent(name)}`;
+
+// A record menu's "Open in the Desk", for those who have the Desk.
+export const deskActions = (doctype, name) =>
+	mayUseDesk()
+		? [
+				{
+					label: "Open in the Desk",
+					icon: "lucide-app-window",
+					onClick: () => (window.location.href = deskRoute(doctype, name)),
+				},
+		  ]
+		: [];
 
 export async function signOut({ unsent, clear }) {
 	if (

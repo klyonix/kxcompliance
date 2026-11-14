@@ -9,7 +9,7 @@
    "link_fieldname": "client"
   }
  ],
- "modified": "2026-11-15 16:00:00.000000",
+ "modified": "2026-11-16 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "owner": "Administrator",
@@ -27,6 +27,8 @@
   "contact_phone",
   "section_team",
   "team",
+  "section_logins",
+  "logins",
   "section_notes",
   "notes"
  ],
@@ -93,6 +95,18 @@
    "options": "Compliance Client Member"
   },
   {
+   "description": "People at the client who may sign in to the app to see their companies' filings, register and legal matters, and upload documents. Each gets an email to set a password.",
+   "fieldname": "section_logins",
+   "fieldtype": "Section Break",
+   "label": "Client Logins"
+  },
+  {
+   "fieldname": "logins",
+   "fieldtype": "Table",
+   "label": "Logins",
+   "options": "Compliance Client Login"
+  },
+  {
    "fieldname": "section_notes",
    "fieldtype": "Section Break",
    "label": "Notes"
@@ -100,7 +114,8 @@
   {
    "fieldname": "notes",
    "fieldtype": "Small Text",
-   "label": "Notes"
+   "label": "Notes",
+   "permlevel": 1
   }
  ],
  "name": "Compliance Client",
@@ -155,6 +170,33 @@
    "report": 1,
    "email": 0,
    "share": 0
+  },
+  {
+   "role": "Compliance Client",
+   "read": 1,
+   "print": 1
+  },
+  {
+   "role": "System Manager",
+   "permlevel": 1,
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Compliance Manager",
+   "permlevel": 1,
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Compliance User",
+   "permlevel": 1,
+   "read": 1
+  },
+  {
+   "role": "Compliance Auditor",
+   "permlevel": 1,
+   "read": 1
   }
  ]
 }

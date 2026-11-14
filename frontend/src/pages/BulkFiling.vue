@@ -21,6 +21,7 @@
 			</p>
 			<FormControl
 				v-model="chosen"
+				data-tour="bulk-choose"
 				type="select"
 				label="Return and period"
 				:options="[
@@ -43,13 +44,18 @@
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-end">
 					<FormControl
 						v-model="sharedDate"
+						data-tour="bulk-date"
 						class="sm:w-56"
 						type="date"
 						:format="pickerFormat()"
 						label="Filed on"
 						description="For every row without its own date."
 					/>
-					<div v-if="rules?.requires_proof" class="flex flex-col gap-1 sm:flex-1">
+					<div
+						v-if="rules?.requires_proof"
+						class="flex flex-col gap-1 sm:flex-1"
+						data-tour="bulk-proofs"
+					>
 						<Button
 							class="self-start"
 							icon-left="lucide-files"
@@ -86,7 +92,7 @@
 					/>
 				</div>
 
-				<ul class="flex flex-col">
+				<ul class="flex flex-col" data-tour="bulk-rows">
 					<li
 						v-for="row in rows"
 						:key="row.name"
@@ -192,6 +198,7 @@
 			</p>
 			<Button
 				variant="solid"
+				data-tour="bulk-save"
 				:label="saveLabel(ticked.map((row) => row.step.status))"
 				:disabled="!ticked.length"
 				:loading="saving"

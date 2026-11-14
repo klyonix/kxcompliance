@@ -15,7 +15,7 @@
 		</div>
 
 		<template v-else>
-			<nav class="flex flex-wrap gap-2" aria-label="Set up">
+			<nav class="flex flex-wrap gap-2" aria-label="Set up" data-tour="settings-setup">
 				<Button icon-left="lucide-users" label="People" :route="{ name: 'People' }" />
 				<Button
 					icon-left="lucide-building-2"

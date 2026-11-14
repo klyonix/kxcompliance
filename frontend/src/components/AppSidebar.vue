@@ -6,7 +6,7 @@
 			:logo="boot.appLogo || undefined"
 			:menu-items="menu"
 		/>
-		<div class="flex flex-1 flex-col overflow-y-auto">
+		<div class="flex flex-1 flex-col overflow-y-auto" data-tour="nav">
 			<SidebarItem
 				v-for="section in sections"
 				:key="section.route"

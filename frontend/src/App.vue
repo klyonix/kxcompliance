@@ -6,7 +6,7 @@
 		<ConnectionBanner />
 		<RouterView />
 		<template #nav>
-			<MobileNav>
+			<MobileNav data-tour="nav">
 				<MobileNavItem
 					v-for="section in tabSections"
 					:key="section.route"

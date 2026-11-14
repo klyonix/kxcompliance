@@ -30,7 +30,7 @@
 					<span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true" />
 				</template>
 			</TextInput>
-			<TabButtons v-model="show" :options="SHOW" />
+			<TabButtons v-model="show" :options="SHOW" data-tour="obligations-show" />
 		</div>
 
 		<p
@@ -49,6 +49,7 @@
 		</div>
 		<section
 			v-for="group in groups"
+			data-tour="obligations-list"
 			v-else
 			:key="group.law"
 			class="flex flex-col"

@@ -28,7 +28,7 @@
 		<div v-else-if="!types" class="flex flex-col gap-3" aria-busy="true">
 			<Skeleton v-for="index in 5" :key="index" class="h-12 w-full rounded-lg" />
 		</div>
-		<ul v-else class="flex flex-col">
+		<ul v-else class="flex flex-col" data-tour="item-types-list">
 			<li v-for="type in types" :key="type.name">
 				<RouterLink
 					:to="{ name: 'ItemType', params: { name: type.name } }"

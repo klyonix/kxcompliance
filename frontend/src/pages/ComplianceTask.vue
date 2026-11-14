@@ -39,6 +39,7 @@
 				<p class="text-base text-ink-gray-6">{{ row.detail }}</p>
 				<ol
 					v-if="showSteps"
+					data-tour="filing-steps"
 					class="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1 text-sm"
 					aria-label="Where this filing is"
 				>
@@ -341,6 +342,7 @@
 	<!-- The actions stay in reach at the foot of the screen, on a phone above the tab bar. -->
 	<div
 		v-if="footerShown"
+		data-tour="filing-actions"
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div

@@ -23,7 +23,7 @@
 			<h2 class="text-xl font-semibold text-ink-gray-9" aria-live="polite">
 				{{ monthTitle(month) }}
 			</h2>
-			<fieldset class="flex flex-wrap gap-x-4 gap-y-1">
+			<fieldset class="flex flex-wrap gap-x-4 gap-y-1" data-tour="calendar-kinds">
 				<legend class="sr-only">Show</legend>
 				<label
 					v-for="kind in KINDS"
@@ -50,7 +50,11 @@
 			{{ error }}
 		</p>
 
-		<div class="overflow-hidden rounded-lg border border-outline-gray-1" :aria-busy="loading">
+		<div
+			class="overflow-hidden rounded-lg border border-outline-gray-1"
+			:aria-busy="loading"
+			data-tour="calendar-grid"
+		>
 			<div
 				class="grid grid-cols-7 border-b border-outline-gray-1 bg-surface-gray-1 text-center text-xs font-medium text-ink-gray-5"
 				aria-hidden="true"

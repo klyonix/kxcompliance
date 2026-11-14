@@ -23,6 +23,7 @@ from kxcompliance.kx_compliance import (
 	people,
 	score,
 	setup_import,
+	tours,
 )
 from kxcompliance.kx_compliance.company_events import event_types_for
 from kxcompliance.kx_compliance.overview import get_overview
@@ -632,6 +633,20 @@ def item_form_options() -> dict:
 		"billing_cycles": [cycle for cycle in meta.get_field("billing_cycle").options.split("\n") if cycle],
 		"people": onboarding.firm_people(),
 	}
+
+
+@frappe.whitelist(methods=["GET"])
+def tours_seen() -> dict:
+	"""The tours this person has already been shown (staff and client logins)."""
+	check_reader_access()
+	return tours.seen()
+
+
+@frappe.whitelist(methods=["POST"])
+def tour_opened(tour: str) -> dict:
+	"""This person started a tour; counted every time, and the first time marks it seen."""
+	check_reader_access()
+	return tours.opened(tour)
 
 
 @frappe.whitelist(methods=["GET"])

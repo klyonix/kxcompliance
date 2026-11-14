@@ -1,23 +1,29 @@
 <template>
 	<PageHeaderMobile v-if="isMobile">
-		<template v-if="parent" #prefix>
+		<!-- Help sits on the left on a phone, so the page's own buttons keep room on the right. -->
+		<template #prefix>
 			<Button
+				v-if="parent"
 				variant="ghost"
 				icon="lucide-arrow-left"
 				:label="`Back to ${parent.label}`"
 				@click="back"
 			/>
-		</template>
-		<template v-else-if="showSearch" #prefix>
 			<Button
+				v-else-if="showSearch"
 				variant="ghost"
 				icon="lucide-search"
 				label="Search"
 				:route="{ name: 'Search' }"
 			/>
+			<TourMenu />
 		</template>
 		<PageHeaderMobileTitle :title="title" />
-		<template #suffix><slot name="actions" /></template>
+		<template #suffix>
+			<span v-if="$slots.actions" class="flex items-center" data-tour="page-actions">
+				<slot name="actions" />
+			</span>
+		</template>
 	</PageHeaderMobile>
 	<PageHeader v-else>
 		<div v-if="parent" class="flex min-w-0 items-center gap-2">
@@ -32,7 +38,12 @@
 			/>
 		</div>
 		<PageHeaderTitle v-else :title="title" />
-		<div class="flex items-center gap-2"><slot name="actions" /></div>
+		<div class="flex items-center gap-2">
+			<span v-if="$slots.actions" class="flex items-center gap-2" data-tour="page-actions">
+				<slot name="actions" />
+			</span>
+			<TourMenu />
+		</div>
 	</PageHeader>
 </template>
 
@@ -48,6 +59,7 @@ import {
 	PageHeaderTitle,
 } from "frappe-ui";
 import { checksOnly } from "@/boot";
+import TourMenu from "@/components/TourMenu.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { goBack } from "@/navigation";
 

@@ -1,5 +1,5 @@
 <template>
-	<div v-if="filterOffered()" class="flex items-center gap-2">
+	<div v-if="filterOffered()" class="flex items-center gap-2" data-tour="client-filter">
 		<FormControl
 			type="select"
 			class="min-w-0 flex-1 sm:w-56 sm:flex-none"

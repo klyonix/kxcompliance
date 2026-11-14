@@ -229,6 +229,33 @@ export const ARTICLES = [
 		firm: true,
 	},
 	{
+		id: "licence-rules",
+		area: "Setting up",
+		title: "How do I stop selling to customers without a licence?",
+		when: "When you may only sell to, or buy from, parties who hold a licence, such as FSSAI or a drug licence.",
+		steps: [
+			'Open Settings and press "Customer and supplier licences".',
+			'Press "Add a rule", choose the licence, and whether customers or suppliers must hold it.',
+			"Choose to block the document or only warn, and the documents to check.",
+			"Record each customer's licence in the Register, held by that customer.",
+		],
+		page: "LicenceRules",
+		managers: true,
+	},
+	{
+		id: "allow-once",
+		area: "Setting up",
+		title: "A sale was blocked. How do I let it through?",
+		when: "When a document must go ahead though the licence is missing, for instance while it is being renewed.",
+		steps: [
+			'Open Settings, "Customer and supplier licences", then "Blocks and warnings".',
+			'Find the document under Blocked and press "Allow this once".',
+			"Give the reason. That document can then be saved and submitted.",
+		],
+		page: "LicenceBlocks",
+		managers: true,
+	},
+	{
 		id: "invite-a-colleague",
 		area: "Setting up",
 		title: "How do I add a colleague?",

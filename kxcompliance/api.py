@@ -743,6 +743,34 @@ def bulk_filing_choices() -> list[dict]:
 
 
 @frappe.whitelist(methods=["GET"])
+def licence_rule_options() -> dict:
+	"""What the licence rule screen offers: licence types, item and party groups, and the selling
+	and buying documents a rule can be checked on (managers only)."""
+	check_manager_access(_("Only a Compliance Manager can change licence rules."))
+	documents = [
+		{"doctype": doctype, "party_type": party_type, "field": check_field}
+		for doctype, (party_type, check_field, _field, _date) in DOCUMENTS.items()
+	]
+	# Group names only, to choose from: a Compliance Manager is not given ERPNext's selling and
+	# buying masters, and the rule they save is governed by Licence Requirement's own permissions.
+	groups = {
+		key: frappe.get_all(doctype, pluck="name", order_by="name asc", limit=500)
+		for key, doctype in (
+			("item_groups", "Item Group"),
+			("customer_groups", "Customer Group"),
+			("supplier_groups", "Supplier Group"),
+		)
+	}
+	return {
+		"item_types": frappe.get_list(
+			"Compliance Item Type", filters={"is_active": 1}, pluck="name", order_by="name asc"
+		),
+		**groups,
+		"documents": documents,
+	}
+
+
+@frappe.whitelist(methods=["GET"])
 def obligation_form_options() -> dict:
 	"""What the obligation screen offers to choose from (managers only)."""
 	check_manager_access(_("Only a Compliance Manager can change the obligation library."))

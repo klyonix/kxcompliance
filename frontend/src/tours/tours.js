@@ -621,6 +621,48 @@ export const TOURS = [
 		],
 	},
 	{
+		id: "licence-rules",
+		title: "Customer and supplier licences",
+		route: "LicenceRules",
+		managers: true,
+		organisation: true,
+		steps: [
+			{
+				title: "Licence rules",
+				text: "Say which licences a customer or supplier must hold. A sale or purchase without them is blocked, or only warned about, when it is saved.",
+			},
+			{
+				target: ["licence-rules-list"],
+				title: "Each rule",
+				text: "The licence, who must hold it, and the documents it is checked on. Open one to change it or switch it off.",
+			},
+			{
+				target: ["page-actions"],
+				title: "Add a rule, see what was blocked",
+				text: "Add a rule for each licence, and see the sales and purchases that were stopped.",
+			},
+		],
+	},
+	{
+		id: "licence-blocks",
+		title: "Blocks and warnings",
+		route: "LicenceBlocks",
+		managers: true,
+		organisation: true,
+		steps: [
+			{
+				target: ["licence-blocks-tabs"],
+				title: "Blocked, warned, let through",
+				text: "What a rule stopped, what it only warned about, and what a manager let through once.",
+			},
+			{
+				target: ["licence-blocks-list"],
+				title: "Let one through",
+				text: "When a sale must go ahead, Allow this once with a reason. The reason is kept, and only that document goes through.",
+			},
+		],
+	},
+	{
 		id: "reports",
 		title: "Reports",
 		route: "Reports",

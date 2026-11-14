@@ -41,6 +41,8 @@ TOURS = (
 	"obligations",
 	"item-types",
 	"licence-check",
+	"licence-rules",
+	"licence-blocks",
 	"reports",
 	"report",
 	"help",

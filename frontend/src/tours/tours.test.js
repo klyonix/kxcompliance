@@ -43,6 +43,8 @@ const NO_TOUR = {
 	Extension: "the extensions tour explains it",
 	RecordEvent: "a form; each field is labelled",
 	NewNotice: "a form; each field is labelled",
+	LicenceRuleNew: "a form; each section says what it is",
+	LicenceRule: "a form; each section says what it is",
 };
 
 describe("tours", () => {

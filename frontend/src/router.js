@@ -59,6 +59,27 @@ export const routes = [
 		props: true,
 	},
 	{
+		path: "/settings/licence-rules",
+		name: "LicenceRules",
+		component: () => import("./pages/LicenceRules.vue"),
+	},
+	{
+		path: "/settings/licence-rules/new",
+		name: "LicenceRuleNew",
+		component: () => import("./pages/LicenceRuleForm.vue"),
+	},
+	{
+		path: "/settings/licence-rules/:name",
+		name: "LicenceRule",
+		component: () => import("./pages/LicenceRuleForm.vue"),
+		props: true,
+	},
+	{
+		path: "/licence-check/blocks",
+		name: "LicenceBlocks",
+		component: () => import("./pages/LicenceBlocks.vue"),
+	},
+	{
 		path: "/settings/people",
 		name: "People",
 		component: () => import("./pages/People.vue"),
@@ -208,6 +229,10 @@ const MANAGER_ROUTES = [
 	"CompanyNew",
 	"Company",
 	"People",
+	"LicenceRules",
+	"LicenceRuleNew",
+	"LicenceRule",
+	"LicenceBlocks",
 	"ItemTypes",
 	"ItemTypeNew",
 	"ItemType",

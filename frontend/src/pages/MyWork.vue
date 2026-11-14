@@ -2,6 +2,13 @@
 	<AppPageHeader title="My Work">
 		<template #actions>
 			<Button
+				v-if="isMobile && isManager()"
+				variant="ghost"
+				icon="lucide-layout-dashboard"
+				label="Overview"
+				:route="{ name: 'Overview' }"
+			/>
+			<Button
 				variant="ghost"
 				icon="lucide-refresh-cw"
 				label="Refresh"
@@ -72,11 +79,14 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { Button, Skeleton, TabButtons } from "frappe-ui";
-import { boot } from "@/boot";
+import { boot, isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import WorkRow from "@/components/WorkRow.vue";
+import { useIsMobile } from "@/composables/useIsMobile";
 import { BUCKETS } from "@/pages/myWork";
 import { counts, loadWork, rows, work } from "@/stores/work";
+
+const isMobile = useIsMobile();
 
 const filter = ref("all");
 

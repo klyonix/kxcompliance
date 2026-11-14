@@ -1,9 +1,10 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { checksOnly } from "./boot";
+import { checksOnly, isManager } from "./boot";
 import { noteNoResponse } from "./offline/reachability";
 
 export const routes = [
 	{ path: "/", name: "MyWork", component: () => import("./pages/MyWork.vue") },
+	{ path: "/overview", name: "Overview", component: () => import("./pages/Overview.vue") },
 	{ path: "/account", name: "Account", component: () => import("./pages/Account.vue") },
 	{ path: "/register", name: "Register", component: () => import("./pages/Register.vue") },
 	{
@@ -48,6 +49,7 @@ router.beforeEach((to) => {
 	if (checksOnly() && !["LicenceCheck", "Account"].includes(to.name)) {
 		return { name: "LicenceCheck" };
 	}
+	if (to.name === "Overview" && !isManager()) return { name: "MyWork" };
 });
 
 // A screen's code that cannot be fetched means the server is not answering (or the device is offline).

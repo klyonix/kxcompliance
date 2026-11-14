@@ -6,7 +6,7 @@
 		<template #nav>
 			<MobileNav>
 				<MobileNavItem
-					v-for="section in sections"
+					v-for="section in tabSections"
 					:key="section.route"
 					:label="section.tabLabel || section.label"
 					:icon="section.icon"
@@ -54,4 +54,5 @@ import { sections } from "./navigation";
 // Paint the app light or dark as chosen on the Account page, following the system by default.
 useColorScheme();
 const isMobile = useIsMobile();
+const tabSections = sections.filter((section) => !section.desktopOnly);
 </script>

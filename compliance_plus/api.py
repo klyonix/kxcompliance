@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
 
+from compliance_plus.compliance_plus.overview import get_overview
 from compliance_plus.compliance_plus.party_licences import (
 	DOCUMENTS,
 	GROUP_FIELDS,
@@ -15,7 +16,7 @@ from compliance_plus.compliance_plus.party_licences import (
 	party_licence_items,
 	requirements_for_party,
 )
-from compliance_plus.compliance_plus.register import CLOSED_TASK_STATUSES
+from compliance_plus.compliance_plus.register import CLOSED_TASK_STATUSES, is_approver
 
 APP_ROLES = frozenset({"System Manager", "Compliance Manager", "Compliance User", "Compliance Auditor"})
 # People who sell or buy may open the app for the Licence Check only, for their side of the business.
@@ -133,6 +134,15 @@ def my_work() -> dict:
 		),
 		"as_of": str(now_datetime()),
 	}
+
+
+@frappe.whitelist(methods=["GET"])
+def overview() -> dict:
+	"""The managers' numbers across the register, filings, legal work and party licences."""
+	check_app_access()
+	if not is_approver():
+		frappe.throw(_("Only a Compliance Manager can open the overview."), frappe.PermissionError)
+	return get_overview()
 
 
 @frappe.whitelist(methods=["POST"])

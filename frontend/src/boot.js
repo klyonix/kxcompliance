@@ -8,6 +8,10 @@ export const boot = {
 	companies: window.companies || [],
 	// The site's date format setting, such as "dd-mm-yyyy".
 	dateFormat: window.date_format || "",
+	// "Organisation" or "CA/CS Firm", chosen in onboarding.
+	accountType: window.account_type || "",
+	// True for a manager on a site that has not been set up yet.
+	setupNeeded: Boolean(window.setup_needed),
 	// Whose licences this person may check: Customer, Supplier or both.
 	partyTypes: window.party_types || [],
 	defaultCompany: window.default_company || "",

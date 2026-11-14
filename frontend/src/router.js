@@ -1,9 +1,10 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { checksOnly, isManager } from "./boot";
+import { boot, checksOnly, isManager } from "./boot";
 import { noteNoResponse } from "./offline/reachability";
 
 export const routes = [
 	{ path: "/", name: "MyWork", component: () => import("./pages/MyWork.vue") },
+	{ path: "/setup", name: "Onboarding", component: () => import("./pages/Onboarding.vue") },
 	{ path: "/search", name: "Search", component: () => import("./pages/Search.vue") },
 	{ path: "/overview", name: "Overview", component: () => import("./pages/Overview.vue") },
 	{ path: "/account", name: "Account", component: () => import("./pages/Account.vue") },
@@ -52,6 +53,9 @@ const router = createRouter({ history: createWebHistory("/compliance"), routes }
 
 // Someone here only for the Licence Check is kept to it (the server refuses the rest anyway).
 router.beforeEach((to) => {
+	// A manager on a new site sets it up before anything else.
+	if (boot.setupNeeded && to.name !== "Onboarding") return { name: "Onboarding" };
+	if (!boot.setupNeeded && to.name === "Onboarding") return { name: "MyWork" };
 	if (checksOnly() && !["LicenceCheck", "Account"].includes(to.name)) {
 		return { name: "LicenceCheck" };
 	}

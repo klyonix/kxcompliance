@@ -1,5 +1,7 @@
 <template>
-	<MobileShell v-if="isMobile">
+	<!-- Onboarding has the whole screen: there is nothing to navigate to until it is done. -->
+	<RouterView v-if="route.name === 'Onboarding'" />
+	<MobileShell v-else-if="isMobile">
 		<UpdatePrompt />
 		<ConnectionBanner />
 		<RouterView />
@@ -45,7 +47,7 @@ import {
 	useColorScheme,
 } from "frappe-ui";
 import { onBeforeUnmount, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { boot, checksOnly } from "./boot";
 import AppSidebar from "./components/AppSidebar.vue";
 import ConnectionBanner from "./components/ConnectionBanner.vue";
@@ -58,6 +60,7 @@ useColorScheme();
 
 // Ctrl/⌘ K anywhere, or "/" when not typing, opens search.
 const router = useRouter();
+const route = useRoute();
 function openSearch(event) {
 	const typing = event.target.closest?.("input, textarea, select, [contenteditable]");
 	const shortcut =

@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
 
+from compliance_plus.compliance_plus import onboarding
 from compliance_plus.compliance_plus.company_events import event_types_for
 from compliance_plus.compliance_plus.overview import get_overview
 from compliance_plus.compliance_plus.party_licences import (
@@ -384,6 +385,20 @@ def event_types(company: str) -> list[dict]:
 	)
 
 
+@frappe.whitelist(methods=["GET"])
+def onboarding_options() -> dict:
+	"""What the onboarding screens offer: companies, kinds, registrations, states and people."""
+	check_app_access()
+	return onboarding.options()
+
+
+@frappe.whitelist(methods=["POST"])
+def complete_onboarding(setup: dict) -> dict:
+	"""Set the site up from the onboarding answers. `setup` is read field by field, never stored whole."""
+	check_app_access()
+	return onboarding.complete(setup)
+
+
 def app_companies() -> list[str]:
 	"""The companies the person may pick in the app: their User Permissions, else every company.
 
@@ -409,4 +424,7 @@ def boot() -> dict:
 		"companies": app_companies() if has_app_access() else [],
 		"default_company": frappe.defaults.get_user_default("Company") or "",
 		"date_format": frappe.db.get_default("date_format") or "dd-mm-yyyy",
+		"account_type": settings.account_type or "",
+		# Managers are taken through onboarding until the site is set up.
+		"setup_needed": not settings.setup_complete and is_approver(),
 	}

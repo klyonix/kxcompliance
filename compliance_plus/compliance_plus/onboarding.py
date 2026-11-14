@@ -33,10 +33,9 @@ def check_can_onboard():
 		frappe.throw(_("Only a Compliance Manager can set up the app."), frappe.PermissionError)
 
 
-def options() -> dict:
-	"""What the onboarding screens offer to choose from."""
-	check_can_onboard()
-	with_profile = set(frappe.get_all("Company Compliance Profile", pluck="company"))
+def firm_people() -> list[dict]:
+	"""Active users who can hold or review compliance work, by name, for choosing in a form.
+	Names and IDs only: compliance roles do not otherwise read User."""
 	users = sorted(
 		set(
 			frappe.get_all(
@@ -45,12 +44,19 @@ def options() -> dict:
 		)
 		- {"Guest"}
 	)
-	people = frappe.get_all(
+	return frappe.get_all(
 		"User",
-		filters={"name": ("in", users), "enabled": 1, "user_type": "System User"},
+		filters={"name": ("in", users or [""]), "enabled": 1, "user_type": "System User"},
 		fields=["name", "full_name"],
 		order_by="full_name asc",
 	)
+
+
+def options() -> dict:
+	"""What the onboarding screens offer to choose from."""
+	check_can_onboard()
+	with_profile = set(frappe.get_all("Company Compliance Profile", pluck="company"))
+	people = firm_people()
 	return {
 		"companies": [
 			{"name": name, "set_up": name in with_profile}

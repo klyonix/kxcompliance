@@ -553,6 +553,15 @@ def client_of_login() -> str:
 
 
 @frappe.whitelist(methods=["GET"])
+def people_options() -> list[dict]:
+	"""The firm's people who can be given compliance work, for the app's forms."""
+	check_app_access()
+	if not is_approver():
+		frappe.throw(_("Only a Compliance Manager can assign people."), frappe.PermissionError)
+	return onboarding.firm_people()
+
+
+@frappe.whitelist(methods=["GET"])
 def settings_options() -> dict:
 	"""The app's settings screen: the values and the choices it offers (managers only)."""
 	check_app_access()

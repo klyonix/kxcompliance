@@ -7,10 +7,19 @@
 		:to-row="itemRow"
 		search-placeholder="Search the register"
 		:empty="empty"
-	/>
+	>
+		<template #actions>
+			<Button
+				icon-left="lucide-pen-line"
+				label="Signatories"
+				:route="{ name: 'Signatories' }"
+			/>
+		</template>
+	</RecordList>
 </template>
 
 <script setup>
+import { Button } from "frappe-ui";
 import RecordList from "@/components/RecordList.vue";
 import { ITEM_LIST_FIELDS, REGISTER_VIEWS, itemRow } from "@/lib/items";
 

@@ -12,6 +12,22 @@ export const routes = [
 	{ path: "/settings", name: "Settings", component: () => import("./pages/Settings.vue") },
 	{ path: "/register", name: "Register", component: () => import("./pages/Register.vue") },
 	{
+		path: "/signatories",
+		name: "Signatories",
+		component: () => import("./pages/Signatories.vue"),
+	},
+	{
+		path: "/signatories/new",
+		name: "SignatoryNew",
+		component: () => import("./pages/SignatoryForm.vue"),
+	},
+	{
+		path: "/signatories/:name",
+		name: "Signatory",
+		component: () => import("./pages/SignatoryForm.vue"),
+		props: true,
+	},
+	{
 		path: "/register/:name",
 		name: "ComplianceItem",
 		component: () => import("./pages/ComplianceItem.vue"),
@@ -24,6 +40,17 @@ export const routes = [
 		props: () => ({ name: boot.client }),
 	},
 	{ path: "/clients", name: "Clients", component: () => import("./pages/Clients.vue") },
+	{
+		path: "/clients/new",
+		name: "ClientNew",
+		component: () => import("./pages/ClientForm.vue"),
+	},
+	{
+		path: "/clients/:name/edit",
+		name: "ClientEdit",
+		component: () => import("./pages/ClientForm.vue"),
+		props: true,
+	},
 	{
 		path: "/clients/import",
 		name: "BulkSetup",
@@ -75,6 +102,9 @@ export const routes = [
 	{ path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
+// Screens for Compliance Managers only; the server refuses the rest anyway.
+const MANAGER_ROUTES = ["Overview", "BulkSetup", "Settings", "ClientNew", "ClientEdit"];
+
 const router = createRouter({ history: createWebHistory("/compliance"), routes });
 
 // Someone here only for the Licence Check is kept to it (the server refuses the rest anyway).
@@ -90,7 +120,7 @@ router.beforeEach((to) => {
 	if (checksOnly() && !["LicenceCheck", "Account"].includes(to.name)) {
 		return { name: "LicenceCheck" };
 	}
-	if (["Overview", "BulkSetup", "Settings"].includes(to.name) && !isManager()) {
+	if (MANAGER_ROUTES.includes(to.name) && !isManager()) {
 		return { name: "MyWork" };
 	}
 });

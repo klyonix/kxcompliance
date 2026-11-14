@@ -244,6 +244,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { Badge, Button, Dropdown, Skeleton, dialog, toast } from "frappe-ui";
 import { createDoc, getDoc, getList, runMethod, saveChanges } from "@/api";
 import { boot, isManager } from "@/boot";
@@ -271,6 +272,7 @@ import { notLoaded } from "@/offline/reachability";
 import { learnNames, nameOf } from "@/composables/usePeople";
 
 const props = defineProps({ name: { type: String, required: true } });
+const router = useRouter();
 
 const item = ref(null);
 const renewals = ref([]);
@@ -333,6 +335,15 @@ const facts = computed(() =>
 );
 
 const menu = computed(() => [
+	...(mayAct.value
+		? [
+				{
+					label: "Edit item",
+					icon: "lucide-pencil",
+					onClick: () => router.push({ name: "ItemEdit", params: { name: props.name } }),
+				},
+		  ]
+		: []),
 	...deskActions("Compliance Item", props.name),
 	...(mayAct.value
 		? [

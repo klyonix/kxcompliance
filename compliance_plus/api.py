@@ -583,11 +583,27 @@ def save_company(company: str, values: dict, new_company: bool = False) -> dict:
 
 @frappe.whitelist(methods=["GET"])
 def people_options() -> list[dict]:
-	"""The firm's people who can be given compliance work, for the app's forms."""
+	"""The firm's people who can be given compliance work, for the app's forms (names only)."""
 	check_app_access()
-	if not is_approver():
-		frappe.throw(_("Only a Compliance Manager can assign people."), frappe.PermissionError)
 	return onboarding.firm_people()
+
+
+@frappe.whitelist(methods=["GET"])
+def item_form_options() -> dict:
+	"""What the register item screen offers to choose from."""
+	check_app_access()
+	meta = frappe.get_meta("Compliance Item")
+	return {
+		"item_types": frappe.get_list(
+			"Compliance Item Type",
+			filters={"is_active": 1},
+			fields=["name", "category", "renewal_cycle_months", "requires_document"],
+			order_by="name asc",
+		),
+		"states": [state for state in meta.get_field("state").options.split("\n") if state],
+		"billing_cycles": [cycle for cycle in meta.get_field("billing_cycle").options.split("\n") if cycle],
+		"people": onboarding.firm_people(),
+	}
 
 
 @frappe.whitelist(methods=["GET"])

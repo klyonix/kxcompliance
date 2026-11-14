@@ -10,9 +10,24 @@
 	>
 		<template #actions>
 			<Button
+				v-if="isMobile"
+				variant="ghost"
+				icon="lucide-pen-line"
+				label="Signatories"
+				:route="{ name: 'Signatories' }"
+			/>
+			<Button
+				v-else
 				icon-left="lucide-pen-line"
 				label="Signatories"
 				:route="{ name: 'Signatories' }"
+			/>
+			<Button
+				v-if="mayRecord()"
+				variant="solid"
+				icon-left="lucide-plus"
+				:label="isMobile ? 'New' : 'New item'"
+				:route="{ name: 'ItemNew' }"
 			/>
 		</template>
 	</RecordList>
@@ -20,8 +35,13 @@
 
 <script setup>
 import { Button } from "frappe-ui";
+import { mayRecord } from "@/boot";
 import RecordList from "@/components/RecordList.vue";
+import { useIsMobile } from "@/composables/useIsMobile";
 import { ITEM_LIST_FIELDS, REGISTER_VIEWS, itemRow } from "@/lib/items";
+
+// The phone's header has room for short labels beside the title.
+const isMobile = useIsMobile();
 
 function empty(view, searching) {
 	if (searching) return { title: "No matches", detail: "Try another word, or look under All." };

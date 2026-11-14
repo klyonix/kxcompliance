@@ -131,3 +131,13 @@ class TestComplianceItem(IntegrationTestCase):
 		row = next(row for row in rows if row.item_type == "Test Costed Subscription")
 		self.assertEqual(row.item_count, 2)
 		self.assertEqual(row.annual_cost, 17000)
+
+	def test_the_app_offers_active_types_states_and_people(self):
+		from compliance_plus.api import item_form_options
+		from compliance_plus.compliance_plus.test_utils import HOLDER, MANAGER
+
+		with self.set_user(HOLDER):
+			options = item_form_options()
+		self.assertIn("Test Expiring Licence", [row.name for row in options["item_types"]])
+		self.assertIn("Karnataka", options["states"])
+		self.assertIn(MANAGER, [row.name for row in options["people"]])

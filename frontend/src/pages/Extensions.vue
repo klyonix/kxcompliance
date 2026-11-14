@@ -36,6 +36,7 @@ const EMPTY = {
 	current: {
 		title: "No extensions running",
 		detail: "When the government extends a due date, record it here and the open filings it covers move to the new date.",
+		action: { label: "Extend a due date", route: { name: "ExtensionNew" } },
 	},
 	past: {
 		title: "No past extensions",

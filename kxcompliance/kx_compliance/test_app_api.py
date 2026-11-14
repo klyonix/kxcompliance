@@ -139,6 +139,12 @@ class TestAppApi(IntegrationTestCase):
 		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
 			overview()
 
+	def test_the_overview_marks_what_needs_someone_to_act(self):
+		self.assertTrue(self.overview_card("Filings", "Overdue")["act"])
+		self.assertTrue(self.overview_card("Filings", "Waiting for review")["act"])
+		self.assertFalse(self.overview_card("Register", "Active")["act"])
+		self.assertFalse(self.overview_card("Filings", "Filed late")["act"])
+
 	def test_overview_links_carry_their_filters_for_the_desk_list(self):
 		link = desk_link(
 			"Compliance Item", {"status": ("in", ["Expired", "Lapsed"]), "holder_type": "Company"}

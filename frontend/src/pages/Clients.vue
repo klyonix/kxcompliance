@@ -49,6 +49,10 @@
 			<p class="max-w-sm text-base text-ink-gray-5">
 				Clients you are on the team of appear here, with their companies and what is due.
 			</p>
+			<div v-if="isManager()" class="mt-2 flex flex-wrap justify-center gap-2">
+				<Button variant="solid" label="Add a client" :route="{ name: 'ClientNew' }" />
+				<Button label="Import from a sheet" :route="{ name: 'BulkSetup' }" />
+			</div>
 		</div>
 		<ul v-else class="flex flex-col gap-1">
 			<li v-for="client in clients" :key="client.name">

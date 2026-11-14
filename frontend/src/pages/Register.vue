@@ -48,6 +48,10 @@ function empty(view, searching) {
 	return {
 		title: view === "attention" ? "Nothing needs attention" : "No items yet",
 		detail: "Licences, registrations, certificates, insurance and subscriptions appear here once they are recorded.",
+		action:
+			view !== "attention" && mayRecord()
+				? { label: "Add the first item", route: { name: "ItemNew" } }
+				: null,
 	};
 }
 </script>

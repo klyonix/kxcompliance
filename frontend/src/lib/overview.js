@@ -24,7 +24,28 @@ export function onTimeParts(onTime) {
 		.map((part) => ({ ...part, share: (part.count * 100) / counted }));
 }
 
+// A percentage only means something once filings have been filed; before that, say so instead of 0%.
+export const showPercent = (onTime) =>
+	onTime.percent !== null && !(onTime.on_time === 0 && onTime.late === 0);
+
 export function onTimeSummary(onTime) {
 	if (onTime.percent === null) return "No filings fell due in the last twelve months.";
+	if (!showPercent(onTime)) return "Nothing has been filed yet in the last twelve months.";
 	return "of filings due in the last twelve months were filed on time.";
 }
+
+const URGENCY = { red: 0, amber: 1, blue: 2 };
+
+// The numbers that need someone to act, the most urgent first, each with its section's name.
+export function needsYou(sections) {
+	return sections
+		.flatMap((section) =>
+			section.cards
+				.filter((card) => card.act && card.value)
+				.map((card) => ({ ...card, section: section.title }))
+		)
+		.sort((a, b) => (URGENCY[a.tone] ?? 3) - (URGENCY[b.tone] ?? 3));
+}
+
+// A section with nothing in it is named once at the end rather than shown as a row of zeros.
+export const isQuiet = (section) => section.cards.every((card) => !card.value);

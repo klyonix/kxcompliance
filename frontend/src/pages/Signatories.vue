@@ -34,6 +34,9 @@ function empty(view, searching) {
 		? {
 				title: "No signatories yet",
 				detail: "Directors, partners and authorised signatories, who hold the DSCs.",
+				action: mayRecord()
+					? { label: "Add a signatory", route: { name: "SignatoryNew" } }
+					: null,
 		  }
 		: { title: "Nobody has left", detail: "Signatories who resign or retire appear here." };
 }

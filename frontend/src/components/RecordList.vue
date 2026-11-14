@@ -50,6 +50,13 @@
 			</span>
 			<p class="text-lg font-medium text-ink-gray-8">{{ emptyState.title }}</p>
 			<p class="max-w-sm text-base text-ink-gray-5">{{ emptyState.detail }}</p>
+			<Button
+				v-if="emptyState.action"
+				class="mt-2"
+				variant="solid"
+				:label="emptyState.action.label"
+				:route="emptyState.action.route"
+			/>
 		</div>
 
 		<div v-else class="flex flex-col gap-1">
@@ -94,7 +101,7 @@ const props = defineProps({
 	toRow: { type: Function, default: null },
 	searchField: { type: String, default: "title" },
 	searchPlaceholder: { type: String, default: "Search by title" },
-	// (view, searching) => { title, detail }
+	// (view, searching) => { title, detail, action?: { label, route } }: the action is the next step.
 	empty: { type: Function, required: true },
 	// For a list that belongs under another page, as AppPageHeader takes it.
 	parent: { type: Object, default: null },

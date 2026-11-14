@@ -49,7 +49,7 @@ const isMobile = useIsMobile();
 const EMPTY = {
 	open: {
 		title: "Nothing to file",
-		detail: "Returns, payments and forms from the statutory calendar appear here as they fall due.",
+		detail: "Returns, payments and forms appear here as they fall due, from each company's registrations.",
 	},
 	review: {
 		title: "Nothing waiting for review",
@@ -60,6 +60,11 @@ const EMPTY = {
 
 function empty(view, searching) {
 	if (searching) return { title: "No matches", detail: "Try another word, or another tab." };
-	return EMPTY[view];
+	// A manager with nothing to file may not have set up any company's registrations yet.
+	const action =
+		view === "open" && isManager()
+			? { label: "Set up companies", route: { name: "Companies" } }
+			: null;
+	return { ...EMPTY[view], action };
 }
 </script>

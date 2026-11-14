@@ -28,6 +28,46 @@
 		</div>
 
 		<template v-else>
+			<section class="flex flex-col gap-3" aria-labelledby="needs-heading">
+				<h2 id="needs-heading" class="text-base font-semibold text-ink-gray-8">
+					Needs you now
+				</h2>
+				<div
+					v-if="!needs.length"
+					class="flex items-center gap-3 rounded-lg bg-surface-green-1 px-4 py-3"
+				>
+					<span
+						class="lucide-circle-check size-5 shrink-0 text-ink-green-4"
+						aria-hidden="true"
+					/>
+					<p class="text-base text-ink-gray-8">
+						All clear: nothing overdue, expiring or waiting for review.
+					</p>
+				</div>
+				<ul v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+					<li v-for="card in needs" :key="`${card.section}-${card.label}`">
+						<a
+							:href="card.link"
+							class="flex items-center gap-4 rounded-lg border border-outline-gray-1 px-4 py-3 hover:bg-surface-gray-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
+						>
+							<span
+								class="w-10 shrink-0 text-2xl font-semibold tabular-nums"
+								:class="valueClass(card)"
+								>{{ card.value }}</span
+							>
+							<span class="flex min-w-0 flex-col">
+								<span class="truncate text-base font-medium text-ink-gray-8">{{
+									card.label
+								}}</span>
+								<span class="truncate text-sm text-ink-gray-5">{{
+									card.section
+								}}</span>
+							</span>
+						</a>
+					</li>
+				</ul>
+			</section>
+
 			<section
 				class="flex flex-col gap-3 rounded-lg border border-outline-gray-1 px-4 py-4"
 				aria-labelledby="on-time-heading"
@@ -44,7 +84,7 @@
 				</div>
 				<p class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
 					<span
-						v-if="data.on_time.percent !== null"
+						v-if="showPercent(data.on_time)"
 						class="text-3xl font-semibold text-ink-gray-9"
 						>{{ data.on_time.percent }}%</span
 					>
@@ -131,7 +171,7 @@
 			</section>
 
 			<section
-				v-for="section in data.sections"
+				v-for="section in busy"
 				:key="section.title"
 				class="flex flex-col gap-3"
 				:aria-label="section.title"
@@ -154,6 +194,9 @@
 				</div>
 			</section>
 
+			<p v-if="quiet.length" class="text-sm text-ink-gray-5">
+				Nothing recorded yet: {{ quiet.map((section) => section.title).join(" · ") }}.
+			</p>
 			<p class="text-sm text-ink-gray-5">Each number opens its list in the Desk.</p>
 		</template>
 	</div>
@@ -167,7 +210,14 @@ import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import ScoreBadge from "@/components/ScoreBadge.vue";
 import { formatMoney } from "@/lib/format";
-import { onTimeParts, onTimeSummary, valueClass } from "@/lib/overview";
+import {
+	isQuiet,
+	needsYou,
+	onTimeParts,
+	onTimeSummary,
+	showPercent,
+	valueClass,
+} from "@/lib/overview";
 import { notLoaded } from "@/offline/reachability";
 
 const data = ref(null);
@@ -176,6 +226,9 @@ const loading = ref(false);
 const error = ref("");
 
 const parts = computed(() => (data.value ? onTimeParts(data.value.on_time) : []));
+const needs = computed(() => needsYou(data.value.sections));
+const busy = computed(() => data.value.sections.filter((section) => !isQuiet(section)));
+const quiet = computed(() => data.value.sections.filter(isQuiet));
 
 async function load() {
 	loading.value = true;

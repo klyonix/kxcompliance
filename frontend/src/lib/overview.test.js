@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { onTimeParts, onTimeSummary, valueClass } from "./overview";
+import {
+	isQuiet,
+	needsYou,
+	onTimeParts,
+	onTimeSummary,
+	showPercent,
+	valueClass,
+} from "./overview";
 
 describe("the overview", () => {
 	it("colours a number only when there is something to look at", () => {
@@ -19,5 +26,39 @@ describe("the overview", () => {
 	it("says so when nothing fell due", () => {
 		expect(onTimeSummary({ percent: null })).toMatch(/^No filings/);
 		expect(onTimeSummary({ percent: 75 })).toMatch(/^of filings/);
+	});
+
+	it("shows no percentage before anything is filed", () => {
+		const nothingFiled = { on_time: 0, late: 0, overdue: 1, percent: 0 };
+		expect(showPercent(nothingFiled)).toBe(false);
+		expect(onTimeSummary(nothingFiled)).toMatch(/^Nothing has been filed yet/);
+		expect(showPercent({ on_time: 0, late: 2, overdue: 1, percent: 0 })).toBe(true);
+	});
+
+	it("puts what needs someone first, the most urgent first", () => {
+		const sections = [
+			{
+				title: "Register",
+				cards: [
+					{ label: "Due for renewal", value: 2, tone: "amber", act: true },
+					{ label: "Active", value: 9, tone: "green", act: false },
+				],
+			},
+			{
+				title: "Filings",
+				cards: [
+					{ label: "Waiting for review", value: 1, tone: "blue", act: true },
+					{ label: "Overdue", value: 3, tone: "red", act: true },
+					{ label: "Due this week", value: 0, tone: "amber", act: true },
+				],
+			},
+		];
+		expect(needsYou(sections).map((card) => [card.section, card.label])).toEqual([
+			["Filings", "Overdue"],
+			["Register", "Due for renewal"],
+			["Filings", "Waiting for review"],
+		]);
+		expect(isQuiet(sections[0])).toBe(false);
+		expect(isQuiet({ cards: [{ value: 0 }, { value: 0 }] })).toBe(true);
 	});
 });

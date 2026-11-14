@@ -66,8 +66,9 @@ def desk_link(doctype: str, filters: dict) -> str:
 	return f"/app/{frappe.scrub(doctype).replace('_', '-')}?{urlencode(query)}"
 
 
-def card(label: str, value: int, tone: str, doctype: str, filters: dict) -> dict:
-	return {"label": label, "value": value, "tone": tone, "link": desk_link(doctype, filters)}
+def card(label: str, value: int, tone: str, doctype: str, filters: dict, act: bool = False) -> dict:
+	"""One number of the overview; `act` marks what someone has to do something about."""
+	return {"label": label, "value": value, "tone": tone, "link": desk_link(doctype, filters), "act": act}
 
 
 def get_overview() -> dict:
@@ -96,6 +97,7 @@ def get_overview() -> dict:
 						"amber",
 						"Compliance Item",
 						{"status": "Due for Renewal", "holder_type": not_party},
+						act=True,
 					),
 					card(
 						_("Expired or lapsed"),
@@ -103,6 +105,7 @@ def get_overview() -> dict:
 						"red",
 						"Compliance Item",
 						{"status": ("in", expired), "holder_type": not_party},
+						act=True,
 					),
 					card(
 						_("Renewals in progress"),
@@ -132,6 +135,7 @@ def get_overview() -> dict:
 						"amber",
 						"Compliance Task",
 						{"status": ("not in", CLOSED_TASK_STATUSES), "effective_due_date": week},
+						act=True,
 					),
 					card(
 						_("Overdue"),
@@ -139,6 +143,7 @@ def get_overview() -> dict:
 						"red",
 						"Compliance Task",
 						{"is_overdue": 1},
+						act=True,
 					),
 					card(
 						_("Waiting for review"),
@@ -146,6 +151,7 @@ def get_overview() -> dict:
 						"blue",
 						"Compliance Task",
 						{"status": "Ready for Review"},
+						act=True,
 					),
 					card(
 						_("Filed late"),
@@ -165,6 +171,7 @@ def get_overview() -> dict:
 						"blue",
 						"Legal Date",
 						{"status": "Scheduled", "date": week},
+						act=True,
 					),
 					card(
 						_("Outcomes not recorded"),
@@ -172,6 +179,7 @@ def get_overview() -> dict:
 						"red",
 						"Legal Date",
 						{"is_overdue": 1},
+						act=True,
 					),
 					card(
 						_("Open cases"),
@@ -205,6 +213,7 @@ def get_overview() -> dict:
 						"amber",
 						"Trademark",
 						{"status": ("in", ["Objected", "Opposed"])},
+						act=True,
 					),
 					card(
 						_("Registered"),
@@ -224,6 +233,7 @@ def get_overview() -> dict:
 						"amber",
 						"Compliance Item",
 						{"status": "Due for Renewal", "holder_type": is_party},
+						act=True,
 					),
 					card(
 						_("Expired"),
@@ -231,6 +241,7 @@ def get_overview() -> dict:
 						"red",
 						"Compliance Item",
 						{"status": ("in", expired), "holder_type": is_party},
+						act=True,
 					),
 					card(
 						_("Sales and purchases blocked"),
@@ -238,6 +249,7 @@ def get_overview() -> dict:
 						"red",
 						"Licence Check Log",
 						{"result": "Blocked"},
+						act=True,
 					),
 				],
 			},

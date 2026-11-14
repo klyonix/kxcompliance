@@ -52,6 +52,13 @@
 
 		<div class="flex flex-col gap-2">
 			<Button
+				v-if="isManager()"
+				label="Settings"
+				icon-left="lucide-settings"
+				class="justify-start"
+				:route="{ name: 'Settings' }"
+			/>
+			<Button
 				v-if="mayUseDesk()"
 				label="Open the Desk"
 				icon-left="lucide-app-window"
@@ -71,7 +78,7 @@
 <script setup>
 import { Avatar, Button, TabButtons, useColorScheme } from "frappe-ui";
 import { call } from "@/api";
-import { boot, checksOnly, mayUseDesk } from "@/boot";
+import { boot, checksOnly, isManager, mayUseDesk } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import CalendarFeed from "@/components/CalendarFeed.vue";
 import SyncStatus from "@/components/SyncStatus.vue";

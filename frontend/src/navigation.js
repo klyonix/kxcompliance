@@ -29,6 +29,14 @@ const ALL_SECTIONS = [
 		// A firm checks licences on its clients' sales only if it turns this on (not built yet).
 		organisation: true,
 	},
+	// Managers only; on phones it opens from Account, as the tab bar is full.
+	{
+		label: "Settings",
+		route: "Settings",
+		icon: "lucide-settings",
+		managers: true,
+		desktopOnly: true,
+	},
 ];
 
 // What a client's login may open: their home, the records of their companies, and search.

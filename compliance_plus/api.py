@@ -11,7 +11,13 @@ from frappe.desk.doctype.notification_log.notification_log import enqueue_create
 from frappe.handler import ALLOWED_MIMETYPES
 from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
 
-from compliance_plus.compliance_plus import clients, document_requests, onboarding, setup_import
+from compliance_plus.compliance_plus import (
+	app_settings,
+	clients,
+	document_requests,
+	onboarding,
+	setup_import,
+)
 from compliance_plus.compliance_plus.company_events import event_types_for
 from compliance_plus.compliance_plus.overview import get_overview
 from compliance_plus.compliance_plus.party_licences import (
@@ -544,6 +550,20 @@ def client_of_login() -> str:
 		return ""
 	clients = frappe.get_list("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name", limit=1)
 	return clients[0] if clients else ""
+
+
+@frappe.whitelist(methods=["GET"])
+def settings_options() -> dict:
+	"""The app's settings screen: the values and the choices it offers (managers only)."""
+	check_app_access()
+	return app_settings.options()
+
+
+@frappe.whitelist(methods=["POST"])
+def save_settings(values: dict) -> dict:
+	"""Change the app's settings; only the fields the settings screen shows."""
+	check_app_access()
+	return app_settings.save(values)
 
 
 @frappe.whitelist(methods=["GET"])

@@ -11,7 +11,7 @@ their first filings, as finding obligations does in the Desk.
 
 import frappe
 from frappe import _
-from frappe.utils import cint
+from frappe.utils import cint, formatdate, getdate
 
 from kxcompliance.kx_compliance.onboarding import (
 	STATE_REGISTRATIONS,
@@ -98,7 +98,7 @@ def company_detail(company: str) -> dict:
 		for row in frappe.get_all(
 			"Compliance Obligation Template",
 			filters={"name": ("in", [row.obligation_template for row in profile.obligations] or [""])},
-			fields=["name", "law", "frequency"],
+			fields=["name", "law", "frequency", "due_after_event", "event_type"],
 		)
 	}
 	return {
@@ -129,6 +129,20 @@ def company_detail(company: str) -> dict:
 			}
 			for row in profile.obligations
 		],
+		"agm_dates": [
+			{"financial_year_end": str(row.financial_year_end), "agm_date": str(row.agm_date)}
+			for row in sorted(profile.agm_dates, key=lambda row: getdate(row.financial_year_end))
+		],
+		# The filings an AGM sets the due date of (due a number of days after it).
+		"agm_filings": sorted(
+			{
+				row.obligation_template
+				for row in profile.obligations
+				if row.is_active
+				and (templates.get(row.obligation_template) or {}).get("due_after_event")
+				and not (templates.get(row.obligation_template) or {}).get("event_type")
+			}
+		),
 		"modified": str(profile.modified),
 		"score": company_scores([profile.company])[profile.company],
 	}
@@ -175,11 +189,36 @@ def save_company(company: str, values: dict, new_company: bool = False) -> dict:
 	profile.default_responsible = responsible
 	profile.default_reviewer = values.get("default_reviewer") or None
 	profile.set("registrations", registrations)
+	if "agm_dates" in values:
+		profile.set("agm_dates", clean_agm_dates(company, values.get("agm_dates")))
 	update_obligations(profile, values.get("obligations") or [])
 	profile.save()
 	# New registrations bring their obligations and first filings.
 	obligations = profile.find_obligations()
 	return {"company": company, "obligations": obligations, "tasks": generate_tasks(company=company)}
+
+
+def clean_agm_dates(company: str, rows: list | None) -> list[dict]:
+	"""Each financial year once, its AGM held after the year ended."""
+	cleaned, years = [], set()
+	for row in rows or []:
+		year_end, agm = row.get("financial_year_end"), row.get("agm_date")
+		if not (year_end and agm):
+			frappe.throw(
+				_("Give both the year's end and the AGM date for each of {0}'s AGMs.").format(company)
+			)
+		year_end, agm = getdate(year_end), getdate(agm)
+		if agm <= year_end:
+			frappe.throw(
+				_("{0}'s AGM on {1} is not after the year ending {2}.").format(
+					company, formatdate(agm), formatdate(year_end)
+				)
+			)
+		if year_end in years:
+			frappe.throw(_("{0} has two AGMs for the year ending {1}.").format(company, formatdate(year_end)))
+		years.add(year_end)
+		cleaned.append({"financial_year_end": year_end, "agm_date": agm})
+	return cleaned
 
 
 def update_obligations(profile, changes: list):

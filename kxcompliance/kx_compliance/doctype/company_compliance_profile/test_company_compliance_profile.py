@@ -188,6 +188,32 @@ class TestCompaniesInTheApp(IntegrationTestCase):
 		self.assertIn(made["company"], [row.company for row in overview["companies"]])
 		self.assertNotIn(made["company"], overview["not_set_up"])
 
+	def test_a_companys_agm_dates_are_kept_and_checked(self):
+		from kxcompliance.api import company_detail, save_company
+
+		values = {"company_type": "Private Limited", "default_responsible": HOLDER}
+		with self.set_user(MANAGER):
+			save_company(APP_COMPANY, values)
+			values["agm_dates"] = [{"financial_year_end": "2026-03-31", "agm_date": "2026-09-25"}]
+			save_company(APP_COMPANY, values)
+			detail = company_detail(APP_COMPANY)
+			self.assertEqual(
+				detail["agm_dates"], [{"financial_year_end": "2026-03-31", "agm_date": "2026-09-25"}]
+			)
+			self.assertIn("AOC-4 (Financial Statements)", detail["agm_filings"])
+			values["agm_dates"] = [{"financial_year_end": "2026-03-31", "agm_date": "2026-03-01"}]
+			with self.assertRaisesRegex(frappe.ValidationError, "not after the year ending"):
+				save_company(APP_COMPANY, values)
+			values["agm_dates"] = [
+				{"financial_year_end": "2026-03-31", "agm_date": "2026-09-25"},
+				{"financial_year_end": "2026-03-31", "agm_date": "2026-09-28"},
+			]
+			with self.assertRaisesRegex(frappe.ValidationError, "two AGMs"):
+				save_company(APP_COMPANY, values)
+			del values["agm_dates"]
+			save_company(APP_COMPANY, values)
+			self.assertEqual(len(company_detail(APP_COMPANY)["agm_dates"]), 1)
+
 	def test_only_known_people_and_managers(self):
 		from kxcompliance.api import save_company
 

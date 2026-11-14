@@ -282,6 +282,32 @@ export const ARTICLES = [
 		managers: true,
 	},
 	{
+		id: "was-it-sent",
+		area: "Setting up",
+		title: "A client says nobody reminded them. How do I check?",
+		when: "When someone says they were not told a filing or renewal was due.",
+		steps: [
+			'Open Settings and press "Reminder log".',
+			"Type part of their email address to see everything sent to them, newest first.",
+			"Open any of them to see the filing or item it was about.",
+		],
+		page: "ReminderLog",
+		managers: true,
+	},
+	{
+		id: "agm-dates",
+		area: "Setting up",
+		title: "AOC-4 and MGT-7 have no due date. Why?",
+		when: "When a company's Companies Act annual filings show no due date.",
+		steps: [
+			"They fall due a set number of days after the company's AGM.",
+			'Open Settings, "Companies", and the company.',
+			'Under AGM dates press "Add an AGM", give the year\'s end and the date it was held, and save.',
+		],
+		page: "Companies",
+		managers: true,
+	},
+	{
 		id: "set-up-a-company",
 		area: "Setting up",
 		title: "How do I set up a company?",

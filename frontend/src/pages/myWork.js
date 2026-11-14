@@ -8,6 +8,7 @@ export const KINDS = {
 	request: { label: "Document requests", icon: "lucide-file-up" },
 	signatory: { label: "Signatories", icon: "lucide-pen-line" },
 	extension: { label: "Due-date extensions", icon: "lucide-calendar-clock" },
+	reminder: { label: "Reminders", icon: "lucide-bell" },
 };
 
 const LEGAL_PAGES = { "Legal Case": "LegalCase", Trademark: "Trademark" };

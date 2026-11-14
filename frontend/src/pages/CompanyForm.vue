@@ -156,6 +156,54 @@
 			</section>
 
 			<section
+				v-if="company && (agmFilings.length || form.agm_dates.length)"
+				class="flex flex-col gap-3"
+				aria-labelledby="agm-heading"
+			>
+				<div class="flex items-start justify-between gap-3">
+					<div class="flex flex-col gap-0.5">
+						<h2 id="agm-heading" class="text-base font-semibold text-ink-gray-8">
+							AGM dates
+						</h2>
+						<p class="text-sm text-ink-gray-5">
+							When each year's AGM was held. These filings fall due a set number of
+							days after it: {{ agmFilings.join(", ") || "none now" }}.
+						</p>
+					</div>
+					<Button icon-left="lucide-plus" label="Add an AGM" @click="addAgm" />
+				</div>
+				<p v-if="!form.agm_dates.length" class="text-base text-ink-gray-5">
+					No AGM recorded yet, so those filings have no due date.
+				</p>
+				<div
+					v-for="(row, index) in form.agm_dates"
+					:key="index"
+					class="grid grid-cols-[1fr_1fr_auto] items-end gap-2"
+				>
+					<FormControl
+						v-model="row.financial_year_end"
+						type="date"
+						:format="pickerFormat()"
+						label="Year ended"
+					/>
+					<FormControl
+						v-model="row.agm_date"
+						type="date"
+						:format="pickerFormat()"
+						label="AGM held on"
+					/>
+					<Button
+						variant="ghost"
+						icon="lucide-trash-2"
+						:label="`Remove the AGM for the year ended ${
+							row.financial_year_end || ''
+						}`"
+						@click="form.agm_dates.splice(index, 1)"
+					/>
+				</div>
+			</section>
+
+			<section
 				v-if="company"
 				class="flex flex-col gap-3"
 				aria-labelledby="obligations-heading"
@@ -239,7 +287,7 @@ import { call } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import ScoreBadge from "@/components/ScoreBadge.vue";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, pickerFormat } from "@/lib/format";
 import { personOptions } from "@/lib/people";
 import { notLoaded } from "@/offline/reachability";
 
@@ -263,7 +311,21 @@ const form = reactive({
 	default_reviewer: "",
 	registrations: [],
 	obligations: [],
+	agm_dates: [],
 });
+const agmFilings = ref([]);
+
+// A new row for the latest year not yet recorded: years end on 31 March.
+function addAgm() {
+	const years = form.agm_dates.map((row) => Number(String(row.financial_year_end).slice(0, 4)));
+	const today = new Date();
+	const lastEnded = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+	const year = years.length ? Math.max(...years) + 1 : lastEnded;
+	form.agm_dates.push({
+		financial_year_end: `${Math.min(year, lastEnded)}-03-31`,
+		agm_date: "",
+	});
+}
 
 const isFirm = boot.accountType === "CA/CS Firm";
 const people = computed(() => personOptions(options.value?.people || []));
@@ -294,6 +356,7 @@ async function save() {
 					default_responsible: form.default_responsible,
 					default_reviewer: form.default_reviewer || null,
 					registrations: form.registrations,
+					...(props.company ? { agm_dates: form.agm_dates } : {}),
 					obligations: form.obligations.map((row) => ({
 						name: row.name,
 						is_active: row.is_active ? 1 : 0,
@@ -329,6 +392,7 @@ async function load() {
 				company: props.company,
 			});
 			score.value = detail.score;
+			agmFilings.value = detail.agm_filings || [];
 			Object.assign(form, {
 				company_type: detail.company_type || "",
 				client: detail.client || "",
@@ -338,6 +402,7 @@ async function load() {
 					...row,
 					state: row.state || "",
 				})),
+				agm_dates: (detail.agm_dates || []).map((row) => ({ ...row })),
 				obligations: detail.obligations.map((row) => ({
 					...row,
 					is_active: Boolean(row.is_active),

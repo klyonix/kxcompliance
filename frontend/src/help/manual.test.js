@@ -41,6 +41,8 @@ describe("the user manual", () => {
 		for (const article of ARTICLES) {
 			expect(AREAS).toContain(article.area);
 			expect(tourFor(article.page), article.id).toBeTruthy();
+			// "Show me" opens the page by itself, so it cannot be one that needs a record.
+			expect(tourFor(article.page).record, article.id).toBeFalsy();
 		}
 	});
 

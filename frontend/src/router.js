@@ -80,6 +80,11 @@ export const routes = [
 		component: () => import("./pages/LicenceBlocks.vue"),
 	},
 	{
+		path: "/settings/reminder-log",
+		name: "ReminderLog",
+		component: () => import("./pages/ReminderLog.vue"),
+	},
+	{
 		path: "/settings/people",
 		name: "People",
 		component: () => import("./pages/People.vue"),
@@ -258,6 +263,10 @@ router.beforeEach((to) => {
 	if (to.name === "ClientHome") return { name: "MyWork" };
 	if (checksOnly() && !["LicenceCheck", "Account", "Help"].includes(to.name)) {
 		return { name: "LicenceCheck" };
+	}
+	// The reminder log is for managers and auditors, who check what was sent.
+	if (to.name === "ReminderLog" && !isManager() && !boot.roles.includes("Compliance Auditor")) {
+		return { name: "MyWork" };
 	}
 	if (MANAGER_ROUTES.includes(to.name) && !isManager()) {
 		return { name: "MyWork" };

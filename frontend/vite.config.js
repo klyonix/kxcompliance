@@ -81,5 +81,7 @@ export default defineConfig({
 	},
 	test: {
 		environment: "happy-dom",
+		// The screenshot capture under e2e/ runs with Playwright, not Vitest.
+		include: ["src/**/*.test.js"],
 	},
 });

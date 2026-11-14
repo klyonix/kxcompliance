@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import nowdate
 
-from compliance_plus.compliance_plus.legal import CLOSED_CASE_STATUSES
+from compliance_plus.compliance_plus.legal import CLOSED_CASE_STATUSES, pass_company_to_dates
 
 
 class LegalCase(Document):
@@ -25,6 +25,8 @@ class LegalCase(Document):
 	def on_update(self):
 		if self.has_value_changed("responsible") or self.has_value_changed("reviewer"):
 			self.pass_people_to_open_dates()
+		if self.has_value_changed("company"):
+			pass_company_to_dates(self.doctype, self.name, self.company)
 
 	def pass_people_to_open_dates(self):
 		# Legal Dates carry the case's people so lists can be filtered by them.

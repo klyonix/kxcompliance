@@ -12,3 +12,4 @@ compliance_plus.patches.v1_0.move_trademark_tracker
 compliance_plus.patches.v1_0.move_customer_licences
 compliance_plus.patches.v1_0.reword_trademark_deadlines
 compliance_plus.patches.v1_0.mark_existing_sites_set_up
+compliance_plus.patches.v1_0.fill_legal_date_company

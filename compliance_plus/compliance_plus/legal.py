@@ -18,6 +18,8 @@ from compliance_plus.compliance_plus.reminders import (
 
 # What a Legal Date can belong to, and the field that names it.
 REFERENCE_TITLES = {"Legal Case": "title", "Trademark": "mark"}
+# The field that names the company a case or trademark belongs to.
+REFERENCE_COMPANIES = {"Legal Case": "company", "Trademark": "applicant"}
 CLOSED_CASE_STATUSES = ("Disposed - In Our Favour", "Disposed - Against Us", "Settled", "Withdrawn")
 REMINDER_DAYS = (7, 2, 1)
 DATE_FIELDS = [
@@ -30,6 +32,16 @@ DATE_FIELDS = [
 	"responsible",
 	"reviewer",
 ]
+
+
+def pass_company_to_dates(doctype: str, name: str, company: str | None):
+	"""Legal Dates carry their case's or trademark's company, which permissions and lists filter by."""
+	legal_date = frappe.qb.DocType("Legal Date")
+	(
+		frappe.qb.update(legal_date)
+		.set(legal_date.company, company)
+		.where((legal_date.reference_doctype == doctype) & (legal_date.reference_name == name))
+	).run()
 
 
 def refresh_next_date(doctype: str, name: str):

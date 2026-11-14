@@ -1,5 +1,6 @@
 <template>
 	<MobileShell v-if="isMobile">
+		<UpdatePrompt />
 		<ConnectionBanner />
 		<RouterView />
 		<template #nav>
@@ -28,6 +29,7 @@
 		<template #sidebar>
 			<AppSidebar />
 		</template>
+		<UpdatePrompt />
 		<ConnectionBanner />
 		<RouterView />
 	</DesktopShell>
@@ -45,6 +47,7 @@ import {
 import { boot } from "./boot";
 import AppSidebar from "./components/AppSidebar.vue";
 import ConnectionBanner from "./components/ConnectionBanner.vue";
+import UpdatePrompt from "./components/UpdatePrompt.vue";
 import { useIsMobile } from "./composables/useIsMobile";
 import { sections } from "./navigation";
 

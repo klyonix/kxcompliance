@@ -116,3 +116,23 @@ class TestComplianceRenewal(IntegrationTestCase):
 			self.assertFalse(frappe.has_permission("Compliance Renewal", "read", renewal))
 		with self.set_user(HOLDER):
 			self.assertIn(renewal, frappe.get_list("Compliance Renewal", pluck="name"))
+
+	def test_the_app_records_and_completes_a_renewal(self):
+		from compliance_plus.api import save_changes
+
+		renewal = self.renewal(status="Applied")
+		new_certificate = make_file("renewed.txt")
+		with self.set_user(HOLDER):
+			save_changes(
+				"Compliance Renewal",
+				renewal.name,
+				{"new_valid_until": "2027-12-31", "new_certificate": new_certificate, "fee": 2500},
+			)
+			with self.assertRaises(frappe.PermissionError):
+				save_changes("Compliance Renewal", renewal.name, {"status": "Approved"})
+			with self.assertRaises(frappe.PermissionError):
+				save_changes("Compliance Renewal", renewal.name, {"previous_valid_until": "2020-01-01"})
+		with self.set_user(MANAGER):
+			save_changes("Compliance Renewal", renewal.name, {"status": "Approved"})
+		item = frappe.get_doc("Compliance Item", self.item.name)
+		self.assertEqual((str(item.valid_until), item.certificate), ("2027-12-31", new_certificate))

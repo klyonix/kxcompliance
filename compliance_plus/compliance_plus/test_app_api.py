@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import json
+from urllib.parse import unquote, urlsplit
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -154,6 +155,13 @@ class TestAppApi(IntegrationTestCase):
 		]
 		self.assertEqual(total(rows, status=["Filed", "Filed Late"]), 8)
 		self.assertEqual(total(rows, status="Open"), 1)
+
+	def test_the_on_time_rate_links_to_its_report(self):
+		with self.set_user(MANAGER):
+			link = overview()["on_time"]["link"]
+		path = unquote(urlsplit(link).path)
+		self.assertTrue(path.startswith("/app/query-report/"))
+		self.assertTrue(frappe.db.exists("Report", path.removeprefix("/app/query-report/")))
 
 	def test_the_app_shows_people_by_name(self):
 		with self.set_user(HOLDER):

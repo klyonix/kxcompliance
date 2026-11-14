@@ -5,6 +5,7 @@ export const KINDS = {
 	filing: { label: "Filings", icon: "lucide-calendar-check" },
 	legal: { label: "Legal", icon: "lucide-scale" },
 	trademark: { label: "Trademarks", icon: "lucide-stamp" },
+	request: { label: "Document requests", icon: "lucide-file-up" },
 };
 
 const LEGAL_PAGES = { "Legal Case": "LegalCase", Trademark: "Trademark" };

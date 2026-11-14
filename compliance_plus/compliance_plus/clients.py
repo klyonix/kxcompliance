@@ -235,6 +235,9 @@ TASK_FIELDS = [
 ]
 
 
+REQUEST_FIELDS = ["name", "title", "status", "is_overdue", "due_date", "company", "compliance_task"]
+
+
 def filing_counts(companies: list[str]) -> dict[str, dict[str, int]]:
 	"""Per company: open filings overdue, due in the next seven days, and waiting for review.
 	Read with get_list, so each person counts only what they may see."""
@@ -323,6 +326,13 @@ def client_detail(name: str) -> dict:
 		if names
 		else []
 	)
+	requests = frappe.get_list(
+		"Document Request",
+		filters={"client": name, "status": ("in", ("Requested", "Uploaded"))},
+		fields=REQUEST_FIELDS,
+		order_by="due_date asc",
+		limit=100,
+	)
 	return {
 		"name": client.name,
 		"client_kind": client.client_kind,
@@ -334,5 +344,6 @@ def client_detail(name: str) -> dict:
 		"contact_phone": client.contact_phone,
 		"companies": companies,
 		"filings": filings,
+		"requests": requests,
 		**add_up(counts, names),
 	}

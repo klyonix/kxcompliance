@@ -69,20 +69,27 @@ export async function upload(file, { doctype, docname, fileName, fetcher = fetch
 	return (await send("/api/method/upload_file", init, fetcher)).message;
 }
 
-// A client's login adds a document to one of its filings (it cannot change the filing itself).
-export async function uploadClientDocument(file, task, { fetcher = fetch } = {}) {
+// Upload a file to one of the app's own upload methods, with the record it is for.
+async function uploadTo(method, fields, file, fetcher) {
 	const form = new FormData();
 	form.append("file", file, file.name || "upload");
-	form.append("task", task);
+	for (const [key, value] of Object.entries(fields)) form.append(key, value);
 	const init = {
 		method: "POST",
 		headers: { Accept: "application/json", "X-Frappe-CSRF-Token": window.csrf_token || "" },
 		credentials: "same-origin",
 		body: form,
 	};
-	return (await send("/api/method/compliance_plus.api.add_client_document", init, fetcher))
-		.message;
+	return (await send(`/api/method/${method}`, init, fetcher)).message;
 }
+
+// A client's login adds a document to one of its filings (it cannot change the filing itself).
+export const uploadClientDocument = (file, task, { fetcher = fetch } = {}) =>
+	uploadTo("compliance_plus.api.add_client_document", { task }, file, fetcher);
+
+// What a document request asks for, from the client (or from the firm, received another way).
+export const uploadRequestDocument = (file, request, { fetcher = fetch } = {}) =>
+	uploadTo("compliance_plus.api.add_request_document", { request }, file, fetcher);
 
 async function send(url, init, fetcher) {
 	let response;

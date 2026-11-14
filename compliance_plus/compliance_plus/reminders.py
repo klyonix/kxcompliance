@@ -377,6 +377,7 @@ def write_log(
 	legal_date: str | None = None,
 	rule_days: int | None = None,
 	due_date=None,
+	document_request: str | None = None,
 ):
 	frappe.get_doc(
 		{
@@ -384,6 +385,7 @@ def write_log(
 			"compliance_item": item,
 			"compliance_task": task,
 			"legal_date": legal_date,
+			"document_request": document_request,
 			"kind": kind,
 			"rule_days": rule_days,
 			"due_date": due_date,

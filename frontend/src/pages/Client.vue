@@ -35,6 +35,28 @@
 				<p class="text-base text-ink-gray-6">{{ people }}</p>
 			</section>
 
+			<section class="flex flex-col gap-1" aria-labelledby="requests-heading">
+				<div class="flex items-center justify-between gap-3 pb-2">
+					<h2 id="requests-heading" class="text-base font-semibold text-ink-gray-8">
+						{{ clientLogin ? "Documents your firm needs" : "Document requests" }}
+					</h2>
+					<Button
+						v-if="mayAsk"
+						icon-left="lucide-file-up"
+						label="Ask for a document"
+						@click="asking = true"
+					/>
+				</div>
+				<p v-if="!client.requests.length" class="text-base text-ink-gray-5">
+					{{ clientLogin ? "Nothing needed right now." : "Nothing asked for." }}
+				</p>
+				<WorkRow
+					v-for="request in client.requests"
+					:key="request.name"
+					:row="requestRow(request, { client: clientLogin })"
+				/>
+			</section>
+
 			<section class="flex flex-col gap-3" aria-labelledby="companies-heading">
 				<h2 id="companies-heading" class="text-base font-semibold text-ink-gray-8">
 					Companies
@@ -86,18 +108,28 @@
 			</section>
 		</template>
 	</div>
+
+	<AskDocument
+		v-if="mayAsk"
+		v-model:open="asking"
+		:companies="client.companies.map((row) => row.company)"
+		@created="opened"
+	/>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, Dropdown, Skeleton } from "frappe-ui";
+import { useRouter } from "vue-router";
 import { call } from "@/api";
-import { isClientLogin } from "@/boot";
+import { isClientLogin, mayRecord } from "@/boot";
+import AskDocument from "@/components/AskDocument.vue";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { clientAttention, clientTheme } from "@/lib/clients";
 import { taskRow } from "@/lib/filings";
+import { requestRow } from "@/lib/requests";
 import { deskActions } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
 
@@ -112,6 +144,17 @@ const TONE = {
 const client = ref(null);
 const error = ref("");
 const clientLogin = isClientLogin();
+const router = useRouter();
+const asking = ref(false);
+const mayAsk = computed(
+	() =>
+		!clientLogin &&
+		mayRecord() &&
+		client.value?.status !== "Left" &&
+		client.value?.companies.length
+);
+const opened = (request) =>
+	router.push({ name: "DocumentRequest", params: { name: request.name } });
 
 const people = computed(() => {
 	const manager = client.value.relationship_manager;

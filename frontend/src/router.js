@@ -29,6 +29,12 @@ export const routes = [
 		component: () => import("./pages/Client.vue"),
 		props: true,
 	},
+	{
+		path: "/requests/:name",
+		name: "DocumentRequest",
+		component: () => import("./pages/DocumentRequest.vue"),
+		props: true,
+	},
 	{ path: "/filings", name: "Filings", component: () => import("./pages/Filings.vue") },
 	{
 		path: "/filings/event",

@@ -155,6 +155,7 @@ scheduler_events = {
 		"compliance_plus.compliance_plus.reminders.run_daily",
 		"compliance_plus.compliance_plus.statutory.run_daily",
 		"compliance_plus.compliance_plus.legal.run_daily",
+		"compliance_plus.compliance_plus.document_requests.run_daily",
 	],
 	# 	"hourly": [
 	# 		"compliance_plus.tasks.hourly"
@@ -252,6 +253,7 @@ permission_query_conditions = {
 	"Compliance Item": "compliance_plus.permissions.item_query_conditions",
 	"Compliance Renewal": "compliance_plus.permissions.renewal_query_conditions",
 	"Compliance Task": "compliance_plus.permissions.task_query_conditions",
+	"Document Request": "compliance_plus.permissions.document_request_query_conditions",
 	"Legal Case": "compliance_plus.permissions.legal_case_query_conditions",
 	"Legal Date": "compliance_plus.permissions.legal_date_query_conditions",
 	"Trademark": "compliance_plus.permissions.trademark_query_conditions",
@@ -262,6 +264,7 @@ has_permission = {
 	"Compliance Item": "compliance_plus.permissions.has_item_permission",
 	"Compliance Renewal": "compliance_plus.permissions.has_renewal_permission",
 	"Compliance Task": "compliance_plus.permissions.has_task_permission",
+	"Document Request": "compliance_plus.permissions.has_document_request_permission",
 	"Legal Case": "compliance_plus.permissions.has_legal_case_permission",
 	"Legal Date": "compliance_plus.permissions.has_legal_date_permission",
 	"Trademark": "compliance_plus.permissions.has_trademark_permission",

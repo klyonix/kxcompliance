@@ -34,6 +34,7 @@ const ALL_SECTIONS = [
 // What a client's login may open: their home, the records of their companies, and search.
 export const CLIENT_ROUTES = [
 	"ClientHome",
+	"DocumentRequest",
 	"Search",
 	"Filings",
 	"ComplianceTask",

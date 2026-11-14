@@ -21,6 +21,11 @@
 					label="Companies"
 					:route="{ name: 'Companies' }"
 				/>
+				<Button
+					icon-left="lucide-file-badge"
+					label="Register item types"
+					:route="{ name: 'ItemTypes' }"
+				/>
 			</nav>
 
 			<section class="flex flex-col gap-4" aria-labelledby="reminders-heading">

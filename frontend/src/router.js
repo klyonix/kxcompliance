@@ -40,6 +40,33 @@ export const routes = [
 		props: true,
 	},
 	{
+		path: "/register/new",
+		name: "ItemNew",
+		component: () => import("./pages/ItemForm.vue"),
+	},
+	{
+		path: "/register/:name/edit",
+		name: "ItemEdit",
+		component: () => import("./pages/ItemForm.vue"),
+		props: true,
+	},
+	{
+		path: "/settings/item-types",
+		name: "ItemTypes",
+		component: () => import("./pages/ItemTypes.vue"),
+	},
+	{
+		path: "/settings/item-types/new",
+		name: "ItemTypeNew",
+		component: () => import("./pages/ItemTypeForm.vue"),
+	},
+	{
+		path: "/settings/item-types/:name",
+		name: "ItemType",
+		component: () => import("./pages/ItemTypeForm.vue"),
+		props: true,
+	},
+	{
 		path: "/register/:name",
 		name: "ComplianceItem",
 		component: () => import("./pages/ComplianceItem.vue"),
@@ -124,6 +151,9 @@ const MANAGER_ROUTES = [
 	"Companies",
 	"CompanyNew",
 	"Company",
+	"ItemTypes",
+	"ItemTypeNew",
+	"ItemType",
 ];
 
 const router = createRouter({ history: createWebHistory("/compliance"), routes });

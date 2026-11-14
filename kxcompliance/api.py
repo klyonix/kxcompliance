@@ -17,8 +17,10 @@ from kxcompliance.kx_compliance import (
 	clients,
 	companies,
 	document_requests,
+	getting_started,
 	month_calendar,
 	onboarding,
+	people,
 	score,
 	setup_import,
 )
@@ -630,6 +632,53 @@ def item_form_options() -> dict:
 		"billing_cycles": [cycle for cycle in meta.get_field("billing_cycle").options.split("\n") if cycle],
 		"people": onboarding.firm_people(),
 	}
+
+
+@frappe.whitelist(methods=["GET"])
+def team() -> list[dict]:
+	"""Everyone on the team and their role, for the People screen (managers only)."""
+	check_app_access()
+	return people.team()
+
+
+@frappe.whitelist(methods=["POST"])
+def invite_person(full_name: str, email: str, role: str) -> dict:
+	"""Add someone to the team as Manager, Staff or Auditor (managers only)."""
+	check_app_access()
+	return people.invite(full_name, email, role)
+
+
+@frappe.whitelist(methods=["POST"])
+def set_person_role(user: str, role: str) -> dict:
+	check_app_access()
+	return people.set_role(user, role)
+
+
+@frappe.whitelist(methods=["POST"])
+def remove_person(user: str) -> dict:
+	"""Take someone off the team; their work stays as it is."""
+	check_app_access()
+	return people.remove(user)
+
+
+@frappe.whitelist(methods=["POST"])
+def new_sign_in_link(user: str) -> dict:
+	"""A fresh link to set a password, for someone added who has never signed in."""
+	check_app_access()
+	return people.new_sign_in_link(user)
+
+
+@frappe.whitelist(methods=["GET"])
+def getting_started_checklist() -> dict:
+	"""The first-week checklist for a manager's My Work, each step ticked when done."""
+	check_app_access()
+	return getting_started.checklist()
+
+
+@frappe.whitelist(methods=["POST"])
+def hide_getting_started():
+	check_app_access()
+	getting_started.hide()
 
 
 @frappe.whitelist(methods=["GET"])

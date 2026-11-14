@@ -51,6 +51,11 @@ export const routes = [
 		props: true,
 	},
 	{
+		path: "/settings/people",
+		name: "People",
+		component: () => import("./pages/People.vue"),
+	},
+	{
 		path: "/settings/item-types",
 		name: "ItemTypes",
 		component: () => import("./pages/ItemTypes.vue"),
@@ -194,6 +199,7 @@ const MANAGER_ROUTES = [
 	"Companies",
 	"CompanyNew",
 	"Company",
+	"People",
 	"ItemTypes",
 	"ItemTypeNew",
 	"ItemType",

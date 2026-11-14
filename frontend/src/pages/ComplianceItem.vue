@@ -112,6 +112,42 @@
 				</div>
 			</section>
 
+			<section v-if="isDsc" class="flex flex-col gap-3" aria-labelledby="dsc-heading">
+				<div class="flex items-center justify-between gap-3">
+					<h2 id="dsc-heading" class="text-base font-semibold text-ink-gray-8">Token</h2>
+					<Button
+						v-if="mayAct"
+						icon-left="lucide-arrow-left-right"
+						label="Hand over"
+						:disabled="!isConnected()"
+						@click="handOver"
+					/>
+				</div>
+				<p class="text-base text-ink-gray-8">
+					{{
+						item.custody
+							? `${item.custody} since ${formatDate(item.custody_since)}`
+							: "Nobody has recorded where the token is."
+					}}
+				</p>
+				<ol v-if="handOvers.length" class="flex flex-col">
+					<li
+						v-for="entry in handOvers"
+						:key="entry.name"
+						class="flex flex-col gap-0.5 border-b border-outline-gray-1 py-2 last:border-b-0"
+					>
+						<span class="text-base text-ink-gray-8">{{
+							[entry.custody, entry.person].filter(Boolean).join(" · ")
+						}}</span>
+						<span class="text-sm text-ink-gray-5">{{
+							[formatDate(entry.on_date), nameOf(entry.recorded_by), entry.note]
+								.filter(Boolean)
+								.join(" · ")
+						}}</span>
+					</li>
+				</ol>
+			</section>
+
 			<section class="flex flex-col gap-3" aria-labelledby="details-heading">
 				<h2 id="details-heading" class="text-base font-semibold text-ink-gray-8">
 					Details
@@ -156,7 +192,14 @@ import { createDoc, getDoc, getList, runMethod } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
-import { OPEN_RENEWAL_STATUSES, canAct, itemRow, itemTheme } from "@/lib/items";
+import {
+	CUSTODY_STATES,
+	DSC_TYPE,
+	OPEN_RENEWAL_STATUSES,
+	canAct,
+	itemRow,
+	itemTheme,
+} from "@/lib/items";
 import { deskActions } from "@/navigation";
 import {
 	SAVED_ON_DEVICE,
@@ -183,6 +226,9 @@ const fileInput = ref(null);
 
 const row = computed(() => itemRow(item.value));
 const mayAct = computed(() => canAct(item.value, boot));
+const isDsc = computed(() => item.value?.item_type === DSC_TYPE);
+// Latest hand-over first.
+const handOvers = computed(() => [...(item.value?.custody_log || [])].reverse());
 const openRenewal = computed(() =>
 	renewals.value.find((renewal) => OPEN_RENEWAL_STATUSES.includes(renewal.status))
 );
@@ -209,8 +255,12 @@ const facts = computed(() =>
 			"Held by",
 			item.value.holder_type === "Company"
 				? item.value.company
-				: `${item.value.holder} (${item.value.holder_type})`,
+				: `${item.value.holder_name || item.value.holder} (${item.value.holder_type})`,
 		],
+		["Class", item.value.dsc_class],
+		["Purpose", item.value.dsc_purpose],
+		["Certifying authority", item.value.certifying_authority],
+		["Token serial number", item.value.token_serial],
 		["Company", item.value.holder_type === "Company" ? "" : item.value.company],
 		["Branch", item.value.branch],
 		["State", item.value.state],
@@ -262,7 +312,11 @@ async function load() {
 	error.value = "";
 	try {
 		item.value = await getDoc("Compliance Item", props.name);
-		learnNames([item.value.responsible, item.value.reviewer]);
+		learnNames([
+			item.value.responsible,
+			item.value.reviewer,
+			...(item.value.custody_log || []).map((entry) => entry.recorded_by),
+		]);
 		renewals.value = (
 			await getList("Compliance Renewal", {
 				fields: [
@@ -308,6 +362,32 @@ async function attachCertificate(event) {
 	} finally {
 		await refreshOutbox();
 	}
+}
+
+function handOver() {
+	dialog.prompt({
+		title: "Hand over the token",
+		message: `Record who has the token for ${item.value.title} from today.`,
+		confirmLabel: "Record",
+		fields: [
+			{
+				name: "custody",
+				label: "Token now",
+				type: "select",
+				required: true,
+				defaultValue:
+					item.value.custody === "With the Firm" ? "With the Holder" : "With the Firm",
+				options: CUSTODY_STATES.map((value) => ({ label: value, value })),
+			},
+			{ name: "person", label: "With whom", placeholder: "Who received it" },
+			{ name: "note", label: "Note", type: "textarea" },
+		],
+		onConfirm: async ({ values }) => {
+			await runMethod("Compliance Item", props.name, "hand_over", values);
+			toast.success("Hand-over recorded");
+			await load();
+		},
+	});
 }
 
 function startRenewal() {

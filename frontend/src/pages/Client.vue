@@ -93,6 +93,21 @@
 				</ul>
 			</section>
 
+			<section
+				v-if="client.signatures.length"
+				class="flex flex-col gap-1"
+				aria-labelledby="signatures-heading"
+			>
+				<h2 id="signatures-heading" class="pb-2 text-base font-semibold text-ink-gray-8">
+					Digital signatures
+				</h2>
+				<WorkRow
+					v-for="signature in client.signatures"
+					:key="signature.name"
+					:row="itemRow({ ...signature, item_type: DSC_TYPE })"
+				/>
+			</section>
+
 			<section class="flex flex-col gap-1" aria-labelledby="open-heading">
 				<h2 id="open-heading" class="pb-2 text-base font-semibold text-ink-gray-8">
 					Open filings
@@ -129,6 +144,7 @@ import WorkRow from "@/components/WorkRow.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { clientAttention, clientTheme } from "@/lib/clients";
 import { taskRow } from "@/lib/filings";
+import { DSC_TYPE, itemRow } from "@/lib/items";
 import { requestRow } from "@/lib/requests";
 import { deskActions } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";

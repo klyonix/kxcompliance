@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAct, itemRow, itemTheme, searchFilter } from "./items";
+import { DSC_TYPE, canAct, itemRow, itemTheme, searchFilter } from "./items";
 
 describe("compliance items in the app", () => {
 	it("colours a status by how pressing it is", () => {
@@ -62,5 +62,33 @@ describe("compliance items in the app", () => {
 	it("searches titles only when something is typed", () => {
 		expect(searchFilter("  ")).toEqual([]);
 		expect(searchFilter("fire")).toEqual([["title", "like", "%fire%"]]);
+	});
+});
+
+describe("itemRow for a digital signature", () => {
+	it("names the holder and where the token is", () => {
+		const row = itemRow({
+			name: "CI-9",
+			title: "DSC - Ravi Rao",
+			item_type: DSC_TYPE,
+			status: "Active",
+			valid_until: "2027-01-09",
+			holder_name: "Ravi Rao",
+			custody: "With the Firm",
+		});
+		expect(row.detail).toBe("Ravi Rao · Token with the firm");
+	});
+
+	it("falls back to the company when nobody has recorded the token", () => {
+		const row = itemRow({
+			name: "CI-9",
+			title: "DSC - Ravi Rao",
+			item_type: DSC_TYPE,
+			status: "Active",
+			holder_name: "Ravi Rao",
+			company: "Sunrise Foods",
+			custody: "",
+		});
+		expect(row.detail).toBe("Ravi Rao · Sunrise Foods");
 	});
 });

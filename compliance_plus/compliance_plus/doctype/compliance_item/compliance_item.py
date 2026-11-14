@@ -6,6 +6,9 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate, nowdate
 
+DSC_TYPE = "Digital Signature Certificate"
+CUSTODY_STATES = ("With the Firm", "With the Client", "With the Holder", "Not Known")
+
 from compliance_plus.compliance_plus.doctype.trademark.trademark import follow_renewal
 from compliance_plus.compliance_plus.register import (
 	compute_status,
@@ -19,16 +22,59 @@ class ComplianceItem(Document):
 	def validate(self):
 		rules = get_type_rules([self.item_type]).get(self.item_type) or frappe._dict()
 		self.set_holder()
+		self.set_custody()
 		if self.is_new():
 			self.copy_reminders_from_type()
 		self.validate_dates(rules)
 		self.status = self.get_status(rules)
 
 	def set_holder(self):
+		self.holder_name = ""
 		if self.holder_type == "Company":
 			self.holder = self.company
-		elif not self.holder:
+			return
+		if not self.holder:
 			frappe.throw(_("Choose the {0} that holds this item.").format(_(self.holder_type)))
+		if self.holder_type == "Signatory":
+			self.check_signatory()
+
+	def check_signatory(self):
+		signatory = frappe.get_doc("Signatory", self.holder)
+		self.holder_name = signatory.full_name
+		if self.company not in signatory.companies():
+			frappe.throw(
+				_(
+					"{0} does not sign for {1}. Add {1} to the signatory's companies, or pick their company."
+				).format(signatory.full_name, self.company)
+			)
+
+	def set_custody(self):
+		"""Where the token is now: the latest hand-over."""
+		if not self.custody_log:
+			return
+		latest = max(self.custody_log, key=lambda row: (getdate(row.on_date), row.idx))
+		self.custody = latest.custody
+		self.custody_since = latest.on_date
+
+	@frappe.whitelist(methods=["POST"])
+	def hand_over(self, custody: str, person: str | None = None, note: str | None = None):
+		"""Record that the DSC's token changed hands."""
+		self.check_permission("write")
+		if self.item_type != DSC_TYPE:
+			frappe.throw(_("{0} is not a digital signature, so it has no token.").format(self.name))
+		if custody not in CUSTODY_STATES:
+			frappe.throw(_("Token Now should be one of: {0}.").format(", ".join(CUSTODY_STATES)))
+		self.append(
+			"custody_log",
+			{
+				"on_date": nowdate(),
+				"custody": custody,
+				"person": (person or "").strip(),
+				"note": (note or "").strip(),
+				"recorded_by": frappe.session.user,
+			},
+		)
+		self.save()
 
 	def copy_reminders_from_type(self):
 		if self.reminders or not self.item_type:

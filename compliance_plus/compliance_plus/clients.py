@@ -16,6 +16,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, nowdate
 
+from compliance_plus.compliance_plus.doctype.compliance_item.compliance_item import DSC_TYPE
 from compliance_plus.compliance_plus.register import CLOSED_TASK_STATUSES
 from compliance_plus.install import CLIENT_ROLE
 from compliance_plus.permissions import is_restricted
@@ -235,6 +236,7 @@ TASK_FIELDS = [
 ]
 
 
+DSC_FIELDS = ["name", "title", "status", "valid_until", "holder_name", "company", "custody", "custody_since"]
 REQUEST_FIELDS = ["name", "title", "status", "is_overdue", "due_date", "company", "compliance_task"]
 
 
@@ -326,6 +328,17 @@ def client_detail(name: str) -> dict:
 		if names
 		else []
 	)
+	signatures = (
+		frappe.get_list(
+			"Compliance Item",
+			filters={"company": ("in", names), "item_type": DSC_TYPE, "is_cancelled": 0},
+			fields=DSC_FIELDS,
+			order_by="valid_until asc",
+			limit=100,
+		)
+		if names
+		else []
+	)
 	requests = frappe.get_list(
 		"Document Request",
 		filters={"client": name, "status": ("in", ("Requested", "Uploaded"))},
@@ -345,5 +358,6 @@ def client_detail(name: str) -> dict:
 		"companies": companies,
 		"filings": filings,
 		"requests": requests,
+		"signatures": signatures,
 		**add_up(counts, names),
 	}

@@ -9,6 +9,8 @@ export const ATTENTION_STATUSES = [
 	"Renewal in Progress",
 ];
 export const OPEN_RENEWAL_STATUSES = ["Planned", "Applied"];
+export const DSC_TYPE = "Digital Signature Certificate";
+export const CUSTODY_STATES = ["With the Firm", "With the Client", "With the Holder", "Not Known"];
 
 export const REGISTER_VIEWS = [
 	{
@@ -23,6 +25,15 @@ export const REGISTER_VIEWS = [
 		filters: [["status", "=", "Active"]],
 		orderBy: "valid_until asc",
 	},
+	{
+		label: "Digital signatures",
+		value: "dsc",
+		filters: [
+			["item_type", "=", DSC_TYPE],
+			["is_cancelled", "=", 0],
+		],
+		orderBy: "valid_until asc",
+	},
 	{ label: "All", value: "all", filters: [], orderBy: "valid_until asc" },
 ];
 
@@ -35,6 +46,8 @@ export const ITEM_LIST_FIELDS = [
 	"reference_number",
 	"responsible",
 	"reviewer",
+	"holder_name",
+	"custody",
 ];
 
 export function itemTheme(status) {
@@ -51,6 +64,15 @@ function dueFor(item, midnight, overdue) {
 	return relativeDue(item.valid_until, midnight, { overdue });
 }
 
+// A DSC is told apart by whose it is and who has the token; other items by type and number.
+function itemDetail(item) {
+	if (item.item_type === DSC_TYPE && item.holder_name) {
+		const custody = item.custody ? `Token ${item.custody.toLowerCase()}` : "";
+		return [item.holder_name, custody || item.company].filter(Boolean).join(" · ");
+	}
+	return [item.item_type, item.reference_number].filter(Boolean).join(" · ");
+}
+
 export function itemRow(item, today = new Date()) {
 	const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 	const overdue = ["Expired", "Lapsed"].includes(item.status);
@@ -58,7 +80,7 @@ export function itemRow(item, today = new Date()) {
 		key: item.name,
 		kind: "licence",
 		title: item.title,
-		detail: [item.item_type, item.reference_number].filter(Boolean).join(" · "),
+		detail: itemDetail(item),
 		status: item.status,
 		theme: itemTheme(item.status),
 		due: dueFor(item, midnight, overdue),

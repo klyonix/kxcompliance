@@ -175,6 +175,7 @@ export const LEGAL_VIEWS = [
 		filters: [["status", "not in", ENDED_MARK_STATUSES]],
 		orderBy: "next_date asc",
 		toRow: markRow,
+		companyField: "applicant",
 		searchField: "mark",
 		searchPlaceholder: "Search trademarks",
 	},

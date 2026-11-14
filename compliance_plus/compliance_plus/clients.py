@@ -312,6 +312,23 @@ def currency_of(companies: list[str]) -> str:
 	return frappe.get_cached_value("Company", companies[0], "default_currency") or ""
 
 
+def client_choices() -> list[dict]:
+	"""Clients still with the firm that the person may read, with the companies each owns."""
+	names = frappe.get_list(
+		"Compliance Client", filters={"status": ("!=", "Left")}, pluck="name", order_by="name asc", limit=1000
+	)
+	companies_of: dict[str, list[str]] = {name: [] for name in names}
+	# Only the link, for clients just read with get_list.
+	for row in frappe.get_all(
+		"Company Compliance Profile",
+		filters={"client": ("in", names or [""])},
+		fields=["company", "client"],
+		order_by="company asc",
+	):
+		companies_of[row.client].append(row.company)
+	return [{"name": name, "companies": companies_of[name]} for name in names]
+
+
 def client_detail(name: str) -> dict:
 	client = frappe.get_doc("Compliance Client", name)
 	client.check_permission("read")

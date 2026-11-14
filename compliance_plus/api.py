@@ -180,6 +180,7 @@ def my_work() -> dict:
 				"reference_doctype",
 				"reference_name",
 				"reference_title",
+				"company",
 				"is_overdue",
 			],
 			order_by="date asc",
@@ -406,6 +407,13 @@ def clients_overview() -> list[dict]:
 	"""A CA/CS firm's clients the person may see, with their open filings, worst first."""
 	check_app_access()
 	return clients.clients_overview()
+
+
+@frappe.whitelist(methods=["GET"])
+def client_choices() -> list[dict]:
+	"""The clients the person may pick to narrow the app's lists, each with its companies."""
+	check_app_access()
+	return clients.client_choices()
 
 
 @frappe.whitelist(methods=["GET"])

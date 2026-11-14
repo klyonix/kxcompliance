@@ -1,6 +1,7 @@
 // Values the server writes into the page (compliance_plus.api.boot), read once.
 export const boot = {
 	user: window.user || "Guest",
+	siteName: window.site_name || "",
 	userFullname: window.user_fullname || "",
 	roles: window.roles || [],
 	appName: window.app_name || "Compliance Plus",

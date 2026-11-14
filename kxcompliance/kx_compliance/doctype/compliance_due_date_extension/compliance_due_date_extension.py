@@ -7,6 +7,7 @@ from frappe.model.document import Document
 from frappe.utils import getdate
 
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
+from kxcompliance.kx_compliance.statutory import extensions_for, find_extension
 
 
 class ComplianceDueDateExtension(Document):
@@ -30,20 +31,41 @@ class ComplianceDueDateExtension(Document):
 
 
 def apply_extension(extension: str):
-	"""Move every open task this extension covers; filed tasks keep the dates they were filed against."""
+	"""Move every open task this extension covers; filed tasks keep the dates they were filed against.
+
+	Open tasks it moved before but no longer covers (its periods or obligation were changed) go
+	back to their usual due date, or to another extension that covers them.
+	"""
 	doc = frappe.get_doc("Compliance Due Date Extension", extension)
-	tasks = frappe.get_all(
+	still_open = ("not in", CLOSED_TASK_STATUSES)
+	covered = frappe.get_all(
 		"Compliance Task",
 		filters={
 			"obligation_template": doc.obligation_template,
 			"period_end": ("between", [doc.periods_ending_from, doc.periods_ending_to]),
-			"status": ("not in", CLOSED_TASK_STATUSES),
+			"status": still_open,
 		},
 		pluck="name",
 	)
-	for name in tasks:
-		task = frappe.get_doc("Compliance Task", name)
-		task.extended_due_date = doc.new_due_date
-		task.extension = doc.name
-		task.flags.ignore_permissions = True  # applied by the system on a manager's extension
-		task.save()
+	for name in covered:
+		move_task(name, doc.new_due_date, doc.name)
+
+	left = frappe.get_all(
+		"Compliance Task",
+		filters={"extension": doc.name, "name": ("not in", covered or [""]), "status": still_open},
+		fields=["name", "obligation_template", "period_end"],
+	)
+	others = [
+		row for row in extensions_for([row.obligation_template for row in left]) if row.name != doc.name
+	]
+	for row in left:
+		other = find_extension(others, row.obligation_template, getdate(row.period_end))
+		move_task(row.name, other.new_due_date if other else None, other.name if other else None)
+
+
+def move_task(name: str, extended_due_date, extension: str | None):
+	task = frappe.get_doc("Compliance Task", name)
+	task.extended_due_date = extended_due_date
+	task.extension = extension
+	task.flags.ignore_permissions = True  # applied by the system on a manager's extension
+	task.save()

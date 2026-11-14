@@ -75,6 +75,8 @@ SEARCHES = {
 }
 WORK_HORIZON_DAYS = 30
 WORK_LIMIT = 200
+# The obligation screen's choices, read from the template's own select fields.
+OBLIGATION_CHOICES = ("law", "frequency", "period_basis", "registration_type")
 
 # The only fields the app may change on each record; everything else stays in the Desk.
 EDITABLE_FIELDS = {
@@ -135,6 +137,16 @@ def check_party_type(party_type: str):
 def check_app_access():
 	if frappe.session.user == "Guest" or not has_app_access():
 		frappe.throw(_("You do not have access to the compliance app."), frappe.PermissionError)
+
+
+def check_manager_access(message: str):
+	check_app_access()
+	if not is_approver():
+		frappe.throw(message, frappe.PermissionError)
+
+
+def select_options(meta, fieldname: str) -> list[str]:
+	return [option for option in (meta.get_field(fieldname).options or "").split("\n") if option]
 
 
 def check_reader_access():
@@ -614,6 +626,35 @@ def item_form_options() -> dict:
 		"billing_cycles": [cycle for cycle in meta.get_field("billing_cycle").options.split("\n") if cycle],
 		"people": onboarding.firm_people(),
 	}
+
+
+@frappe.whitelist(methods=["GET"])
+def obligation_form_options() -> dict:
+	"""What the obligation screen offers to choose from (managers only)."""
+	check_manager_access(_("Only a Compliance Manager can change the obligation library."))
+	meta = frappe.get_meta("Compliance Obligation Template")
+	return {
+		**{field: select_options(meta, field) for field in OBLIGATION_CHOICES},
+		"company_types": select_options(frappe.get_meta("Compliance Company Type"), "company_type"),
+		"states": select_options(frappe.get_meta("Company Obligation"), "state"),
+		"event_types": frappe.get_list("Compliance Event Type", pluck="name", order_by="name asc"),
+	}
+
+
+@frappe.whitelist(methods=["GET"])
+def extension_preview(obligation_template: str, periods_ending_from: str, periods_ending_to: str) -> dict:
+	"""How many open filings an extension with these periods would move (managers only)."""
+	check_manager_access(_("Only a Compliance Manager can extend due dates."))
+	rows = frappe.get_list(
+		"Compliance Task",
+		filters={
+			"obligation_template": obligation_template,
+			"period_end": ("between", [getdate(periods_ending_from), getdate(periods_ending_to)]),
+			"status": ("not in", CLOSED_TASK_STATUSES),
+		},
+		fields=["company"],
+	)
+	return {"filings": len(rows), "companies": len({row.company for row in rows})}
 
 
 @frappe.whitelist(methods=["GET"])

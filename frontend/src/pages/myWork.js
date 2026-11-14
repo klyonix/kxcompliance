@@ -7,6 +7,7 @@ export const KINDS = {
 	trademark: { label: "Trademarks", icon: "lucide-stamp" },
 	request: { label: "Document requests", icon: "lucide-file-up" },
 	signatory: { label: "Signatories", icon: "lucide-pen-line" },
+	extension: { label: "Due-date extensions", icon: "lucide-calendar-clock" },
 };
 
 const LEGAL_PAGES = { "Legal Case": "LegalCase", Trademark: "Trademark" };

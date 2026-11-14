@@ -700,5 +700,6 @@ def sync_standard_templates():
 		else:
 			doc = frappe.get_doc({"doctype": "Compliance Obligation Template", **values})
 		doc.is_standard = 1
+		doc.flags.from_library = True
 		doc.flags.ignore_permissions = True  # the app's own library, written during migrate
 		doc.save()

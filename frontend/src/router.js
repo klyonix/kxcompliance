@@ -67,6 +67,23 @@ export const routes = [
 		props: true,
 	},
 	{
+		path: "/settings/obligations",
+		name: "ObligationLibrary",
+		component: () => import("./pages/ObligationLibrary.vue"),
+	},
+	{
+		path: "/settings/obligations/new",
+		name: "ObligationNew",
+		component: () => import("./pages/ObligationForm.vue"),
+	},
+	{
+		// Obligation names may hold a slash ("TDS/TCS Payment").
+		path: "/settings/obligations/:name(.*)",
+		name: "Obligation",
+		component: () => import("./pages/ObligationForm.vue"),
+		props: true,
+	},
+	{
 		path: "/register/:name",
 		name: "ComplianceItem",
 		component: () => import("./pages/ComplianceItem.vue"),
@@ -108,6 +125,22 @@ export const routes = [
 		props: true,
 	},
 	{ path: "/filings", name: "Filings", component: () => import("./pages/Filings.vue") },
+	{
+		path: "/filings/extensions",
+		name: "Extensions",
+		component: () => import("./pages/Extensions.vue"),
+	},
+	{
+		path: "/filings/extensions/new",
+		name: "ExtensionNew",
+		component: () => import("./pages/ExtensionForm.vue"),
+	},
+	{
+		path: "/filings/extensions/:name",
+		name: "Extension",
+		component: () => import("./pages/ExtensionForm.vue"),
+		props: true,
+	},
 	{
 		path: "/filings/event",
 		name: "RecordEvent",
@@ -154,6 +187,12 @@ const MANAGER_ROUTES = [
 	"ItemTypes",
 	"ItemTypeNew",
 	"ItemType",
+	"ObligationLibrary",
+	"ObligationNew",
+	"Obligation",
+	"Extensions",
+	"ExtensionNew",
+	"Extension",
 ];
 
 const router = createRouter({ history: createWebHistory("/compliance"), routes });

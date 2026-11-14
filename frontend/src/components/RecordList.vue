@@ -4,7 +4,7 @@
 	</AppPageHeader>
 
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6">
-		<ClientPicker />
+		<ClientPicker v-if="byClient" />
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 			<TabButtons v-model="view" :options="tabs" />
 			<TextInput
@@ -98,6 +98,8 @@ const props = defineProps({
 	empty: { type: Function, required: true },
 	// For a list that belongs under another page, as AppPageHeader takes it.
 	parent: { type: Object, default: null },
+	// False for records that belong to no company, which the client filter cannot narrow.
+	byClient: { type: Boolean, default: true },
 });
 
 const PAGE = 30;
@@ -140,7 +142,7 @@ async function load(more = false) {
 			fields: fields || props.fields,
 			filters: [
 				...filters,
-				...companyFilters(chosenCompanies.value, companyField),
+				...(props.byClient ? companyFilters(chosenCompanies.value, companyField) : []),
 				...searchFilter(search.value, searchField || props.searchField),
 			],
 			orderBy,
@@ -164,6 +166,7 @@ watch(view, () => {
 	load();
 });
 watch(chosenCompanies, () => {
+	if (!props.byClient) return;
 	records.value = [];
 	load();
 });

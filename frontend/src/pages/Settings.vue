@@ -26,6 +26,16 @@
 					label="Register item types"
 					:route="{ name: 'ItemTypes' }"
 				/>
+				<Button
+					icon-left="lucide-library"
+					label="Obligation library"
+					:route="{ name: 'ObligationLibrary' }"
+				/>
+				<Button
+					icon-left="lucide-calendar-clock"
+					label="Due-date extensions"
+					:route="{ name: 'Extensions' }"
+				/>
 			</nav>
 
 			<section class="flex flex-col gap-4" aria-labelledby="reminders-heading">

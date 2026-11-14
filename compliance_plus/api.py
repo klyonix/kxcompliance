@@ -25,6 +25,40 @@ CHECK_ROLES = {"Sales User": "Customer", "Purchase User": "Supplier"}
 PARTY_NAME_FIELDS = {"Customer": "customer_name", "Supplier": "supplier_name"}
 PARTY_SEARCH_LIMIT = 20
 NAMES_LIMIT = 50
+SEARCH_LIMIT = 6
+SEARCH_MIN_LENGTH = 2
+# What the app's search looks through: the fields matched and the fields shown, per record type.
+SEARCHES = {
+	"items": (
+		"Compliance Item",
+		["title", "reference_number"],
+		["name", "title", "item_type", "status", "valid_until", "reference_number"],
+	),
+	"filings": (
+		"Compliance Task",
+		["obligation_template", "acknowledgement_number", "period_label"],
+		[
+			"name",
+			"obligation_template",
+			"period_label",
+			"company",
+			"status",
+			"is_overdue",
+			"effective_due_date",
+			"filed_on",
+		],
+	),
+	"cases": (
+		"Legal Case",
+		["title", "case_number", "notice_reference", "cnr_number"],
+		["name", "title", "case_type", "forum", "forum_name", "case_number", "status", "next_date"],
+	),
+	"trademarks": (
+		"Trademark",
+		["mark", "application_number", "registration_number"],
+		["name", "mark", "application_number", "status", "next_date"],
+	),
+}
 WORK_HORIZON_DAYS = 30
 WORK_LIMIT = 200
 
@@ -309,6 +343,27 @@ def full_names(users: str) -> dict[str, str]:
 	# Names only, for people this app already shows by ID; Compliance roles do not read User.
 	rows = frappe.get_all("User", filters={"name": ("in", wanted)}, fields=["name", "full_name"])
 	return {row.name: row.full_name or row.name for row in rows}
+
+
+@frappe.whitelist(methods=["GET"])
+def search(text: str) -> dict[str, list]:
+	"""Register items, filings, cases and trademarks whose name, number or reference contains
+	`text`, a few of each, as far as the person may read them."""
+	check_app_access()
+	text = text.strip()
+	if len(text) < SEARCH_MIN_LENGTH:
+		return {section: [] for section in SEARCHES}
+	pattern = f"%{text}%"
+	return {
+		section: frappe.get_list(
+			doctype,
+			or_filters={field: ("like", pattern) for field in matched},
+			fields=shown,
+			order_by="modified desc",
+			limit=SEARCH_LIMIT,
+		)
+		for section, (doctype, matched, shown) in SEARCHES.items()
+	}
 
 
 @frappe.whitelist(methods=["GET"])

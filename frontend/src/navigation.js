@@ -2,6 +2,8 @@ import { checksOnly, isManager } from "./boot";
 
 // The app's sections, in the order they appear in the side bar and the phone's tab bar.
 const ALL_SECTIONS = [
+	// On phones search opens from a button in each page's header, as the tab bar is full.
+	{ label: "Search", route: "Search", icon: "lucide-search", desktopOnly: true },
 	{ label: "My Work", route: "MyWork", icon: "lucide-inbox", count: "overdue" },
 	// Managers only; on phones it opens from My Work, as the tab bar has no room for it.
 	{

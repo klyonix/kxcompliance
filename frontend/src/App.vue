@@ -44,7 +44,9 @@ import {
 	MobileShell,
 	useColorScheme,
 } from "frappe-ui";
-import { boot } from "./boot";
+import { onBeforeUnmount, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { boot, checksOnly } from "./boot";
 import AppSidebar from "./components/AppSidebar.vue";
 import ConnectionBanner from "./components/ConnectionBanner.vue";
 import UpdatePrompt from "./components/UpdatePrompt.vue";
@@ -53,6 +55,20 @@ import { sections } from "./navigation";
 
 // Paint the app light or dark as chosen on the Account page, following the system by default.
 useColorScheme();
+
+// Ctrl/⌘ K anywhere, or "/" when not typing, opens search.
+const router = useRouter();
+function openSearch(event) {
+	const typing = event.target.closest?.("input, textarea, select, [contenteditable]");
+	const shortcut =
+		((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") ||
+		(event.key === "/" && !typing);
+	if (!shortcut || checksOnly()) return;
+	event.preventDefault();
+	router.push({ name: "Search" });
+}
+onMounted(() => window.addEventListener("keydown", openSearch));
+onBeforeUnmount(() => window.removeEventListener("keydown", openSearch));
 const isMobile = useIsMobile();
 const tabSections = sections.filter((section) => !section.desktopOnly);
 </script>

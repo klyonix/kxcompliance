@@ -6,7 +6,16 @@ import json
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from compliance_plus.api import app_companies, boot, full_names, log_notice, my_work, overview, save_changes
+from compliance_plus.api import (
+	app_companies,
+	boot,
+	full_names,
+	log_notice,
+	my_work,
+	overview,
+	save_changes,
+	search,
+)
 from compliance_plus.compliance_plus.overview import desk_link, total
 from compliance_plus.compliance_plus.test_utils import (
 	AUDITOR,
@@ -159,6 +168,22 @@ class TestAppApi(IntegrationTestCase):
 	def test_the_app_is_told_the_sites_date_format(self):
 		with self.set_user(HOLDER):
 			self.assertEqual(boot()["date_format"], frappe.db.get_default("date_format") or "dd-mm-yyyy")
+
+	def test_search_finds_by_number_within_what_the_person_may_see(self):
+		mine = make_item("Test App Licence", responsible=HOLDER, reference_number="TL/2026/4471").name
+		theirs = make_item(
+			"Test App Licence", responsible=OTHER_HOLDER, reviewer=MANAGER, reference_number="TL/2026/4472"
+		).name
+		with self.set_user(HOLDER):
+			found = [row.name for row in search("TL/2026/447")["items"]]
+			self.assertIn(mine, found)
+			self.assertNotIn(theirs, found)
+			self.assertEqual(search(" T ")["items"], [])
+			self.assertEqual(set(search("TL/2026")), {"items", "filings", "cases", "trademarks"})
+		with self.set_user(MANAGER):
+			self.assertIn(theirs, [row.name for row in search("4472")["items"]])
+		with self.set_user(OUTSIDER), self.assertRaises(frappe.PermissionError):
+			search("TL/2026")
 
 	def test_the_manifest_carries_the_sites_name_and_logo(self):
 		with self.change_settings(

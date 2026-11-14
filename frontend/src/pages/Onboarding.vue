@@ -368,7 +368,7 @@ async function next() {
 	error.value = "";
 	try {
 		result.value = await call(
-			"compliance_plus.api.complete_onboarding",
+			"kxcompliance.api.complete_onboarding",
 			{ setup: setupAnswers(answers, companyChoice.value) },
 			{ httpMethod: "POST" }
 		);
@@ -390,7 +390,7 @@ const finish = () => (window.location.href = "/compliance");
 
 onMounted(async () => {
 	try {
-		options.value = await call("compliance_plus.api.onboarding_options");
+		options.value = await call("kxcompliance.api.onboarding_options");
 		// After ERPNext's own setup there is usually a company already, and it is the one meant.
 		if (openCompanies.value.length || !options.value.can_create_company) {
 			companyChoice.value = "existing";

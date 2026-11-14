@@ -1,0 +1,87 @@
+{
+ "actions": [],
+ "creation": "2026-11-15 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "links": [],
+ "modified": "2026-11-15 01:08:09.744208",
+ "modified_by": "Administrator",
+ "module": "KX Compliance",
+ "owner": "Administrator",
+ "states": [],
+ "autoname": "hash",
+ "description": "Kept by the app: which company each team member can see through which client, and whether the app made their User Permission for it.",
+ "field_order": [
+  "client",
+  "user",
+  "company",
+  "made_user_permission"
+ ],
+ "fields": [
+  {
+   "fieldname": "client",
+   "fieldtype": "Link",
+   "label": "Client",
+   "options": "Compliance Client",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "made_user_permission",
+   "fieldtype": "Check",
+   "label": "Made the User Permission",
+   "read_only": 1
+  }
+ ],
+ "name": "Compliance Client Access",
+ "in_create": 1,
+ "read_only": 1,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "email": 0,
+   "share": 0
+  },
+  {
+   "role": "Compliance Manager",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "email": 0,
+   "share": 0
+  }
+ ]
+}

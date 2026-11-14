@@ -393,7 +393,7 @@ export const recordEvent = atBothWidths(
 	defineFlow<AnyEvent>({
 		id: "record-event",
 		title: "Record an event",
-		source: "frontend/src/pages/RecordEvent.vue, compliance_plus/compliance_plus/company_events.py",
+		source: "frontend/src/pages/RecordEvent.vue, kxcompliance/kx_compliance/company_events.py",
 		machine: eventMachine,
 		async enter(scene) {
 			// Paths run one at a time and each removes its own event, so this pair finds it.

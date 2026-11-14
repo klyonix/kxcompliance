@@ -284,7 +284,7 @@ async function save() {
 	saving.value = true;
 	try {
 		const result = await call(
-			"compliance_plus.api.save_company",
+			"kxcompliance.api.save_company",
 			{
 				company: name,
 				new_company: !props.company && form.mode === "new",
@@ -322,10 +322,10 @@ async function save() {
 async function load() {
 	error.value = "";
 	try {
-		options.value = await call("compliance_plus.api.company_form_options");
+		options.value = await call("kxcompliance.api.company_form_options");
 		notSetUpList.value = options.value.not_set_up;
 		if (props.company) {
-			const detail = await call("compliance_plus.api.company_detail", {
+			const detail = await call("kxcompliance.api.company_detail", {
 				company: props.company,
 			});
 			score.value = detail.score;

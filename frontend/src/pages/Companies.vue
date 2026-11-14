@@ -97,7 +97,7 @@ const error = ref("");
 
 onMounted(async () => {
 	try {
-		data.value = await call("compliance_plus.api.companies_overview");
+		data.value = await call("kxcompliance.api.companies_overview");
 	} catch (err) {
 		error.value = err.isNetwork ? notLoaded("the companies") : err.message;
 	}

@@ -1,8 +1,8 @@
 {
-  "name": "compliance_plus",
+  "name": "kxcompliance",
   "version": "0.0.1",
   "private": true,
-  "description": "Builds the Compliance Plus app at /compliance when the app is installed or built on a server.",
+  "description": "Builds the KlyONIX Compliance app at /compliance when the app is installed or built on a server.",
   "scripts": {
     "postinstall": "cd frontend && yarn install --check-files",
     "dev": "cd frontend && yarn dev",

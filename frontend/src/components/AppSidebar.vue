@@ -36,7 +36,7 @@ const menu = [
 	mayUseDesk() && {
 		label: "Open the Desk",
 		icon: "lucide-app-window",
-		onClick: () => (window.location.href = "/app/compliance-plus"),
+		onClick: () => (window.location.href = "/app/klyonix-compliance"),
 	},
 	{
 		label: "Sign out",

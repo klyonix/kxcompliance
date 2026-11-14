@@ -1,0 +1,257 @@
+{
+ "actions": [],
+ "autoname": "LD-.YY.-.#####",
+ "creation": "2026-11-14 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "reference_doctype",
+  "reference_name",
+  "reference_title",
+  "company",
+  "kind",
+  "column_break_main",
+  "date",
+  "time",
+  "status",
+  "is_overdue",
+  "section_purpose",
+  "purpose",
+  "section_outcome",
+  "attended_by",
+  "proceedings",
+  "column_break_outcome",
+  "order",
+  "next_date",
+  "next_legal_date",
+  "section_people",
+  "responsible",
+  "column_break_people",
+  "reviewer"
+ ],
+ "fields": [
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "For",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Record",
+   "options": "reference_doctype",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "reference_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "search_index": 1,
+   "in_standard_filter": 1,
+   "description": "The company of the case or trademark."
+  },
+  {
+   "default": "Hearing",
+   "fieldname": "kind",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Kind",
+   "options": "Hearing\nReply Due\nFiling Due\nOrder Pronouncement\nExamination Report Reply\nCounter-Statement\nOpposition Window\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "time",
+   "fieldtype": "Time",
+   "label": "Time"
+  },
+  {
+   "default": "Scheduled",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Scheduled\nDone\nAdjourned\nMissed\nCancelled",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "is_overdue",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Outcome Not Recorded",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_purpose",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Small Text",
+   "label": "Purpose"
+  },
+  {
+   "depends_on": "eval:doc.status != 'Scheduled'",
+   "fieldname": "section_outcome",
+   "fieldtype": "Section Break",
+   "label": "Outcome"
+  },
+  {
+   "fieldname": "attended_by",
+   "fieldtype": "Data",
+   "label": "Attended By"
+  },
+  {
+   "fieldname": "proceedings",
+   "fieldtype": "Small Text",
+   "label": "What Happened",
+   "mandatory_depends_on": "eval:doc.kind == 'Hearing' && in_list(['Done', 'Adjourned'], doc.status)"
+  },
+  {
+   "fieldname": "column_break_outcome",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "order",
+   "fieldtype": "Attach",
+   "label": "Order or Document"
+  },
+  {
+   "description": "A next date makes the next hearing by itself.",
+   "fieldname": "next_date",
+   "fieldtype": "Date",
+   "label": "Next Date"
+  },
+  {
+   "fieldname": "next_legal_date",
+   "fieldtype": "Link",
+   "label": "Next Hearing",
+   "no_copy": 1,
+   "options": "Legal Date",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_people",
+   "fieldtype": "Section Break",
+   "label": "People"
+  },
+  {
+   "fieldname": "responsible",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Responsible",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_people",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reviewer",
+   "fieldtype": "Link",
+   "label": "Reviewer",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-15 01:08:09.744208",
+ "modified_by": "Administrator",
+ "module": "KX Compliance",
+ "name": "Legal Date",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Auditor",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "role": "Compliance Client",
+   "read": 1,
+   "print": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "kind,date,status",
+ "sort_field": "date",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "reference_title",
+ "track_changes": 1
+}

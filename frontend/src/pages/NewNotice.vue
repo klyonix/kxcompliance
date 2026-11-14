@@ -169,7 +169,7 @@ async function save() {
 	try {
 		name = (
 			await call(
-				"compliance_plus.api.log_notice",
+				"kxcompliance.api.log_notice",
 				{ ...form, title: form.title.trim() },
 				{ httpMethod: "POST" }
 			)

@@ -547,7 +547,7 @@ function fillForm() {
 
 async function loadDocuments() {
 	try {
-		allDocuments.value = await call("compliance_plus.api.documents", {
+		allDocuments.value = await call("kxcompliance.api.documents", {
 			doctype: "Compliance Task",
 			name: props.name,
 		});
@@ -559,7 +559,7 @@ async function loadDocuments() {
 
 async function loadPenalty() {
 	try {
-		penalty.value = await call("compliance_plus.api.filing_penalty", { task: props.name });
+		penalty.value = await call("kxcompliance.api.filing_penalty", { task: props.name });
 	} catch {
 		// The estimate is extra; the filing is still useful without it, offline included.
 		penalty.value = null;

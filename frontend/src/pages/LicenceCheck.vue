@@ -221,7 +221,7 @@ async function findParties() {
 	searching.value = true;
 	searchError.value = "";
 	try {
-		const found = await call("compliance_plus.api.search_parties", {
+		const found = await call("kxcompliance.api.search_parties", {
 			party_type: partyType.value,
 			text: search.value,
 		});
@@ -239,7 +239,7 @@ async function runCheck() {
 	checkError.value = "";
 	if (!party.value) return;
 	try {
-		check.value = await call("compliance_plus.api.check_party", {
+		check.value = await call("kxcompliance.api.check_party", {
 			party_type: partyType.value,
 			party: party.value,
 		});

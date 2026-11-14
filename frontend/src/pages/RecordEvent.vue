@@ -208,7 +208,7 @@ async function loadEventTypes() {
 	eventTypes.value = [];
 	if (!form.company) return;
 	try {
-		eventTypes.value = await call("compliance_plus.api.event_types", {
+		eventTypes.value = await call("kxcompliance.api.event_types", {
 			company: form.company,
 		});
 		if (!eventTypes.value.some((type) => type.name === form.event_type)) form.event_type = "";

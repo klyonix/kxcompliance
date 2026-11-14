@@ -89,11 +89,11 @@ async function uploadTo(method, fields, file, fetcher) {
 
 // A client's login adds a document to one of its filings (it cannot change the filing itself).
 export const uploadClientDocument = (file, task, { fetcher = fetch } = {}) =>
-	uploadTo("compliance_plus.api.add_client_document", { task }, file, fetcher);
+	uploadTo("kxcompliance.api.add_client_document", { task }, file, fetcher);
 
 // What a document request asks for, from the client (or from the firm, received another way).
 export const uploadRequestDocument = (file, request, { fetcher = fetch } = {}) =>
-	uploadTo("compliance_plus.api.add_request_document", { request }, file, fetcher);
+	uploadTo("kxcompliance.api.add_request_document", { request }, file, fetcher);
 
 async function send(url, init, fetcher) {
 	let response;
@@ -137,7 +137,7 @@ async function send(url, init, fetcher) {
 
 export const saveChanges = (doctype, name, values, baseModified, options) =>
 	call(
-		"compliance_plus.api.save_changes",
+		"kxcompliance.api.save_changes",
 		{ doctype, name, values, base_modified: baseModified },
 		{ httpMethod: "POST", ...options }
 	);

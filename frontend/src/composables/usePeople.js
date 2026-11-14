@@ -16,7 +16,7 @@ export async function learnNames(users) {
 	try {
 		Object.assign(
 			names,
-			await call("compliance_plus.api.full_names", { users: wanted.join(",") })
+			await call("kxcompliance.api.full_names", { users: wanted.join(",") })
 		);
 	} catch {
 		wanted.forEach((user) => asked.delete(user));

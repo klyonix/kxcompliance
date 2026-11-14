@@ -8,11 +8,13 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        files: "compliance_plus.*"
+        files: "kxcompliance.*"
         exclude: ".*json$|.*txt$|.*csv|.*md|.*svg"
       - id: check-merge-conflict
       - id: check-ast
       - id: check-json
+        # Jinja templates served as JSON
+        exclude: "kxcompliance/www/.*\\.json$"
       - id: check-toml
       - id: check-yaml
       - id: debug-statements
@@ -38,11 +40,12 @@ repos:
         # Ignore any files that might contain jinja / bundles
         exclude: |
             (?x)^(
-                compliance_plus/public/dist/.*|
+                kxcompliance/public/dist/.*|
                 .*node_modules.*|
                 .*boilerplate.*|
-                compliance_plus/templates/includes/.*|
-                compliance_plus/public/js/lib/.*
+                kxcompliance/templates/includes/.*|
+                kxcompliance/www/.*\.js|
+                kxcompliance/public/js/lib/.*
             )$
 
 
@@ -55,12 +58,13 @@ repos:
         # Ignore any files that might contain jinja / bundles
         exclude: |
             (?x)^(
-                compliance_plus/public/dist/.*|
+                kxcompliance/public/dist/.*|
                 cypress/.*|
                 .*node_modules.*|
                 .*boilerplate.*|
-                compliance_plus/templates/includes/.*|
-                compliance_plus/public/js/lib/.*
+                kxcompliance/templates/includes/.*|
+                kxcompliance/www/.*\.js|
+                kxcompliance/public/js/lib/.*
             )$
 
 ci:

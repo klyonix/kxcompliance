@@ -106,7 +106,7 @@ async function drop(entry) {
 	await refresh();
 }
 
-const openDesk = () => (window.location.href = "/app/compliance-plus");
+const openDesk = () => (window.location.href = "/app/klyonix-compliance");
 const leave = () =>
 	signOut({ unsent: outbox.waiting + outbox.needsLook.length, clear: clearOutbox });
 </script>

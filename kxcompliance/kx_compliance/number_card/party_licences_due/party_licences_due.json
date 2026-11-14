@@ -1,0 +1,22 @@
+{
+ "color": "Orange",
+ "creation": "2026-11-14 21:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Number Card",
+ "document_type": "Compliance Item",
+ "dynamic_filters_json": "[]",
+ "filters_json": "[[\"Compliance Item\",\"holder_type\",\"in\",[\"Customer\",\"Supplier\"]],[\"Compliance Item\",\"status\",\"=\",\"Due for Renewal\"]]",
+ "function": "Count",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Party Licences Due",
+ "modified": "2026-11-15 01:08:09.744208",
+ "modified_by": "Administrator",
+ "module": "KX Compliance",
+ "name": "Party Licences Due",
+ "owner": "Administrator",
+ "show_percentage_stats": 0,
+ "stats_time_interval": "Daily",
+ "type": "Document Type"
+}

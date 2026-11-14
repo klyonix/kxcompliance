@@ -290,7 +290,7 @@ async function loadSignatories() {
 		return;
 	}
 	signatoryRows.value = await call(
-		"compliance_plus.compliance_plus.doctype.signatory.signatory.signatories_for",
+		"kxcompliance.kx_compliance.doctype.signatory.signatory.signatories_for",
 		{
 			doctype: "Signatory",
 			txt: "",
@@ -338,7 +338,7 @@ watch(() => [form.item_type, form.company], loadSignatories);
 
 onMounted(async () => {
 	try {
-		options.value = await call("compliance_plus.api.item_form_options");
+		options.value = await call("kxcompliance.api.item_form_options");
 		if (props.name) {
 			const item = await getDoc("Compliance Item", props.name);
 			for (const field of FIELDS) form[field] = item[field] ?? "";

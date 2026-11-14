@@ -5,7 +5,7 @@ import frappeui from "frappe-ui/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const appRoot = path.resolve(import.meta.dirname, "..");
-const outDir = path.resolve(appRoot, "compliance_plus/public/frontend");
+const outDir = path.resolve(appRoot, "kxcompliance/public/frontend");
 
 export default defineConfig({
 	plugins: [
@@ -15,8 +15,8 @@ export default defineConfig({
 			jinjaBootData: true,
 			buildConfig: {
 				outDir,
-				indexHtmlPath: path.resolve(appRoot, "compliance_plus/www/compliance.html"),
-				baseUrl: "/assets/compliance_plus/frontend/",
+				indexHtmlPath: path.resolve(appRoot, "kxcompliance/www/compliance.html"),
+				baseUrl: "/assets/kxcompliance/frontend/",
 				emptyOutDir: true,
 			},
 		}),
@@ -31,7 +31,7 @@ export default defineConfig({
 			workbox: {
 				// The worker is served from /compliance_sw.js, so each built file needs its full
 				// path; index.html is only the template Frappe renders as /compliance.
-				modifyURLPrefix: { "": "/assets/compliance_plus/frontend/" },
+				modifyURLPrefix: { "": "/assets/kxcompliance/frontend/" },
 				globIgnores: ["**/index.html"],
 				inlineWorkboxRuntime: true,
 				cleanupOutdatedCaches: true,

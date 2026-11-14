@@ -18,7 +18,7 @@ export async function loadWork() {
 	work.loading = true;
 	work.error = "";
 	try {
-		work.data = await call("compliance_plus.api.my_work");
+		work.data = await call("kxcompliance.api.my_work");
 	} catch (error) {
 		// With My Work already on screen, the banner says the server is not answering.
 		if (error.isNetwork && work.data) return;

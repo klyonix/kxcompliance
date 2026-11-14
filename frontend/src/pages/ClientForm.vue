@@ -253,7 +253,7 @@ async function save() {
 
 onMounted(async () => {
 	try {
-		people.value = await call("compliance_plus.api.people_options");
+		people.value = await call("kxcompliance.api.people_options");
 		learnNames(people.value.map((person) => person.name));
 		if (props.name) {
 			const client = await getDoc("Compliance Client", props.name);

@@ -1,0 +1,22 @@
+{
+ "color": "Blue",
+ "creation": "2026-11-14 15:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Number Card",
+ "document_type": "Legal Date",
+ "dynamic_filters_json": "[[\"Legal Date\",\"date\",\"Between\",\"[frappe.datetime.get_today(), frappe.datetime.add_days(frappe.datetime.get_today(), 7)]\"]]",
+ "filters_json": "[[\"Legal Date\",\"status\",\"=\",\"Scheduled\"]]",
+ "function": "Count",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Hearings This Week",
+ "modified": "2026-11-15 01:08:09.744208",
+ "modified_by": "Administrator",
+ "module": "KX Compliance",
+ "name": "Hearings This Week",
+ "owner": "Administrator",
+ "show_percentage_stats": 0,
+ "stats_time_interval": "Daily",
+ "type": "Document Type"
+}

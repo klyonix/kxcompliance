@@ -90,7 +90,7 @@ const SCOPES = [
 	{ label: "My work", value: "My Work" },
 	{ label: "Everything I can see", value: "Everything I Can See" },
 ];
-const METHOD = "compliance_plus.compliance_plus.calendar_feed";
+const METHOD = "kxcompliance.kx_compliance.calendar_feed";
 
 const clientLogin = isClientLogin();
 const settings = ref(null);

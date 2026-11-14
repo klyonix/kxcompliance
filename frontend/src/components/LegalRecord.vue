@@ -134,7 +134,7 @@ const menu = computed(() => deskActions(props.doctype, props.name));
 
 async function loadDocuments() {
 	try {
-		documents.value = await call("compliance_plus.api.documents", {
+		documents.value = await call("kxcompliance.api.documents", {
 			doctype: props.doctype,
 			name: props.name,
 		});

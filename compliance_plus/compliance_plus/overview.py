@@ -29,6 +29,7 @@ PENDING_MARK_STATUSES = [
 	"Opposed",
 ]
 ON_TIME_MONTHS = 12
+ON_TIME_REPORT = "On-time Filing"
 
 
 def grouped_counts(doctype: str, group_by: list[str], filters: dict | None = None) -> list[dict]:
@@ -264,6 +265,6 @@ def on_time_rate(today: str) -> dict:
 		"late": late,
 		"overdue": overdue,
 		"percent": round(on_time * 100 / counted, 1) if counted else None,
-		"link": f"/app/query-report/{quote('On Time Filing')}?"
+		"link": f"/app/query-report/{quote(ON_TIME_REPORT)}?"
 		+ urlencode({"from_date": str(since), "to_date": str(today)}),
 	}

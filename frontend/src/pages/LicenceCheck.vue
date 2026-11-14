@@ -186,6 +186,7 @@ import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { formatDate } from "@/lib/format";
 import { coverage, licenceState, requirementState, verdict } from "@/lib/licenceCheck";
+import { notLoaded } from "@/offline/reachability";
 
 const VERDICT_STYLES = {
 	red: "bg-surface-red-1 text-ink-red-7",
@@ -211,10 +212,7 @@ const check = ref(null);
 const checkError = ref("");
 const answer = computed(() => (check.value ? verdict(check.value) : null));
 
-const friendly = (err, what) =>
-	err.isNetwork
-		? `You are offline, and ${what} has not been loaded on this device yet.`
-		: err.message;
+const friendly = (err, what) => (err.isNetwork ? notLoaded(what) : err.message);
 
 let typing;
 let latest = 0;

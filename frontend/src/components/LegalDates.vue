@@ -83,8 +83,9 @@ import {
 	outcomeValues,
 	proceedingsError,
 } from "@/lib/legal";
-import { refresh as refreshOutbox } from "@/offline/outbox";
+import { SAVED_ON_DEVICE, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
+import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({
 	doctype: { type: String, required: true },
@@ -164,9 +165,7 @@ async function load() {
 			})
 		).rows;
 	} catch (err) {
-		error.value = err.isNetwork
-			? "You are offline, and these dates have not been loaded on this device yet."
-			: err.message;
+		error.value = err.isNetwork ? notLoaded("these dates") : err.message;
 	} finally {
 		loaded.value = true;
 	}
@@ -182,7 +181,7 @@ async function send(legalDate, values, files = []) {
 	});
 	if (result.queued) {
 		waiting[legalDate.name] = true;
-		toast.info("Saved on this device. It will be sent when you reconnect.");
+		toast.info(SAVED_ON_DEVICE);
 	} else {
 		await load();
 		emit("changed");

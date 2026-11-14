@@ -45,6 +45,7 @@ import LegalRecord from "@/components/LegalRecord.vue";
 import { canAct } from "@/lib/items";
 import { ENDED_MARK_STATUSES, markRow, plainText } from "@/lib/legal";
 import { formatDate } from "@/lib/format";
+import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({ name: { type: String, required: true } });
 
@@ -114,9 +115,7 @@ async function load() {
 	try {
 		mark.value = await getDoc("Trademark", props.name);
 	} catch (err) {
-		error.value = err.isNetwork
-			? "You are offline, and this trademark has not been opened on this device yet."
-			: err.message;
+		error.value = err.isNetwork ? notLoaded("this trademark", "opened") : err.message;
 	}
 }
 

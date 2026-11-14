@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError, call } from "./api";
+import { noteResponse, server } from "./offline/reachability";
 
 const answer = (status, body) => async () => ({
 	ok: status === 200,
@@ -51,5 +52,21 @@ describe("the API client", () => {
 		const error = await call("x.y", {}, { fetcher: answer(500, body) }).catch((err) => err);
 		expect(error.message).not.toContain("pypdf");
 		expect(error.message).toContain("could not complete");
+	});
+
+	it("treats a gateway error as no answer, and a saved copy as the server not answering", async () => {
+		Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+		const error = await call("x.y", {}, { fetcher: answer(502, {}) }).catch((err) => err);
+		expect(error.isNetwork).toBe(true);
+		expect(error.message).toBe("The server is not answering");
+		noteResponse({ status: 200 });
+
+		const saved = async () => ({
+			...(await answer(200, { message: "old" })()),
+			headers: new Headers({ "X-Served-From": "cache" }),
+		});
+		expect(await call("x.y", {}, { fetcher: saved })).toBe("old");
+		expect(server.reachable).toBe(false);
+		noteResponse({ status: 200 });
 	});
 });

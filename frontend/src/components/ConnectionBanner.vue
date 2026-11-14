@@ -13,8 +13,10 @@
 <script setup>
 import { computed } from "vue";
 import { outbox } from "@/offline/outbox";
+import { server } from "@/offline/reachability";
 
-// Shown only when something differs from normal: offline, or a change that needs a second look.
+// Shown only when something differs from normal: offline, the server not answering, or a
+// change that needs a second look.
 const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
 
 const message = computed(() => {
@@ -30,14 +32,21 @@ const message = computed(() => {
 			: "";
 		return `You are offline and seeing what was last loaded.${waiting}`;
 	}
+	if (!server.reachable) {
+		const waiting = outbox.waiting
+			? ` ${plural(outbox.waiting, "change")} will be sent when it is back.`
+			: " Changes you make are kept on this device and sent when it is back.";
+		return `The server is not answering, so you are seeing what was last loaded.${waiting}`;
+	}
 	return "";
 });
 const tone = computed(() =>
 	outbox.needsLook.length
-		? "bg-surface-red-1 text-ink-red-4"
-		: "bg-surface-amber-1 text-ink-amber-4"
+		? "bg-surface-red-1 text-ink-red-7"
+		: "bg-surface-amber-1 text-ink-amber-7"
 );
-const icon = computed(() =>
-	outbox.needsLook.length ? "lucide-triangle-alert" : "lucide-wifi-off"
-);
+const icon = computed(() => {
+	if (outbox.needsLook.length) return "lucide-triangle-alert";
+	return outbox.online ? "lucide-server-off" : "lucide-wifi-off";
+});
 </script>

@@ -2,6 +2,7 @@
 import { computed, reactive } from "vue";
 import { call } from "@/api";
 import { summarise, workRows } from "@/pages/myWork";
+import { notLoaded } from "@/offline/reachability";
 
 export const work = reactive({ data: null, loading: false, error: "" });
 
@@ -14,9 +15,9 @@ export async function loadWork() {
 	try {
 		work.data = await call("compliance_plus.api.my_work");
 	} catch (error) {
-		work.error = error.isNetwork
-			? "You are offline, and My Work has not been loaded on this device yet."
-			: error.message;
+		// With My Work already on screen, the banner says the server is not answering.
+		if (error.isNetwork && work.data) return;
+		work.error = error.isNetwork ? notLoaded("My Work") : error.message;
 	} finally {
 		work.loading = false;
 	}

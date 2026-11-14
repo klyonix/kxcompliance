@@ -36,6 +36,7 @@ import LegalRecord from "@/components/LegalRecord.vue";
 import { canAct } from "@/lib/items";
 import { OPEN_CASE_STATUSES, caseRow, plainText } from "@/lib/legal";
 import { formatDate } from "@/lib/format";
+import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({ name: { type: String, required: true } });
 
@@ -104,9 +105,7 @@ async function load() {
 	try {
 		legalCase.value = await getDoc("Legal Case", props.name);
 	} catch (err) {
-		error.value = err.isNetwork
-			? "You are offline, and this case has not been opened on this device yet."
-			: err.message;
+		error.value = err.isNetwork ? notLoaded("this case", "opened") : err.message;
 	}
 }
 

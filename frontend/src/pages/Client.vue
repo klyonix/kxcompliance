@@ -284,7 +284,7 @@ const menu = computed(() => [
 async function load() {
 	error.value = "";
 	try {
-		client.value = await call("compliance_plus.api.client_detail", { client: props.name });
+		client.value = await call("kxcompliance.api.client_detail", { client: props.name });
 		learnNames([client.value.relationship_manager, ...client.value.team]);
 	} catch (err) {
 		error.value = err.isNetwork ? notLoaded("this client", "opened") : err.message;

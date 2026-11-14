@@ -1,0 +1,37 @@
+{
+ "actions": [],
+ "creation": "2026-11-18 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "designation"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "designation",
+   "fieldtype": "Select",
+   "label": "Designation",
+   "options": "Director\nManaging Director\nWhole-time Director\nIndependent Director\nDesignated Partner\nPartner\nProprietor\nKarta\nTrustee\nCompany Secretary\nAuthorised Signatory\nOther",
+   "in_list_view": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-15 01:08:09.744208",
+ "modified_by": "Administrator",
+ "module": "KX Compliance",
+ "name": "Signatory Company",
+ "owner": "Administrator",
+ "permissions": [],
+ "states": []
+}

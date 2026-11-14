@@ -89,7 +89,11 @@
 						Shown in the app's header and when it is installed on a phone.
 					</p>
 				</div>
-				<FormControl v-model="form.app_name" label="Name" placeholder="Compliance Plus" />
+				<FormControl
+					v-model="form.app_name"
+					label="Name"
+					placeholder="KlyONIX Compliance"
+				/>
 				<div class="flex items-center gap-3">
 					<img
 						v-if="form.app_logo"
@@ -222,8 +226,8 @@ async function uploadLogo(event) {
 	uploading.value = true;
 	try {
 		const uploaded = await upload(file, {
-			doctype: "Compliance Plus Settings",
-			docname: "Compliance Plus Settings",
+			doctype: "KX Compliance Settings",
+			docname: "KX Compliance Settings",
 			isPrivate: false,
 		});
 		form.app_logo = uploaded.file_url;
@@ -245,7 +249,7 @@ async function save() {
 		);
 		fill(
 			await call(
-				"compliance_plus.api.save_settings",
+				"kxcompliance.api.save_settings",
 				{ values: changed },
 				{ httpMethod: "POST" }
 			)
@@ -262,7 +266,7 @@ async function save() {
 
 onMounted(async () => {
 	try {
-		options.value = await call("compliance_plus.api.settings_options");
+		options.value = await call("kxcompliance.api.settings_options");
 		fill(options.value.values);
 	} catch (err) {
 		error.value = err.isNetwork ? notLoaded("the settings", "opened") : err.message;

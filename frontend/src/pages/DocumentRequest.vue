@@ -253,7 +253,7 @@ const menu = computed(() => [
 
 async function loadDocuments() {
 	try {
-		documents.value = await call("compliance_plus.api.documents", {
+		documents.value = await call("kxcompliance.api.documents", {
 			doctype: "Document Request",
 			name: props.name,
 		});

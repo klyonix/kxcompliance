@@ -1,6 +1,6 @@
 // The outbox: changes made while offline, kept in the browser's IndexedDB until sent.
 
-const DB_NAME = "compliance-plus";
+const DB_NAME = "kxcompliance";
 const STORE = "outbox";
 
 function open() {

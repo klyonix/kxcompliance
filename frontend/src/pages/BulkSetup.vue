@@ -31,7 +31,7 @@
 							<Button
 								icon-left="lucide-download"
 								label="Download template"
-								href="/api/method/compliance_plus.api.setup_template"
+								href="/api/method/kxcompliance.api.setup_template"
 							/>
 						</div>
 					</div>

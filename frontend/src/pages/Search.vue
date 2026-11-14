@@ -98,7 +98,7 @@ async function run() {
 	}
 	searching.value = true;
 	try {
-		const found = await call("compliance_plus.api.search", { text: query });
+		const found = await call("kxcompliance.api.search", { text: query });
 		// A slower earlier search must not replace the answer to a later one.
 		if (ticket === latest) results.value = found;
 	} catch (err) {

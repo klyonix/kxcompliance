@@ -1,5 +1,5 @@
 [project]
-name = "compliance_plus"
+name = "kxcompliance"
 authors = [
     { name = "KlyONIX Tech Consulting Pvt Ltd", email = "hello@klyonix.com"}
 ]

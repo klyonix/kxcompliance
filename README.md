@@ -1,4 +1,4 @@
-### Compliance Plus
+### KlyONIX Compliance
 
 Simple Compliance Management app
 
@@ -9,7 +9,7 @@ You can install this app using the [bench](https://github.com/frappe/bench) CLI:
 ```bash
 cd $PATH_TO_YOUR_BENCH
 bench get-app $URL_OF_THIS_REPO --branch develop
-bench install-app compliance_plus
+bench install-app kxcompliance
 ```
 
 ### Contributing
@@ -17,7 +17,7 @@ bench install-app compliance_plus
 This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:
 
 ```bash
-cd apps/compliance_plus
+cd apps/kxcompliance
 pre-commit install
 ```
 

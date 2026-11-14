@@ -5,7 +5,7 @@ import { call } from "@/api";
 import { boot, checksOnly, isClientLogin } from "@/boot";
 import { companiesOf } from "@/lib/clientFilter";
 
-const KEY = `compliance-plus:${boot.siteName}:${boot.user}:client`;
+const KEY = `kxcompliance:${boot.siteName}:${boot.user}:client`;
 
 export const clientFilter = reactive({
 	client: localStorage.getItem(KEY) || "",
@@ -32,7 +32,7 @@ export function chooseClient(name) {
 let loading;
 export function loadClients() {
 	if (!filterOffered()) return Promise.resolve();
-	loading ??= call("compliance_plus.api.client_choices")
+	loading ??= call("kxcompliance.api.client_choices")
 		.then((clients) => {
 			clientFilter.clients = clients;
 			// A client no longer offered (left the firm, or the team changed) is let go.

@@ -64,7 +64,7 @@ export const salesCheck = atBothWidths(
 	defineFlow<AnyEvent>({
 		id: "sales-check",
 		title: "Licence Check for sales staff",
-		source: "frontend/src/navigation.js (sections), frontend/src/router.js (beforeEach), compliance_plus/api.py (party_types_to_check)",
+		source: "frontend/src/navigation.js (sections), frontend/src/router.js (beforeEach), kxcompliance/api.py (party_types_to_check)",
 		persona: "Sales User",
 		machine: setup({}).createMachine({
 			id: "sales-check",
@@ -96,13 +96,13 @@ export const salesCheck = atBothWidths(
 	})
 );
 
-/** The managers' overview. Overview.vue and compliance_plus/compliance_plus/overview.py. */
+/** The managers' overview. Overview.vue and kxcompliance/kx_compliance/overview.py. */
 const overviewHolds = new WeakMap<Scene, Hold>();
 export const overview = atBothWidths(
 	defineFlow<AnyEvent>({
 		id: "overview",
 		title: "Overview",
-		source: "frontend/src/pages/Overview.vue, compliance_plus/compliance_plus/overview.py",
+		source: "frontend/src/pages/Overview.vue, kxcompliance/kx_compliance/overview.py",
 		machine: setup({}).createMachine({
 			id: "overview",
 			initial: "skeleton",
@@ -113,7 +113,7 @@ export const overview = atBothWidths(
 			},
 		}),
 		async enter(scene) {
-			overviewHolds.set(scene, await scene.hold("**/api/method/compliance_plus.api.overview*"));
+			overviewHolds.set(scene, await scene.hold("**/api/method/kxcompliance.api.overview*"));
 			await scene.goto("/overview");
 			await expect(scene.page.locator("[aria-busy=true]").first()).toBeVisible();
 		},
@@ -154,7 +154,7 @@ export const account = atBothWidths(
 				await scene.page.evaluate(
 					() =>
 						new Promise<void>((resolve, reject) => {
-							const request = indexedDB.open("compliance-plus", 1);
+							const request = indexedDB.open("kxcompliance", 1);
 							request.onsuccess = () => {
 								const store = request.result.transaction("outbox", "readwrite").objectStore("outbox");
 								store.add({

@@ -6,8 +6,8 @@ tags
 node_modules
 __pycache__
 # Built by the front end (yarn build); a server builds them on install.
-compliance_plus/public/frontend/
-compliance_plus/www/compliance.html
+kxcompliance/public/frontend/
+kxcompliance/www/compliance.html
 frontend/e2e/ui-states/out/
 frontend/e2e/ui-states/.runs/
 frontend/e2e/ui-states/.users.json

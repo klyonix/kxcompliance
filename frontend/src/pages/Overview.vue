@@ -181,7 +181,7 @@ async function load() {
 	loading.value = true;
 	error.value = "";
 	try {
-		data.value = await call("compliance_plus.api.overview");
+		data.value = await call("kxcompliance.api.overview");
 	} catch (err) {
 		// Numbers already on screen stay; the banner says the server is not answering.
 		if (!(err.isNetwork && data.value)) {

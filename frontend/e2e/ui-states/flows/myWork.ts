@@ -50,7 +50,7 @@ const machine = setup({ types: { events: {} as Event } }).createMachine({
 });
 
 const holds = new WeakMap<Scene, Hold>();
-const MY_WORK = "**/api/method/compliance_plus.api.my_work*";
+const MY_WORK = "**/api/method/kxcompliance.api.my_work*";
 
 async function expectRows(scene: Scene) {
 	await expect(scene.page.getByText("This week", { exact: false }).first()).toBeVisible();

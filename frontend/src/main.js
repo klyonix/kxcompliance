@@ -7,6 +7,7 @@ import { h } from "vue";
 import App from "./App.vue";
 import router from "./router";
 import { watchConnection } from "./offline/outbox";
+import { watchForUpdates } from "./offline/updates";
 
 createApp({ render: () => h(FrappeUIProvider, null, { default: () => h(App) }) })
 	.use(router)
@@ -15,5 +16,5 @@ createApp({ render: () => h(FrappeUIProvider, null, { default: () => h(App) }) }
 watchConnection();
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
-	navigator.serviceWorker.register("/compliance_sw.js", { scope: "/compliance" });
+	watchForUpdates();
 }

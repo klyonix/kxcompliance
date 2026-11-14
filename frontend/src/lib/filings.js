@@ -135,3 +135,29 @@ export function changedValues(values, saved) {
 	}
 	return changed;
 }
+
+// The steps a filing goes through, for the line at the top of its page.
+export function filingSteps(task, rules) {
+	const steps = ["File", ...(rules?.requires_review ? ["Review"] : []), "Filed"];
+	let current = 0;
+	if (CLOSED_STATUSES.includes(task.status)) current = steps.length - 1;
+	else if (task.status === "Ready for Review") current = steps.indexOf("Review");
+	return { steps, current: Math.max(current, 0) };
+}
+
+// Whether anything about the filing itself has been recorded yet (remarks are notes, not filing).
+export const hasFilingDetails = (task) =>
+	Boolean(
+		task.filed_on ||
+			task.acknowledgement_number ||
+			task.proof ||
+			["amount_paid", "interest", "late_fee"].some((field) => Number(task[field]))
+	);
+
+// When the filing fields show: once someone starts recording it, or straight away if something
+// is already recorded on an open filing. In review they stay folded unless someone asks to correct.
+export function showFilingForm(task, { editable, opened }) {
+	if (!editable || CLOSED_STATUSES.includes(task.status)) return false;
+	if (task.status === "Ready for Review") return opened;
+	return opened || hasFilingDetails(task);
+}

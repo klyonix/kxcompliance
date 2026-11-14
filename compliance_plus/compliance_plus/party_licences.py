@@ -22,6 +22,7 @@ DOCUMENTS = {
 	"Purchase Invoice": ("Supplier", "check_purchase_invoice", "supplier", "posting_date"),
 }
 GROUP_FIELDS = {"Customer": "customer_group", "Supplier": "supplier_group"}
+CHECK_FIELDS = tuple(check_field for _party_type, check_field, _field, _date in DOCUMENTS.values())
 LICENCE_NUMBERS_FIELD = "customer_licence_numbers"
 
 
@@ -64,10 +65,24 @@ def check_document(doc, method=None):
 
 
 def applicable_requirements(doc, party_type: str, check_field: str, party: str) -> list:
+	document_groups = {row.get("item_group") for row in doc.get("items", [])} - {None, ""}
+	return [
+		requirement
+		for requirement in requirements_for_party(party_type, party, check_field)
+		if not requirement.item_groups or set(requirement.item_groups) & document_groups
+	]
+
+
+def requirements_for_party(party_type: str, party: str, check_field: str | None = None) -> list:
+	"""Active requirements that apply to this party, each with the item groups it is limited to."""
+	filters = {"party_type": party_type, "is_active": 1}
+	if check_field:
+		filters[check_field] = 1
 	requirements = frappe.get_all(
 		"Licence Requirement",
-		filters={"party_type": party_type, "is_active": 1, check_field: 1},
-		fields=["name", "item_type", "action", "grace_days"],
+		filters=filters,
+		fields=["name", "item_type", "action", "grace_days", *CHECK_FIELDS],
+		order_by="item_type asc",
 	)
 	if not requirements:
 		return []
@@ -75,16 +90,13 @@ def applicable_requirements(doc, party_type: str, check_field: str, party: str) 
 	item_groups = rows_by_parent("Licence Requirement Item Group", names, "item_group")
 	party_groups = rows_by_parent("Licence Requirement Party Group", names, "party_group")
 	party_group = frappe.get_cached_value(party_type, party, GROUP_FIELDS[party_type])
-	document_groups = {row.get("item_group") for row in doc.get("items", [])} - {None, ""}
 
 	applicable = []
 	for requirement in requirements:
-		wanted_items = item_groups.get(requirement.name)
 		wanted_parties = party_groups.get(requirement.name)
-		if wanted_items and not (wanted_items & document_groups):
-			continue
 		if wanted_parties and party_group not in wanted_parties:
 			continue
+		requirement.item_groups = sorted(item_groups.get(requirement.name, ()))
 		applicable.append(requirement)
 	return applicable
 
@@ -96,39 +108,61 @@ def rows_by_parent(doctype: str, parents: list[str], fieldname: str) -> dict[str
 	return result
 
 
-def valid_licences(party_type: str, party: str, on, item_type: str | None = None, grace_days: int = 0):
+def party_licence_items(party_type: str, party: str, item_type: str | None = None) -> list:
+	"""The party's licences that are not cancelled, latest expiry first."""
 	filters = {"holder_type": party_type, "holder": party, "is_cancelled": 0}
 	if item_type:
 		filters["item_type"] = item_type
-	licences = frappe.get_all(
+	return frappe.get_all(
 		"Compliance Item",
 		filters=filters,
-		fields=["name", "item_type", "reference_number", "valid_from", "valid_until"],
+		fields=["name", "item_type", "reference_number", "status", "valid_from", "valid_until"],
 		order_by="valid_until desc",
 	)
+
+
+def is_valid_on(licence, on, grace_days: int = 0) -> bool:
+	return (not licence.valid_from or getdate(licence.valid_from) <= on) and (
+		not licence.valid_until or getdate(add_days(licence.valid_until, grace_days)) >= on
+	)
+
+
+def valid_licences(party_type: str, party: str, on, item_type: str | None = None, grace_days: int = 0):
 	return [
 		licence
-		for licence in licences
-		if (not licence.valid_from or getdate(licence.valid_from) <= on)
-		and (not licence.valid_until or getdate(add_days(licence.valid_until, grace_days)) >= on)
+		for licence in party_licence_items(party_type, party, item_type)
+		if is_valid_on(licence, on, grace_days)
 	]
 
 
-def missing_licence(requirement, party_type: str, party: str, on) -> str | None:
-	if valid_licences(party_type, party, on, requirement.item_type, requirement.grace_days or 0):
+def licence_gap(requirement, licences: list, party_type: str, party: str, on) -> dict | None:
+	"""Why the party's licences do not meet a requirement on a date, or None when they do.
+
+	`licences` are the party's licences, latest expiry first, as party_licence_items gives them.
+	"""
+	of_type = [licence for licence in licences if licence.item_type == requirement.item_type]
+	if any(is_valid_on(licence, on, requirement.grace_days or 0) for licence in of_type):
 		return None
-	latest = frappe.db.get_value(
-		"Compliance Item",
-		{"holder_type": party_type, "holder": party, "item_type": requirement.item_type, "is_cancelled": 0},
-		["name", "valid_until"],
-		as_dict=True,
-		order_by="valid_until desc",
-	)
-	if latest and latest.valid_until:
-		return _("{0} {1}'s {2} ({3}) expired on {4}.").format(
-			_(party_type), party, requirement.item_type, latest.name, formatdate(latest.valid_until)
-		)
-	return _("{0} {1} has no {2} on record.").format(_(party_type), party, requirement.item_type)
+	latest = next((licence for licence in of_type if licence.valid_until), None)
+	if latest:
+		return {
+			"result": "expired",
+			"licence": latest.name,
+			"message": _("{0} {1}'s {2} ({3}) expired on {4}.").format(
+				_(party_type), party, requirement.item_type, latest.name, formatdate(latest.valid_until)
+			),
+		}
+	return {
+		"result": "missing",
+		"licence": None,
+		"message": _("{0} {1} has no {2} on record.").format(_(party_type), party, requirement.item_type),
+	}
+
+
+def missing_licence(requirement, party_type: str, party: str, on) -> str | None:
+	licences = party_licence_items(party_type, party, requirement.item_type)
+	gap = licence_gap(requirement, licences, party_type, party, on)
+	return gap["message"] if gap else None
 
 
 def licence_numbers(party_type: str, party: str, on) -> str:

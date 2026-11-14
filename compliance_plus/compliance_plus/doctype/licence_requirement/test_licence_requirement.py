@@ -6,6 +6,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from compliance_plus.api import can_open_app, check_party, has_app_access, my_work, search_parties
 from compliance_plus.compliance_plus.move_old_trackers import (
 	CUSTOMER_LICENCE_TABLES,
 	move_customer_licence_row,
@@ -13,7 +14,13 @@ from compliance_plus.compliance_plus.move_old_trackers import (
 from compliance_plus.compliance_plus.party_dashboards import customer as customer_dashboard
 from compliance_plus.compliance_plus.party_licences import check_document, override_key
 from compliance_plus.compliance_plus.reminders import send_party_reminders
-from compliance_plus.compliance_plus.test_utils import HOLDER, TEST_COMPANY, make_company, make_users
+from compliance_plus.compliance_plus.test_utils import (
+	HOLDER,
+	TEST_COMPANY,
+	make_company,
+	make_user,
+	make_users,
+)
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Compliance Item Type", "Item Group", "Customer Group", "Supplier Group"]
@@ -24,6 +31,7 @@ WHOLESALER = "Licence Test Wholesaler"
 DRUGS = "Licence Test Drugs"
 SNACKS = "Licence Test Snacks"
 CHEMISTS = "Licence Test Chemists"
+SALES = "licence-sales@example.com"
 
 
 def ensure_tree(doctype: str, root: str, name: str, parent_field: str):
@@ -87,22 +95,24 @@ def sales_order(
 	return doc
 
 
+def make_parties():
+	make_company()
+	make_users()
+	frappe.defaults.set_global_default("company", TEST_COMPANY)
+	ensure_tree("Item Group", "All Item Groups", DRUGS, "parent_item_group")
+	ensure_tree("Item Group", "All Item Groups", SNACKS, "parent_item_group")
+	ensure_tree("Customer Group", "All Customer Groups", CHEMISTS, "parent_customer_group")
+	ensure_tree("Supplier Group", "All Supplier Groups", "Licence Test Suppliers", "parent_supplier_group")
+	make_party("Customer", PHARMACY, customer_group=CHEMISTS, email_id="pharmacy@example.com")
+	make_party("Customer", GROCER)
+	make_party("Supplier", WHOLESALER, supplier_group="Licence Test Suppliers")
+
+
 class TestLicenceRequirement(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		make_company()
-		make_users()
-		frappe.defaults.set_global_default("company", TEST_COMPANY)
-		ensure_tree("Item Group", "All Item Groups", DRUGS, "parent_item_group")
-		ensure_tree("Item Group", "All Item Groups", SNACKS, "parent_item_group")
-		ensure_tree("Customer Group", "All Customer Groups", CHEMISTS, "parent_customer_group")
-		ensure_tree(
-			"Supplier Group", "All Supplier Groups", "Licence Test Suppliers", "parent_supplier_group"
-		)
-		make_party("Customer", PHARMACY, customer_group=CHEMISTS, email_id="pharmacy@example.com")
-		make_party("Customer", GROCER)
-		make_party("Supplier", WHOLESALER, supplier_group="Licence Test Suppliers")
+		make_parties()
 
 	def setUp(self):
 		# Data stays until the class ends, so clear what an earlier test may have left.
@@ -278,3 +288,63 @@ class TestLicenceRequirement(IntegrationTestCase):
 		)
 		self.assertEqual(item.reference_number, "20B-KA-OLD")
 		self.assertIn("Retail", item.notes)
+
+
+class TestLicenceCheckScreen(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_parties()
+		make_user(SALES, ("Sales User",))
+
+	def setUp(self):
+		frappe.db.delete("Licence Requirement")
+		frappe.db.delete("Compliance Item", {"holder_type": ("in", ["Customer", "Supplier"])})
+
+	def requirement_for(self, result: dict, item_type: str) -> dict:
+		return next(row for row in result["requirements"] if row["item_type"] == item_type)
+
+	def test_the_check_says_which_licences_are_missing_expired_or_in_order(self):
+		requirement(party_groups=[{"party_group": CHEMISTS}], check_quotation=0)
+		requirement(item_type="FSSAI Licence", item_groups=[], action="Warn", grace_days=15)
+		with self.freeze_time("2026-11-14"):
+			result = check_party("Customer", PHARMACY)
+			drug = self.requirement_for(result, "Drug Licence")
+			self.assertEqual(drug["result"], "missing")
+			self.assertEqual(drug["item_groups"], [DRUGS])
+			self.assertNotIn("Quotation", drug["documents"])
+			self.assertIn("Sales Invoice", drug["documents"])
+
+			licence("Customer", PHARMACY, "Drug Licence", "2026-11-01")
+			licence("Customer", PHARMACY, "FSSAI Licence", "2026-11-05", number="FS-1")
+			result = check_party("Customer", PHARMACY)
+			self.assertEqual(self.requirement_for(result, "Drug Licence")["result"], "expired")
+			# Expired nine days ago, inside its fifteen days of grace.
+			self.assertEqual(self.requirement_for(result, "FSSAI Licence")["result"], "ok")
+			self.assertEqual(len(result["licences"]), 2)
+			self.assertFalse(any(row["valid"] for row in result["licences"]))
+
+			# A requirement limited to chemists does not apply to a grocer.
+			grocer = check_party("Customer", GROCER)
+			self.assertEqual([row["item_type"] for row in grocer["requirements"]], ["FSSAI Licence"])
+
+	def test_sales_staff_check_customers_only_and_see_nothing_else(self):
+		with self.set_user(SALES):
+			self.assertTrue(can_open_app())
+			self.assertFalse(has_app_access())
+			self.assertIn(PHARMACY, [row.name for row in search_parties("Customer", "Pharmacy")])
+			self.assertEqual(check_party("Customer", PHARMACY)["party"], PHARMACY)
+			with self.assertRaises(frappe.PermissionError):
+				check_party("Supplier", WHOLESALER)
+			with self.assertRaises(frappe.PermissionError):
+				search_parties("Supplier", "")
+			with self.assertRaises(frappe.PermissionError):
+				my_work()
+
+	def test_compliance_staff_search_both_sides_without_reading_parties(self):
+		with self.set_user(HOLDER):
+			self.assertFalse(frappe.has_permission("Customer", "read"))
+			found = search_parties("Supplier", "wholesale")
+			self.assertEqual([row.name for row in found], [WHOLESALER])
+			self.assertEqual(found[0].party_group, "Licence Test Suppliers")
+			self.assertEqual(check_party("Customer", GROCER)["party_name"], GROCER)

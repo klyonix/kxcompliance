@@ -5,11 +5,23 @@
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, get_datetime, now_datetime, nowdate
+from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
 
+from compliance_plus.compliance_plus.party_licences import (
+	DOCUMENTS,
+	GROUP_FIELDS,
+	is_valid_on,
+	licence_gap,
+	party_licence_items,
+	requirements_for_party,
+)
 from compliance_plus.compliance_plus.register import CLOSED_TASK_STATUSES
 
 APP_ROLES = frozenset({"System Manager", "Compliance Manager", "Compliance User", "Compliance Auditor"})
+# People who sell or buy may open the app for the Licence Check only, for their side of the business.
+CHECK_ROLES = {"Sales User": "Customer", "Purchase User": "Supplier"}
+PARTY_NAME_FIELDS = {"Customer": "customer_name", "Supplier": "supplier_name"}
+PARTY_SEARCH_LIMIT = 20
 WORK_HORIZON_DAYS = 30
 WORK_LIMIT = 200
 
@@ -32,6 +44,25 @@ EDITABLE_FIELDS = {
 
 def has_app_access(user: str | None = None) -> bool:
 	return bool(APP_ROLES & set(frappe.get_roles(user)))
+
+
+def party_types_to_check(user: str | None = None) -> list[str]:
+	"""Whose licences the person may check: both sides for compliance roles, else by Sales or Purchase User."""
+	roles = set(frappe.get_roles(user))
+	if APP_ROLES & roles:
+		return list(PARTY_NAME_FIELDS)
+	return [party_type for role, party_type in CHECK_ROLES.items() if role in roles]
+
+
+def can_open_app(user: str | None = None) -> bool:
+	return has_app_access(user) or bool(party_types_to_check(user))
+
+
+def check_party_type(party_type: str):
+	if frappe.session.user == "Guest" or party_type not in party_types_to_check():
+		frappe.throw(
+			_("You cannot check the licences of a {0}.").format(_(party_type)), frappe.PermissionError
+		)
 
 
 def check_app_access():
@@ -175,6 +206,82 @@ def log_notice(
 	return {"name": case.name}
 
 
+@frappe.whitelist(methods=["GET"])
+def search_parties(party_type: str, text: str = "") -> list[dict]:
+	"""Customers or suppliers whose ID or name contains `text`, for the Licence Check."""
+	check_party_type(party_type)
+	name_field = PARTY_NAME_FIELDS[party_type]
+	query = {
+		"filters": {"disabled": 0},
+		"or_filters": {"name": ("like", f"%{text.strip()}%"), name_field: ("like", f"%{text.strip()}%")}
+		if text.strip()
+		else None,
+		"fields": ["name", f"{name_field} as party_name", f"{GROUP_FIELDS[party_type]} as party_group"],
+		"order_by": f"{name_field} asc",
+		"limit": PARTY_SEARCH_LIMIT,
+	}
+	if frappe.has_permission(party_type, "read"):
+		return frappe.get_list(party_type, **query)
+	# Compliance roles do not read Customer or Supplier; the check gives them names and groups only.
+	return frappe.get_all(party_type, **query)
+
+
+@frappe.whitelist(methods=["GET"])
+def check_party(party_type: str, party: str) -> dict:
+	"""Whether a customer or supplier holds the licences their sales or purchases need today."""
+	check_party_type(party_type)
+	if frappe.has_permission(party_type, "read"):
+		frappe.has_permission(party_type, "read", doc=party, throw=True)
+	details = frappe.db.get_value(
+		party_type,
+		party,
+		[PARTY_NAME_FIELDS[party_type], GROUP_FIELDS[party_type]],
+		as_dict=True,
+	)
+	if not details:
+		frappe.throw(_("{0} {1} does not exist.").format(_(party_type), party), frappe.DoesNotExistError)
+
+	today = getdate(nowdate())
+	licences = party_licence_items(party_type, party)
+	documents = [
+		(doctype, check_field)
+		for doctype, (side, check_field, _field, _date) in DOCUMENTS.items()
+		if side == party_type
+	]
+	requirements = []
+	for requirement in requirements_for_party(party_type, party):
+		gap = licence_gap(requirement, licences, party_type, party, today) or {}
+		requirements.append(
+			{
+				"item_type": requirement.item_type,
+				"action": requirement.action,
+				"grace_days": requirement.grace_days or 0,
+				"item_groups": requirement.item_groups,
+				"documents": [doctype for doctype, check_field in documents if requirement.get(check_field)],
+				"result": gap.get("result", "ok"),
+				"message": gap.get("message", ""),
+			}
+		)
+	return {
+		"party_type": party_type,
+		"party": party,
+		"party_name": details[PARTY_NAME_FIELDS[party_type]],
+		"party_group": details[GROUP_FIELDS[party_type]],
+		"checked_on": str(today),
+		"requirements": requirements,
+		"licences": [
+			{
+				"item_type": licence.item_type,
+				"reference_number": licence.reference_number,
+				"status": licence.status,
+				"valid_until": licence.valid_until and str(licence.valid_until),
+				"valid": is_valid_on(licence, today),
+			}
+			for licence in licences
+		],
+	}
+
+
 def app_companies() -> list[str]:
 	"""The companies the person may pick in the app: their User Permissions, else every company.
 
@@ -191,11 +298,12 @@ def boot() -> dict:
 	return {
 		"user": frappe.session.user,
 		"user_fullname": frappe.utils.get_fullname(frappe.session.user),
-		"roles": sorted(APP_ROLES & set(frappe.get_roles())),
+		"roles": sorted((APP_ROLES | set(CHECK_ROLES)) & set(frappe.get_roles())),
+		"party_types": party_types_to_check(),
 		"app_name": settings.app_name or "Compliance Plus",
 		"app_logo": settings.app_logo or "",
 		"csrf_token": frappe.sessions.get_csrf_token(),
 		"site_name": frappe.local.site,
-		"companies": app_companies(),
+		"companies": app_companies() if has_app_access() else [],
 		"default_company": frappe.defaults.get_user_default("Company") or "",
 	}

@@ -17,6 +17,7 @@ from kxcompliance.kx_compliance import (
 	clients,
 	companies,
 	document_requests,
+	month_calendar,
 	onboarding,
 	score,
 	setup_import,
@@ -629,6 +630,22 @@ def item_form_options() -> dict:
 		"billing_cycles": [cycle for cycle in meta.get_field("billing_cycle").options.split("\n") if cycle],
 		"people": onboarding.firm_people(),
 	}
+
+
+@frappe.whitelist(methods=["GET"])
+def month_events(start: str, end: str, companies: str | None = None) -> list[dict]:
+	"""What falls on each day from `start` to `end` that the person may see, for the app's calendar.
+
+	`companies`, a JSON list of company names, narrows it to a client's companies (the client
+	filter); none means all. A GET request carries it as text, so it is read and checked here.
+	"""
+	check_app_access()
+	chosen = frappe.parse_json(companies) if companies else None
+	if chosen is not None and not (
+		isinstance(chosen, list) and all(isinstance(name, str) for name in chosen)
+	):
+		frappe.throw(_("Companies must be a list of company names."), frappe.ValidationError)
+	return month_calendar.month_events(start, end, chosen)
 
 
 @frappe.whitelist(methods=["GET"])

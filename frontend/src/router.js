@@ -126,6 +126,11 @@ export const routes = [
 	},
 	{ path: "/filings", name: "Filings", component: () => import("./pages/Filings.vue") },
 	{
+		path: "/calendar",
+		name: "MonthCalendar",
+		component: () => import("./pages/MonthCalendar.vue"),
+	},
+	{
 		path: "/filings/bulk",
 		name: "BulkFiling",
 		component: () => import("./pages/BulkFiling.vue"),

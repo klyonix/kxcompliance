@@ -18,6 +18,8 @@ const ALL_SECTIONS = [
 	// CA/CS firms only.
 	{ label: "Clients", route: "Clients", icon: "lucide-users", firm: true },
 	{ label: "Filings", route: "Filings", icon: "lucide-calendar-check" },
+	// On phones it opens from My Work, as the tab bar is full.
+	{ label: "Calendar", route: "MonthCalendar", icon: "lucide-calendar-days", desktopOnly: true },
 	{ label: "Register", route: "Register", icon: "lucide-file-badge" },
 	{ label: "Legal", route: "Legal", icon: "lucide-scale" },
 	{

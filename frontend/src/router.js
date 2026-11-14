@@ -9,6 +9,7 @@ export const routes = [
 	{ path: "/search", name: "Search", component: () => import("./pages/Search.vue") },
 	{ path: "/overview", name: "Overview", component: () => import("./pages/Overview.vue") },
 	{ path: "/account", name: "Account", component: () => import("./pages/Account.vue") },
+	{ path: "/settings", name: "Settings", component: () => import("./pages/Settings.vue") },
 	{ path: "/register", name: "Register", component: () => import("./pages/Register.vue") },
 	{
 		path: "/register/:name",
@@ -89,7 +90,9 @@ router.beforeEach((to) => {
 	if (checksOnly() && !["LicenceCheck", "Account"].includes(to.name)) {
 		return { name: "LicenceCheck" };
 	}
-	if (["Overview", "BulkSetup"].includes(to.name) && !isManager()) return { name: "MyWork" };
+	if (["Overview", "BulkSetup", "Settings"].includes(to.name) && !isManager()) {
+		return { name: "MyWork" };
+	}
 });
 
 // A screen's code that cannot be fetched means the server is not answering (or the device is offline).

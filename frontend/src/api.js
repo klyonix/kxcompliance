@@ -54,12 +54,16 @@ export async function call(method, params = {}, { httpMethod = "GET", fetcher = 
 	return (await send(url, init, fetcher)).message;
 }
 
-export async function upload(file, { doctype, docname, fileName, fetcher = fetch }) {
+// Files are private unless asked otherwise (an app logo has to be public, for instance).
+export async function upload(
+	file,
+	{ doctype, docname, fileName, isPrivate = true, fetcher = fetch }
+) {
 	const form = new FormData();
 	form.append("file", file, fileName || file.name || "upload");
 	form.append("doctype", doctype);
 	form.append("docname", docname);
-	form.append("is_private", "1");
+	form.append("is_private", isPrivate ? "1" : "0");
 	const init = {
 		method: "POST",
 		headers: { Accept: "application/json", "X-Frappe-CSRF-Token": window.csrf_token || "" },

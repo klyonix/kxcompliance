@@ -4,6 +4,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from compliance_plus.api import event_types
+from compliance_plus.compliance_plus.company_events import event_type_query, event_types_for
 from compliance_plus.compliance_plus.doctype.compliance_task.test_compliance_task import (
 	make_profile,
 	obligation,
@@ -67,12 +69,31 @@ class TestComplianceEvent(IntegrationTestCase):
 
 	def test_forms_follow_the_kind_of_company(self):
 		with self.freeze_time("2026-11-15"):
-			self.assertEqual(event_tasks(record("Partner Changed")), [])
+			# A private company has no partners: the event is refused, not recorded with nothing due.
+			with self.assertRaisesRegex(frappe.ValidationError, "calls for no filing"):
+				record("Partner Changed")
 			make_profile("LLP")
 			self.assertEqual(
 				[task.obligation_template for task in event_tasks(record("Partner Changed"))],
 				["LLP Form 4 (Partner Changed)"],
 			)
+
+	def test_only_events_that_call_for_a_filing_are_offered(self):
+		company_events = event_types_for("Private Limited")
+		self.assertIn("Change in Directors", company_events)
+		self.assertNotIn("Partner Changed", company_events)
+		llp_events = event_types_for("LLP")
+		self.assertEqual(llp_events, ["LLP Agreement Changed", "Partner Changed"])
+		with self.set_user(HOLDER):
+			offered = [row.name for row in event_types(TEST_COMPANY)]
+			picker = [
+				row[0]
+				for row in event_type_query(
+					"Compliance Event Type", "", "name", 0, 50, {"company": TEST_COMPANY}
+				)
+			]
+		self.assertEqual(offered, company_events)
+		self.assertEqual(picker, company_events)
 
 	def test_an_event_recorded_late_is_overdue_at_once(self):
 		with self.freeze_time("2026-11-15"):

@@ -11,6 +11,53 @@ from frappe.utils import add_days, formatdate, getdate
 from compliance_plus.compliance_plus.statutory import extensions_for, find_extension
 
 
+def event_types_for(company_type: str) -> list[str]:
+	"""The event types that call for at least one filing from this kind of company."""
+	template = frappe.qb.DocType("Compliance Obligation Template")
+	kind = frappe.qb.DocType("Compliance Company Type")
+	rows = (
+		frappe.qb.from_(template)
+		.left_join(kind)
+		.on((kind.parent == template.name) & (kind.parenttype == "Compliance Obligation Template"))
+		.select(template.event_type, kind.company_type)
+		.where((template.is_active == 1) & template.event_type.isnotnull() & (template.event_type != ""))
+	).run(as_dict=True)
+	# A template that names no company types applies to every kind of company.
+	types_by_event: dict[str, set] = {}
+	for row in rows:
+		types_by_event.setdefault(row.event_type, set()).add(row.company_type)
+	return sorted(
+		event_type for event_type, types in types_by_event.items() if None in types or company_type in types
+	)
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def event_type_query(
+	doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict
+) -> list[tuple]:
+	"""The Desk's Event Type picker on a Compliance Event: only events that call for a filing
+	from the chosen company's kind."""
+	frappe.has_permission("Compliance Event", "create", throw=True)
+	company_type = frappe.db.get_value(
+		"Company Compliance Profile", (filters or {}).get("company") or "", "company_type"
+	)
+	if not company_type:
+		return []
+	names = event_types_for(company_type)
+	if not names:
+		return []
+	event_type = frappe.qb.DocType("Compliance Event Type")
+	return (
+		frappe.qb.from_(event_type)
+		.select(event_type.name, event_type.description)
+		.where(event_type.name.isin(names) & event_type.name.like(f"%{txt}%"))
+		.orderby(event_type.name)
+		.limit(page_len)
+		.offset(start)
+	).run()
+
+
 def event_templates(event_type: str, company_type: str) -> list:
 	"""The active templates an event of this type calls for, for this kind of company."""
 	templates = [

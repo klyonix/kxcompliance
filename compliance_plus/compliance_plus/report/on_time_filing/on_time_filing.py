@@ -5,18 +5,21 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-GROUPINGS = {"Company": "company", "Law": "law", "Responsible": "responsible"}
+from compliance_plus.compliance_plus.client_reports import companies_by_client
+
+# A CA/CS firm also sees it per client, through the client's companies.
+GROUPINGS = {"Company": "company", "Client": "company", "Law": "law", "Responsible": "responsible"}
 
 
 def execute(filters: dict | None = None):
 	filters = frappe._dict(filters or {})
-	group_field = GROUPINGS.get(filters.get("group_by") or "Company", "company")
-	return get_columns(group_field), get_data(filters, group_field)
+	group_by = filters.get("group_by") if filters.get("group_by") in GROUPINGS else "Company"
+	return get_columns(group_by), get_data(filters, group_by)
 
 
-def get_columns(group_field: str):
+def get_columns(group_by: str):
 	return [
-		{"label": _(group_field.title()), "fieldname": "group", "fieldtype": "Data", "width": 200},
+		{"label": _(group_by), "fieldname": "group", "fieldtype": "Data", "width": 200},
 		{"label": _("Filed On Time"), "fieldname": "on_time", "fieldtype": "Int", "width": 120},
 		{"label": _("Filed Late"), "fieldname": "late", "fieldtype": "Int", "width": 100},
 		{"label": _("Overdue"), "fieldname": "overdue", "fieldtype": "Int", "width": 100},
@@ -26,10 +29,25 @@ def get_columns(group_field: str):
 	]
 
 
-def get_data(filters: frappe._dict, group_field: str):
+def get_data(filters: frappe._dict, group_by: str):
+	group_field = GROUPINGS[group_by]
 	conditions = {}
 	if filters.get("company"):
 		conditions["company"] = filters.company
+	client_of = {}
+	if group_by == "Client" or filters.get("client"):
+		clients = frappe.get_list(
+			"Compliance Client",
+			filters={"name": filters.client} if filters.get("client") else {},
+			pluck="name",
+		)
+		client_of = companies_by_client(clients)
+	if filters.get("client"):
+		companies = list(client_of)
+		if filters.get("company"):
+			# Both filters: the company, if it is the client's.
+			companies = [company for company in companies if company == filters.company]
+		conditions["company"] = ("in", companies or [""])
 	if filters.get("from_date") and filters.get("to_date"):
 		conditions["effective_due_date"] = ("between", [filters.from_date, filters.to_date])
 	tasks = frappe.get_list(
@@ -39,7 +57,10 @@ def get_data(filters: frappe._dict, group_field: str):
 	)
 	rows: dict[str, frappe._dict] = {}
 	for task in tasks:
-		key = task.get(group_field) or _("Not set")
+		if group_by == "Client":
+			key = client_of.get(task.company) or _("No client")
+		else:
+			key = task.get(group_field) or _("Not set")
 		row = rows.setdefault(
 			key, frappe._dict(group=key, on_time=0, late=0, overdue=0, late_fee=0, interest=0)
 		)

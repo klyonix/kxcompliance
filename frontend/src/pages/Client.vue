@@ -35,6 +35,32 @@
 				<p class="text-base text-ink-gray-6">{{ people }}</p>
 			</section>
 
+			<section class="flex flex-col gap-3" aria-labelledby="year-heading">
+				<div class="flex flex-col gap-0.5">
+					<h2 id="year-heading" class="text-base font-semibold text-ink-gray-8">
+						This financial year
+					</h2>
+					<p class="text-sm text-ink-gray-5">
+						Filings due {{ formatDate(client.year.from_date) }} to
+						{{ formatDate(client.year.to_date) }}; notices, documents and DSCs as of
+						today.
+					</p>
+				</div>
+				<dl class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+					<div
+						v-for="fact in yearFacts(client.year, { client: clientLogin })"
+						:key="fact.label"
+						class="flex flex-col gap-0.5 rounded-lg bg-surface-gray-1 px-3 py-2.5"
+					>
+						<dt class="text-sm text-ink-gray-6">{{ fact.label }}</dt>
+						<dd class="text-xl font-semibold" :class="FACT_TONE[fact.tone]">
+							{{ fact.value }}
+						</dd>
+						<dd class="text-sm text-ink-gray-5">{{ fact.detail }}</dd>
+					</div>
+				</dl>
+			</section>
+
 			<section class="flex flex-col gap-1" aria-labelledby="requests-heading">
 				<div class="flex items-center justify-between gap-3 pb-2">
 					<h2 id="requests-heading" class="text-base font-semibold text-ink-gray-8">
@@ -137,12 +163,13 @@ import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, Dropdown, Skeleton } from "frappe-ui";
 import { useRouter } from "vue-router";
 import { call } from "@/api";
-import { isClientLogin, mayRecord } from "@/boot";
+import { isClientLogin, mayRecord, mayUseDesk } from "@/boot";
 import AskDocument from "@/components/AskDocument.vue";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";
-import { clientAttention, clientTheme } from "@/lib/clients";
+import { clientAttention, clientTheme, yearFacts } from "@/lib/clients";
+import { formatDate } from "@/lib/format";
 import { taskRow } from "@/lib/filings";
 import { DSC_TYPE, itemRow } from "@/lib/items";
 import { requestRow } from "@/lib/requests";
@@ -156,6 +183,8 @@ const TONE = {
 	amber: "text-ink-amber-5",
 	green: "text-ink-gray-6",
 };
+
+const FACT_TONE = { red: "text-ink-red-4", amber: "text-ink-amber-4", gray: "text-ink-gray-8" };
 
 const client = ref(null);
 const error = ref("");
@@ -183,7 +212,21 @@ const people = computed(() => {
 	return [contact, team.length && `Team: ${team.join(", ")}`].filter(Boolean).join(" · ");
 });
 
-const menu = computed(() => deskActions("Compliance Client", props.name));
+const menu = computed(() => [
+	...deskActions("Compliance Client", props.name),
+	...(mayUseDesk()
+		? [
+				{
+					label: "Client Summary report",
+					icon: "lucide-table",
+					onClick: () =>
+						(window.location.href = `/app/query-report/Client Summary?${new URLSearchParams(
+							{ client: props.name }
+						)}`),
+				},
+		  ]
+		: []),
+]);
 
 async function load() {
 	error.value = "";

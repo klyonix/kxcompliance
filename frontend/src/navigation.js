@@ -1,4 +1,4 @@
-import { checksOnly, isManager } from "./boot";
+import { boot, checksOnly, isManager } from "./boot";
 
 // The app's sections, in the order they appear in the side bar and the phone's tab bar.
 const ALL_SECTIONS = [
@@ -13,6 +13,8 @@ const ALL_SECTIONS = [
 		managers: true,
 		desktopOnly: true,
 	},
+	// CA/CS firms only.
+	{ label: "Clients", route: "Clients", icon: "lucide-users", firm: true },
 	{ label: "Filings", route: "Filings", icon: "lucide-calendar-check" },
 	{ label: "Register", route: "Register", icon: "lucide-file-badge" },
 	{ label: "Legal", route: "Legal", icon: "lucide-scale" },
@@ -22,12 +24,19 @@ const ALL_SECTIONS = [
 		tabLabel: "Licences",
 		route: "LicenceCheck",
 		icon: "lucide-shield-check",
+		// A firm checks licences on its clients' sales only if it turns this on (not built yet).
+		organisation: true,
 	},
 ];
 
 export const sections = checksOnly()
 	? ALL_SECTIONS.filter((section) => section.route === "LicenceCheck")
-	: ALL_SECTIONS.filter((section) => !section.managers || isManager());
+	: ALL_SECTIONS.filter((section) => {
+			const firm = boot.accountType === "CA/CS Firm";
+			if (section.managers && !isManager()) return false;
+			if (section.firm && !firm) return false;
+			return !(section.organisation && firm);
+	  });
 
 // Where each record opens until it has a screen of its own in the app.
 export const deskRoute = (doctype, name) =>

@@ -15,6 +15,13 @@ export const routes = [
 		component: () => import("./pages/ComplianceItem.vue"),
 		props: true,
 	},
+	{ path: "/clients", name: "Clients", component: () => import("./pages/Clients.vue") },
+	{
+		path: "/clients/:name",
+		name: "Client",
+		component: () => import("./pages/Client.vue"),
+		props: true,
+	},
 	{ path: "/filings", name: "Filings", component: () => import("./pages/Filings.vue") },
 	{
 		path: "/filings/event",

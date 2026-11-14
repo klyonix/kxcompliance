@@ -52,6 +52,7 @@ export function setupAnswers(answers, companyChoice) {
 	return {
 		account_type: answers.account_type,
 		firm_name: answers.account_type === "CA/CS Firm" ? answers.firm_name.trim() : "",
+		client_name: answers.account_type === "CA/CS Firm" ? answers.client_name.trim() : "",
 		new_company: companyChoice === "new" ? answers.new_company.trim() : "",
 		company: companyChoice === "existing" ? answers.company : "",
 		company_type: answers.company_type,

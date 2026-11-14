@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
 
-from compliance_plus.compliance_plus import onboarding
+from compliance_plus.compliance_plus import clients, onboarding
 from compliance_plus.compliance_plus.company_events import event_types_for
 from compliance_plus.compliance_plus.overview import get_overview
 from compliance_plus.compliance_plus.party_licences import (
@@ -383,6 +383,20 @@ def event_types(company: str) -> list[dict]:
 		fields=["name", "description"],
 		order_by="name asc",
 	)
+
+
+@frappe.whitelist(methods=["GET"])
+def clients_overview() -> list[dict]:
+	"""A CA/CS firm's clients the person may see, with their open filings, worst first."""
+	check_app_access()
+	return clients.clients_overview()
+
+
+@frappe.whitelist(methods=["GET"])
+def client_detail(client: str) -> dict:
+	"""One client: its companies, team and open filings."""
+	check_app_access()
+	return clients.client_detail(client)
 
 
 @frappe.whitelist(methods=["GET"])

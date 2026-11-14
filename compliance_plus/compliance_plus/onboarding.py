@@ -142,6 +142,9 @@ def complete(setup: dict) -> dict:
 	if reviewer and not frappe.db.exists("User", reviewer):
 		frappe.throw(_("{0} is not a user on this site.").format(reviewer))
 	registrations = clean_registrations(setup.get("registrations"))
+	client_name = (setup.get("client_name") or "").strip()
+	if account_type == "CA/CS Firm" and not client_name:
+		frappe.throw(_("Give the name of the client this company belongs to."))
 
 	if setup.get("new_company"):
 		company = make_company(setup["new_company"])
@@ -152,10 +155,27 @@ def complete(setup: dict) -> dict:
 		if frappe.db.exists("Company Compliance Profile", company):
 			frappe.throw(_("{0} is already set up for compliance.").format(company))
 
+	client = None
+	if account_type == "CA/CS Firm":
+		client = (
+			client_name
+			if frappe.db.exists("Compliance Client", client_name)
+			else frappe.get_doc(
+				{
+					"doctype": "Compliance Client",
+					"client_name": client_name,
+					"relationship_manager": frappe.session.user,
+				}
+			)
+			.insert()
+			.name
+		)
+
 	profile = frappe.get_doc(
 		{
 			"doctype": "Company Compliance Profile",
 			"company": company,
+			"client": client,
 			"company_type": company_type,
 			"default_responsible": responsible,
 			"default_reviewer": reviewer,
@@ -170,4 +190,4 @@ def complete(setup: dict) -> dict:
 		settings.app_name = setup["firm_name"].strip()
 	settings.setup_complete = 1
 	settings.save()
-	return {"company": company, "obligations": obligations, "tasks": tasks}
+	return {"company": company, "client": client, "obligations": obligations, "tasks": tasks}

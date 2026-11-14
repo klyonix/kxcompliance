@@ -10,6 +10,13 @@ export const routes = [
 		component: () => import("./pages/ComplianceItem.vue"),
 		props: true,
 	},
+	{ path: "/filings", name: "Filings", component: () => import("./pages/Filings.vue") },
+	{
+		path: "/filings/:name",
+		name: "ComplianceTask",
+		component: () => import("./pages/ComplianceTask.vue"),
+		props: true,
+	},
 	{ path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 

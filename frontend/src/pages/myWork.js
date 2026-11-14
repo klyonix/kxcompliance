@@ -63,7 +63,7 @@ export function workRows(work, { link, today = new Date() }) {
 			status: task.status,
 			date: task.effective_due_date,
 			overdue: Boolean(task.is_overdue),
-			href: link("Compliance Task", task.name),
+			to: { name: "ComplianceTask", params: { name: task.name } },
 		})),
 		...work.legal_dates.map((legalDate) => ({
 			key: `legal-${legalDate.name}`,

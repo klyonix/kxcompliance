@@ -15,9 +15,15 @@ export const REGISTER_VIEWS = [
 		label: "Needs attention",
 		value: "attention",
 		filters: [["status", "in", ATTENTION_STATUSES]],
+		orderBy: "valid_until asc",
 	},
-	{ label: "Active", value: "active", filters: [["status", "=", "Active"]] },
-	{ label: "All", value: "all", filters: [] },
+	{
+		label: "Active",
+		value: "active",
+		filters: [["status", "=", "Active"]],
+		orderBy: "valid_until asc",
+	},
+	{ label: "All", value: "all", filters: [], orderBy: "valid_until asc" },
 ];
 
 export const ITEM_LIST_FIELDS = [
@@ -67,4 +73,5 @@ export function canAct(item, { user, roles }) {
 	return [item.responsible, item.reviewer].includes(user);
 }
 
-export const searchFilter = (text) => (text.trim() ? [["title", "like", `%${text.trim()}%`]] : []);
+export const searchFilter = (text, field = "title") =>
+	text.trim() ? [[field, "like", `%${text.trim()}%`]] : [];

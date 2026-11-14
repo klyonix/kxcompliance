@@ -1,15 +1,17 @@
 <template>
-	<AppPageHeader :title="title" />
+	<AppPageHeader :title="title">
+		<template #actions><slot name="actions" /></template>
+	</AppPageHeader>
 
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6">
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-			<TabButtons v-model="view" :options="views" />
+			<TabButtons v-model="view" :options="tabs" />
 			<TextInput
 				v-model="search"
 				type="search"
-				:placeholder="searchPlaceholder"
+				:placeholder="current.searchPlaceholder || searchPlaceholder"
 				class="sm:w-64"
-				:aria-label="searchPlaceholder"
+				:aria-label="current.searchPlaceholder || searchPlaceholder"
 			>
 				<template #prefix
 					><span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true"
@@ -50,7 +52,11 @@
 		</div>
 
 		<div v-else class="flex flex-col gap-1">
-			<WorkRow v-for="record in records" :key="record.name" :row="toRow(record)" />
+			<WorkRow
+				v-for="record in records"
+				:key="record.name"
+				:row="(current.toRow || toRow)(record)"
+			/>
 			<Button
 				v-if="hasMore"
 				class="mt-3 self-center"
@@ -63,7 +69,8 @@
 </template>
 
 <script setup>
-// A searchable list of one doctype with a few fixed views, as the Register and Filings show.
+// A searchable list with a few fixed views, as the Register, Filings and Legal show. A view may
+// list its own doctype by carrying doctype, fields, toRow, searchField and searchPlaceholder.
 import { computed, onMounted, ref, watch } from "vue";
 import { Button, Skeleton, TabButtons, TextInput } from "frappe-ui";
 import { getList } from "@/api";
@@ -73,11 +80,11 @@ import { searchFilter } from "@/lib/items";
 
 const props = defineProps({
 	title: { type: String, required: true },
-	doctype: { type: String, required: true },
-	fields: { type: Array, required: true },
+	doctype: { type: String, default: "" },
+	fields: { type: Array, default: () => [] },
 	// [{ label, value, filters, orderBy }]
 	views: { type: Array, required: true },
-	toRow: { type: Function, required: true },
+	toRow: { type: Function, default: null },
 	searchField: { type: String, default: "title" },
 	searchPlaceholder: { type: String, default: "Search by title" },
 	// (view, searching) => { title, detail }
@@ -93,17 +100,19 @@ const hasMore = ref(false);
 const loading = ref(false);
 const error = ref("");
 
+const current = computed(() => props.views.find((option) => option.value === view.value));
+const tabs = computed(() => props.views.map(({ label, value }) => ({ label, value })));
 const emptyState = computed(() => props.empty(view.value, Boolean(search.value.trim())));
 
 async function load(more = false) {
 	loading.value = true;
 	error.value = "";
 	try {
-		const current = props.views.find((option) => option.value === view.value);
-		const page = await getList(props.doctype, {
-			fields: props.fields,
-			filters: [...current.filters, ...searchFilter(search.value, props.searchField)],
-			orderBy: current.orderBy,
+		const { doctype, fields, filters, orderBy, searchField } = current.value;
+		const page = await getList(doctype || props.doctype, {
+			fields: fields || props.fields,
+			filters: [...filters, ...searchFilter(search.value, searchField || props.searchField)],
+			orderBy,
 			start: more ? records.value.length : 0,
 			limit: PAGE,
 		});
@@ -119,7 +128,10 @@ async function load(more = false) {
 }
 
 let typing;
-watch(view, () => load());
+watch(view, () => {
+	records.value = [];
+	load();
+});
 watch(search, () => {
 	clearTimeout(typing);
 	typing = setTimeout(() => load(), 300);

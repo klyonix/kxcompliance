@@ -6,8 +6,9 @@ import json
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from compliance_plus.api import my_work, save_changes
+from compliance_plus.api import app_companies, log_notice, my_work, save_changes
 from compliance_plus.compliance_plus.test_utils import (
+	AUDITOR,
 	HOLDER,
 	MANAGER,
 	OTHER_HOLDER,
@@ -75,6 +76,42 @@ class TestAppApi(IntegrationTestCase):
 		item.save()
 		with self.set_user(HOLDER), self.assertRaises(frappe.TimestampMismatchError):
 			save_changes("Compliance Item", item.name, {"notes": "Offline note"}, stale)
+
+	def test_a_new_notice_is_held_by_its_receiver_with_its_reply_date(self):
+		with self.set_user(HOLDER):
+			name = log_notice(
+				"Show cause notice, GST FY 2024-25",
+				"Tax Notice or Assessment",
+				"Tax Officer",
+				TEST_COMPANY,
+				"2026-12-05",
+				notice_reference="ZD291126001",
+			)["name"]
+		case = frappe.get_doc("Legal Case", name)
+		self.assertEqual((case.responsible, case.our_role, case.status), (HOLDER, "Noticee", "Open"))
+		reply = frappe.get_all(
+			"Legal Date",
+			filters={"reference_name": name},
+			fields=["kind", "date", "responsible", "status"],
+		)
+		self.assertEqual(len(reply), 1)
+		self.assertEqual((reply[0].kind, str(reply[0].date)), ("Reply Due", "2026-12-05"))
+		self.assertEqual(reply[0].responsible, HOLDER)
+		self.assertEqual(str(case.next_date), "2026-12-05")
+
+	def test_logging_a_notice_needs_a_role_that_may_create_cases(self):
+		with self.set_user(AUDITOR), self.assertRaises(frappe.PermissionError):
+			log_notice("Notice", "Other", "Other", TEST_COMPANY, "2026-12-05")
+
+	def test_the_app_offers_only_the_companies_a_person_is_permitted(self):
+		frappe.db.delete("User Permission", {"user": HOLDER})
+		with self.set_user(HOLDER):
+			self.assertIn(TEST_COMPANY, app_companies())
+		frappe.get_doc(
+			{"doctype": "User Permission", "user": HOLDER, "allow": "Company", "for_value": TEST_COMPANY}
+		).insert()
+		with self.set_user(HOLDER):
+			self.assertEqual(app_companies(), [TEST_COMPANY])
 
 	def test_the_manifest_carries_the_sites_name_and_logo(self):
 		with self.change_settings(

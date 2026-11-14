@@ -4,7 +4,10 @@ export const KINDS = {
 	licence: { label: "Licences", icon: "lucide-file-badge" },
 	filing: { label: "Filings", icon: "lucide-calendar-check" },
 	legal: { label: "Legal", icon: "lucide-scale" },
+	trademark: { label: "Trademarks", icon: "lucide-stamp" },
 };
+
+const LEGAL_PAGES = { "Legal Case": "LegalCase", Trademark: "Trademark" };
 
 export const BUCKETS = [
 	{ key: "overdue", label: "Overdue" },
@@ -42,7 +45,7 @@ function themeFor(status, overdue) {
 	return "gray";
 }
 
-export function workRows(work, { link, today = new Date() }) {
+export function workRows(work, { today = new Date() } = {}) {
 	const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 	const rows = [
 		...work.items.map((item) => ({
@@ -73,7 +76,10 @@ export function workRows(work, { link, today = new Date() }) {
 			status: legalDate.is_overdue ? "Outcome not recorded" : "Scheduled",
 			date: legalDate.date,
 			overdue: Boolean(legalDate.is_overdue),
-			href: link("Legal Date", legalDate.name),
+			to: {
+				name: LEGAL_PAGES[legalDate.reference_doctype],
+				params: { name: legalDate.reference_name },
+			},
 		})),
 	];
 	for (const row of rows) {

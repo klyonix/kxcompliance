@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { relativeDue, summarise, workRows } from "./myWork";
 
-const link = (doctype, name) => `/${doctype}/${name}`;
 const today = new Date(2026, 10, 14);
 
 const rows = workRows(
@@ -45,7 +44,7 @@ const rows = workRows(
 			},
 		],
 	},
-	{ link, today }
+	{ today }
 );
 
 describe("My Work rows", () => {
@@ -56,7 +55,7 @@ describe("My Work rows", () => {
 			"task-CT-1",
 			"item-CI-2",
 		]);
-		expect(rows[1].href).toBe("/Legal Date/LD-1");
+		expect(rows[1].to).toEqual({ name: "LegalCase", params: { name: "CASE-1" } });
 		expect(rows[0].to).toEqual({ name: "ComplianceItem", params: { name: "CI-1" } });
 		expect(rows[2].to).toEqual({ name: "ComplianceTask", params: { name: "CT-1" } });
 	});

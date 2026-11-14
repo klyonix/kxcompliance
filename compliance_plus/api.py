@@ -133,6 +133,59 @@ def save_changes(doctype: str, name: str, values: dict, base_modified: str | Non
 	return {"name": doc.name, "modified": str(doc.modified)}
 
 
+@frappe.whitelist(methods=["POST"])
+def log_notice(
+	title: str,
+	case_type: str,
+	forum: str,
+	company: str,
+	reply_by: str,
+	notice_reference: str | None = None,
+) -> dict:
+	"""Record a notice that has just arrived, with its reply date, as the person who received it.
+
+	The rest of the case is filled in later in the Desk; the app attaches a copy of the notice.
+	"""
+	check_app_access()
+	frappe.has_permission("Legal Case", "create", throw=True)
+	case = frappe.get_doc(
+		{
+			"doctype": "Legal Case",
+			"title": title,
+			"case_type": case_type,
+			"forum": forum,
+			"company": company,
+			"notice_reference": notice_reference,
+			"filing_date": nowdate(),
+			"our_role": "Noticee",
+			"status": "Open",
+			"responsible": frappe.session.user,
+		}
+	).insert()
+	frappe.get_doc(
+		{
+			"doctype": "Legal Date",
+			"reference_doctype": "Legal Case",
+			"reference_name": case.name,
+			"kind": "Reply Due",
+			"date": reply_by,
+			"purpose": _("Reply to the notice"),
+		}
+	).insert()
+	return {"name": case.name}
+
+
+def app_companies() -> list[str]:
+	"""The companies the person may pick in the app: their User Permissions, else every company.
+
+	Compliance roles do not read Company itself, so the app is given just the names.
+	"""
+	allowed = frappe.permissions.get_user_permissions(frappe.session.user).get("Company")
+	if allowed:
+		return sorted({permission.get("doc") for permission in allowed})
+	return frappe.get_all("Company", pluck="name", order_by="name")
+
+
 def boot() -> dict:
 	settings = frappe.get_cached_doc("Compliance Plus Settings")
 	return {
@@ -143,4 +196,6 @@ def boot() -> dict:
 		"app_logo": settings.app_logo or "",
 		"csrf_token": frappe.sessions.get_csrf_token(),
 		"site_name": frappe.local.site,
+		"companies": app_companies(),
+		"default_company": frappe.defaults.get_user_default("Company") or "",
 	}

@@ -241,6 +241,7 @@ import {
 import { deskRoute } from "@/navigation";
 import { refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
+import { formatDate } from "@/lib/format";
 
 const props = defineProps({ name: { type: String, required: true } });
 
@@ -281,14 +282,6 @@ const primary = computed(() => {
 	return null;
 });
 
-const formatDate = (value) =>
-	value
-		? new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
-				day: "numeric",
-				month: "short",
-				year: "numeric",
-		  })
-		: "";
 const formatAmount = (value) =>
 	Number(value)
 		? Number(value).toLocaleString(undefined, {

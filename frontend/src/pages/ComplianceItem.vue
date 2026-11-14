@@ -160,6 +160,7 @@ import { OPEN_RENEWAL_STATUSES, canAct, itemRow, itemTheme } from "@/lib/items";
 import { deskRoute } from "@/navigation";
 import { outbox, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
+import { formatDate } from "@/lib/format";
 
 const props = defineProps({ name: { type: String, required: true } });
 
@@ -176,15 +177,6 @@ const openRenewal = computed(() =>
 );
 const canRenew = computed(() => Boolean(item.value) && mayAct.value && !openRenewal.value);
 const isMobile = useIsMobile();
-
-const formatDate = (value) =>
-	value
-		? new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
-				day: "numeric",
-				month: "short",
-				year: "numeric",
-		  })
-		: "";
 
 const validity = computed(() => {
 	if (!item.value.valid_until) return "Does not expire";

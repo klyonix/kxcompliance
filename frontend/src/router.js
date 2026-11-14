@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { checksOnly } from "./boot";
+import { noteNoResponse } from "./offline/reachability";
 
 export const routes = [
 	{ path: "/", name: "MyWork", component: () => import("./pages/MyWork.vue") },
@@ -47,6 +48,11 @@ router.beforeEach((to) => {
 	if (checksOnly() && !["LicenceCheck", "Account"].includes(to.name)) {
 		return { name: "LicenceCheck" };
 	}
+});
+
+// A screen's code that cannot be fetched means the server is not answering (or the device is offline).
+router.onError((error) => {
+	if (error instanceof TypeError) noteNoResponse();
 });
 
 export default router;

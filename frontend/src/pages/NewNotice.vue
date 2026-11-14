@@ -12,11 +12,11 @@
 		</p>
 
 		<p
-			v-if="!outbox.online"
+			v-if="!isConnected()"
 			class="flex items-center gap-2 rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-4"
 		>
 			<span class="lucide-cloud-off size-4 shrink-0" aria-hidden="true" />
-			Logging a notice needs a connection.
+			Logging a notice needs a connection to the server.
 		</p>
 
 		<FormControl
@@ -109,7 +109,7 @@
 				label="Log notice"
 				:size="buttonSize"
 				:loading="saving"
-				:disabled="!outbox.online"
+				:disabled="!isConnected()"
 			/>
 		</div>
 	</form>
@@ -124,7 +124,7 @@ import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { CASE_TYPES, FORUMS } from "@/lib/legal";
-import { outbox } from "@/offline/outbox";
+import { isConnected } from "@/offline/outbox";
 
 const router = useRouter();
 const isMobile = useIsMobile();

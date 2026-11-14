@@ -39,7 +39,8 @@
 					class="flex items-center gap-2 rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-4"
 				>
 					<span class="lucide-cloud-off size-4 shrink-0" aria-hidden="true" />
-					Your change is saved on this device and will be sent when you reconnect.
+					Your change is saved on this device and will be sent as soon as the server can
+					be reached.
 				</p>
 				<p
 					v-else-if="reviewNote"
@@ -239,9 +240,10 @@ import {
 	taskRow,
 } from "@/lib/filings";
 import { deskRoute } from "@/navigation";
-import { refresh as refreshOutbox } from "@/offline/outbox";
+import { SAVED_ON_DEVICE, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
 import { formatDate } from "@/lib/format";
+import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({ name: { type: String, required: true } });
 
@@ -396,9 +398,7 @@ async function load() {
 		);
 		fillForm();
 	} catch (err) {
-		error.value = err.isNetwork
-			? "You are offline, and this filing has not been opened on this device yet."
-			: err.message;
+		error.value = err.isNetwork ? notLoaded("this filing", "opened") : err.message;
 	}
 }
 
@@ -425,7 +425,7 @@ async function send(values, busyKey) {
 		});
 		if (result.queued) {
 			waiting.value = true;
-			toast.info("Saved on this device. It will be sent when you reconnect.");
+			toast.info(SAVED_ON_DEVICE);
 		} else {
 			toast.success(
 				{ "Ready for Review": "Sent for review", Filed: "Marked filed" }[values.status] ||

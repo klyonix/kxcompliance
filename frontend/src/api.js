@@ -1,4 +1,5 @@
 // A small client for Frappe's API that keeps what the server said when it refuses.
+import { GATEWAY_STATUSES, noteNoResponse, noteResponse } from "@/offline/reachability";
 
 export class ApiError extends Error {
 	constructor(message, { status = 0, excType = "" } = {}) {
@@ -12,9 +13,10 @@ export class ApiError extends Error {
 		return this.excType === "TimestampMismatchError";
 	}
 
-	// No answer from the server at all: the phone is offline or the site is unreachable.
+	// No answer from the server: the phone is offline, the site is unreachable, or the gateway
+	// in front of it says the app server behind it did not answer.
 	get isNetwork() {
-		return this.status === 0;
+		return this.status === 0 || GATEWAY_STATUSES.includes(this.status);
 	}
 }
 
@@ -72,7 +74,16 @@ async function send(url, init, fetcher) {
 	try {
 		response = await fetcher(url, init);
 	} catch {
+		noteNoResponse();
 		throw new ApiError("No connection", { status: 0 });
+	}
+	// The service worker marks a read it answered from its saved copy.
+	noteResponse({
+		status: response.status,
+		fromCache: Boolean(response.headers?.get?.("X-Served-From")),
+	});
+	if (GATEWAY_STATUSES.includes(response.status)) {
+		throw new ApiError("The server is not answering", { status: response.status });
 	}
 	let body = {};
 	try {

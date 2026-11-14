@@ -2,6 +2,7 @@
 import { reactive } from "vue";
 import { clearEntries } from "./db";
 import { entries, flush } from "./queue";
+import { probe, server, whenBack } from "./reachability";
 
 export const outbox = reactive({
 	online: typeof navigator === "undefined" ? true : navigator.onLine,
@@ -16,8 +17,15 @@ export async function refresh() {
 	outbox.needsLook = all.filter((entry) => entry.status !== "waiting");
 }
 
+// What a person is told when a change is kept on the device to send later.
+export const SAVED_ON_DEVICE =
+	"Saved on this device. It will be sent as soon as the server can be reached.";
+
+// Online and the server answering: what actions that cannot wait for a connection need.
+export const isConnected = () => outbox.online && server.reachable;
+
 export async function sendWaiting() {
-	if (outbox.sending || !outbox.online) return;
+	if (outbox.sending || !isConnected()) return;
 	outbox.sending = true;
 	try {
 		await flush();
@@ -33,10 +41,12 @@ export async function clearOutbox() {
 }
 
 export function watchConnection() {
-	window.addEventListener("online", () => {
+	window.addEventListener("online", async () => {
 		outbox.online = true;
-		sendWaiting();
+		// Back online says nothing about the server; ask it before sending.
+		if (await probe()) sendWaiting();
 	});
+	whenBack(sendWaiting);
 	window.addEventListener("offline", () => {
 		outbox.online = false;
 	});

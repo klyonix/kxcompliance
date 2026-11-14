@@ -5,8 +5,8 @@
 				v-if="canRenew && !isMobile"
 				variant="solid"
 				label="Start renewal"
-				:disabled="!outbox.online"
-				:tooltip="outbox.online ? undefined : 'Starting a renewal needs a connection'"
+				:disabled="!isConnected()"
+				:tooltip="isConnected() ? undefined : 'Starting a renewal needs a connection'"
 				@click="startRenewal"
 			/>
 			<Dropdown v-if="item" :options="menu" align="end">
@@ -58,10 +58,10 @@
 					size="md"
 					variant="solid"
 					label="Start renewal"
-					:disabled="!outbox.online"
+					:disabled="!isConnected()"
 					@click="startRenewal"
 				/>
-				<p v-if="canRenew && isMobile && !outbox.online" class="text-sm text-ink-gray-5">
+				<p v-if="canRenew && isMobile && !isConnected()" class="text-sm text-ink-gray-5">
 					Starting a renewal needs a connection.
 				</p>
 			</section>
@@ -158,9 +158,10 @@ import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { OPEN_RENEWAL_STATUSES, canAct, itemRow, itemTheme } from "@/lib/items";
 import { deskRoute } from "@/navigation";
-import { outbox, refresh as refreshOutbox } from "@/offline/outbox";
+import { SAVED_ON_DEVICE, isConnected, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
 import { formatDate } from "@/lib/format";
+import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({ name: { type: String, required: true } });
 
@@ -226,7 +227,7 @@ const menu = computed(() => [
 					icon: "lucide-ban",
 					theme: "red",
 					onClick: cancelItem,
-					disabled: !outbox.online,
+					disabled: !isConnected(),
 				},
 		  ]
 		: []),
@@ -270,9 +271,7 @@ async function load() {
 			})
 		).rows;
 	} catch (err) {
-		error.value = err.isNetwork
-			? "You are offline, and this item has not been opened on this device yet."
-			: err.message;
+		error.value = err.isNetwork ? notLoaded("this item", "opened") : err.message;
 	}
 }
 
@@ -292,7 +291,7 @@ async function attachCertificate(event) {
 		});
 		if (result.queued) {
 			pendingCertificate.value = file.name;
-			toast.info("Saved on this device. It will be sent when you reconnect.");
+			toast.info(SAVED_ON_DEVICE);
 		} else {
 			toast.success("Certificate attached");
 			await load();

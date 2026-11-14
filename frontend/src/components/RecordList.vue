@@ -77,6 +77,7 @@ import { getList } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { searchFilter } from "@/lib/items";
+import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({
 	title: { type: String, required: true },
@@ -119,9 +120,7 @@ async function load(more = false) {
 		records.value = more ? [...records.value, ...page.rows] : page.rows;
 		hasMore.value = page.hasMore;
 	} catch (err) {
-		error.value = err.isNetwork
-			? "You are offline, and this list has not been loaded on this device yet."
-			: err.message;
+		error.value = err.isNetwork ? notLoaded("this list") : err.message;
 	} finally {
 		loading.value = false;
 	}

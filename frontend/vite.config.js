@@ -31,8 +31,8 @@ export default defineConfig({
 			workbox: {
 				// The worker is served from /compliance_sw.js, so each built file needs its full
 				// path; index.html is only the template Frappe renders as /compliance.
-				modifyURLPrefix: { '': '/assets/compliance_plus/frontend/' },
-				globIgnores: ['**/index.html'],
+				modifyURLPrefix: { "": "/assets/compliance_plus/frontend/" },
+				globIgnores: ["**/index.html"],
 				inlineWorkboxRuntime: true,
 				cleanupOutdatedCaches: true,
 				navigateFallback: null,
@@ -44,13 +44,31 @@ export default defineConfig({
 						options: { cacheName: "compliance-pages", networkTimeoutSeconds: 4 },
 					},
 					{
+						// The ping is left alone: it is how the app asks whether the server answers.
 						urlPattern: ({ url, request }) =>
-							request.method === "GET" && url.pathname.startsWith("/api/"),
+							request.method === "GET" &&
+							url.pathname.startsWith("/api/") &&
+							url.pathname !== "/api/method/ping",
 						handler: "NetworkFirst",
 						options: {
 							cacheName: "compliance-reads",
 							networkTimeoutSeconds: 4,
 							expiration: { maxEntries: 500, maxAgeSeconds: 14 * 24 * 60 * 60 },
+							plugins: [
+								{
+									// Mark a saved copy, so the page knows the server did not answer.
+									cachedResponseWillBeUsed: async ({ cachedResponse }) => {
+										if (!cachedResponse) return cachedResponse;
+										const headers = new Headers(cachedResponse.headers);
+										headers.set("X-Served-From", "cache");
+										return new Response(await cachedResponse.blob(), {
+											status: cachedResponse.status,
+											statusText: cachedResponse.statusText,
+											headers,
+										});
+									},
+								},
+							],
 						},
 					},
 				],

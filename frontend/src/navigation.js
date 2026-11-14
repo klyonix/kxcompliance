@@ -39,6 +39,8 @@ const ALL_SECTIONS = [
 		managers: true,
 		desktopOnly: true,
 	},
+	// On phones it opens from Account, as the tab bar is full.
+	{ label: "Reports", route: "Reports", icon: "lucide-file-chart-column", desktopOnly: true },
 	// The user manual; on phones it opens from the question mark on every page.
 	{ label: "Help", route: "Help", icon: "lucide-book-open", desktopOnly: true },
 ];

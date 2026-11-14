@@ -11,6 +11,13 @@ export const routes = [
 	{ path: "/account", name: "Account", component: () => import("./pages/Account.vue") },
 	{ path: "/settings", name: "Settings", component: () => import("./pages/Settings.vue") },
 	{ path: "/help", name: "Help", component: () => import("./pages/Help.vue") },
+	{ path: "/reports", name: "Reports", component: () => import("./pages/Reports.vue") },
+	{
+		path: "/reports/:report",
+		name: "Report",
+		component: () => import("./pages/Report.vue"),
+		props: true,
+	},
 	{ path: "/register", name: "Register", component: () => import("./pages/Register.vue") },
 	{ path: "/companies", name: "Companies", component: () => import("./pages/Companies.vue") },
 	{

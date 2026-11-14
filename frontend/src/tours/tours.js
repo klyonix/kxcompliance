@@ -621,6 +621,41 @@ export const TOURS = [
 		],
 	},
 	{
+		id: "reports",
+		title: "Reports",
+		route: "Reports",
+		steps: [
+			{
+				target: ["reports-list"],
+				title: "Reports",
+				text: "The same reports as the Desk, so the numbers agree. Open one to filter it and download it.",
+			},
+		],
+	},
+	{
+		id: "report",
+		title: "A report",
+		route: "Report",
+		record: true,
+		steps: [
+			{
+				target: ["report-filters"],
+				title: "Filters",
+				text: "Narrow it down; the report runs again as you change them. Leave a filter on All to include everything.",
+			},
+			{
+				target: ["report-table"],
+				title: "The results",
+				text: "Press a column's name to sort by it. A name in a link opens that record.",
+			},
+			{
+				target: ["report-download"],
+				title: "Download",
+				text: "As Excel or CSV, for a spreadsheet or to send on.",
+			},
+		],
+	},
+	{
 		id: "help",
 		title: "The user manual",
 		route: "Help",

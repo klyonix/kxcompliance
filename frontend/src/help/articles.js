@@ -61,6 +61,19 @@ export const ARTICLES = [
 		page: "MonthCalendar",
 	},
 	{
+		id: "reports",
+		area: "Getting started",
+		title: "How do I get a report into Excel?",
+		when: "For a meeting, an auditor, or the notes to the accounts.",
+		steps: [
+			"Open Reports, from the side bar or, on a phone, from Account.",
+			"Open a report and set its filters. It runs again as you change them.",
+			'Press "Download" and choose Excel or CSV.',
+		],
+		tip: "The reports are the Desk's own, so the numbers always agree.",
+		page: "Reports",
+	},
+	{
 		id: "file-a-return",
 		area: "Filings",
 		title: "How do I record a return I have filed?",

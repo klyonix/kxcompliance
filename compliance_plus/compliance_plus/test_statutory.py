@@ -80,6 +80,36 @@ class TestStatutoryRules(IntegrationTestCase):
 		self.assertEqual(due("Labour Welfare Fund - Maharashtra", "2026-06-30"), date(2026, 7, 15))
 		self.assertEqual(due("Labour Welfare Fund - Karnataka", "2026-12-31"), date(2027, 1, 15))
 
+	def test_firms_proprietors_and_composition(self):
+		self.assertEqual(due("Income Tax Return (Firms, Non-audit)", "2027-03-31"), date(2027, 8, 31))
+		self.assertEqual(due("Income Tax Return (Firms, Audit Cases)", "2027-03-31"), date(2027, 10, 31))
+		self.assertEqual(due("Income Tax Return (Proprietor, Non-audit)", "2027-03-31"), date(2027, 8, 31))
+		self.assertEqual(due("Tax Audit Report (Firms and Proprietors)", "2027-03-31"), date(2027, 9, 30))
+		self.assertEqual(due("TDS Return 27Q (Non-residents)", "2027-03-31"), date(2027, 5, 31))
+		self.assertEqual(due("CMP-08 (Composition Payment)", "2026-12-31"), date(2027, 1, 18))
+		self.assertEqual(due("GSTR-4 (Composition Annual Return)", "2027-03-31"), date(2027, 6, 30))
+		self.assertEqual(due("ITC-04 (Job Work, turnover above ₹5 crore)", "2026-09-30"), date(2026, 10, 25))
+		self.assertEqual(due("ITC-04 (Job Work, turnover up to ₹5 crore)", "2027-03-31"), date(2027, 4, 25))
+
+	def test_trade_food_and_listed_company_dates(self):
+		self.assertEqual(due("FLA Return (Foreign Liabilities and Assets)", "2027-03-31"), date(2027, 7, 15))
+		self.assertEqual(due("IEC Annual Update", "2027-03-31"), date(2027, 6, 30))
+		self.assertEqual(due("FSSAI Annual Return (D-1)", "2027-03-31"), date(2027, 5, 31))
+		self.assertEqual(due("Shareholding Pattern", "2026-06-30"), date(2026, 7, 21))
+		self.assertEqual(due("Integrated Filing (Governance)", "2026-12-31"), date(2027, 1, 30))
+		self.assertEqual(due("Integrated Filing (Financial)", "2026-06-30"), date(2026, 8, 14))
+		self.assertEqual(due("Integrated Filing (Financial)", "2027-03-31"), date(2027, 5, 30))
+		self.assertEqual(due("Reconciliation of Share Capital Audit", "2026-09-30"), date(2026, 10, 30))
+		self.assertEqual(due("Annual Secretarial Compliance Report", "2027-03-31"), date(2027, 5, 30))
+
+	def test_states_added_later(self):
+		self.assertEqual(due("Professional Tax - Andhra Pradesh", "2026-10-31"), date(2026, 11, 10))
+		self.assertEqual(due("Professional Tax - Assam", "2026-10-31"), date(2026, 11, 28))
+		self.assertEqual(due("Labour Welfare Fund - Andhra Pradesh", "2026-12-31"), date(2027, 1, 31))
+		self.assertEqual(due("Labour Welfare Fund - Delhi", "2026-06-30"), date(2026, 7, 15))
+		self.assertEqual(due("Labour Welfare Fund - Punjab", "2026-09-30"), date(2026, 10, 15))
+		self.assertEqual(due("Labour Welfare Fund - Punjab", "2027-03-31"), date(2027, 4, 15))
+
 	def test_period_labels(self):
 		self.assertEqual(period_label("Monthly", "Financial Year", date(2026, 10, 1)), "Oct 2026")
 		self.assertEqual(period_label("Quarterly", "Financial Year", date(2026, 7, 1)), "Q2 2026-27")
@@ -91,7 +121,7 @@ class TestStatutoryRules(IntegrationTestCase):
 		templates = frappe.get_all(
 			"Compliance Obligation Template", filters={"is_standard": 1}, fields=["checked_on"]
 		)
-		self.assertEqual(len(templates), 38)
+		self.assertEqual(len(templates), 65)
 		self.assertTrue(all(row.checked_on is None for row in templates))
 
 	def test_a_template_due_after_the_agm_needs_its_days(self):

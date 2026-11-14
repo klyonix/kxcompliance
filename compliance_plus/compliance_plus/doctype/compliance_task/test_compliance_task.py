@@ -102,6 +102,55 @@ class TestComplianceTask(IntegrationTestCase):
 		with self.set_user(MANAGER):
 			self.assertEqual(profile.find_obligations(), 0)
 
+	def test_a_composition_proprietor_gets_its_own_filings(self):
+		profile = make_profile(
+			"Proprietorship",
+			registrations=[
+				{
+					"registration_type": "GST Composition",
+					"registration_number": "33ABCDE1234F1Z5",
+					"state": "Tamil Nadu",
+				},
+				{"registration_type": "IEC", "registration_number": "ABCDE1234F"},
+			],
+		)
+		with self.set_user(MANAGER):
+			profile.find_obligations()
+		found = {row.obligation_template for row in profile.obligations}
+		self.assertTrue(
+			{
+				"CMP-08 (Composition Payment)",
+				"GSTR-4 (Composition Annual Return)",
+				"Income Tax Return (Proprietor, Non-audit)",
+				"IEC Annual Update",
+				"Advance Tax",
+			}
+			<= found
+		)
+		for absent in (
+			"GSTR-1 (Monthly)",
+			"GSTR-3B (Monthly)",
+			"GSTR-9 (Annual Return)",
+			"Income Tax Return (Audit Cases)",
+			"Income Tax Return (Proprietor, Audit Cases)",
+			"AOC-4 (Financial Statements)",
+			"Shareholding Pattern",
+		):
+			self.assertNotIn(absent, found)
+
+	def test_a_listed_company_gets_its_sebi_filings(self):
+		profile = make_profile(
+			"Public Limited",
+			registrations=[{"registration_type": "Stock Exchange", "registration_number": "NSE: DEMOCO"}],
+		)
+		with self.set_user(MANAGER):
+			profile.find_obligations()
+		found = {row.obligation_template for row in profile.obligations}
+		self.assertTrue(
+			{"Shareholding Pattern", "Integrated Filing (Governance)", "Integrated Filing (Financial)"}
+			<= found
+		)
+
 	def test_tasks_are_made_up_to_the_horizon_and_never_twice(self):
 		make_profile(obligations=[obligation("GSTR-3B (Monthly)", registration_number="29GST")])
 		with self.change_settings(SETTINGS, generation_horizon_days=45):

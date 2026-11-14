@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clientAttention, clientTheme, companiesLine } from "./clients";
+import { clientAttention, clientTheme, companiesLine, yearFacts } from "./clients";
 
 describe("a firm's clients", () => {
 	it("says what needs attention, worst first, and colours it", () => {
@@ -18,5 +18,38 @@ describe("a firm's clients", () => {
 		expect(companiesLine(["Sunrise Foods", "Sunrise Exports", "Sunrise Farms"])).toBe(
 			"Sunrise Foods and 2 more"
 		);
+	});
+});
+
+describe("yearFacts", () => {
+	const year = {
+		on_time: 2,
+		late: 1,
+		overdue: 0,
+		late_fee: 1000,
+		interest: 150,
+		open_cases: 1,
+		waiting_on_client: 0,
+		dscs_expiring: 0,
+		currency: "INR",
+	};
+
+	it("gives the on-time share of the filings that fell due", () => {
+		const [onTime, overdue] = yearFacts(year);
+		expect(onTime).toMatchObject({ value: "67%", detail: "2 of 3 filings", tone: "amber" });
+		expect(overdue).toMatchObject({ value: "0", detail: "1 filed late", tone: "gray" });
+	});
+
+	it("adds late fees and interest together", () => {
+		expect(yearFacts(year)[2].value).toMatch(/1,150/);
+	});
+
+	it("speaks to the client in its own login", () => {
+		expect(yearFacts(year, { client: true })[4].label).toBe("Documents your firm needs");
+	});
+
+	it("says so when nothing has fallen due yet", () => {
+		const empty = { ...year, on_time: 0, late: 0, overdue: 0 };
+		expect(yearFacts(empty)[0]).toMatchObject({ value: "—", tone: "gray" });
 	});
 });

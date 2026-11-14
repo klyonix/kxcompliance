@@ -16,6 +16,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, nowdate
 
+from compliance_plus.compliance_plus.client_reports import financial_year, summarise
 from compliance_plus.compliance_plus.doctype.compliance_item.compliance_item import DSC_TYPE
 from compliance_plus.compliance_plus.register import CLOSED_TASK_STATUSES
 from compliance_plus.install import CLIENT_ROLE
@@ -304,6 +305,13 @@ def clients_overview() -> list[dict]:
 	return sorted(clients, key=lambda row: (-row.overdue, -row.due_this_week, row.name))
 
 
+def currency_of(companies: list[str]) -> str:
+	"""The currency late fees are shown in: the first company's, as a client's companies share one."""
+	if not companies:
+		return ""
+	return frappe.get_cached_value("Company", companies[0], "default_currency") or ""
+
+
 def client_detail(name: str) -> dict:
 	client = frappe.get_doc("Compliance Client", name)
 	client.check_permission("read")
@@ -346,6 +354,8 @@ def client_detail(name: str) -> dict:
 		order_by="due_date asc",
 		limit=100,
 	)
+	from_date, to_date = financial_year()
+	year = summarise([name], from_date, to_date)[name]
 	return {
 		"name": client.name,
 		"client_kind": client.client_kind,
@@ -359,5 +369,6 @@ def client_detail(name: str) -> dict:
 		"filings": filings,
 		"requests": requests,
 		"signatures": signatures,
+		"year": {**year, "from_date": from_date, "to_date": to_date, "currency": currency_of(names)},
 		**add_up(counts, names),
 	}

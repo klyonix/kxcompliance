@@ -14,6 +14,7 @@ from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
 from compliance_plus.compliance_plus import (
 	app_settings,
 	clients,
+	companies,
 	document_requests,
 	onboarding,
 	setup_import,
@@ -550,6 +551,34 @@ def client_of_login() -> str:
 		return ""
 	clients = frappe.get_list("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name", limit=1)
 	return clients[0] if clients else ""
+
+
+@frappe.whitelist(methods=["GET"])
+def companies_overview() -> dict:
+	"""Companies set up for compliance, and those not yet (managers only)."""
+	check_app_access()
+	return companies.companies_overview()
+
+
+@frappe.whitelist(methods=["GET"])
+def company_form_options() -> dict:
+	"""What the company screen offers to choose from (managers only)."""
+	check_app_access()
+	return companies.form_options()
+
+
+@frappe.whitelist(methods=["GET"])
+def company_detail(company: str) -> dict:
+	"""A company's compliance profile, for its screen (managers only)."""
+	check_app_access()
+	return companies.company_detail(company)
+
+
+@frappe.whitelist(methods=["POST"])
+def save_company(company: str, values: dict, new_company: bool = False) -> dict:
+	"""Set a company up or change its profile; `values` is read field by field (managers only)."""
+	check_app_access()
+	return companies.save_company(company, values, new_company)
 
 
 @frappe.whitelist(methods=["GET"])

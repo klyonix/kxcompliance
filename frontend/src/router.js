@@ -11,6 +11,18 @@ export const routes = [
 	{ path: "/account", name: "Account", component: () => import("./pages/Account.vue") },
 	{ path: "/settings", name: "Settings", component: () => import("./pages/Settings.vue") },
 	{ path: "/register", name: "Register", component: () => import("./pages/Register.vue") },
+	{ path: "/companies", name: "Companies", component: () => import("./pages/Companies.vue") },
+	{
+		path: "/companies/new",
+		name: "CompanyNew",
+		component: () => import("./pages/CompanyForm.vue"),
+	},
+	{
+		path: "/companies/:company",
+		name: "Company",
+		component: () => import("./pages/CompanyForm.vue"),
+		props: true,
+	},
 	{
 		path: "/signatories",
 		name: "Signatories",
@@ -103,7 +115,16 @@ export const routes = [
 ];
 
 // Screens for Compliance Managers only; the server refuses the rest anyway.
-const MANAGER_ROUTES = ["Overview", "BulkSetup", "Settings", "ClientNew", "ClientEdit"];
+const MANAGER_ROUTES = [
+	"Overview",
+	"BulkSetup",
+	"Settings",
+	"ClientNew",
+	"ClientEdit",
+	"Companies",
+	"CompanyNew",
+	"Company",
+];
 
 const router = createRouter({ history: createWebHistory("/compliance"), routes });
 

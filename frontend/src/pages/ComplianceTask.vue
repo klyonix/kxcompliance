@@ -227,6 +227,29 @@
 				</ul>
 			</section>
 
+			<section
+				v-if="requests.length || mayAsk"
+				class="flex flex-col gap-1"
+				aria-labelledby="requests-heading"
+			>
+				<div class="flex items-center justify-between gap-3 pb-2">
+					<h2 id="requests-heading" class="text-base font-semibold text-ink-gray-8">
+						{{ clientLogin ? "Documents your firm needs" : "Asked of the client" }}
+					</h2>
+					<Button
+						v-if="mayAsk"
+						icon-left="lucide-file-up"
+						label="Ask the client"
+						@click="asking = true"
+					/>
+				</div>
+				<WorkRow
+					v-for="request in requests"
+					:key="request.name"
+					:row="requestRow(request, { client: clientLogin })"
+				/>
+			</section>
+
 			<section class="flex flex-col gap-3" aria-labelledby="details-heading">
 				<h2 id="details-heading" class="text-base font-semibold text-ink-gray-8">
 					Details
@@ -240,6 +263,15 @@
 			</section>
 		</template>
 	</div>
+
+	<AskDocument
+		v-if="mayAsk"
+		v-model:open="asking"
+		:task="props.name"
+		:task-label="`${task.obligation_template} (${task.period_label})`"
+		:filing-due="task.effective_due_date"
+		@created="openRequest"
+	/>
 
 	<!-- The actions stay in reach at the foot of the screen, on a phone above the tab bar. -->
 	<div
@@ -283,11 +315,16 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { Badge, Button, Dropdown, FormControl, Skeleton, dialog, toast } from "frappe-ui";
-import { call, getDoc, uploadClientDocument } from "@/api";
-import { boot, isClientLogin } from "@/boot";
+import { useRouter } from "vue-router";
+import { call, getDoc, getList, uploadClientDocument } from "@/api";
+import { boot, isClientLogin, mayRecord } from "@/boot";
+import AskDocument from "@/components/AskDocument.vue";
+import WorkRow from "@/components/WorkRow.vue";
+import { OPEN_REQUEST_STATUSES, REQUEST_FIELDS, requestRow } from "@/lib/requests";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import {
+	CLOSED_STATUSES,
 	FILING_FIELDS,
 	changedValues,
 	formValues,
@@ -326,6 +363,22 @@ const documents = computed(() =>
 const documentInput = ref(null);
 const uploading = ref(false);
 const uploadError = ref("");
+
+// Documents asked of the client for this filing (CA/CS firms).
+const router = useRouter();
+const requests = ref([]);
+const asking = ref(false);
+const isFirm = boot.accountType === "CA/CS Firm";
+const mayAsk = computed(
+	() =>
+		Boolean(task.value) &&
+		isFirm &&
+		!clientLogin &&
+		mayRecord() &&
+		!CLOSED_STATUSES.includes(task.value.status)
+);
+const openRequest = (request) =>
+	router.push({ name: "DocumentRequest", params: { name: request.name } });
 const form = reactive(Object.fromEntries(FILING_FIELDS.map((field) => [field, ""])));
 
 const isMobile = useIsMobile();
@@ -462,6 +515,26 @@ async function loadDocuments() {
 	} catch {
 		// Documents are extra; the filing is still useful without them, offline included.
 		allDocuments.value = [];
+	}
+}
+
+async function loadRequests() {
+	if (!isFirm) return;
+	try {
+		requests.value = (
+			await getList("Document Request", {
+				fields: REQUEST_FIELDS,
+				filters: [
+					["compliance_task", "=", props.name],
+					["status", "in", [...OPEN_REQUEST_STATUSES, "Accepted"]],
+				],
+				orderBy: "due_date asc",
+				limit: 20,
+			})
+		).rows;
+	} catch {
+		// Requests are extra here; the filing page works without them, offline included.
+		requests.value = [];
 	}
 }
 
@@ -607,10 +680,12 @@ watch(
 	() => {
 		load();
 		loadDocuments();
+		loadRequests();
 	}
 );
 onMounted(() => {
 	load();
 	loadDocuments();
+	loadRequests();
 });
 </script>

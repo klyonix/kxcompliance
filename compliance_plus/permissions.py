@@ -145,6 +145,27 @@ def has_renewal_permission(doc, ptype: str | None = None, user: str | None = Non
 	return bool(holders) and holds_or_serves(holders, user, holders.company)
 
 
+def document_request_query_conditions(user: str | None = None) -> str:
+	"""Who asked for it, and everyone who serves (or is) the client whose company it is for."""
+	user = user or frappe.session.user
+	if not is_restricted(user):
+		return ""
+	quoted = frappe.db.escape(user)
+	return (
+		f"(`tabDocument Request`.`requested_by` = {quoted}"
+		f"{company_condition('`tabDocument Request`.`company`', user)})"
+	)
+
+
+def has_document_request_permission(doc, ptype: str | None = None, user: str | None = None) -> bool:
+	user = user or frappe.session.user
+	if not is_restricted(user):
+		return True
+	if doc.is_new():
+		return True  # the company is checked by the User Permission and validate
+	return user == doc.requested_by or (doc.company or "") in client_companies_of(user)
+
+
 def client_query_conditions(user: str | None = None) -> str:
 	"""Firm staff see the clients they are on the team of, or manage the relationship of; a
 	client's login sees its own client."""

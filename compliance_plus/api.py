@@ -11,7 +11,7 @@ from frappe.desk.doctype.notification_log.notification_log import enqueue_create
 from frappe.handler import ALLOWED_MIMETYPES
 from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
 
-from compliance_plus.compliance_plus import clients, onboarding
+from compliance_plus.compliance_plus import clients, document_requests, onboarding
 from compliance_plus.compliance_plus.company_events import event_types_for
 from compliance_plus.compliance_plus.overview import get_overview
 from compliance_plus.compliance_plus.party_licences import (
@@ -440,23 +440,7 @@ def add_client_document(task: str) -> dict:
 		frappe.throw(_("Only a client's login adds documents this way."), frappe.PermissionError)
 	filing = frappe.get_doc("Compliance Task", task)
 	filing.check_permission("read")
-	upload = frappe.request.files.get("file") if frappe.request else None
-	if not upload or not upload.filename:
-		frappe.throw(_("Choose a file to upload."))
-	if guess_type(upload.filename)[0] not in ALLOWED_MIMETYPES:
-		frappe.throw(_("You can only upload JPG, PNG, GIF, PDF, TXT, CSV or Microsoft documents."))
-	document = frappe.get_doc(
-		{
-			"doctype": "File",
-			"file_name": upload.filename,
-			"attached_to_doctype": "Compliance Task",
-			"attached_to_name": filing.name,
-			"is_private": 1,
-			"content": upload.stream.read(),
-		}
-	)
-	# Attaching needs write on the filing, which a client does not have; read was checked above.
-	document.insert(ignore_permissions=True)
+	document = attach_upload("Compliance Task", filing.name)
 	if filing.responsible:
 		enqueue_create_notification(
 			filing.responsible,
@@ -476,7 +460,45 @@ def add_client_document(task: str) -> dict:
 	return {"name": document.name, "file_name": document.file_name, "file_url": document.file_url}
 
 
-DOCUMENT_DOCTYPES = ("Compliance Task", "Compliance Item", "Legal Case", "Trademark")
+@frappe.whitelist(methods=["POST"])
+def add_request_document(request: str) -> dict:
+	"""The client (or the firm, for a document it received another way) uploads what a Document
+	Request asks for (the file in the request)."""
+	check_reader_access()
+	doc = frappe.get_doc("Document Request", request)
+	doc.check_permission("read")
+	if not (is_client_login() or doc.has_permission("write")):
+		frappe.throw(_("You cannot upload to {0}.").format(doc.name), frappe.PermissionError)
+	if doc.status not in document_requests.OPEN_STATUSES:
+		frappe.throw(_("{0} is {1}; nothing more can be uploaded to it.").format(doc.name, _(doc.status)))
+	document = attach_upload("Document Request", doc.name)
+	document_requests.received(doc, document)
+	return {"name": document.name, "file_name": document.file_name, "file_url": document.file_url}
+
+
+def attach_upload(doctype: str, name: str):
+	"""Attach the file in this request to a record the caller may read (checked by the caller)."""
+	upload = frappe.request.files.get("file") if frappe.request else None
+	if not upload or not upload.filename:
+		frappe.throw(_("Choose a file to upload."))
+	if guess_type(upload.filename)[0] not in ALLOWED_MIMETYPES:
+		frappe.throw(_("You can only upload JPG, PNG, GIF, PDF, TXT, CSV or Microsoft documents."))
+	document = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": upload.filename,
+			"attached_to_doctype": doctype,
+			"attached_to_name": name,
+			"is_private": 1,
+			"content": upload.stream.read(),
+		}
+	)
+	# Attaching needs write on the record, which a client does not have; read was checked first.
+	document.insert(ignore_permissions=True)
+	return document
+
+
+DOCUMENT_DOCTYPES = ("Compliance Task", "Compliance Item", "Legal Case", "Trademark", "Document Request")
 DOCUMENTS_LIMIT = 50
 
 

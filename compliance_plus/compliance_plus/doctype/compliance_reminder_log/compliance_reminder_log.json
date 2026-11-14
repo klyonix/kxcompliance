@@ -8,6 +8,7 @@
   "compliance_item",
   "compliance_task",
   "legal_date",
+  "document_request",
   "kind",
   "rule_days",
   "due_date",
@@ -43,12 +44,19 @@
    "search_index": 1
   },
   {
+   "fieldname": "document_request",
+   "fieldtype": "Link",
+   "label": "Document Request",
+   "options": "Document Request",
+   "read_only": 1
+  },
+  {
    "fieldname": "kind",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Kind",
-   "options": "Reminder\nEscalation\nDigest\nParty Reminder"
+   "options": "Reminder\nEscalation\nDigest\nParty Reminder\nDocument Request"
   },
   {
    "fieldname": "rule_days",
@@ -86,7 +94,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-14 21:00:00.000000",
+ "modified": "2026-11-17 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Reminder Log",

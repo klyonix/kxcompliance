@@ -42,7 +42,10 @@
 						<p v-if="legalDate.attended_by" class="text-sm text-ink-gray-5">
 							Attended by {{ legalDate.attended_by }}
 						</p>
-						<p v-if="waiting[legalDate.name]" class="text-sm text-ink-amber-4">
+						<p
+							v-if="isWaiting('Legal Date', legalDate.name)"
+							class="text-sm text-ink-amber-4"
+						>
 							Waiting to send
 						</p>
 					</div>
@@ -72,7 +75,7 @@
 
 <script setup>
 // The hearings and deadlines of one case or trademark, where the outcome of each is recorded.
-import { onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, dialog, toast } from "frappe-ui";
 import { getList } from "@/api";
 import {
@@ -83,9 +86,10 @@ import {
 	outcomeValues,
 	proceedingsError,
 } from "@/lib/legal";
-import { SAVED_ON_DEVICE, refresh as refreshOutbox } from "@/offline/outbox";
+import { SAVED_ON_DEVICE, isWaiting, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
 import { notLoaded } from "@/offline/reachability";
+import { formatDate, pickerFormat } from "@/lib/format";
 
 const props = defineProps({
 	doctype: { type: String, required: true },
@@ -97,7 +101,12 @@ const emit = defineEmits(["changed"]);
 const dates = ref([]);
 const loaded = ref(false);
 const error = ref("");
-const waiting = reactive({});
+// The dates with a change kept on the device; when one is sent, the dates are read again.
+const waitingDates = computed(() =>
+	dates.value
+		.filter((legalDate) => isWaiting("Legal Date", legalDate.name))
+		.map((legalDate) => legalDate.name)
+);
 const fileInput = ref(null);
 let orderFor = null;
 
@@ -105,15 +114,7 @@ const toDate = (value) => new Date(`${value}T00:00:00`);
 const month = (value) => toDate(value).toLocaleDateString(undefined, { month: "short" });
 const day = (value) => toDate(value).getDate();
 const when = (legalDate) =>
-	[
-		toDate(legalDate.date).toLocaleDateString(undefined, {
-			weekday: "short",
-			day: "numeric",
-			month: "short",
-			year: "numeric",
-		}),
-		legalDate.time && legalDate.time.slice(0, 5),
-	]
+	[formatDate(legalDate.date, { weekday: true }), legalDate.time && legalDate.time.slice(0, 5)]
 		.filter(Boolean)
 		.join(" at ");
 
@@ -122,7 +123,7 @@ function actionsFor(legalDate) {
 	if (legalDate.order) {
 		actions.push({ label: "View order", href: legalDate.order });
 	}
-	if (!props.mayAct || waiting[legalDate.name]) return actions;
+	if (!props.mayAct || isWaiting("Legal Date", legalDate.name)) return actions;
 	if (legalDate.status === "Scheduled") {
 		actions.push({
 			label: "Record outcome",
@@ -180,7 +181,6 @@ async function send(legalDate, values, files = []) {
 		files,
 	});
 	if (result.queued) {
-		waiting[legalDate.name] = true;
 		toast.info(SAVED_ON_DEVICE);
 	} else {
 		await load();
@@ -215,6 +215,7 @@ function recordOutcome(legalDate) {
 				name: "next_date",
 				label: "Next date",
 				type: "date",
+				format: pickerFormat(),
 				description: "A new hearing or deadline is added on this date.",
 				validate: (value) => nextDateError(legalDate.date, value),
 			},
@@ -245,6 +246,12 @@ async function attachOrder(event) {
 	}
 }
 
+watch(waitingDates, async (now, before) => {
+	if (before.some((name) => !now.includes(name))) {
+		await load();
+		emit("changed");
+	}
+});
 watch(() => props.name, load);
 onMounted(load);
 defineExpose({ load });

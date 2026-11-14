@@ -23,6 +23,7 @@ APP_ROLES = frozenset({"System Manager", "Compliance Manager", "Compliance User"
 CHECK_ROLES = {"Sales User": "Customer", "Purchase User": "Supplier"}
 PARTY_NAME_FIELDS = {"Customer": "customer_name", "Supplier": "supplier_name"}
 PARTY_SEARCH_LIMIT = 20
+NAMES_LIMIT = 50
 WORK_HORIZON_DAYS = 30
 WORK_LIMIT = 200
 
@@ -292,6 +293,23 @@ def check_party(party_type: str, party: str) -> dict:
 	}
 
 
+@frappe.whitelist(methods=["GET"])
+def full_names(users: str) -> dict[str, str]:
+	"""People's names for the user IDs the app shows (responsible, reviewer), as the Desk shows them.
+
+	`users` is comma-separated, since a GET request cannot carry a list; user IDs hold no commas.
+	"""
+	check_app_access()
+	wanted = sorted({user.strip() for user in users.split(",") if user.strip()})
+	if len(wanted) > NAMES_LIMIT:
+		frappe.throw(_("Ask for at most {0} names at a time.").format(NAMES_LIMIT))
+	if not wanted:
+		return {}
+	# Names only, for people this app already shows by ID; Compliance roles do not read User.
+	rows = frappe.get_all("User", filters={"name": ("in", wanted)}, fields=["name", "full_name"])
+	return {row.name: row.full_name or row.name for row in rows}
+
+
 def app_companies() -> list[str]:
 	"""The companies the person may pick in the app: their User Permissions, else every company.
 
@@ -316,4 +334,5 @@ def boot() -> dict:
 		"site_name": frappe.local.site,
 		"companies": app_companies() if has_app_access() else [],
 		"default_company": frappe.defaults.get_user_default("Company") or "",
+		"date_format": frappe.db.get_default("date_format") or "dd-mm-yyyy",
 	}

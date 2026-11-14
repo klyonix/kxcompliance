@@ -27,7 +27,7 @@ const machine = setup({ types: { events: {} as Event } }).createMachine({
 			on: { LOADS: "grouped", FAILS: "failed" },
 		},
 		failed: {
-			meta: { description: "Loading My Work failed on the server: its message, and the Refresh button in the header." },
+			meta: { description: "Loading My Work failed on the server: the summary says so, with the message and the Refresh button." },
 			on: { RETRY: "grouped" },
 		},
 		grouped: {
@@ -38,7 +38,7 @@ const machine = setup({ types: { events: {} as Event } }).createMachine({
 			meta: { description: "The This week tab: only what falls due in the next seven days." },
 		},
 		overdueTab: {
-			meta: { description: "The Overdue tab when nothing is overdue." },
+			meta: { description: "The Overdue tab when nothing is overdue: says so, instead of a blank page." },
 		},
 		serverDown: {
 			meta: { description: "A refresh the server did not answer: the list stays, and the banner says the server is not answering." },
@@ -90,7 +90,7 @@ export const myWork = atBothWidths(
 			},
 			async PICK_OVERDUE(scene) {
 				await tab(scene, /^Overdue/).click();
-				await expect(scene.page.getByRole("link").filter({ hasText: "Sample GST demand appeal" })).toHaveCount(0);
+				await expect(scene.page.getByText("Nothing is overdue.")).toBeVisible();
 			},
 			async SERVER_DOWN(scene) {
 				await scene.page.route("**/api/**", (route) => route.abort("connectionrefused"));

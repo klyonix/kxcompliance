@@ -74,7 +74,8 @@ class Trademark(Document):
 			)
 		)
 		legal_date.date = due
-		legal_date.purpose = _("From {0} on {1}").format(
+		# "Examination Report Received On: 10-11-2026"; the field's label already says when.
+		legal_date.purpose = _("{0}: {1}").format(
 			_(self.meta.get_label(event_field)), frappe.format(self.get(event_field), "Date")
 		)
 		legal_date.save()

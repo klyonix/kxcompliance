@@ -37,6 +37,7 @@ import { canAct } from "@/lib/items";
 import { OPEN_CASE_STATUSES, caseRow, plainText } from "@/lib/legal";
 import { formatDate } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
+import { learnNames, nameOf } from "@/composables/usePeople";
 
 const props = defineProps({ name: { type: String, required: true } });
 
@@ -90,8 +91,8 @@ const facts = computed(() => {
 		["Opposing party", current.opposing_party],
 		["Advocate", [current.advocate, current.advocate_contact].filter(Boolean).join(" · ")],
 		["Appeal of", current.appeal_of],
-		["Responsible", current.responsible],
-		["Reviewer", current.reviewer],
+		["Responsible", nameOf(current.responsible)],
+		["Reviewer", nameOf(current.reviewer)],
 	];
 });
 
@@ -104,6 +105,7 @@ async function load() {
 	error.value = "";
 	try {
 		legalCase.value = await getDoc("Legal Case", props.name);
+		learnNames([legalCase.value.responsible, legalCase.value.reviewer]);
 	} catch (err) {
 		error.value = err.isNetwork ? notLoaded("this case", "opened") : err.message;
 	}

@@ -27,6 +27,8 @@
 			/>
 		</section>
 
+		<CalendarFeed v-if="!checksOnly()" />
+
 		<section class="flex flex-col gap-3" aria-labelledby="sync-heading">
 			<h2 id="sync-heading" class="text-base font-semibold text-ink-gray-8">
 				Changes on this device
@@ -69,8 +71,9 @@
 <script setup>
 import { Avatar, Button, TabButtons, useColorScheme } from "frappe-ui";
 import { call } from "@/api";
-import { boot, mayUseDesk } from "@/boot";
+import { boot, checksOnly, mayUseDesk } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import CalendarFeed from "@/components/CalendarFeed.vue";
 import SyncStatus from "@/components/SyncStatus.vue";
 import { signOut } from "@/navigation";
 import { clearOutbox, outbox, refresh, sendWaiting } from "@/offline/outbox";

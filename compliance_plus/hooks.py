@@ -60,9 +60,8 @@ required_apps = ["erpnext"]
 # home_page = "login"
 
 # website user home page (by Role)
-# role_home_page = {
-# 	"Role": "home_page"
-# }
+# A client login has no Desk; signing in takes them straight to the app.
+role_home_page = {"Compliance Client": "compliance"}
 
 # Generators
 # ----------

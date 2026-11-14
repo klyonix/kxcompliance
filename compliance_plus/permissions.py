@@ -7,7 +7,9 @@ Compliance Managers, Auditors and System Managers see everything. Anyone else re
 an item, a statutory task or a legal case as its Responsible person or its Reviewer, and
 a renewal or a Legal Date through the record it belongs to. In a CA/CS firm, someone on a
 client's team also sees every record of that client's companies (clients.py gives them the
-access, and a User Permission keeps them to those companies).
+access, and a User Permission keeps them to those companies). A client's own login sees its
+client's companies the same way, only reading (its role has no write permission) and without
+the firm's remarks and notes, which are at permission level 1.
 """
 
 import frappe
@@ -144,14 +146,16 @@ def has_renewal_permission(doc, ptype: str | None = None, user: str | None = Non
 
 
 def client_query_conditions(user: str | None = None) -> str:
-	"""Firm staff see the clients they are on the team of, or manage the relationship of."""
+	"""Firm staff see the clients they are on the team of, or manage the relationship of; a
+	client's login sees its own client."""
 	user = user or frappe.session.user
 	if not is_restricted(user):
 		return ""
 	quoted = frappe.db.escape(user)
 	return (
 		f"(`tabCompliance Client`.`relationship_manager` = {quoted} or `tabCompliance Client`.`name` in"
-		f" (select `parent` from `tabCompliance Client Member` where `user` = {quoted}))"
+		f" (select `parent` from `tabCompliance Client Member` where `user` = {quoted}"
+		f" union select `parent` from `tabCompliance Client Login` where `user` = {quoted} and `enabled` = 1))"
 	)
 
 
@@ -159,4 +163,8 @@ def has_client_permission(doc, ptype: str | None = None, user: str | None = None
 	user = user or frappe.session.user
 	if not is_restricted(user):
 		return True
-	return user == doc.relationship_manager or user in {row.user for row in doc.team}
+	return (
+		user == doc.relationship_manager
+		or user in {row.user for row in doc.team}
+		or user in {row.user for row in doc.logins if row.enabled}
+	)

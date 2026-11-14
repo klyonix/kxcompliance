@@ -3,8 +3,12 @@
 
 """Whitelisted methods for the Compliance Plus app at /compliance."""
 
+from mimetypes import guess_type
+
 import frappe
 from frappe import _
+from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
+from frappe.handler import ALLOWED_MIMETYPES
 from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
 
 from compliance_plus.compliance_plus import clients, onboarding
@@ -19,6 +23,7 @@ from compliance_plus.compliance_plus.party_licences import (
 	requirements_for_party,
 )
 from compliance_plus.compliance_plus.register import CLOSED_TASK_STATUSES, is_approver
+from compliance_plus.install import CLIENT_ROLE
 
 APP_ROLES = frozenset({"System Manager", "Compliance Manager", "Compliance User", "Compliance Auditor"})
 # People who sell or buy may open the app for the Licence Check only, for their side of the business.
@@ -92,8 +97,13 @@ def party_types_to_check(user: str | None = None) -> list[str]:
 	return [party_type for role, party_type in CHECK_ROLES.items() if role in roles]
 
 
+def is_client_login(user: str | None = None) -> bool:
+	"""Someone at a firm's client, who signs in to see their companies and upload documents."""
+	return CLIENT_ROLE in frappe.get_roles(user) and not has_app_access(user)
+
+
 def can_open_app(user: str | None = None) -> bool:
-	return has_app_access(user) or bool(party_types_to_check(user))
+	return has_app_access(user) or is_client_login(user) or bool(party_types_to_check(user))
 
 
 def check_party_type(party_type: str):
@@ -105,6 +115,12 @@ def check_party_type(party_type: str):
 
 def check_app_access():
 	if frappe.session.user == "Guest" or not has_app_access():
+		frappe.throw(_("You do not have access to the compliance app."), frappe.PermissionError)
+
+
+def check_reader_access():
+	"""For what a client's login may also read: the firm's staff, or the client's own people."""
+	if frappe.session.user == "Guest" or not (has_app_access() or is_client_login()):
 		frappe.throw(_("You do not have access to the compliance app."), frappe.PermissionError)
 
 
@@ -335,7 +351,7 @@ def full_names(users: str) -> dict[str, str]:
 
 	`users` is comma-separated, since a GET request cannot carry a list; user IDs hold no commas.
 	"""
-	check_app_access()
+	check_reader_access()
 	wanted = sorted({user.strip() for user in users.split(",") if user.strip()})
 	if len(wanted) > NAMES_LIMIT:
 		frappe.throw(_("Ask for at most {0} names at a time.").format(NAMES_LIMIT))
@@ -350,7 +366,7 @@ def full_names(users: str) -> dict[str, str]:
 def search(text: str) -> dict[str, list]:
 	"""Register items, filings, cases and trademarks whose name, number or reference contains
 	`text`, a few of each, as far as the person may read them."""
-	check_app_access()
+	check_reader_access()
 	text = text.strip()
 	if len(text) < SEARCH_MIN_LENGTH:
 		return {section: [] for section in SEARCHES}
@@ -395,7 +411,7 @@ def clients_overview() -> list[dict]:
 @frappe.whitelist(methods=["GET"])
 def client_detail(client: str) -> dict:
 	"""One client: its companies, team and open filings."""
-	check_app_access()
+	check_reader_access()
 	return clients.client_detail(client)
 
 
@@ -413,6 +429,82 @@ def complete_onboarding(setup: dict) -> dict:
 	return onboarding.complete(setup)
 
 
+@frappe.whitelist(methods=["POST"])
+def add_client_document(task: str) -> dict:
+	"""A client's login attaches a document (the file in the request) to one of its filings.
+
+	The client may read the filing but not change it, so this is the one thing it may add; the
+	filing's responsible person is told.
+	"""
+	if not is_client_login():
+		frappe.throw(_("Only a client's login adds documents this way."), frappe.PermissionError)
+	filing = frappe.get_doc("Compliance Task", task)
+	filing.check_permission("read")
+	upload = frappe.request.files.get("file") if frappe.request else None
+	if not upload or not upload.filename:
+		frappe.throw(_("Choose a file to upload."))
+	if guess_type(upload.filename)[0] not in ALLOWED_MIMETYPES:
+		frappe.throw(_("You can only upload JPG, PNG, GIF, PDF, TXT, CSV or Microsoft documents."))
+	document = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": upload.filename,
+			"attached_to_doctype": "Compliance Task",
+			"attached_to_name": filing.name,
+			"is_private": 1,
+			"content": upload.stream.read(),
+		}
+	)
+	# Attaching needs write on the filing, which a client does not have; read was checked above.
+	document.insert(ignore_permissions=True)
+	if filing.responsible:
+		enqueue_create_notification(
+			filing.responsible,
+			{
+				"type": "Alert",
+				"document_type": "Compliance Task",
+				"document_name": filing.name,
+				"from_user": frappe.session.user,
+				"subject": _("{0} uploaded {1} for {2} ({3})").format(
+					frappe.utils.get_fullname(frappe.session.user),
+					document.file_name,
+					filing.obligation_template,
+					filing.period_label or filing.name,
+				),
+			},
+		)
+	return {"name": document.name, "file_name": document.file_name, "file_url": document.file_url}
+
+
+DOCUMENT_DOCTYPES = ("Compliance Task", "Compliance Item", "Legal Case", "Trademark")
+DOCUMENTS_LIMIT = 50
+
+
+@frappe.whitelist(methods=["GET"])
+def documents(doctype: str, name: str) -> list[dict]:
+	"""The files attached to a record the person may read, newest first."""
+	check_reader_access()
+	if doctype not in DOCUMENT_DOCTYPES:
+		frappe.throw(_("Documents are not shown for {0}.").format(doctype), frappe.PermissionError)
+	frappe.get_doc(doctype, name).check_permission("read")
+	# A client's login may list only files it uploaded itself; reading the record is what counts.
+	return frappe.get_all(
+		"File",
+		filters={"attached_to_doctype": doctype, "attached_to_name": name},
+		fields=["name", "file_name", "file_url", "owner", "creation"],
+		order_by="creation desc",
+		limit=DOCUMENTS_LIMIT,
+	)
+
+
+def client_of_login() -> str:
+	"""The client a client's login belongs to; the first one if a person is at several."""
+	if not is_client_login():
+		return ""
+	clients = frappe.get_list("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name", limit=1)
+	return clients[0] if clients else ""
+
+
 def app_companies() -> list[str]:
 	"""The companies the person may pick in the app: their User Permissions, else every company.
 
@@ -421,6 +513,8 @@ def app_companies() -> list[str]:
 	allowed = frappe.permissions.get_user_permissions(frappe.session.user).get("Company")
 	if allowed:
 		return sorted({permission.get("doc") for permission in allowed})
+	if is_client_login():
+		return []  # a client whose companies are not linked yet sees none, never every company
 	return frappe.get_all("Company", pluck="name", order_by="name")
 
 
@@ -429,13 +523,14 @@ def boot() -> dict:
 	return {
 		"user": frappe.session.user,
 		"user_fullname": frappe.utils.get_fullname(frappe.session.user),
-		"roles": sorted((APP_ROLES | set(CHECK_ROLES)) & set(frappe.get_roles())),
+		"roles": sorted((APP_ROLES | set(CHECK_ROLES) | {CLIENT_ROLE}) & set(frappe.get_roles())),
 		"party_types": party_types_to_check(),
 		"app_name": settings.app_name or "Compliance Plus",
 		"app_logo": settings.app_logo or "",
 		"csrf_token": frappe.sessions.get_csrf_token(),
 		"site_name": frappe.local.site,
-		"companies": app_companies() if has_app_access() else [],
+		"companies": app_companies() if has_app_access() or is_client_login() else [],
+		"client": client_of_login(),
 		"default_company": frappe.defaults.get_user_default("Company") or "",
 		"date_format": frappe.db.get_default("date_format") or "dd-mm-yyyy",
 		"account_type": settings.account_type or "",

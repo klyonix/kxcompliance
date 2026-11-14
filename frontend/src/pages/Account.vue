@@ -50,6 +50,7 @@
 
 		<div class="flex flex-col gap-2">
 			<Button
+				v-if="mayUseDesk()"
 				label="Open the Desk"
 				icon-left="lucide-app-window"
 				class="justify-start"
@@ -68,7 +69,7 @@
 <script setup>
 import { Avatar, Button, TabButtons, useColorScheme } from "frappe-ui";
 import { call } from "@/api";
-import { boot } from "@/boot";
+import { boot, mayUseDesk } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import SyncStatus from "@/components/SyncStatus.vue";
 import { signOut } from "@/navigation";

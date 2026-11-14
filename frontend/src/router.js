@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { boot, checksOnly, isManager } from "./boot";
+import { boot, checksOnly, isClientLogin, isManager } from "./boot";
+import { CLIENT_ROUTES } from "./navigation";
 import { noteNoResponse } from "./offline/reachability";
 
 export const routes = [
@@ -14,6 +15,12 @@ export const routes = [
 		name: "ComplianceItem",
 		component: () => import("./pages/ComplianceItem.vue"),
 		props: true,
+	},
+	{
+		path: "/home",
+		name: "ClientHome",
+		component: () => import("./pages/Client.vue"),
+		props: () => ({ name: boot.client }),
 	},
 	{ path: "/clients", name: "Clients", component: () => import("./pages/Clients.vue") },
 	{
@@ -63,6 +70,11 @@ router.beforeEach((to) => {
 	// A manager on a new site sets it up before anything else.
 	if (boot.setupNeeded && to.name !== "Onboarding") return { name: "Onboarding" };
 	if (!boot.setupNeeded && to.name === "Onboarding") return { name: "MyWork" };
+	if (isClientLogin()) {
+		if (!CLIENT_ROUTES.includes(to.name)) return { name: "ClientHome" };
+		return;
+	}
+	if (to.name === "ClientHome") return { name: "MyWork" };
 	if (checksOnly() && !["LicenceCheck", "Account"].includes(to.name)) {
 		return { name: "LicenceCheck" };
 	}

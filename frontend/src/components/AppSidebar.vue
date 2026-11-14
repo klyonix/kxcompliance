@@ -26,14 +26,14 @@
 
 <script setup>
 import { Sidebar, SidebarHeader, SidebarItem } from "frappe-ui";
-import { boot } from "@/boot";
+import { boot, mayUseDesk } from "@/boot";
 import { sections, signOut } from "@/navigation";
 import { clearOutbox, outbox } from "@/offline/outbox";
 import { counts } from "@/stores/work";
 import SyncStatus from "./SyncStatus.vue";
 
 const menu = [
-	{
+	mayUseDesk() && {
 		label: "Open the Desk",
 		icon: "lucide-app-window",
 		onClick: () => (window.location.href = "/app/compliance-plus"),
@@ -44,5 +44,5 @@ const menu = [
 		onClick: () =>
 			signOut({ unsent: outbox.waiting + outbox.needsLook.length, clear: clearOutbox }),
 	},
-];
+].filter(Boolean);
 </script>

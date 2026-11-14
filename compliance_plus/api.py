@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
 
+from compliance_plus.compliance_plus.company_events import event_types_for
 from compliance_plus.compliance_plus.overview import get_overview
 from compliance_plus.compliance_plus.party_licences import (
 	DOCUMENTS,
@@ -308,6 +309,24 @@ def full_names(users: str) -> dict[str, str]:
 	# Names only, for people this app already shows by ID; Compliance roles do not read User.
 	rows = frappe.get_all("User", filters={"name": ("in", wanted)}, fields=["name", "full_name"])
 	return {row.name: row.full_name or row.name for row in rows}
+
+
+@frappe.whitelist(methods=["GET"])
+def event_types(company: str) -> list[dict]:
+	"""The events that call for a filing from this company, for recording one in the app."""
+	check_app_access()
+	if company not in app_companies():
+		frappe.throw(_("You cannot record events for {0}.").format(company), frappe.PermissionError)
+	company_type = frappe.db.get_value("Company Compliance Profile", company, "company_type")
+	names = event_types_for(company_type) if company_type else []
+	if not names:
+		return []
+	return frappe.get_all(
+		"Compliance Event Type",
+		filters={"name": ("in", names)},
+		fields=["name", "description"],
+		order_by="name asc",
+	)
 
 
 def app_companies() -> list[str]:

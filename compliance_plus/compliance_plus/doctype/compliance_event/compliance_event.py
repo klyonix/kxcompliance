@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate, nowdate
 
-from compliance_plus.compliance_plus.company_events import make_event_tasks
+from compliance_plus.compliance_plus.company_events import event_types_for, make_event_tasks
 from compliance_plus.compliance_plus.register import CLOSED_TASK_STATUSES, is_approver
 
 
@@ -29,6 +29,12 @@ class ComplianceEvent(Document):
 			frappe.throw(
 				_("Set up the Company Compliance Profile for {0} before recording its events.").format(
 					self.company
+				)
+			)
+		if self.event_type not in event_types_for(profile.company_type):
+			frappe.throw(
+				_("{0} calls for no filing from a {1} such as {2}; choose another event.").format(
+					_(self.event_type), _(profile.company_type), self.company
 				)
 			)
 		if not profile.default_responsible:

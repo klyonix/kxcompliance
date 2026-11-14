@@ -123,9 +123,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { Button, FormControl, toast } from "frappe-ui";
-import { createDoc, getList, readMethod } from "@/api";
+import { call, createDoc, readMethod } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
@@ -200,17 +200,20 @@ function reset() {
 	checking.value = false;
 }
 
-onMounted(async () => {
+// The events that call for a filing from the chosen company, asked again when it changes.
+async function loadEventTypes() {
+	eventTypes.value = [];
+	if (!form.company) return;
 	try {
-		eventTypes.value = (
-			await getList("Compliance Event Type", {
-				fields: ["name", "description"],
-				orderBy: "name asc",
-				limit: 100,
-			})
-		).rows;
+		eventTypes.value = await call("compliance_plus.api.event_types", {
+			company: form.company,
+		});
+		if (!eventTypes.value.some((type) => type.name === form.event_type)) form.event_type = "";
 	} catch (err) {
 		formError.value = err.message;
 	}
-});
+}
+
+watch(() => form.company, loadEventTypes);
+onMounted(loadEventTypes);
 </script>

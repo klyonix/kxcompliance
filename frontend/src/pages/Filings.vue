@@ -10,6 +10,21 @@
 		:empty="empty"
 	>
 		<template #actions>
+			<template v-if="isManager()">
+				<Button
+					v-if="isMobile"
+					variant="ghost"
+					icon="lucide-calendar-clock"
+					label="Due-date extensions"
+					:route="{ name: 'Extensions' }"
+				/>
+				<Button
+					v-else
+					icon-left="lucide-calendar-clock"
+					label="Extensions"
+					:route="{ name: 'Extensions' }"
+				/>
+			</template>
 			<Button
 				v-if="mayRecord()"
 				variant="solid"
@@ -23,7 +38,7 @@
 
 <script setup>
 import { Button } from "frappe-ui";
-import { mayRecord } from "@/boot";
+import { isManager, mayRecord } from "@/boot";
 import RecordList from "@/components/RecordList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { FILING_VIEWS, TASK_LIST_FIELDS, taskRow } from "@/lib/filings";

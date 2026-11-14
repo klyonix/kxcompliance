@@ -32,6 +32,7 @@ const LISTS = {
 	"Legal Date": { name: "Legal", view: "dates" },
 	"Legal Case": { name: "Legal", view: "cases" },
 	Trademark: { name: "Legal", view: "marks" },
+	"Licence Check Log": { name: "LicenceBlocks", view: "blocked" },
 };
 
 export function listRoute(card, section) {

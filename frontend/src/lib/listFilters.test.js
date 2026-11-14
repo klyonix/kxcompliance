@@ -26,6 +26,7 @@ describe("lists opened from an Overview number", () => {
 			name: "Filings",
 			query: { view: "open", f: '[["is_overdue","=",1]]', label: "Filings: Overdue" },
 		});
-		expect(listRoute({ ...card, doctype: "Licence Check Log" })).toBeNull();
+		expect(listRoute({ ...card, doctype: "Licence Check Log" }).name).toBe("LicenceBlocks");
+		expect(listRoute({ ...card, doctype: "Company" })).toBeNull();
 	});
 });

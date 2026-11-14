@@ -11,6 +11,7 @@ from kxcompliance.api import (
 	app_companies,
 	boot,
 	full_names,
+	licence_rule_options,
 	log_notice,
 	my_work,
 	overview,
@@ -138,6 +139,16 @@ class TestAppApi(IntegrationTestCase):
 		self.assertTrue(after["link"].startswith("/app/compliance-item?"))
 		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
 			overview()
+
+	def test_the_licence_rule_screen_offers_documents_by_party_for_managers(self):
+		with self.set_user(MANAGER):
+			options = licence_rule_options()
+		by_doctype = {row["doctype"]: row for row in options["documents"]}
+		self.assertEqual(by_doctype["Sales Invoice"]["party_type"], "Customer")
+		self.assertEqual(by_doctype["Purchase Order"]["field"], "check_purchase_order")
+		self.assertIn("All Item Groups", options["item_groups"])
+		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
+			licence_rule_options()
 
 	def test_an_overview_number_carries_its_list_filters(self):
 		card = self.overview_card("Register", "Expired or lapsed")

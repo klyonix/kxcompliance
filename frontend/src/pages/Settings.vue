@@ -28,6 +28,12 @@
 					:route="{ name: 'ItemTypes' }"
 				/>
 				<Button
+					v-if="!isFirm"
+					icon-left="lucide-shield-check"
+					label="Customer and supplier licences"
+					:route="{ name: 'LicenceRules' }"
+				/>
+				<Button
 					icon-left="lucide-library"
 					label="Obligation library"
 					:route="{ name: 'ObligationLibrary' }"
@@ -189,9 +195,12 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { Button, FormControl, Skeleton, TabButtons, toast } from "frappe-ui";
 import { call, upload } from "@/api";
+import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { notLoaded } from "@/offline/reachability";
 
+// Licence rules are for an organisation's own sales and purchases, not a firm's.
+const isFirm = boot.accountType === "CA/CS Firm";
 const options = ref(null);
 const saved = ref({});
 const form = reactive({});

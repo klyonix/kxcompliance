@@ -2,6 +2,13 @@
 	<AppPageHeader title="My Work">
 		<template #actions>
 			<Button
+				v-if="isMobile"
+				variant="ghost"
+				icon="lucide-calendar-days"
+				label="Calendar"
+				:route="{ name: 'MonthCalendar' }"
+			/>
+			<Button
 				v-if="isMobile && isManager()"
 				variant="ghost"
 				icon="lucide-layout-dashboard"

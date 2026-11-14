@@ -20,6 +20,7 @@ SCHEDULE_FIELDS = (
 	"extended_due_date",
 	"extension",
 	"task_key",
+	"company_event",
 	"reviewed_by",
 )
 

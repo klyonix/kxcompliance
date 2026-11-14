@@ -105,7 +105,8 @@ def candidate_tasks(profile, today: date) -> list[dict]:
 		if not obligation.is_active:
 			continue
 		template = frappe.get_cached_doc("Compliance Obligation Template", obligation.obligation_template)
-		if not template.is_active:
+		# Event templates are made when the event is recorded (company_events.py), not by period.
+		if not template.is_active or template.event_type:
 			continue
 		registration = obligation.registration_number or obligation.state
 		for period_start, period_end in obligation_periods(template, obligation, limit, agm_dates):

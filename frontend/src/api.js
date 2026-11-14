@@ -152,6 +152,12 @@ export async function createDoc(doctype, values, { fetcher = fetch } = {}) {
 	return (await send(documentPath(doctype), json("POST", values), fetcher)).data;
 }
 
+// A document method that only reads, called with GET as the server requires.
+export async function readMethod(doctype, name, method, { fetcher = fetch } = {}) {
+	return (await send(`${documentPath(doctype, name)}method/${method}/`, json("GET"), fetcher))
+		.data;
+}
+
 export async function runMethod(doctype, name, method, args = {}, { fetcher = fetch } = {}) {
 	return (
 		await send(`${documentPath(doctype, name)}method/${method}/`, json("POST", args), fetcher)

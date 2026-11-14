@@ -15,6 +15,11 @@ export const routes = [
 	},
 	{ path: "/filings", name: "Filings", component: () => import("./pages/Filings.vue") },
 	{
+		path: "/filings/event",
+		name: "RecordEvent",
+		component: () => import("./pages/RecordEvent.vue"),
+	},
+	{
 		path: "/filings/:name",
 		name: "ComplianceTask",
 		component: () => import("./pages/ComplianceTask.vue"),

@@ -40,6 +40,7 @@ def obligation(name, law, form, frequency, months_after=None, day=None, **extra)
 		"due_day": day,
 		"due_after_event": 0,
 		"days_after_event": None,
+		"event_type": None,
 		"overrides": [
 			{"period_end_month": month, "months_after_period": after, "due_day": due_day}
 			for month, after, due_day in extra.pop("overrides", ())
@@ -80,6 +81,40 @@ def after_agm(name, form, days, source):
 		{"due_after_event": 1, "days_after_event": days, "months_after_period": None, "due_day": None}
 	)
 	return values
+
+
+def after_event(name, form, event_type, days, source, law="Companies Act", companies=COMPANIES):
+	"""A form due a set number of days after a company event, made when the event is recorded."""
+	values = obligation(
+		name, law, form, "Per Event", companies=companies, authority="Registrar of Companies", source=source
+	)
+	values.update(
+		{
+			"due_after_event": 1,
+			"days_after_event": days,
+			"event_type": event_type,
+			"months_after_period": None,
+			"due_day": None,
+		}
+	)
+	return values
+
+
+# The events the shipped event-based forms follow, with what each covers.
+EVENT_TYPES = {
+	"Incorporation": "The company was incorporated.",
+	"Change in Directors": "A director was appointed, resigned, left or changed designation.",
+	"Resolution to be Filed": "A special resolution, or another resolution section 117 requires to be filed.",
+	"Shares Allotted (Private Placement)": "Shares or securities allotted on a private placement.",
+	"Shares Allotted (Other)": "Shares allotted otherwise, such as on a rights or bonus issue.",
+	"Authorised Capital Changed": "The authorised share capital was increased, consolidated or otherwise altered.",
+	"Charge Created or Modified": "A charge on the company's assets was created or modified.",
+	"Charge Satisfied": "A registered charge was paid off in full.",
+	"Registered Office Moved": "The registered office moved within the same city, town or village.",
+	"Beneficial Ownership Declared": "A declaration of significant beneficial ownership (BEN-1) was received.",
+	"LLP Agreement Changed": "The LLP agreement was changed.",
+	"Partner Changed": "A partner or designated partner joined, left or changed.",
+}
 
 
 def state_tax(law, state, frequency, months_after, day, registration, basis="Financial Year"):
@@ -574,13 +609,82 @@ LIBRARY = [
 		source="SEBI LODR reg. 24A",
 		**LISTED,
 	),
+	# Forms due after a company event (recorded as a Compliance Event).
+	after_event("INC-20A (Commencement of Business)", "INC-20A", "Incorporation", 180, "Companies Act s.10A"),
+	after_event(
+		"DIR-12 (Change in Directors)", "DIR-12", "Change in Directors", 30, "Companies Act s.170(2)"
+	),
+	after_event(
+		"MGT-14 (Filing of Resolutions)", "MGT-14", "Resolution to be Filed", 30, "Companies Act s.117"
+	),
+	after_event(
+		"PAS-3 (Allotment, Private Placement)",
+		"PAS-3",
+		"Shares Allotted (Private Placement)",
+		15,
+		"Companies Act s.42(9)",
+	),
+	after_event("PAS-3 (Allotment, Other)", "PAS-3", "Shares Allotted (Other)", 30, "Companies Act s.39(4)"),
+	after_event(
+		"SH-7 (Alteration of Capital)", "SH-7", "Authorised Capital Changed", 30, "Companies Act s.64"
+	),
+	after_event(
+		"CHG-1 (Charge Created or Modified)", "CHG-1", "Charge Created or Modified", 30, "Companies Act s.77"
+	),
+	after_event("CHG-4 (Charge Satisfied)", "CHG-4", "Charge Satisfied", 30, "Companies Act s.82"),
+	after_event(
+		"INC-22 (Registered Office Moved)",
+		"INC-22",
+		"Registered Office Moved",
+		15,
+		"Companies Act s.12(4); sources give 15 or 30 days, so the earlier is used until confirmed",
+	),
+	after_event(
+		"BEN-2 (Significant Beneficial Owner)",
+		"BEN-2",
+		"Beneficial Ownership Declared",
+		30,
+		"Companies Act s.90; Significant Beneficial Owners Rules, rule 4",
+	),
+	after_event(
+		"LLP Form 3 (LLP Agreement Changed)",
+		"Form 3",
+		"LLP Agreement Changed",
+		30,
+		"LLP Act s.23; LLP Rules, rule 21",
+		law="LLP Act",
+		companies=["LLP"],
+	),
+	after_event(
+		"LLP Form 4 (Partner Changed)",
+		"Form 4",
+		"Partner Changed",
+		30,
+		"LLP Act s.25; LLP Rules, rule 22",
+		law="LLP Act",
+		companies=["LLP"],
+	),
 ]
 
 CLIENT_OWNED_FIELDS = ("is_active",)
 
 
+def sync_standard_event_types():
+	for name, description in EVENT_TYPES.items():
+		if frappe.db.exists("Compliance Event Type", name):
+			doc = frappe.get_doc("Compliance Event Type", name)
+		else:
+			doc = frappe.new_doc("Compliance Event Type")
+			doc.event_type_name = name
+		doc.description = description
+		doc.is_standard = 1
+		doc.flags.ignore_permissions = True  # the app's own list, written during migrate
+		doc.save()
+
+
 def sync_standard_templates():
 	"""Create or update every standard template from LIBRARY. Safe to run on every migrate."""
+	sync_standard_event_types()
 	for values in LIBRARY:
 		name = values["template_name"]
 		if frappe.db.exists("Compliance Obligation Template", name):

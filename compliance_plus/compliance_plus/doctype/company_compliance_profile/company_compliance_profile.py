@@ -31,7 +31,8 @@ class CompanyComplianceProfile(Document):
 		added = 0
 		for template_name in frappe.get_all(
 			"Compliance Obligation Template",
-			filters={"is_active": 1, "add_by_default": 1},
+			# Event templates are not standing obligations; recording the event makes their tasks.
+			filters={"is_active": 1, "add_by_default": 1, "event_type": ("is", "not set")},
 			pluck="name",
 			order_by="law asc, template_name asc",
 		):

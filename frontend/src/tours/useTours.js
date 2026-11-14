@@ -21,6 +21,12 @@ export function toursForReader(reader = {}) {
 		if (tour.staff === false) return false;
 		if (tour.managers && !manager) return false;
 		if (tour.firm && !firm) return false;
+		if (
+			tour.id === "reminder-log" &&
+			!manager &&
+			!(reader.auditor ?? boot.roles.includes("Compliance Auditor"))
+		)
+			return false;
 		if (tour.organisation && firm) return false;
 		return true;
 	});

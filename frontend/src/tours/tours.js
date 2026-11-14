@@ -663,6 +663,27 @@ export const TOURS = [
 		],
 	},
 	{
+		id: "reminder-log",
+		title: "The reminder log",
+		route: "ReminderLog",
+		steps: [
+			{
+				title: "What was sent",
+				text: "Every reminder, escalation and summary the app sent, to whom and when, newest first.",
+			},
+			{
+				target: ["list-tabs"],
+				title: "One kind at a time",
+				text: "Reminders before things fall due, escalations to managers when they are overdue, and the rest.",
+			},
+			{
+				target: ["list-search"],
+				title: "Did they get it?",
+				text: "Type part of someone's email address to see everything sent to them.",
+			},
+		],
+	},
+	{
 		id: "reports",
 		title: "Reports",
 		route: "Reports",

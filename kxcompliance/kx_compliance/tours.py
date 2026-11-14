@@ -43,6 +43,7 @@ TOURS = (
 	"licence-check",
 	"licence-rules",
 	"licence-blocks",
+	"reminder-log",
 	"reports",
 	"report",
 	"help",

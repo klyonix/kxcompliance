@@ -34,6 +34,11 @@
 					:route="{ name: 'LicenceRules' }"
 				/>
 				<Button
+					icon-left="lucide-bell"
+					label="Reminder log"
+					:route="{ name: 'ReminderLog' }"
+				/>
+				<Button
 					icon-left="lucide-library"
 					label="Obligation library"
 					:route="{ name: 'ObligationLibrary' }"

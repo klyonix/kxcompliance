@@ -59,6 +59,13 @@
 				:route="{ name: 'Reports' }"
 			/>
 			<Button
+				v-if="!isManager() && boot.roles.includes('Compliance Auditor')"
+				label="Reminder log"
+				icon-left="lucide-bell"
+				class="justify-start"
+				:route="{ name: 'ReminderLog' }"
+			/>
+			<Button
 				v-if="isManager()"
 				label="Settings"
 				icon-left="lucide-settings"

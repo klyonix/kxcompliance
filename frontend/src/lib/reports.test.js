@@ -1,0 +1,90 @@
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+	REPORTS,
+	filledFilters,
+	financialYear,
+	initialFilters,
+	linkRoute,
+	missingRequired,
+	reportBySlug,
+	reportsFor,
+	rowsOf,
+	sortRows,
+	toCsv,
+	splitTotal,
+} from "./reports";
+
+const REPORT_DIR = path.resolve(import.meta.dirname, "../../../kxcompliance/kx_compliance/report");
+
+describe("the reports", () => {
+	it("are the Desk's reports, with the Desk's filters", () => {
+		const desk = readdirSync(REPORT_DIR).filter((name) => !name.startsWith("_"));
+		expect(REPORTS.length).toBe(desk.length);
+		for (const report of REPORTS) {
+			const folder = report.name.toLowerCase().replace(/[ -]/g, "_");
+			const script = readFileSync(path.join(REPORT_DIR, folder, `${folder}.js`), "utf8");
+			for (const filter of report.filters) {
+				expect(script, `${report.name}: ${filter.fieldname}`).toContain(
+					`fieldname: "${filter.fieldname}"`
+				);
+			}
+		}
+	});
+
+	it("are offered by kind of site and role", () => {
+		const slugs = (reader) => reportsFor(reader).map((report) => report.slug);
+		const staff = { firm: true, manager: false, auditor: false };
+		expect(slugs(staff)).toContain("client-summary");
+		expect(slugs(staff)).not.toContain("contingent-liabilities");
+		expect(slugs(staff)).not.toContain("party-licence-register");
+		expect(slugs({ ...staff, auditor: true })).toContain("contingent-liabilities");
+		expect(slugs({ ...staff, firm: false })).toContain("party-licence-register");
+		expect(slugs({ ...staff, firm: false })).not.toContain("client-summary");
+	});
+
+	it("open with the address's filters over their defaults", () => {
+		const today = new Date(2027, 1, 10);
+		expect(financialYear(today)).toEqual({ start: "2026-04-01", end: "2027-03-31" });
+		expect(financialYear(new Date(2026, 3, 1)).start).toBe("2026-04-01");
+		const summary = reportBySlug("client-summary");
+		expect(initialFilters(summary, { client: "Sunrise Group" }, today)).toEqual({
+			from_date: "2026-04-01",
+			to_date: "2027-03-31",
+			client: "Sunrise Group",
+			relationship_manager: "",
+		});
+		const legal = reportBySlug("legal-calendar");
+		expect(initialFilters(legal, {}, today).to_date).toBe("2027-03-12");
+		expect(
+			missingRequired(legal, { from_date: "2027-02-10" }).map((f) => f.fieldname)
+		).toEqual(["to_date"]);
+		expect(filledFilters({ a: "x", b: "", c: null })).toEqual({ a: "x" });
+	});
+
+	it("show results as the Desk does", () => {
+		const columns = [
+			{ fieldname: "name", label: "Case", fieldtype: "Link", options: "Legal Case" },
+			{ fieldname: "late_fee", label: "Late Fees", fieldtype: "Currency" },
+			{ fieldname: "on_time_percent", label: "On Time %", fieldtype: "Percent" },
+		];
+		const rows = rowsOf(
+			[["LC-2", 200, 50], { name: "LC-10", late_fee: 50, on_time_percent: 100 }],
+			columns
+		);
+		expect(rows[0]).toEqual({ name: "LC-2", late_fee: 200, on_time_percent: 50 });
+		expect(sortRows(rows, "name").map((row) => row.name)).toEqual(["LC-2", "LC-10"]);
+		expect(sortRows(rows, "late_fee", true).map((row) => row.late_fee)).toEqual([200, 50]);
+		expect(splitTotal(rows, true)).toEqual({ rows: [rows[0]], total: rows[1] });
+		expect(splitTotal(rows, false).total).toBeNull();
+		expect(linkRoute(columns[0], "LC-2")).toEqual({
+			name: "LegalCase",
+			params: { name: "LC-2" },
+		});
+		expect(linkRoute({ fieldtype: "Link", options: "Supplier" }, "X")).toBeNull();
+		expect(toCsv(columns.slice(0, 2), [{ name: 'A, "B"', late_fee: 5 }])).toBe(
+			'Case,Late Fees\n"A, ""B""",5'
+		);
+	});
+});

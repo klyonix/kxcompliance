@@ -22,6 +22,14 @@
 		</div>
 
 		<p
+			v-if="pinned"
+			class="flex items-center justify-between gap-3 rounded-lg bg-surface-gray-2 px-3 py-2 text-base text-ink-gray-8"
+		>
+			<span>Showing {{ route.query.label || "a filtered list" }}</span>
+			<Button variant="ghost" label="Show all" @click="unpin" />
+		</p>
+
+		<p
 			v-if="error"
 			role="alert"
 			class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
@@ -90,6 +98,7 @@ import ClientPicker from "@/components/ClientPicker.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { companyFilters } from "@/lib/clientFilter";
 import { searchFilter } from "@/lib/items";
+import { parseListFilters } from "@/lib/listFilters";
 import { chosenCompanies, loadClients } from "@/stores/clientFilter";
 import { notLoaded } from "@/offline/reachability";
 
@@ -133,6 +142,14 @@ const loading = ref(false);
 const error = ref("");
 
 const current = computed(() => props.views.find((option) => option.value === view.value));
+// A list opened from an Overview number shows exactly what it counted, until "Show all".
+const pinned = computed(() => parseListFilters(route.query.f));
+function unpin() {
+	const query = { ...route.query };
+	delete query.f;
+	delete query.label;
+	router.replace({ query }).then(() => load());
+}
 const tabs = computed(() => props.views.map(({ label, value }) => ({ label, value })));
 const emptyState = computed(() => props.empty(view.value, Boolean(search.value.trim())));
 
@@ -149,7 +166,7 @@ async function load(more = false) {
 		const page = await getList(doctype || props.doctype, {
 			fields: fields || props.fields,
 			filters: [
-				...filters,
+				...(pinned.value || filters),
 				...(props.byClient ? companyFilters(chosenCompanies.value, companyField) : []),
 				...searchFilter(search.value, searchField || props.searchField),
 			],
@@ -170,8 +187,13 @@ async function load(more = false) {
 let typing;
 watch(view, () => {
 	records.value = [];
-	remember();
-	load();
+	const query = { ...route.query };
+	delete query.f;
+	delete query.label;
+	router.replace({ query }).then(() => {
+		remember();
+		load();
+	});
 });
 watch(chosenCompanies, () => {
 	if (!props.byClient) return;

@@ -52,6 +52,13 @@
 
 		<div class="flex flex-col gap-2">
 			<Button
+				v-if="!isClientLogin() && !checksOnly()"
+				label="Reports"
+				icon-left="lucide-file-chart-column"
+				class="justify-start"
+				:route="{ name: 'Reports' }"
+			/>
+			<Button
 				v-if="isManager()"
 				label="Settings"
 				icon-left="lucide-settings"
@@ -78,7 +85,7 @@
 <script setup>
 import { Avatar, Button, TabButtons, useColorScheme } from "frappe-ui";
 import { call } from "@/api";
-import { boot, checksOnly, isManager, mayUseDesk } from "@/boot";
+import { boot, checksOnly, isClientLogin, isManager, mayUseDesk } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import CalendarFeed from "@/components/CalendarFeed.vue";
 import SyncStatus from "@/components/SyncStatus.vue";

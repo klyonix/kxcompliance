@@ -67,8 +67,33 @@ def desk_link(doctype: str, filters: dict) -> str:
 
 
 def card(label: str, value: int, tone: str, doctype: str, filters: dict, act: bool = False) -> dict:
-	"""One number of the overview; `act` marks what someone has to do something about."""
-	return {"label": label, "value": value, "tone": tone, "link": desk_link(doctype, filters), "act": act}
+	"""One number of the overview; `act` marks what someone has to do something about.
+
+	`doctype` and `filters` let the app open its own list of exactly what the number counts;
+	`link` is the same list in the Desk."""
+	return {
+		"label": label,
+		"value": value,
+		"tone": tone,
+		"link": desk_link(doctype, filters),
+		"act": act,
+		"doctype": doctype,
+		"filters": list_filters(filters),
+	}
+
+
+def list_filters(filters: dict) -> list[list]:
+	"""{"status": ("in", [...]), "is_overdue": 1} as [["status", "in", [...]], ["is_overdue", "=", 1]]."""
+	out = []
+	for field, value in filters.items():
+		if isinstance(value, tuple | list):
+			operator, operand = value
+			out.append(
+				[field, operator, [str(item) for item in operand] if isinstance(operand, list) else operand]
+			)
+		else:
+			out.append([field, "=", value])
+	return out
 
 
 def get_overview() -> dict:

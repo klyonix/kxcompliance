@@ -41,6 +41,8 @@ TOURS = (
 	"obligations",
 	"item-types",
 	"licence-check",
+	"reports",
+	"report",
 	"help",
 )
 

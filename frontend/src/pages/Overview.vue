@@ -46,8 +46,9 @@
 				</div>
 				<ul v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 					<li v-for="card in needs" :key="`${card.section}-${card.label}`">
-						<a
-							:href="card.link"
+						<component
+							:is="opens(card, card.section) ? RouterLink : 'a'"
+							v-bind="linkTo(card, card.section)"
 							class="flex items-center gap-4 rounded-lg border border-outline-gray-1 px-4 py-3 hover:bg-surface-gray-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
 						>
 							<span
@@ -63,7 +64,7 @@
 									card.section
 								}}</span>
 							</span>
-						</a>
+						</component>
 					</li>
 				</ul>
 			</section>
@@ -76,10 +77,10 @@
 					<h2 id="on-time-heading" class="text-base font-semibold text-ink-gray-8">
 						Filed on time
 					</h2>
-					<a
-						:href="data.on_time.link"
+					<RouterLink
+						:to="{ name: 'Report', params: { report: 'on-time-filing' } }"
 						class="text-sm text-ink-gray-6 underline decoration-outline-gray-3 underline-offset-2 hover:text-ink-gray-8"
-						>Open the report</a
+						>Open the report</RouterLink
 					>
 				</div>
 				<p class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -178,10 +179,11 @@
 			>
 				<h2 class="text-base font-semibold text-ink-gray-8">{{ section.title }}</h2>
 				<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-					<a
+					<component
+						:is="opens(card, section.title) ? RouterLink : 'a'"
 						v-for="card in section.cards"
 						:key="card.label"
-						:href="card.link"
+						v-bind="linkTo(card, section.title)"
 						class="flex flex-col gap-1 rounded-lg border border-outline-gray-1 px-3 py-3 hover:bg-surface-gray-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
 					>
 						<span
@@ -190,14 +192,14 @@
 							>{{ card.value }}</span
 						>
 						<span class="text-sm text-ink-gray-6">{{ card.label }}</span>
-					</a>
+					</component>
 				</div>
 			</section>
 
 			<p v-if="quiet.length" class="text-sm text-ink-gray-5">
 				Nothing recorded yet: {{ quiet.map((section) => section.title).join(" · ") }}.
 			</p>
-			<p class="text-sm text-ink-gray-5">Each number opens its list in the Desk.</p>
+			<p class="text-sm text-ink-gray-5">Each number opens the list of what it counts.</p>
 		</template>
 	</div>
 </template>
@@ -210,6 +212,7 @@ import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import ScoreBadge from "@/components/ScoreBadge.vue";
 import { formatMoney } from "@/lib/format";
+import { listRoute } from "@/lib/listFilters";
 import {
 	isQuiet,
 	needsYou,
@@ -225,6 +228,12 @@ const showAllScores = ref(false);
 const loading = ref(false);
 const error = ref("");
 
+// Each number opens the app's own list of what it counts; a few still open the Desk.
+const opens = (card, section) => listRoute(card, section);
+const linkTo = (card, section) => {
+	const route = opens(card, section);
+	return route ? { to: route } : { href: card.link };
+};
 const parts = computed(() => (data.value ? onTimeParts(data.value.on_time) : []));
 const needs = computed(() => needsYou(data.value.sections));
 const busy = computed(() => data.value.sections.filter((section) => !isQuiet(section)));

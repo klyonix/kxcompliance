@@ -139,6 +139,12 @@ class TestAppApi(IntegrationTestCase):
 		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
 			overview()
 
+	def test_an_overview_number_carries_its_list_filters(self):
+		card = self.overview_card("Register", "Expired or lapsed")
+		self.assertEqual(card["doctype"], "Compliance Item")
+		self.assertIn(["status", "in", ["Expired", "Lapsed"]], card["filters"])
+		self.assertIn(["is_overdue", "=", 1], self.overview_card("Filings", "Overdue")["filters"])
+
 	def test_the_overview_marks_what_needs_someone_to_act(self):
 		self.assertTrue(self.overview_card("Filings", "Overdue")["act"])
 		self.assertTrue(self.overview_card("Filings", "Waiting for review")["act"])

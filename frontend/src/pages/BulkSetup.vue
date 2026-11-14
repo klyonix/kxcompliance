@@ -16,7 +16,7 @@
 				Every row is checked and shown to you before anything is made.
 			</p>
 			<ol class="flex flex-col gap-4">
-				<li class="flex items-start gap-3">
+				<li class="flex items-start gap-3" data-tour="bulk-setup-sheet">
 					<span
 						class="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-gray-2 text-sm font-medium text-ink-gray-7"
 						>1</span
@@ -36,7 +36,7 @@
 						</div>
 					</div>
 				</li>
-				<li class="flex items-start gap-3">
+				<li class="flex items-start gap-3" data-tour="bulk-setup-upload">
 					<span
 						class="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-gray-2 text-sm font-medium text-ink-gray-7"
 						>2</span

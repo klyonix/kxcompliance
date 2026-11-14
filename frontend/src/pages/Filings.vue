@@ -10,31 +10,26 @@
 		:empty="empty"
 	>
 		<template #actions>
-			<template v-if="isManager()">
+			<!-- A phone's header has room for one more button: the rest go in a menu. -->
+			<Dropdown v-if="isMobile && moreMenu.length" :options="moreMenu" align="end">
 				<Button
-					v-if="isMobile"
 					variant="ghost"
-					icon="lucide-calendar-clock"
-					label="Due-date extensions"
-					:route="{ name: 'Extensions' }"
+					icon="lucide-ellipsis"
+					label="More"
+					data-tour="filings-more"
 				/>
+			</Dropdown>
+			<template v-else-if="!isMobile">
 				<Button
-					v-else
+					v-if="isManager()"
+					data-tour="filings-extensions"
 					icon-left="lucide-calendar-clock"
 					label="Extensions"
 					:route="{ name: 'Extensions' }"
 				/>
-			</template>
-			<template v-if="mayRecord()">
 				<Button
-					v-if="isMobile"
-					variant="ghost"
-					icon="lucide-list-checks"
-					label="File in bulk"
-					:route="{ name: 'BulkFiling' }"
-				/>
-				<Button
-					v-else
+					v-if="mayRecord()"
+					data-tour="filings-bulk"
 					icon-left="lucide-list-checks"
 					label="File in bulk"
 					:route="{ name: 'BulkFiling' }"
@@ -52,7 +47,9 @@
 </template>
 
 <script setup>
-import { Button } from "frappe-ui";
+import { computed } from "vue";
+import { useRouter } from "vue-router";
+import { Button, Dropdown } from "frappe-ui";
 import { isManager, mayRecord } from "@/boot";
 import RecordList from "@/components/RecordList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
@@ -60,6 +57,21 @@ import { FILING_VIEWS, TASK_LIST_FIELDS, taskRow } from "@/lib/filings";
 
 // The phone's header has room for a short label beside the title.
 const isMobile = useIsMobile();
+const router = useRouter();
+const moreMenu = computed(() =>
+	[
+		mayRecord() && {
+			label: "File in bulk",
+			icon: "lucide-list-checks",
+			onClick: () => router.push({ name: "BulkFiling" }),
+		},
+		isManager() && {
+			label: "Due-date extensions",
+			icon: "lucide-calendar-clock",
+			onClick: () => router.push({ name: "Extensions" }),
+		},
+	].filter(Boolean)
+);
 
 const EMPTY = {
 	open: {

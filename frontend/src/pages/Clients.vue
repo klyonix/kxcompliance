@@ -54,7 +54,7 @@
 				<Button label="Import from a sheet" :route="{ name: 'BulkSetup' }" />
 			</div>
 		</div>
-		<ul v-else class="flex flex-col gap-1">
+		<ul v-else class="flex flex-col gap-1" data-tour="clients-list">
 			<li v-for="client in clients" :key="client.name">
 				<RouterLink
 					:to="{ name: 'Client', params: { name: client.name } }"

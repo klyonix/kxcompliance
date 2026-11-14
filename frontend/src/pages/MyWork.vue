@@ -26,7 +26,7 @@
 	</AppPageHeader>
 
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6">
-		<div class="flex flex-col gap-1">
+		<div class="flex flex-col gap-1" data-tour="my-work-summary">
 			<p class="text-xl font-semibold text-ink-gray-9">{{ greeting }}</p>
 			<p class="text-base text-ink-gray-6">{{ summary }}</p>
 		</div>
@@ -83,6 +83,7 @@
 			:key="group.key"
 			class="flex flex-col gap-1"
 			:aria-labelledby="`group-${group.key}`"
+			data-tour="my-work-list"
 		>
 			<h2
 				:id="`group-${group.key}`"

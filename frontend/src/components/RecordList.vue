@@ -6,8 +6,9 @@
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6">
 		<ClientPicker v-if="byClient" />
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-			<TabButtons v-model="view" :options="tabs" />
+			<TabButtons v-model="view" :options="tabs" data-tour="list-tabs" />
 			<TextInput
+				data-tour="list-search"
 				v-model="search"
 				type="search"
 				:placeholder="current.searchPlaceholder || searchPlaceholder"
@@ -59,7 +60,7 @@
 			/>
 		</div>
 
-		<div v-else class="flex flex-col gap-1">
+		<div v-else class="flex flex-col gap-1" data-tour="list-rows">
 			<WorkRow
 				v-for="record in records"
 				:key="record.name"

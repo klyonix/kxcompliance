@@ -10,6 +10,7 @@ export const routes = [
 	{ path: "/overview", name: "Overview", component: () => import("./pages/Overview.vue") },
 	{ path: "/account", name: "Account", component: () => import("./pages/Account.vue") },
 	{ path: "/settings", name: "Settings", component: () => import("./pages/Settings.vue") },
+	{ path: "/help", name: "Help", component: () => import("./pages/Help.vue") },
 	{ path: "/register", name: "Register", component: () => import("./pages/Register.vue") },
 	{ path: "/companies", name: "Companies", component: () => import("./pages/Companies.vue") },
 	{
@@ -223,7 +224,7 @@ router.beforeEach((to) => {
 		return;
 	}
 	if (to.name === "ClientHome") return { name: "MyWork" };
-	if (checksOnly() && !["LicenceCheck", "Account"].includes(to.name)) {
+	if (checksOnly() && !["LicenceCheck", "Account", "Help"].includes(to.name)) {
 		return { name: "LicenceCheck" };
 	}
 	if (MANAGER_ROUTES.includes(to.name) && !isManager()) {

@@ -39,6 +39,8 @@ const ALL_SECTIONS = [
 		managers: true,
 		desktopOnly: true,
 	},
+	// The user manual; on phones it opens from the question mark on every page.
+	{ label: "Help", route: "Help", icon: "lucide-book-open", desktopOnly: true },
 ];
 
 // What a client's login may open: their home, the records of their companies, and search.
@@ -56,8 +58,9 @@ export const CLIENT_ROUTES = [
 	"LegalCase",
 	"Trademark",
 	"Account",
+	"Help",
 ];
-const CLIENT_SECTIONS = ["Search", "ClientHome", "Filings", "Register", "Legal"];
+const CLIENT_SECTIONS = ["Search", "ClientHome", "Filings", "Register", "Legal", "Help"];
 
 export function sectionsFor({ checks, client }) {
 	if (checks) return ALL_SECTIONS.filter((section) => section.route === "LicenceCheck");

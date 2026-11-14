@@ -11,6 +11,7 @@ describe("sectionsFor", () => {
 			"Filings",
 			"Register",
 			"Legal",
+			"Help",
 		]);
 	});
 

@@ -61,6 +61,13 @@ export function sectionsFor({ checks, client }) {
 
 export const sections = sectionsFor({ checks: checksOnly(), client: isClientLogin() });
 
+// Back to where the person came from in the app, with that list's tab and search as they left
+// them; to the record's list when the page was opened directly (a link, a reload).
+export function goBack(router, fallback) {
+	if (window.history.state?.back) router.back();
+	else router.push(fallback);
+}
+
 // Where each record opens until it has a screen of its own in the app.
 export const deskRoute = (doctype, name) =>
 	`/app/${doctype.toLowerCase().replace(/ /g, "-")}/${encodeURIComponent(name)}`;

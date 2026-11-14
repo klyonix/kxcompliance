@@ -1,5 +1,5 @@
 <template>
-	<AppPageHeader :title="request?.title || 'Document request'">
+	<AppPageHeader :title="request?.title || 'Document request'" :parent="parent">
 		<template #actions>
 			<Dropdown v-if="request && menu.length" :options="menu" align="end">
 				<Button variant="ghost" icon="lucide-ellipsis" label="More actions" />
@@ -203,6 +203,16 @@ const mayUpload = computed(() => isOpen.value && (clientLogin || mayRecord()));
 const mayCheck = computed(
 	() => !clientLogin && mayRecord() && request.value?.status === "Uploaded"
 );
+
+// A request belongs to its client's page; a client's own login goes back to Home.
+const parent = computed(() => {
+	if (clientLogin) return { label: "Home", route: { name: "ClientHome" } };
+	if (!request.value?.client) return { label: "Clients", route: { name: "Clients" } };
+	return {
+		label: request.value.client,
+		route: { name: "Client", params: { name: request.value.client } },
+	};
+});
 
 const dueLine = computed(() => {
 	const due = `Needed by ${formatDate(request.value.due_date)}`;

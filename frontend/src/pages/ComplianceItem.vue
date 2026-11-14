@@ -1,5 +1,8 @@
 <template>
-	<AppPageHeader :title="item?.title || 'Item'">
+	<AppPageHeader
+		:title="item?.title || 'Item'"
+		:parent="{ label: 'Register', route: { name: 'Register' } }"
+	>
 		<template #actions>
 			<Button
 				v-if="canRenew && !isMobile"

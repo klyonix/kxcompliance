@@ -1,5 +1,5 @@
 <template>
-	<AppPageHeader title="Bulk setup" />
+	<AppPageHeader title="Bulk setup" :parent="{ label: 'Clients', route: { name: 'Clients' } }" />
 
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6">
 		<p

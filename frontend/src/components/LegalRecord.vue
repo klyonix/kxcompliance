@@ -1,5 +1,11 @@
 <template>
-	<AppPageHeader :title="title || fallbackTitle">
+	<AppPageHeader
+		:title="title || fallbackTitle"
+		:parent="{
+			label: 'Legal',
+			route: { name: 'Legal', query: { view: doctype === 'Trademark' ? 'marks' : 'cases' } },
+		}"
+	>
 		<template #actions>
 			<Dropdown v-if="loaded && menu.length" :options="menu" align="end">
 				<Button variant="ghost" icon="lucide-ellipsis" label="More actions" />

@@ -74,6 +74,7 @@
 // list its own doctype by carrying doctype, fields, toRow, searchField and searchPlaceholder, and
 // companyField when its company is not in "company" (for the client filter).
 import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { Button, Skeleton, TabButtons, TextInput } from "frappe-ui";
 import { getList } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
@@ -99,8 +100,21 @@ const props = defineProps({
 
 const PAGE = 30;
 
-const view = ref(props.views[0].value);
-const search = ref("");
+// The tab and search live in the address, so Back from a record returns to them as they were.
+const route = useRoute();
+const router = useRouter();
+const view = ref(
+	props.views.some((option) => option.value === route.query.view)
+		? route.query.view
+		: props.views[0].value
+);
+const search = ref(typeof route.query.q === "string" ? route.query.q : "");
+
+function remember() {
+	const query = { ...route.query, view: view.value, q: search.value.trim() || undefined };
+	if (view.value === props.views[0].value) delete query.view;
+	router.replace({ query });
+}
 const records = ref([]);
 const hasMore = ref(false);
 const loading = ref(false);
@@ -144,6 +158,7 @@ async function load(more = false) {
 let typing;
 watch(view, () => {
 	records.value = [];
+	remember();
 	load();
 });
 watch(chosenCompanies, () => {
@@ -152,7 +167,10 @@ watch(chosenCompanies, () => {
 });
 watch(search, () => {
 	clearTimeout(typing);
-	typing = setTimeout(() => load(), 300);
+	typing = setTimeout(() => {
+		remember();
+		load();
+	}, 300);
 });
 // A client chosen earlier on this device applies once the clients are known.
 onMounted(() => loadClients().then(() => load()));

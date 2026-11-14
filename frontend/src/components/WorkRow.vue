@@ -1,8 +1,6 @@
 <template>
-	<component
-		:is="row.to ? RouterLink : 'a'"
+	<RouterLink
 		:to="row.to"
-		:href="row.to ? undefined : row.href"
 		class="group flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-gray-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
 	>
 		<span
@@ -30,7 +28,7 @@
 		>
 			{{ row.due.text }}
 		</span>
-	</component>
+	</RouterLink>
 </template>
 
 <script setup>

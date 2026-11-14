@@ -3,6 +3,7 @@ export const sections = [
 	{ label: "My Work", route: "MyWork", icon: "lucide-inbox", count: "overdue" },
 	{ label: "Filings", route: "Filings", icon: "lucide-calendar-check" },
 	{ label: "Register", route: "Register", icon: "lucide-file-badge" },
+	{ label: "Legal", route: "Legal", icon: "lucide-scale" },
 ];
 
 // Where each record opens until it has a screen of its own in the app.

@@ -17,6 +17,20 @@ export const routes = [
 		component: () => import("./pages/ComplianceTask.vue"),
 		props: true,
 	},
+	{ path: "/legal", name: "Legal", component: () => import("./pages/Legal.vue") },
+	{ path: "/legal/new", name: "NewNotice", component: () => import("./pages/NewNotice.vue") },
+	{
+		path: "/legal/case/:name",
+		name: "LegalCase",
+		component: () => import("./pages/LegalCase.vue"),
+		props: true,
+	},
+	{
+		path: "/legal/trademark/:name",
+		name: "Trademark",
+		component: () => import("./pages/Trademark.vue"),
+		props: true,
+	},
 	{ path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 

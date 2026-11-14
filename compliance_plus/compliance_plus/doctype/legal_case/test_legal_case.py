@@ -6,10 +6,12 @@ from frappe.tests import IntegrationTestCase
 
 from compliance_plus.compliance_plus.legal import run_daily
 from compliance_plus.compliance_plus.move_old_trackers import move_hearings
+from compliance_plus.compliance_plus.report.case_register.case_register import execute as case_register
 from compliance_plus.compliance_plus.report.contingent_liabilities.contingent_liabilities import (
 	execute as contingent_report,
 )
 from compliance_plus.compliance_plus.test_utils import (
+	AUDITOR,
 	HOLDER,
 	MANAGER,
 	OTHER_HOLDER,
@@ -195,3 +197,35 @@ class TestLegalCase(IntegrationTestCase):
 		self.assertIn("A. Advocate", case.summary)
 		hearing = frappe.get_doc("Legal Date", {"reference_name": case.name})
 		self.assertEqual(hearing.status, "Done")
+
+
+class TestLegalCaseAmounts(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_company()
+		make_users()
+
+	def test_amounts_and_risk_are_for_managers_and_auditors_only(self):
+		case = make_case(amount_involved=500000, provision=100000, risk="Possible")
+		with self.set_user(HOLDER):
+			read = frappe.get_doc("Legal Case", case.name)
+			read.apply_fieldlevel_read_permissions()
+			self.assertFalse(read.get("amount_involved"))
+			self.assertFalse(read.get("risk"))
+			columns, rows = case_register({})
+			self.assertNotIn("amount_involved", [column["fieldname"] for column in columns])
+			self.assertIn(case.name, [row.name for row in rows])
+		with self.set_user(AUDITOR):
+			columns, rows = case_register({})
+			row = next(row for row in rows if row.name == case.name)
+			self.assertEqual(row.amount_involved, 500000)
+
+	def test_a_compliance_user_saving_a_case_keeps_its_amounts(self):
+		case = make_case(amount_involved=500000, provision=100000, risk="Possible")
+		with self.set_user(HOLDER):
+			mine = frappe.get_doc("Legal Case", case.name)
+			mine.amount_involved = 1
+			mine.opposing_party = "Acme Traders"
+			mine.save()
+		self.assertEqual(frappe.db.get_value("Legal Case", case.name, "amount_involved"), 500000)

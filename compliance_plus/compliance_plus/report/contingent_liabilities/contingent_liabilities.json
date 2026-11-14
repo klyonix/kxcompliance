@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2026-11-14 15:00:00.000000",
+ "modified": "2026-11-14 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Contingent Liabilities",
@@ -25,9 +25,6 @@
   },
   {
    "role": "Compliance Manager"
-  },
-  {
-   "role": "Compliance User"
   },
   {
    "role": "Compliance Auditor"

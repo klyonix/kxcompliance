@@ -3,13 +3,21 @@
 
 import frappe
 from frappe import _
+from frappe.model import get_permitted_fields
 
 FILTER_FIELDS = ("company", "case_type", "forum", "status", "risk", "responsible")
 
 
 def execute(filters: dict | None = None):
 	filters = frappe._dict(filters or {})
-	return get_columns(), get_data(filters)
+	columns = permitted_columns()
+	return columns, get_data(filters, columns)
+
+
+def permitted_columns():
+	# Amount and risk are for Compliance Managers and Auditors; others see the cases without them.
+	readable = set(get_permitted_fields("Legal Case")) | {"name"}
+	return [column for column in get_columns() if column["fieldname"] in readable]
 
 
 def get_columns():
@@ -52,11 +60,12 @@ def get_columns():
 	]
 
 
-def get_data(filters: frappe._dict):
-	conditions = {field: filters[field] for field in FILTER_FIELDS if filters.get(field)}
+def get_data(filters: frappe._dict, columns: list[dict]):
+	fields = [column["fieldname"] for column in columns]
+	conditions = {field: filters[field] for field in FILTER_FIELDS if filters.get(field) and field in fields}
 	return frappe.get_list(
 		"Legal Case",
 		filters=conditions,
-		fields=[column["fieldname"] for column in get_columns()],
+		fields=fields,
 		order_by="next_date asc",
 	)

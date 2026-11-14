@@ -254,14 +254,16 @@
    "fieldname": "amount_involved",
    "fieldtype": "Currency",
    "label": "Amount Involved",
-   "options": "currency"
+   "options": "currency",
+   "permlevel": 1
   },
   {
    "description": "Amount provided for in the accounts, if any.",
    "fieldname": "provision",
    "fieldtype": "Currency",
    "label": "Provision",
-   "options": "currency"
+   "options": "currency",
+   "permlevel": 1
   },
   {
    "fetch_from": "company.default_currency",
@@ -282,7 +284,8 @@
    "in_standard_filter": 1,
    "label": "Risk",
    "mandatory_depends_on": "eval:doc.amount_involved",
-   "options": "\nProbable\nPossible\nRemote"
+   "options": "\nProbable\nPossible\nRemote",
+   "permlevel": 1
   },
   {
    "fieldname": "section_outcome",
@@ -335,7 +338,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-14 15:00:00.000000",
+ "modified": "2026-11-14 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Legal Case",
@@ -389,6 +392,23 @@
    "role": "Compliance Auditor",
    "share": 0,
    "write": 0
+  },
+  {
+   "role": "System Manager",
+   "permlevel": 1,
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Compliance Manager",
+   "permlevel": 1,
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Compliance Auditor",
+   "permlevel": 1,
+   "read": 1
   }
  ],
  "row_format": "Dynamic",

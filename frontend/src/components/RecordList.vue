@@ -4,6 +4,7 @@
 	</AppPageHeader>
 
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6">
+		<ClientPicker />
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 			<TabButtons v-model="view" :options="tabs" />
 			<TextInput
@@ -70,13 +71,17 @@
 
 <script setup>
 // A searchable list with a few fixed views, as the Register, Filings and Legal show. A view may
-// list its own doctype by carrying doctype, fields, toRow, searchField and searchPlaceholder.
+// list its own doctype by carrying doctype, fields, toRow, searchField and searchPlaceholder, and
+// companyField when its company is not in "company" (for the client filter).
 import { computed, onMounted, ref, watch } from "vue";
 import { Button, Skeleton, TabButtons, TextInput } from "frappe-ui";
 import { getList } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import ClientPicker from "@/components/ClientPicker.vue";
 import WorkRow from "@/components/WorkRow.vue";
+import { companyFilters } from "@/lib/clientFilter";
 import { searchFilter } from "@/lib/items";
+import { chosenCompanies, loadClients } from "@/stores/clientFilter";
 import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({
@@ -114,10 +119,14 @@ async function load(more = false) {
 	loading.value = true;
 	error.value = "";
 	try {
-		const { doctype, fields, filters, orderBy, searchField } = current.value;
+		const { doctype, fields, filters, orderBy, searchField, companyField } = current.value;
 		const page = await getList(doctype || props.doctype, {
 			fields: fields || props.fields,
-			filters: [...filters, ...searchFilter(search.value, searchField || props.searchField)],
+			filters: [
+				...filters,
+				...companyFilters(chosenCompanies.value, companyField),
+				...searchFilter(search.value, searchField || props.searchField),
+			],
 			orderBy,
 			start: more ? records.value.length : 0,
 			limit: PAGE,
@@ -137,9 +146,14 @@ watch(view, () => {
 	records.value = [];
 	load();
 });
+watch(chosenCompanies, () => {
+	records.value = [];
+	load();
+});
 watch(search, () => {
 	clearTimeout(typing);
 	typing = setTimeout(() => load(), 300);
 });
-onMounted(() => load());
+// A client chosen earlier on this device applies once the clients are known.
+onMounted(() => loadClients().then(() => load()));
 </script>

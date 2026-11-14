@@ -11,6 +11,7 @@ from werkzeug.test import EnvironBuilder
 from compliance_plus.api import (
 	add_client_document,
 	app_companies,
+	client_choices,
 	client_detail,
 	client_of_login,
 	clients_overview,
@@ -329,3 +330,22 @@ class TestComplianceClient(IntegrationTestCase):
 		ours.company = OTHER_COMPANY
 		ours.save()
 		self.assertEqual(frappe.db.get_value("Legal Date", our_date, "company"), OTHER_COMPANY)
+
+	def test_the_lists_offer_the_clients_a_person_works_on(self):
+		sunrise = client("Sunrise Group")
+		client("Moonlight Traders", team=(OTHER_HOLDER,))
+		gone = client("Old Client", status="Left")
+		profile(TEST_COMPANY, sunrise.name)
+		profile(SECOND_COMPANY, sunrise.name)
+		profile(OTHER_COMPANY, gone.name)
+		with self.set_user(HOLDER):
+			self.assertEqual(
+				client_choices(),
+				[{"name": "Sunrise Group", "companies": sorted([TEST_COMPANY, SECOND_COMPANY])}],
+			)
+		with self.set_user(MANAGER):
+			self.assertEqual(
+				[row["name"] for row in client_choices()], ["Moonlight Traders", "Sunrise Group"]
+			)
+		with self.set_user(CLIENT_LOGIN), self.assertRaises(frappe.PermissionError):
+			client_choices()

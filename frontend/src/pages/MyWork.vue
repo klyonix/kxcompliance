@@ -24,6 +24,8 @@
 			<p class="text-base text-ink-gray-6">{{ summary }}</p>
 		</div>
 
+		<ClientPicker />
+
 		<TabButtons v-if="rows.length" v-model="filter" :options="filterOptions" />
 
 		<p
@@ -91,6 +93,7 @@ import { computed, onMounted, ref } from "vue";
 import { Button, Skeleton, TabButtons } from "frappe-ui";
 import { boot, isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import ClientPicker from "@/components/ClientPicker.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { BUCKETS } from "@/pages/myWork";

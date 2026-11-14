@@ -6,6 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, add_months, getdate
 
+from compliance_plus.compliance_plus.legal import pass_company_to_dates
+
 # A date entered on the trademark, the deadline it starts, and how long that deadline runs.
 DEADLINES = (
 	("examination_report_on", "Examination Report Reply", 0, 30),
@@ -48,6 +50,8 @@ class Trademark(Document):
 			seen.add(row.class_number)
 
 	def on_update(self):
+		if self.has_value_changed("applicant"):
+			pass_company_to_dates(self.doctype, self.name, self.applicant)
 		for event_field, kind, months, days in DEADLINES:
 			if self.get(event_field) and self.has_value_changed(event_field):
 				self.set_deadline(

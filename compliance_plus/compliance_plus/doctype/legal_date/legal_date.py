@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate, nowdate
 
-from compliance_plus.compliance_plus.legal import REFERENCE_TITLES, refresh_next_date
+from compliance_plus.compliance_plus.legal import REFERENCE_COMPANIES, REFERENCE_TITLES, refresh_next_date
 
 OUTCOME_STATUSES = ("Done", "Adjourned")
 
@@ -22,12 +22,18 @@ class LegalDate(Document):
 		reference = frappe.db.get_value(
 			self.reference_doctype,
 			self.reference_name,
-			[REFERENCE_TITLES[self.reference_doctype], "responsible", "reviewer"],
+			[
+				REFERENCE_TITLES[self.reference_doctype],
+				f"{REFERENCE_COMPANIES[self.reference_doctype]} as company",
+				"responsible",
+				"reviewer",
+			],
 			as_dict=True,
 		)
 		if not reference:
 			frappe.throw(_("{0} {1} does not exist.").format(_(self.reference_doctype), self.reference_name))
 		self.reference_title = reference[REFERENCE_TITLES[self.reference_doctype]]
+		self.company = reference.company
 		self.responsible = reference.responsible
 		self.reviewer = reference.reviewer
 		if (

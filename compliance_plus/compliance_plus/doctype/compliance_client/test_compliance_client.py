@@ -310,3 +310,22 @@ class TestComplianceClient(IntegrationTestCase):
 				documents("Compliance Task", outside)
 			with self.assertRaises(frappe.PermissionError):
 				documents("User", CLIENT_LOGIN)
+
+	def test_the_team_and_the_clients_logins_see_its_hearings_and_deadlines(self):
+		from compliance_plus.compliance_plus.doctype.legal_case.test_legal_case import make_case, make_date
+
+		sunrise = with_login()  # with HOLDER on its team
+		profile(TEST_COMPANY, sunrise.name)
+		profile(OTHER_COMPANY)
+		ours = make_case(company=TEST_COMPANY, responsible=MANAGER, reviewer=None)
+		theirs = make_case(company=OTHER_COMPANY, responsible=MANAGER, reviewer=None)
+		our_date = make_date(ours.name, "2026-12-01").name
+		make_date(theirs.name, "2026-12-02")
+		self.assertEqual(frappe.db.get_value("Legal Date", our_date, "company"), TEST_COMPANY)
+		for user in (HOLDER, CLIENT_LOGIN):
+			with self.set_user(user):
+				self.assertEqual(frappe.get_list("Legal Date", pluck="name"), [our_date])
+		# The date follows its case to another company.
+		ours.company = OTHER_COMPANY
+		ours.save()
+		self.assertEqual(frappe.db.get_value("Legal Date", our_date, "company"), OTHER_COMPANY)

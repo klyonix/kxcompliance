@@ -82,6 +82,17 @@ EDITABLE_FIELDS = {
 		"remarks",
 	),
 	"Legal Date": ("status", "attended_by", "proceedings", "order", "next_date"),
+	# Approving moves the item's dates and certificate; the renewal's own rules decide who may.
+	"Compliance Renewal": (
+		"status",
+		"applied_on",
+		"application_reference",
+		"new_valid_from",
+		"new_valid_until",
+		"new_certificate",
+		"fee",
+		"notes",
+	),
 }
 
 

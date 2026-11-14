@@ -69,6 +69,46 @@
 				</p>
 			</section>
 
+			<section
+				v-if="openRenewal"
+				class="flex flex-col gap-3 rounded-lg bg-surface-blue-1 px-4 py-3"
+				aria-labelledby="open-renewal-heading"
+			>
+				<div class="flex flex-col gap-0.5">
+					<h2 id="open-renewal-heading" class="text-base font-semibold text-ink-gray-8">
+						{{ renewalTitle(openRenewal) }}
+					</h2>
+					<p class="text-base text-ink-gray-7">{{ renewalNext }}</p>
+				</div>
+				<div v-if="mayAct" class="flex flex-wrap gap-2">
+					<Button
+						v-if="isManager()"
+						variant="solid"
+						label="Complete renewal"
+						:disabled="!isConnected()"
+						@click="completing = true"
+					/>
+					<Button
+						label="Record new validity"
+						:disabled="!isConnected()"
+						@click="recording = true"
+					/>
+					<Button
+						v-if="openRenewal.status === 'Planned'"
+						label="Mark applied"
+						:disabled="!isConnected()"
+						@click="markApplied"
+					/>
+					<Dropdown :options="renewalMenu" align="start">
+						<Button
+							variant="ghost"
+							icon="lucide-ellipsis"
+							label="More renewal actions"
+						/>
+					</Dropdown>
+				</div>
+			</section>
+
 			<section class="flex flex-col gap-3" aria-labelledby="certificate-heading">
 				<h2 id="certificate-heading" class="text-base font-semibold text-ink-gray-8">
 					Certificate
@@ -163,6 +203,20 @@
 				</dl>
 			</section>
 
+			<RenewalDialog
+				v-model:open="recording"
+				:renewal="openRenewal"
+				:item-title="item.title"
+				@saved="renewalSaved"
+			/>
+			<RenewalDialog
+				v-model:open="completing"
+				:renewal="openRenewal"
+				:item-title="item.title"
+				complete
+				@saved="renewalSaved"
+			/>
+
 			<section class="flex flex-col gap-3" aria-labelledby="renewals-heading">
 				<h2 id="renewals-heading" class="text-base font-semibold text-ink-gray-8">
 					Renewals
@@ -191,8 +245,9 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, Dropdown, Skeleton, dialog, toast } from "frappe-ui";
-import { createDoc, getDoc, getList, runMethod } from "@/api";
-import { boot } from "@/boot";
+import { createDoc, getDoc, getList, runMethod, saveChanges } from "@/api";
+import { boot, isManager } from "@/boot";
+import RenewalDialog from "@/components/RenewalDialog.vue";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import {
@@ -292,6 +347,84 @@ const menu = computed(() => [
 		: []),
 ]);
 
+const recording = ref(false);
+const completing = ref(false);
+
+// What happens next with the open renewal, in a line.
+const renewalNext = computed(() => {
+	const renewal = openRenewal.value;
+	if (renewal.new_valid_until) {
+		return isManager()
+			? `New validity until ${formatDate(
+					renewal.new_valid_until
+			  )} is recorded. Complete it to move the item's dates.`
+			: `New validity until ${formatDate(
+					renewal.new_valid_until
+			  )} is recorded; a Compliance Manager completes it.`;
+	}
+	if (renewal.status === "Planned") return "Not applied for yet.";
+	return "When the authority issues it, record the new validity and certificate.";
+});
+
+const renewalMenu = computed(() => [
+	{ label: "Withdraw renewal", icon: "lucide-undo-2", onClick: () => closeRenewal("Withdrawn") },
+	...(isManager()
+		? [
+				{
+					label: "Renewal refused",
+					icon: "lucide-circle-x",
+					onClick: () => closeRenewal("Rejected"),
+				},
+		  ]
+		: []),
+]);
+
+async function renewalSaved(message) {
+	toast.success(message);
+	await load();
+}
+
+async function changeRenewal(values, message) {
+	try {
+		await saveChanges(
+			"Compliance Renewal",
+			openRenewal.value.name,
+			values,
+			openRenewal.value.modified
+		);
+		await renewalSaved(message);
+	} catch (err) {
+		toast.error(err.message);
+	}
+}
+
+function markApplied() {
+	dialog.prompt({
+		title: "Mark applied",
+		message: `${item.value.title} was applied for renewal today.`,
+		confirmLabel: "Mark applied",
+		fields: [
+			{
+				name: "application_reference",
+				label: "Application reference",
+				placeholder: "Acknowledgement or file number",
+			},
+		],
+		onConfirm: ({ values }) =>
+			changeRenewal({ status: "Applied", ...values }, "Marked applied"),
+	});
+}
+
+function closeRenewal(status) {
+	const words = status === "Withdrawn" ? "withdrawn" : "refused by the authority";
+	dialog.confirm({
+		title: status === "Withdrawn" ? "Withdraw renewal" : "Renewal refused",
+		message: `Mark this renewal of ${item.value.title} as ${words}? The item keeps its current dates.`,
+		confirmLabel: status === "Withdrawn" ? "Withdraw" : "Mark refused",
+		onConfirm: () => changeRenewal({ status }, `Renewal ${words}`),
+	});
+}
+
 const renewalTitle = (renewal) =>
 	renewal.new_valid_until
 		? `Renewed until ${formatDate(renewal.new_valid_until)}`
@@ -327,7 +460,11 @@ async function load() {
 					"status",
 					"applied_on",
 					"application_reference",
+					"new_valid_from",
 					"new_valid_until",
+					"new_certificate",
+					"fee",
+					"modified",
 				],
 				filters: [["compliance_item", "=", props.name]],
 				orderBy: "creation desc",

@@ -364,6 +364,17 @@ def client_detail(name: str) -> dict:
 		if names
 		else []
 	)
+	signatories = (
+		frappe.get_list(
+			"Signatory",
+			filters={"company": ("in", names), "is_active": 1},
+			fields=["name", "full_name", "designation", "company", "din", "is_active"],
+			order_by="full_name asc",
+			limit=100,
+		)
+		if names
+		else []
+	)
 	requests = frappe.get_list(
 		"Document Request",
 		filters={"client": name, "status": ("in", ("Requested", "Uploaded"))},
@@ -386,6 +397,7 @@ def client_detail(name: str) -> dict:
 		"filings": filings,
 		"requests": requests,
 		"signatures": signatures,
+		"signatories": signatories,
 		"year": {**year, "from_date": from_date, "to_date": to_date, "currency": currency_of(names)},
 		**add_up(counts, names),
 	}

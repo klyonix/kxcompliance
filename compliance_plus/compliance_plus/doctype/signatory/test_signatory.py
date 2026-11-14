@@ -129,3 +129,13 @@ class TestSignatory(IntegrationTestCase):
 			)
 			with self.assertRaises(frappe.PermissionError):
 				frappe.get_doc("Compliance Item", item.name).hand_over("With the Client")
+
+	def test_the_clients_page_lists_its_signatories(self):
+		frappe.db.delete("Compliance Client")
+		sunrise = with_login()
+		profile(TEST_COMPANY, sunrise.name)
+		signatory()
+		signatory("Former Director", is_active=0)
+		signatory("Other Company Person", OTHER_COMPANY)
+		people = [row.full_name for row in client_detail("Sunrise Group")["signatories"]]
+		self.assertEqual(people, ["Ravi Rao"])

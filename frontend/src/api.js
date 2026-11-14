@@ -178,6 +178,11 @@ export async function createDoc(doctype, values, { fetcher = fetch } = {}) {
 	return (await send(documentPath(doctype), json("POST", values), fetcher)).data;
 }
 
+// Change fields of a record, with the same permissions and rules as the Desk.
+export async function updateDoc(doctype, name, values, { fetcher = fetch } = {}) {
+	return (await send(documentPath(doctype, name), json("PUT", values), fetcher)).data;
+}
+
 // A document method that only reads, called with GET as the server requires.
 export async function readMethod(doctype, name, method, { fetcher = fetch } = {}) {
 	return (await send(`${documentPath(doctype, name)}method/${method}/`, json("GET"), fetcher))

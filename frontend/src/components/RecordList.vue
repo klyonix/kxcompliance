@@ -1,5 +1,5 @@
 <template>
-	<AppPageHeader :title="title">
+	<AppPageHeader :title="title" :parent="parent">
 		<template #actions><slot name="actions" /></template>
 	</AppPageHeader>
 
@@ -96,6 +96,8 @@ const props = defineProps({
 	searchPlaceholder: { type: String, default: "Search by title" },
 	// (view, searching) => { title, detail }
 	empty: { type: Function, required: true },
+	// For a list that belongs under another page, as AppPageHeader takes it.
+	parent: { type: Object, default: null },
 });
 
 const PAGE = 30;

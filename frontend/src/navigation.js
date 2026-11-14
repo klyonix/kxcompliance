@@ -48,6 +48,8 @@ export const CLIENT_ROUTES = [
 	"ComplianceTask",
 	"Register",
 	"ComplianceItem",
+	"Signatories",
+	"Signatory",
 	"Legal",
 	"LegalCase",
 	"Trademark",

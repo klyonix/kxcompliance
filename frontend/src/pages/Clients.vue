@@ -20,7 +20,7 @@
 				variant="solid"
 				icon-left="lucide-plus"
 				label="Add client"
-				href="/app/compliance-client/new"
+				:route="{ name: 'ClientNew' }"
 			/>
 		</template>
 	</AppPageHeader>

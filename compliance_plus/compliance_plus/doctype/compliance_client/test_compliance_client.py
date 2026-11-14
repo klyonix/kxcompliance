@@ -349,3 +349,13 @@ class TestComplianceClient(IntegrationTestCase):
 			)
 		with self.set_user(CLIENT_LOGIN), self.assertRaises(frappe.PermissionError):
 			client_choices()
+
+	def test_managers_are_offered_the_firms_people(self):
+		from compliance_plus.api import people_options
+
+		with self.set_user(MANAGER):
+			people = {row.name for row in people_options()}
+		self.assertTrue({HOLDER, OTHER_HOLDER, MANAGER} <= people)
+		self.assertNotIn(CLIENT_LOGIN, people)
+		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
+			people_options()

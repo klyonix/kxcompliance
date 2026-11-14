@@ -137,6 +137,31 @@
 				/>
 			</section>
 
+			<section class="flex flex-col gap-1" aria-labelledby="signatories-heading">
+				<div class="flex items-center justify-between gap-3 pb-2">
+					<h2 id="signatories-heading" class="text-base font-semibold text-ink-gray-8">
+						Signatories
+					</h2>
+					<Button
+						v-if="mayRecord() && !clientLogin && client.companies.length"
+						icon-left="lucide-plus"
+						label="Add signatory"
+						:route="{
+							name: 'SignatoryNew',
+							query: { company: client.companies[0].company },
+						}"
+					/>
+				</div>
+				<p v-if="!client.signatories.length" class="text-base text-ink-gray-5">
+					No directors, partners or signatories recorded yet.
+				</p>
+				<WorkRow
+					v-for="signatory in client.signatories"
+					:key="signatory.name"
+					:row="signatoryRow(signatory)"
+				/>
+			</section>
+
 			<section class="flex flex-col gap-1" aria-labelledby="open-heading">
 				<h2 id="open-heading" class="pb-2 text-base font-semibold text-ink-gray-8">
 					Open filings
@@ -166,7 +191,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, Dropdown, Skeleton } from "frappe-ui";
 import { useRouter } from "vue-router";
 import { call } from "@/api";
-import { isClientLogin, mayRecord, mayUseDesk } from "@/boot";
+import { isClientLogin, isManager, mayRecord, mayUseDesk } from "@/boot";
 import AskDocument from "@/components/AskDocument.vue";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import WorkRow from "@/components/WorkRow.vue";
@@ -176,6 +201,7 @@ import { formatDate } from "@/lib/format";
 import { taskRow } from "@/lib/filings";
 import { DSC_TYPE, itemRow } from "@/lib/items";
 import { requestRow } from "@/lib/requests";
+import { signatoryRow } from "@/lib/signatories";
 import { deskActions } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
 
@@ -216,6 +242,16 @@ const people = computed(() => {
 });
 
 const menu = computed(() => [
+	...(isManager() && !clientLogin
+		? [
+				{
+					label: "Edit client",
+					icon: "lucide-pencil",
+					onClick: () =>
+						router.push({ name: "ClientEdit", params: { name: props.name } }),
+				},
+		  ]
+		: []),
 	...deskActions("Compliance Client", props.name),
 	...(mayUseDesk()
 		? [

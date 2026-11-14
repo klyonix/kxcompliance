@@ -1,5 +1,8 @@
 <template>
-	<AppPageHeader :title="task?.obligation_template || 'Filing'">
+	<AppPageHeader
+		:title="task?.obligation_template || 'Filing'"
+		:parent="{ label: 'Filings', route: { name: 'Filings' } }"
+	>
 		<template #actions>
 			<Dropdown v-if="task && menu.length" :options="menu" align="end">
 				<Button variant="ghost" icon="lucide-ellipsis" label="More actions" />

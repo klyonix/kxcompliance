@@ -1,5 +1,8 @@
 <template>
-	<AppPageHeader :title="client?.name || 'Client'">
+	<AppPageHeader
+		:title="client?.name || 'Client'"
+		:parent="clientLogin ? null : { label: 'Clients', route: { name: 'Clients' } }"
+	>
 		<template #actions>
 			<Dropdown v-if="client && menu.length" :options="menu" align="end">
 				<Button variant="ghost" icon="lucide-ellipsis" label="More actions" />

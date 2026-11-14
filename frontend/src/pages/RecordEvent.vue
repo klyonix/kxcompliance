@@ -1,5 +1,8 @@
 <template>
-	<AppPageHeader title="Record an event" />
+	<AppPageHeader
+		title="Record an event"
+		:parent="{ label: 'Filings', route: { name: 'Filings' } }"
+	/>
 
 	<div class="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 py-6 sm:px-6">
 		<template v-if="recorded">

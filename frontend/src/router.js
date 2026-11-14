@@ -4,6 +4,7 @@ import { noteNoResponse } from "./offline/reachability";
 
 export const routes = [
 	{ path: "/", name: "MyWork", component: () => import("./pages/MyWork.vue") },
+	{ path: "/search", name: "Search", component: () => import("./pages/Search.vue") },
 	{ path: "/overview", name: "Overview", component: () => import("./pages/Overview.vue") },
 	{ path: "/account", name: "Account", component: () => import("./pages/Account.vue") },
 	{ path: "/register", name: "Register", component: () => import("./pages/Register.vue") },

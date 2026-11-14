@@ -4,7 +4,8 @@
 import frappe
 from frappe import _
 
-from compliance_plus.compliance_plus.client_reports import financial_year, summarise
+from compliance_plus.compliance_plus.client_reports import companies_by_client, financial_year, summarise
+from compliance_plus.compliance_plus.score import company_scores, worst
 
 
 def execute(filters: dict | None = None):
@@ -43,6 +44,13 @@ def get_columns():
 			"fieldtype": "Int",
 			"width": 120,
 		},
+		{"label": _("Lowest Score"), "fieldname": "lowest_score", "fieldtype": "Int", "width": 110},
+		{
+			"label": _("Late Fees Building Up"),
+			"fieldname": "late_fees_so_far",
+			"fieldtype": "Currency",
+			"width": 130,
+		},
 		{
 			"label": _("Relationship Manager"),
 			"fieldname": "relationship_manager",
@@ -63,10 +71,21 @@ def get_data(filters: frappe._dict) -> list[dict]:
 		"Compliance Client", filters=conditions, fields=["name", "relationship_manager"], order_by="name asc"
 	)
 	totals = summarise([row.name for row in clients], filters.from_date, filters.to_date)
-	rows = [
-		{"client": row.name, "relationship_manager": row.relationship_manager, **totals[row.name]}
-		for row in clients
-	]
+	client_of = companies_by_client([row.name for row in clients])
+	scores = company_scores(list(client_of))
+	rows = []
+	for row in clients:
+		companies = [company for company, client in client_of.items() if client == row.name]
+		lowest = worst(scores, companies)
+		rows.append(
+			{
+				"client": row.name,
+				"relationship_manager": row.relationship_manager,
+				**totals[row.name],
+				"lowest_score": lowest["score"] if lowest else None,
+				"late_fees_so_far": sum(scores[company]["late_fees_so_far"] for company in companies),
+			}
+		)
 	# The clients that need the firm most come first: overdue filings, then the lowest on-time rate.
 	return sorted(
 		rows,

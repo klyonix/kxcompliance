@@ -37,6 +37,16 @@
   "requires_payment",
   "section_reminders",
   "reminders",
+  "section_penalty",
+  "late_fee_per_day",
+  "late_fee_flat",
+  "late_fee_cap",
+  "cap_at_tax",
+  "column_break_penalty",
+  "interest_percent",
+  "penalty_rule",
+  "penalty_checked_on",
+  "penalty_set_by_firm",
   "section_notes",
   "description"
  ],
@@ -236,6 +246,64 @@
    "options": "Compliance Reminder Rule"
   },
   {
+   "fieldname": "section_penalty",
+   "fieldtype": "Section Break",
+   "label": "Late Filing",
+   "collapsible": 1,
+   "description": "What filing late costs, for the penalty estimate. The app keeps the standard templates' figures up to date unless Set by Us is ticked."
+  },
+  {
+   "fieldname": "late_fee_per_day",
+   "fieldtype": "Currency",
+   "label": "Late Fee per Day"
+  },
+  {
+   "fieldname": "late_fee_flat",
+   "fieldtype": "Currency",
+   "label": "Late Fee (One-off)",
+   "description": "Charged once the filing is late, such as ₹5,000 for DIR-3 KYC."
+  },
+  {
+   "fieldname": "late_fee_cap",
+   "fieldtype": "Currency",
+   "label": "Late Fee Cap",
+   "description": "The most the late fee can come to; 0 for no cap."
+  },
+  {
+   "fieldname": "cap_at_tax",
+   "fieldtype": "Check",
+   "label": "Capped at the Tax Amount",
+   "description": "The late fee cannot exceed the tax deducted or paid (as under s.234E)."
+  },
+  {
+   "fieldname": "column_break_penalty",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "interest_percent",
+   "fieldtype": "Float",
+   "label": "Interest (% a Year)",
+   "description": "On tax paid late."
+  },
+  {
+   "fieldname": "penalty_rule",
+   "fieldtype": "Small Text",
+   "label": "The Rule",
+   "description": "The rule in words, with its section, including fines the estimate cannot count."
+  },
+  {
+   "fieldname": "penalty_checked_on",
+   "fieldtype": "Date",
+   "label": "Penalty Checked On",
+   "description": "When a chartered accountant last confirmed these figures. Blank means not yet."
+  },
+  {
+   "fieldname": "penalty_set_by_firm",
+   "fieldtype": "Check",
+   "label": "Set by Us",
+   "description": "Keep these figures as they are when the app updates its library."
+  },
+  {
    "collapsible": 1,
    "fieldname": "section_notes",
    "fieldtype": "Section Break",
@@ -257,7 +325,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-16 10:00:00.000000",
+ "modified": "2026-11-24 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Obligation Template",

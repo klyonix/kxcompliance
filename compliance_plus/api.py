@@ -17,6 +17,7 @@ from compliance_plus.compliance_plus import (
 	companies,
 	document_requests,
 	onboarding,
+	score,
 	setup_import,
 )
 from compliance_plus.compliance_plus.company_events import event_types_for
@@ -551,6 +552,15 @@ def client_of_login() -> str:
 		return ""
 	clients = frappe.get_list("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name", limit=1)
 	return clients[0] if clients else ""
+
+
+@frappe.whitelist(methods=["GET"])
+def filing_penalty(task: str) -> dict:
+	"""What filing late costs, or would cost, for one filing the person may read."""
+	check_reader_access()
+	doc = frappe.get_doc("Compliance Task", task)
+	doc.check_permission("read")
+	return score.filing_penalty(doc)
 
 
 @frappe.whitelist(methods=["GET"])

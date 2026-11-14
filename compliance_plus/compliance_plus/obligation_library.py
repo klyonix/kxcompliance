@@ -13,6 +13,8 @@ Extension on the site, and here in the next release.
 
 import frappe
 
+from compliance_plus.compliance_plus.penalty_library import keep_firms_figures, penalty_of
+
 COMPANIES = ["Private Limited", "Public Limited", "One Person Company"]
 FIRMS = ["LLP", "Partnership"]
 QRMP_22_STATES = [
@@ -687,10 +689,12 @@ def sync_standard_templates():
 	sync_standard_event_types()
 	for values in LIBRARY:
 		name = values["template_name"]
+		values = {**values, **penalty_of(values)}
 		if frappe.db.exists("Compliance Obligation Template", name):
 			doc = frappe.get_doc("Compliance Obligation Template", name)
 			for fieldname in CLIENT_OWNED_FIELDS:
 				values = {**values, fieldname: doc.get(fieldname)}
+			values = keep_firms_figures(doc, values)
 			# update() replaces child tables wholesale, so rows dropped from LIBRARY go too.
 			doc.update({key: value for key, value in values.items() if key != "template_name"})
 		else:

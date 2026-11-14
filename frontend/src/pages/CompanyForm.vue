@@ -18,6 +18,31 @@
 		</div>
 
 		<template v-else>
+			<section
+				v-if="score"
+				class="flex items-start gap-4 rounded-lg border border-outline-gray-1 px-4 py-4"
+				aria-labelledby="score-heading"
+			>
+				<ScoreBadge :score="score.score" />
+				<div class="flex min-w-0 flex-1 flex-col gap-1">
+					<h2 id="score-heading" class="text-base font-semibold text-ink-gray-8">
+						Compliance score {{ score.score }} of 100
+					</h2>
+					<p v-if="!score.reasons.length" class="text-base text-ink-gray-6">
+						Nothing to fix.
+					</p>
+					<ul v-else class="flex flex-col gap-0.5 text-base text-ink-gray-7">
+						<li v-for="reason in score.reasons" :key="reason.key">
+							{{ reason.label }} ({{ reason.points }})
+						</li>
+					</ul>
+					<p v-if="score.late_fees_so_far" class="text-base font-medium text-ink-red-4">
+						Late fees building up on overdue filings:
+						{{ formatMoney(score.late_fees_so_far) }}
+					</p>
+				</div>
+			</section>
+
 			<section class="flex flex-col gap-4" aria-labelledby="company-heading">
 				<h2 id="company-heading" class="text-base font-semibold text-ink-gray-8">
 					Company
@@ -213,6 +238,8 @@ import { Button, FormControl, Skeleton, TabButtons, toast } from "frappe-ui";
 import { call } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import ScoreBadge from "@/components/ScoreBadge.vue";
+import { formatMoney } from "@/lib/format";
 import { personOptions } from "@/lib/people";
 import { notLoaded } from "@/offline/reachability";
 
@@ -225,6 +252,7 @@ const notSetUpList = ref([]);
 const error = ref("");
 const saveError = ref("");
 const saving = ref(false);
+const score = ref(null);
 const form = reactive({
 	mode: "existing",
 	existing: "",
@@ -300,6 +328,7 @@ async function load() {
 			const detail = await call("compliance_plus.api.company_detail", {
 				company: props.company,
 			});
+			score.value = detail.score;
 			Object.assign(form, {
 				company_type: detail.company_type || "",
 				client: detail.client || "",

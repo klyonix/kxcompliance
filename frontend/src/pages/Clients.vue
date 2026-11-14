@@ -56,7 +56,12 @@
 					:to="{ name: 'Client', params: { name: client.name } }"
 					class="flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-surface-gray-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
 				>
-					<Avatar :label="client.name" size="lg" />
+					<ScoreBadge
+						:score="client.lowest_score?.score ?? null"
+						:title="
+							client.lowest_score ? `Lowest: ${client.lowest_score.company}` : ''
+						"
+					/>
 					<span class="flex min-w-0 flex-1 flex-col gap-0.5">
 						<span class="truncate text-base font-medium text-ink-gray-8">{{
 							client.name
@@ -76,10 +81,11 @@
 
 <script setup>
 import { onMounted, ref } from "vue";
-import { Avatar, Button, Skeleton } from "frappe-ui";
+import { Button, Skeleton } from "frappe-ui";
 import { call } from "@/api";
 import { isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import ScoreBadge from "@/components/ScoreBadge.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { clientAttention, clientTheme, companiesLine } from "@/lib/clients";
 import { notLoaded } from "@/offline/reachability";

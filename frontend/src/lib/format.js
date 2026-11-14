@@ -25,3 +25,12 @@ export function formatDateTime(value) {
 
 // The same order for what a date picker shows, in its own (dayjs) tokens.
 export const pickerFormat = () => (dayFirst() ? "D MMM YYYY" : "MMM D, YYYY");
+
+// An amount of money, whole units; the app's penalties and fees are in rupees unless told otherwise.
+export function formatMoney(amount, currency = "INR") {
+	return new Intl.NumberFormat(locale(), {
+		style: currency ? "currency" : "decimal",
+		currency: currency || undefined,
+		maximumFractionDigits: 0,
+	}).format(amount || 0);
+}

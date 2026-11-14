@@ -110,10 +110,7 @@
 						:key="company.company"
 						class="flex items-center gap-3 border-b border-outline-gray-1 py-2.5 last:border-b-0"
 					>
-						<span
-							class="lucide-building-2 size-4 text-ink-gray-5"
-							aria-hidden="true"
-						/>
+						<ScoreBadge :score="company.score.score" />
 						<span class="flex min-w-0 flex-1 flex-col">
 							<RouterLink
 								v-if="isManager() && !clientLogin"
@@ -124,7 +121,12 @@
 							<span v-else class="truncate text-base text-ink-gray-8">{{
 								company.company
 							}}</span>
-							<span class="text-sm text-ink-gray-5">{{ company.company_type }}</span>
+							<span class="truncate text-sm text-ink-gray-5">{{
+								[
+									company.company_type,
+									...company.score.reasons.map((reason) => reason.label),
+								].join(" · ")
+							}}</span>
 						</span>
 						<span class="text-sm" :class="TONE[clientTheme(company)]">{{
 							clientAttention(company)
@@ -204,6 +206,7 @@ import { RouterLink, useRouter } from "vue-router";
 import { call } from "@/api";
 import { isClientLogin, isManager, mayRecord, mayUseDesk } from "@/boot";
 import AskDocument from "@/components/AskDocument.vue";
+import ScoreBadge from "@/components/ScoreBadge.vue";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";

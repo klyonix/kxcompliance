@@ -19,6 +19,7 @@ from frappe.utils import add_days, nowdate
 from compliance_plus.compliance_plus.client_reports import financial_year, summarise
 from compliance_plus.compliance_plus.doctype.compliance_item.compliance_item import DSC_TYPE
 from compliance_plus.compliance_plus.register import CLOSED_TASK_STATUSES
+from compliance_plus.compliance_plus.score import company_scores, worst
 from compliance_plus.install import CLIENT_ROLE
 from compliance_plus.permissions import is_restricted
 
@@ -299,9 +300,11 @@ def clients_overview() -> list[dict]:
 	for row in profiles:
 		companies_of.setdefault(row.client, []).append(row.company)
 	counts = filing_counts([row.company for row in profiles])
+	scores = company_scores([row.company for row in profiles])
 	for row in clients:
 		row.companies = sorted(companies_of.get(row.name, []))
 		row.update(add_up(counts, row.companies))
+		row.lowest_score = worst(scores, row.companies)
 	return sorted(clients, key=lambda row: (-row.overdue, -row.due_this_week, row.name))
 
 
@@ -340,8 +343,10 @@ def client_detail(name: str) -> dict:
 	)
 	names = [row.company for row in companies]
 	counts = filing_counts(names)
+	scores = company_scores(names)
 	for row in companies:
 		row.update(counts[row.company])
+		row.score = scores[row.company]
 	filings = (
 		frappe.get_list(
 			"Compliance Task",

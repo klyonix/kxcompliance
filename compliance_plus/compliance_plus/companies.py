@@ -22,6 +22,7 @@ from compliance_plus.compliance_plus.onboarding import (
 	set_up_company,
 )
 from compliance_plus.compliance_plus.register import is_approver
+from compliance_plus.compliance_plus.score import company_scores
 from compliance_plus.compliance_plus.statutory import generate_tasks
 
 PROFILE = "Company Compliance Profile"
@@ -129,6 +130,7 @@ def company_detail(company: str) -> dict:
 			for row in profile.obligations
 		],
 		"modified": str(profile.modified),
+		"score": company_scores([profile.company])[profile.company],
 	}
 
 

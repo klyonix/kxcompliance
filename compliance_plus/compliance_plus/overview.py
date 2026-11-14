@@ -243,7 +243,19 @@ def get_overview() -> dict:
 			},
 		],
 		"on_time": on_time_rate(today),
+		"scores": scores_worst_first(),
 	}
+
+
+def scores_worst_first() -> list[dict]:
+	"""Every company the person may see that is set up, by score, the lowest first."""
+	# Imported here: score.py takes its case statuses and party holders from this module.
+	from compliance_plus.compliance_plus.score import company_scores
+
+	companies = frappe.get_list("Company Compliance Profile", pluck="company", limit=1000)
+	scores = company_scores(companies)
+	rows = [{"company": company, **scores[company]} for company in companies]
+	return sorted(rows, key=lambda row: (row["score"], -row["late_fees_so_far"], row["company"]))
 
 
 def on_time_rate(today: str) -> dict:

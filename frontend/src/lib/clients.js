@@ -1,4 +1,5 @@
 // How a firm's clients show: what needs attention, in words and colour.
+import { formatMoney } from "@/lib/format";
 
 export function clientAttention(client) {
 	const parts = [];
@@ -20,13 +21,6 @@ export function companiesLine(companies) {
 	return `${companies[0]} and ${companies.length - 1} more`;
 }
 
-const money = (amount, currency) =>
-	new Intl.NumberFormat(undefined, {
-		style: currency ? "currency" : "decimal",
-		currency: currency || undefined,
-		maximumFractionDigits: 0,
-	}).format(amount || 0);
-
 // A client's year in a few numbers, each with a tone: red or amber when it needs the firm.
 export function yearFacts(year, { client = false } = {}) {
 	const counted = year.on_time + year.late + year.overdue;
@@ -46,7 +40,7 @@ export function yearFacts(year, { client = false } = {}) {
 		},
 		{
 			label: "Late fees and interest",
-			value: money(paid, year.currency),
+			value: formatMoney(paid, year.currency),
 			detail: paid ? "Paid on late filings" : "None paid",
 			tone: paid ? "amber" : "gray",
 		},

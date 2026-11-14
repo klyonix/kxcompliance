@@ -53,6 +53,25 @@
 				</p>
 			</section>
 
+			<section
+				v-if="penaltyText.length"
+				class="flex flex-col gap-1 rounded-lg px-4 py-3"
+				:class="penalty.days_late ? 'bg-surface-red-1' : 'bg-surface-amber-1'"
+				aria-labelledby="penalty-heading"
+			>
+				<h2 id="penalty-heading" class="text-base font-semibold text-ink-gray-8">
+					{{ penalty.days_late ? "Cost of filing late" : "If it is filed late" }}
+				</h2>
+				<p v-for="line in penaltyText" :key="line" class="text-base text-ink-gray-8">
+					{{ line }}
+				</p>
+				<details v-if="penalty.rule" class="text-sm text-ink-gray-6">
+					<summary class="cursor-pointer">The rule</summary>
+					<p class="mt-1">{{ penalty.rule }}</p>
+					<p class="mt-1">{{ penaltySource }}</p>
+				</details>
+			</section>
+
 			<section class="flex flex-col gap-4" aria-labelledby="filing-heading">
 				<h2 id="filing-heading" class="text-base font-semibold text-ink-gray-8">Filing</h2>
 
@@ -324,6 +343,7 @@ import { boot, isClientLogin, mayRecord } from "@/boot";
 import AskDocument from "@/components/AskDocument.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { OPEN_REQUEST_STATUSES, REQUEST_FIELDS, requestRow } from "@/lib/requests";
+import { penaltyLines } from "@/lib/score";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import {
@@ -370,6 +390,22 @@ const uploadError = ref("");
 // Documents asked of the client for this filing (CA/CS firms).
 const router = useRouter();
 const requests = ref([]);
+
+// What filing late costs: shown while the filing is open, and for one filed late.
+const penalty = ref(null);
+const penaltyText = computed(() => {
+	if (!penalty.value || !task.value) return [];
+	const open = !CLOSED_STATUSES.includes(task.value.status);
+	if (!open && task.value.status !== "Filed Late") return [];
+	return penaltyLines(penalty.value, { open });
+});
+const penaltySource = computed(() => {
+	if (penalty.value.set_by_firm) return "Figures set by your firm.";
+	if (penalty.value.checked_on) {
+		return `Checked by a chartered accountant on ${formatDate(penalty.value.checked_on)}.`;
+	}
+	return "An estimate from the Act; not yet checked by a chartered accountant.";
+});
 const asking = ref(false);
 const isFirm = boot.accountType === "CA/CS Firm";
 const mayAsk = computed(
@@ -518,6 +554,15 @@ async function loadDocuments() {
 	} catch {
 		// Documents are extra; the filing is still useful without them, offline included.
 		allDocuments.value = [];
+	}
+}
+
+async function loadPenalty() {
+	try {
+		penalty.value = await call("compliance_plus.api.filing_penalty", { task: props.name });
+	} catch {
+		// The estimate is extra; the filing is still useful without it, offline included.
+		penalty.value = null;
 	}
 }
 
@@ -684,11 +729,13 @@ watch(
 		load();
 		loadDocuments();
 		loadRequests();
+		loadPenalty();
 	}
 );
 onMounted(() => {
 	load();
 	loadDocuments();
 	loadRequests();
+	loadPenalty();
 });
 </script>

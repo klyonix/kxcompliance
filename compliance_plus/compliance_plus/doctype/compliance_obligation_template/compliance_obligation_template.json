@@ -21,6 +21,7 @@
   "column_break_rule",
   "months_after_period",
   "due_day",
+  "event_type",
   "days_after_event",
   "overrides",
   "section_applies",
@@ -110,7 +111,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Frequency",
-   "options": "Monthly\nQuarterly\nHalf-yearly\nYearly",
+   "options": "Monthly\nQuarterly\nHalf-yearly\nYearly\nPer Event",
    "reqd": 1
   },
   {
@@ -122,10 +123,10 @@
    "reqd": 1
   },
   {
-   "description": "Counted from the AGM date on the company's profile instead of from the period.",
+   "description": "Due a number of days after the AGM, or after a company event when Event Type is set.",
    "fieldname": "due_after_event",
    "fieldtype": "Check",
-   "label": "Due After the AGM"
+   "label": "Due After an Event"
   },
   {
    "fieldname": "column_break_rule",
@@ -244,11 +245,19 @@
    "fieldname": "description",
    "fieldtype": "Text Editor",
    "label": "Description"
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Link",
+   "label": "Event Type",
+   "options": "Compliance Event Type",
+   "depends_on": "eval:doc.due_after_event",
+   "description": "Leave empty for a filing due after the AGM."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-15 10:05:00.000000",
+ "modified": "2026-11-15 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Obligation Template",

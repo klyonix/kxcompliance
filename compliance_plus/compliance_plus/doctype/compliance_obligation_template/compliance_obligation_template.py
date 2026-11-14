@@ -9,10 +9,21 @@ from frappe.model.document import Document
 class ComplianceObligationTemplate(Document):
 	def validate(self):
 		if self.due_after_event:
-			self.frequency = "Yearly"
+			# After a company event when an Event Type is set; otherwise after the AGM.
+			self.frequency = "Per Event" if self.event_type else "Yearly"
 			self.period_basis = "Financial Year"
 			if not self.days_after_event:
-				frappe.throw(_("Set how many days after the AGM {0} is due.").format(self.template_name))
+				frappe.throw(
+					_("Set how many days after the {0} {1} is due.").format(
+						_(self.event_type) if self.event_type else _("AGM"), self.template_name
+					)
+				)
+		elif self.event_type or self.frequency == "Per Event":
+			frappe.throw(
+				_("{0} has an Event Type or the Per Event frequency, so tick Due After an Event.").format(
+					self.template_name
+				)
+			)
 		elif not 1 <= (self.due_day or 0) <= 31:
 			frappe.throw(_("Due Day must be between 1 and 31, not {0}.").format(self.due_day))
 		for row in self.overrides:

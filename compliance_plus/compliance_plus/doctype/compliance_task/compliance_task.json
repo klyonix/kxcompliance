@@ -15,6 +15,7 @@
   "status",
   "is_overdue",
   "period_label",
+  "company_event",
   "period_start",
   "period_end",
   "section_due",
@@ -258,11 +259,20 @@
    "print_hide": 1,
    "read_only": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "company_event",
+   "fieldtype": "Link",
+   "label": "Company Event",
+   "options": "Compliance Event",
+   "read_only": 1,
+   "search_index": 1,
+   "depends_on": "eval:doc.company_event"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-14 12:00:00.000000",
+ "modified": "2026-11-15 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Compliance Plus",
  "name": "Compliance Task",

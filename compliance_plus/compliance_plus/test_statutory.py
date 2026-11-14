@@ -121,7 +121,7 @@ class TestStatutoryRules(IntegrationTestCase):
 		templates = frappe.get_all(
 			"Compliance Obligation Template", filters={"is_standard": 1}, fields=["checked_on"]
 		)
-		self.assertEqual(len(templates), 65)
+		self.assertEqual(len(templates), 77)
 		self.assertTrue(all(row.checked_on is None for row in templates))
 
 	def test_a_template_due_after_the_agm_needs_its_days(self):

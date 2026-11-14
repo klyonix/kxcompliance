@@ -1,8 +1,16 @@
-import { checksOnly } from "./boot";
+import { checksOnly, isManager } from "./boot";
 
 // The app's sections, in the order they appear in the side bar and the phone's tab bar.
 const ALL_SECTIONS = [
 	{ label: "My Work", route: "MyWork", icon: "lucide-inbox", count: "overdue" },
+	// Managers only; on phones it opens from My Work, as the tab bar has no room for it.
+	{
+		label: "Overview",
+		route: "Overview",
+		icon: "lucide-layout-dashboard",
+		managers: true,
+		desktopOnly: true,
+	},
 	{ label: "Filings", route: "Filings", icon: "lucide-calendar-check" },
 	{ label: "Register", route: "Register", icon: "lucide-file-badge" },
 	{ label: "Legal", route: "Legal", icon: "lucide-scale" },
@@ -17,7 +25,7 @@ const ALL_SECTIONS = [
 
 export const sections = checksOnly()
 	? ALL_SECTIONS.filter((section) => section.route === "LicenceCheck")
-	: ALL_SECTIONS;
+	: ALL_SECTIONS.filter((section) => !section.managers || isManager());
 
 // Where each record opens until it has a screen of its own in the app.
 export const deskRoute = (doctype, name) =>

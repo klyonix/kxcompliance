@@ -6,7 +6,8 @@ import json
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from compliance_plus.api import app_companies, log_notice, my_work, save_changes
+from compliance_plus.api import app_companies, log_notice, my_work, overview, save_changes
+from compliance_plus.compliance_plus.overview import desk_link, total
 from compliance_plus.compliance_plus.test_utils import (
 	AUDITOR,
 	HOLDER,
@@ -112,6 +113,38 @@ class TestAppApi(IntegrationTestCase):
 		).insert()
 		with self.set_user(HOLDER):
 			self.assertEqual(app_companies(), [TEST_COMPANY])
+
+	def overview_card(self, section: str, label: str) -> dict:
+		with self.set_user(MANAGER):
+			result = overview()
+		cards = next(group["cards"] for group in result["sections"] if group["title"] == section)
+		return next(card for card in cards if card["label"] == label)
+
+	def test_the_overview_counts_what_needs_a_look_and_is_for_managers(self):
+		before = self.overview_card("Register", "Expired or lapsed")["value"]
+		make_item("Test App Licence", days=-30, responsible=HOLDER)
+		after = self.overview_card("Register", "Expired or lapsed")
+		self.assertEqual(after["value"], before + 1)
+		self.assertTrue(after["link"].startswith("/app/compliance-item?"))
+		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
+			overview()
+
+	def test_overview_links_carry_their_filters_for_the_desk_list(self):
+		link = desk_link(
+			"Compliance Item", {"status": ("in", ["Expired", "Lapsed"]), "holder_type": "Company"}
+		)
+		self.assertEqual(
+			link,
+			"/app/compliance-item?status=%5B%22in%22%2C+%5B%22Expired%22%2C+%22Lapsed%22%5D%5D"
+			"&holder_type=Company",
+		)
+		rows = [
+			frappe._dict(status="Filed", count=6),
+			frappe._dict(status="Filed Late", count=2),
+			frappe._dict(status="Open", count=1),
+		]
+		self.assertEqual(total(rows, status=["Filed", "Filed Late"]), 8)
+		self.assertEqual(total(rows, status="Open"), 1)
 
 	def test_the_manifest_carries_the_sites_name_and_logo(self):
 		with self.change_settings(

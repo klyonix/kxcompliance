@@ -5,7 +5,14 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from compliance_plus.api import boot, complete_onboarding, onboarding_options
-from compliance_plus.compliance_plus.test_utils import HOLDER, MANAGER, REVIEWER, make_company, make_users
+from compliance_plus.compliance_plus.test_utils import (
+	HOLDER,
+	MANAGER,
+	REVIEWER,
+	TEST_COMPANY,
+	make_company,
+	make_users,
+)
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User"]
@@ -123,3 +130,77 @@ class TestOnboarding(IntegrationTestCase):
 			with self.assertRaisesRegex(frappe.ValidationError, "organisation or a CA/CS firm"):
 				complete_onboarding(answers(account_type="Club"))
 		self.assertFalse(frappe.db.get_single_value(SETTINGS, "setup_complete"))
+
+
+APP_COMPANY = "App Test Traders Private Limited"
+
+
+class TestCompaniesInTheApp(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_company()
+		make_users()
+		# A Compliance Manager sets up an existing company; creating one needs a System Manager.
+		if not frappe.db.exists("Company", APP_COMPANY):
+			frappe.get_doc(
+				{
+					"doctype": "Company",
+					"company_name": APP_COMPANY,
+					"abbr": "ATTPL",
+					"default_currency": "INR",
+					"country": "India",
+				}
+			).insert()
+
+	def setUp(self):
+		for company in (NEW_COMPANY, APP_COMPANY):
+			if frappe.db.exists("Company Compliance Profile", company):
+				frappe.delete_doc("Company Compliance Profile", company, force=True)
+			frappe.db.delete("Compliance Task", {"company": company})
+
+	def test_a_manager_sets_a_company_up_and_changes_it(self):
+		from compliance_plus.api import companies_overview, company_detail, save_company
+
+		values = {
+			"company_type": "Private Limited",
+			"default_responsible": HOLDER,
+			"default_reviewer": REVIEWER,
+			"registrations": [
+				{"registration_type": "GST", "registration_number": "29AAACA1234F1Z5", "state": "Karnataka"}
+			],
+		}
+		with self.set_user(MANAGER):
+			made = save_company(APP_COMPANY, values)
+			self.assertGreater(made["obligations"], 0)
+			detail = company_detail(made["company"])
+			before = len(detail["obligations"])
+			first = detail["obligations"][0]
+			values["registrations"].append({"registration_type": "TAN", "registration_number": "BLRA12345A"})
+			values["obligations"] = [{"name": first["name"], "is_active": 0, "responsible": REVIEWER}]
+			changed = save_company(made["company"], values)
+			detail = company_detail(made["company"])
+			overview = companies_overview()
+		self.assertGreater(changed["obligations"], 0)
+		self.assertGreater(len(detail["obligations"]), before)
+		row = next(row for row in detail["obligations"] if row["name"] == first["name"])
+		self.assertEqual((row["is_active"], row["responsible"]), (0, REVIEWER))
+		self.assertIn(made["company"], [row.company for row in overview["companies"]])
+		self.assertNotIn(made["company"], overview["not_set_up"])
+
+	def test_only_known_people_and_managers(self):
+		from compliance_plus.api import save_company
+
+		values = {"company_type": "Private Limited", "default_responsible": "nobody@example.com"}
+		with self.set_user(MANAGER), self.assertRaises(frappe.ValidationError):
+			save_company(TEST_COMPANY, values)
+		values["default_responsible"] = HOLDER
+		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
+			save_company(TEST_COMPANY, values)
+
+	def test_a_new_company_needs_rights_to_create_companies(self):
+		from compliance_plus.api import save_company
+
+		values = {"company_type": "Private Limited", "default_responsible": HOLDER}
+		with self.set_user(MANAGER), self.assertRaises(frappe.PermissionError):
+			save_company("Brand New Foods Private Limited", values, new_company=True)

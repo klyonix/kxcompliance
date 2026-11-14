@@ -87,17 +87,22 @@
 			</section>
 
 			<section class="flex flex-col gap-3" aria-labelledby="companies-heading">
-				<h2 id="companies-heading" class="text-base font-semibold text-ink-gray-8">
-					Companies
-				</h2>
+				<div class="flex items-center justify-between gap-3">
+					<h2 id="companies-heading" class="text-base font-semibold text-ink-gray-8">
+						Companies
+					</h2>
+					<Button
+						v-if="isManager() && !clientLogin"
+						icon-left="lucide-plus"
+						label="Add company"
+						:route="{ name: 'CompanyNew', query: { client: client.name } }"
+					/>
+				</div>
 				<p v-if="!client.companies.length" class="text-base text-ink-gray-5">
 					<template v-if="clientLogin">
 						Your firm has not linked your companies yet.
 					</template>
-					<template v-else>
-						No companies yet. Link a company's compliance profile to this client in the
-						Desk.
-					</template>
+					<template v-else>No companies yet.</template>
 				</p>
 				<ul class="flex flex-col">
 					<li
@@ -110,7 +115,13 @@
 							aria-hidden="true"
 						/>
 						<span class="flex min-w-0 flex-1 flex-col">
-							<span class="truncate text-base text-ink-gray-8">{{
+							<RouterLink
+								v-if="isManager() && !clientLogin"
+								:to="{ name: 'Company', params: { company: company.company } }"
+								class="truncate text-base text-ink-gray-8 underline decoration-outline-gray-3 underline-offset-2"
+								>{{ company.company }}</RouterLink
+							>
+							<span v-else class="truncate text-base text-ink-gray-8">{{
 								company.company
 							}}</span>
 							<span class="text-sm text-ink-gray-5">{{ company.company_type }}</span>
@@ -189,7 +200,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, Dropdown, Skeleton } from "frappe-ui";
-import { useRouter } from "vue-router";
+import { RouterLink, useRouter } from "vue-router";
 import { call } from "@/api";
 import { isClientLogin, isManager, mayRecord, mayUseDesk } from "@/boot";
 import AskDocument from "@/components/AskDocument.vue";

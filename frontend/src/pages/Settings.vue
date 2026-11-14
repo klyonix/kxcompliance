@@ -15,6 +15,14 @@
 		</div>
 
 		<template v-else>
+			<nav class="flex flex-wrap gap-2" aria-label="Set up">
+				<Button
+					icon-left="lucide-building-2"
+					label="Companies"
+					:route="{ name: 'Companies' }"
+				/>
+			</nav>
+
 			<section class="flex flex-col gap-4" aria-labelledby="reminders-heading">
 				<div class="flex flex-col gap-0.5">
 					<h2 id="reminders-heading" class="text-base font-semibold text-ink-gray-8">

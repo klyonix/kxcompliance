@@ -101,6 +101,11 @@
 								v-model="form.escalate_after_days"
 								type="number"
 								label="Tell managers after (days overdue)"
+								:description="
+									boot.accountType === 'CA/CS Firm'
+										? 'The reviewer and the client\'s relationship manager are told too.'
+										: 'The reviewer is told too.'
+								"
 							/>
 							<FormControl
 								v-model="form.digest_day"

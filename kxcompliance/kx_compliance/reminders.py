@@ -47,6 +47,7 @@ ITEM_FIELDS = [
 	"reviewer",
 	"holder_type",
 	"holder",
+	"company",
 ]
 PARTY_EMAIL_FIELDS = {"Customer": "email_id", "Supplier": "email_id"}
 
@@ -189,14 +190,17 @@ def send_escalations(today):
 	due = [(item, f"{item.name}|escalation|{item.valid_until}") for item in items]
 	sent = already_sent([key for _item, key in due])
 	managers = compliance_managers()
+	looking_after = relationship_managers(item.company for item, _key in due)
 	for item, key in due:
 		if key in sent:
 			continue
-		run_for_item(item.name, lambda item=item, key=key: escalate(item, key, managers))
+		to = [*managers, looking_after.get(item.company)]
+		run_for_item(item.name, lambda item=item, key=key, to=to: escalate(item, key, to))
 
 
 def escalate(item, key: str, managers: list[str]):
-	recipients = [user for user in [item.reviewer, *managers] if user]
+	"""`managers`: the compliance managers, and the client's relationship manager on a firm."""
+	recipients = list(dict.fromkeys(user for user in [item.reviewer, *managers] if user))
 	subject = _("Overdue: {0} expired on {1}").format(item.title, formatdate(item.valid_until))
 	message = _("{0} ({1}) expired on {2} and has not been renewed. It is held by {3}.").format(
 		escape_html(item.title), item.name, formatdate(item.valid_until), escape_html(item.responsible)
@@ -325,6 +329,27 @@ def compliance_managers() -> list[str]:
 			& (user.user_type == "System User")
 		)
 	).run(pluck=True)
+
+
+def relationship_managers(companies) -> dict[str, str]:
+	"""Each company's client's relationship manager, for a firm: they hear when its work is overdue.
+	Clients that have left, and managers whose login is disabled, are left out."""
+	companies = [company for company in set(companies) if company]
+	if not companies:
+		return {}
+	profile = frappe.qb.DocType("Company Compliance Profile")
+	client = frappe.qb.DocType("Compliance Client")
+	user = frappe.qb.DocType("User")
+	rows = (
+		frappe.qb.from_(profile)
+		.join(client)
+		.on(client.name == profile.client)
+		.join(user)
+		.on(user.name == client.relationship_manager)
+		.select(profile.company, client.relationship_manager)
+		.where(profile.company.isin(companies) & (client.status != "Left") & (user.enabled == 1))
+	).run(as_dict=True)
+	return {row.company: row.relationship_manager for row in rows}
 
 
 def notify(users: list[str], subject: str, message: str, doctype: str, name: str):

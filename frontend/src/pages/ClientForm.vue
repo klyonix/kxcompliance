@@ -43,6 +43,7 @@
 						type="select"
 						label="Relationship manager"
 						:options="[{ label: 'None', value: '' }, ...peopleOptions]"
+						description="Told, with the managers, when this client's work is overdue."
 					/>
 					<FormControl
 						v-model="form.contact_email"

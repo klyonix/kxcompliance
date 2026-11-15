@@ -48,8 +48,7 @@
   "billing_address",
   "bank_details",
   "bill_prefix",
-  "fees_section",
-  "return_fees"
+  "default_sac"
  ],
  "fields": [
   {
@@ -296,18 +295,6 @@
    "description": "Bills are numbered with this, the financial year and a running number, e.g. RA/26-27/0001."
   },
   {
-   "fieldname": "fees_section",
-   "fieldtype": "Section Break",
-   "label": "Price per Return"
-  },
-  {
-   "fieldname": "return_fees",
-   "fieldtype": "Table",
-   "options": "Return Fee",
-   "label": "Price per Return",
-   "description": "What the firm charges for filing each return; a client's own price overrides it."
-  },
-  {
    "fieldname": "gst_status",
    "fieldtype": "Select",
    "label": "GST Status",
@@ -325,13 +312,19 @@
    "fieldtype": "Data",
    "label": "UPI ID",
    "description": "Printed on bills as a QR code for paying the amount due."
+  },
+  {
+   "fieldname": "default_sac",
+   "fieldtype": "Data",
+   "label": "Default SAC Code",
+   "description": "Printed on bill lines whose rate has no SAC code of its own, such as 998221 for accounting and auditing."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-16 14:00:00.000000",
+ "modified": "2026-11-16 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "KX Compliance Settings",

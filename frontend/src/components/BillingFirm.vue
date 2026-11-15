@@ -93,13 +93,20 @@
 				description="Bills carry a QR code to pay the amount due by UPI."
 			/>
 		</div>
-		<FormControl
-			v-model="form.bill_prefix"
-			class="sm:w-56"
-			label="Bill number prefix"
-			placeholder="RA"
-			description="Bills are numbered RA/26-27/0001 and on."
-		/>
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+			<FormControl
+				v-model="form.bill_prefix"
+				label="Bill number prefix"
+				placeholder="RA"
+				description="Bills are numbered RA/26-27/0001 and on."
+			/>
+			<FormControl
+				v-model="form.default_sac"
+				label="Default SAC code"
+				placeholder="998221"
+				description="For bill lines whose rate has no SAC code of its own."
+			/>
+		</div>
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
 			<p v-if="saveError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ saveError }}
@@ -133,6 +140,7 @@ const FIELDS = [
 	"bank_details",
 	"upi_id",
 	"bill_prefix",
+	"default_sac",
 	"billing_logo",
 ];
 const GST_LINES = {

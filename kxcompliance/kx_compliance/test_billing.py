@@ -21,7 +21,6 @@ from kxcompliance.api import (
 	create_bill,
 	own_bill,
 	record_payment,
-	save_return_fees,
 	send_bill,
 	set_up_billing,
 )
@@ -115,53 +114,134 @@ class TestBillingSetup(IntegrationTestCase):
 			state_of("29ABC")
 
 
-class TestFees(IntegrationTestCase):
+def card(title: str, lines: list[dict], default: bool = True) -> str:
+	if frappe.db.exists("Rate Card", title):
+		frappe.delete_doc("Rate Card", title, force=True)
+	return (
+		frappe.get_doc({"doctype": "Rate Card", "title": title, "is_default": int(default), "lines": lines})
+		.insert()
+		.name
+	)
+
+
+def per_filing(template: str, amount: float, sac: str | None = None) -> dict:
+	return {
+		"kind": "Return",
+		"obligation_template": template,
+		"unit": "Per filing",
+		"amount": amount,
+		"sac_code": sac,
+	}
+
+
+def service(name: str, unit: str, amount: float, sac: str | None = None) -> dict:
+	return {"kind": "Service", "service": name, "unit": unit, "amount": amount, "sac_code": sac}
+
+
+class TestRates(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
 		make_company()
 		make_users()
 
-	def test_filed_returns_not_yet_billed_are_priced_for_the_client(self):
-		with self.change_settings(SETTINGS, account_type="CA/CS Firm"):
-			save_return_fees(
-				[
-					{"obligation_template": "GSTR-3B (Monthly)", "amount": 1500},
-					{"obligation_template": "GSTR-1 (Monthly)", "amount": 1000},
-				]
-			)
-			sunrise = client("Billing Fee Client")
-			sunrise.append("return_fees", {"obligation_template": "GSTR-1 (Monthly)", "amount": 800})
-			sunrise.save()
-			profile(TEST_COMPANY, sunrise.name)
-			filed = filing("GSTR-3B (Monthly)", "2026-09-30", "2026-10-20", status="Filed")
-			late = filing("GSTR-1 (Monthly)", "2026-09-30", "2026-10-11", status="Filed Late")
-			filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20")  # still open: not billed
-			billed = filing("GSTR-1 (Monthly)", "2026-08-31", "2026-09-11", status="Filed")
-			frappe.db.set_value("Compliance Task", billed, "billed_in", "ACC-SINV-TEST")
-			fees = client_fees(sunrise.name)
-		by_name = {row.name: row.fee for row in fees["unbilled"]}
-		# The firm's price, and the client's own where it has one; a billed filing is left out.
-		self.assertEqual(by_name, {filed: 1500, late: 800})
-		self.assertEqual(fees["unbilled_total"], 2300)
+	def setUp(self):
+		profile(TEST_COMPANY)
 
-	def test_a_fixed_fee_says_how_often_and_from_when_and_a_return_is_priced_once(self):
-		with self.assertRaisesRegex(frappe.ValidationError, "give Billed, Billed From"):
-			client("Billing Fee Client", fixed_fee=5000)
-		plan = client("Billing Fee Client", fixed_fee=5000, fee_frequency="Monthly", fee_from="2026-04-01")
-		self.assertEqual((plan.fee_frequency, str(plan.fee_from)), ("Monthly", "2026-04-01"))
-		cleared = client("Billing Fee Client", fixed_fee=0, fee_frequency="Monthly", fee_from="2026-04-01")
-		self.assertEqual((cleared.fee_frequency, cleared.fee_from), (None, None))
+	def test_a_filing_is_priced_by_the_clients_own_rate_else_its_card_else_the_default(self):
+		card(
+			"Billing Standard", [per_filing("GSTR-3B (Monthly)", 1500), per_filing("GSTR-1 (Monthly)", 1000)]
+		)
+		card("Billing Small", [per_filing("GSTR-3B (Monthly)", 900)], default=False)
+		sunrise = client("Billing Fee Client", rate_card="Billing Small")
+		sunrise.append("own_rates", per_filing("GSTR-1 (Monthly)", 800, "998231"))
+		sunrise.save()
+		profile(TEST_COMPANY, sunrise.name)
+		filed = filing("GSTR-3B (Monthly)", "2026-09-30", "2026-10-20", status="Filed")
+		late = filing("GSTR-1 (Monthly)", "2026-09-30", "2026-10-11", status="Filed Late")
+		filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20")  # still open: not billed
+		billed = filing("GSTR-1 (Monthly)", "2026-08-31", "2026-09-11", status="Filed")
+		frappe.db.set_value("Compliance Task", billed, "billed_in", "ACC-SINV-TEST")
 		with self.change_settings(SETTINGS, account_type="CA/CS Firm"):
-			with self.assertRaisesRegex(frappe.ValidationError, "already has a price"):
-				save_return_fees(
-					[
-						{"obligation_template": "GSTR-3B (Monthly)", "amount": 1500},
-						{"obligation_template": "GSTR-3B (Monthly)", "amount": 900},
-					]
-				)
-			with self.assertRaisesRegex(frappe.ValidationError, "a return and its fee"):
-				save_return_fees([{"obligation_template": "GSTR-3B (Monthly)", "amount": 1, "status": "x"}])
+			fees = client_fees(sunrise.name)
+		# Its card's price for GSTR-3B, its own for GSTR-1; a billed filing is left out.
+		self.assertEqual(
+			{row.name: (row.fee, row.sac_code) for row in fees["unbilled"]},
+			{filed: (900, None), late: (800, "998231")},
+		)
+		self.assertEqual(fees["unbilled_total"], 1700)
+		# With no card of its own, the default card prices it.
+		sunrise.rate_card = None
+		sunrise.save()
+		with self.change_settings(SETTINGS, account_type="CA/CS Firm"):
+			self.assertEqual({row.fee for row in client_fees(sunrise.name)["unbilled"]}, {1500, 800})
+
+	def test_a_rate_prices_a_return_per_filing_or_a_named_service_once(self):
+		bad = (
+			([{"kind": "Return", "unit": "Per filing", "amount": 1}], "choose the return"),
+			([per_filing("GSTR-1 (Monthly)", 1) | {"unit": "Per month"}], "charged per filing"),
+			([service("", "Per hour", 1)], "name the service"),
+			([service("Advisory", "Per filing", 1)], "per hour, item, month"),
+			([service("Advisory", "Per hour", 1), service("Advisory", "Per item", 2)], "already has a rate"),
+		)
+		for lines, message in bad:
+			with self.assertRaisesRegex(frappe.ValidationError, message):
+				card("Billing Bad", lines)
+		first = card("Billing One", [per_filing("GSTR-1 (Monthly)", 1)])
+		second = card("Billing Two", [per_filing("GSTR-1 (Monthly)", 2)])
+		self.assertEqual(frappe.db.get_value("Rate Card", first, "is_default"), 0)
+		self.assertEqual(frappe.db.get_value("Rate Card", second, "is_default"), 1)
+
+	def test_a_recurring_charge_needs_the_date_it_is_billed_from(self):
+		card("Billing Retainer", [service("Retainer", "Per month", 5000)])
+		with self.assertRaisesRegex(frappe.ValidationError, "recurring charges start from"):
+			client("Billing Fee Client")
+		self.assertTrue(client("Billing Fee Client", billing_from="2026-04-01").name)
+
+	def test_old_prices_and_fixed_fees_move_onto_rate_cards(self):
+		from kxcompliance.patches.v1_0.move_prices_to_rate_cards import execute as move_prices
+
+		frappe.db.delete("Rate Card")
+		moved = client("Billing Moved Client").name
+		fee = frappe.qb.DocType("Return Fee")
+		for parenttype, parent, amount in (
+			("KX Compliance Settings", "KX Compliance Settings", 1500),
+			("Compliance Client", moved, 800),
+		):
+			frappe.qb.into(fee).columns(
+				"name", "parent", "parenttype", "parentfield", "idx", "obligation_template", "amount"
+			).insert(
+				frappe.generate_hash(length=10),
+				parent,
+				parenttype,
+				"return_fees",
+				1,
+				"GSTR-3B (Monthly)",
+				amount,
+			).run()
+		table = frappe.qb.DocType("Compliance Client")
+		frappe.qb.update(table).set(table.fixed_fee, 5000).set(table.fee_frequency, "Quarterly").set(
+			table.fee_from, "2026-04-01"
+		).where(table.name == moved).run()
+		move_prices()
+		move_prices()  # again: nothing twice
+		standard = frappe.get_doc("Rate Card", {"is_default": 1})
+		self.assertEqual(
+			[(row.obligation_template, row.amount) for row in standard.lines], [("GSTR-3B (Monthly)", 1500)]
+		)
+		self.assertEqual(frappe.db.count("Rate Card"), 1)
+		doc = frappe.get_doc("Compliance Client", moved)
+		self.assertEqual(
+			sorted(
+				(row.kind, row.obligation_template or row.service, row.unit, row.amount)
+				for row in doc.own_rates
+			),
+			[
+				("Return", "GSTR-3B (Monthly)", "Per filing", 800),
+				("Service", "Fixed fee", "Per quarter", 5000),
+			],
+		)
+		self.assertEqual(str(doc.billing_from), "2026-04-01")
 
 
 class TestBills(IntegrationTestCase):
@@ -174,8 +254,17 @@ class TestBills(IntegrationTestCase):
 		make_users()
 		frappe.db.set_single_value(SETTINGS, {"account_type": "CA/CS Firm", "billing_company": None})
 		frappe.clear_document_cache(SETTINGS, SETTINGS)
-		set_up_billing({**DETAILS, "bill_prefix": "TBA"}, name="Bills Test Associates")
-		save_return_fees([{"obligation_template": "GSTR-3B (Monthly)", "amount": 1500}])
+		set_up_billing(
+			{**DETAILS, "bill_prefix": "TBA", "default_sac": "998221"}, name="Bills Test Associates"
+		)
+		card(
+			"Billing Standard",
+			[
+				per_filing("GSTR-3B (Monthly)", 1500, "998231"),
+				service("Fixed fee", "Per month", 5000),
+				service("Advisory", "Per hour", 2000),
+			],
+		)
 
 	def setUp(self):
 		profile(TEST_COMPANY)  # let go of the client an earlier test made, so it can be made again
@@ -183,9 +272,7 @@ class TestBills(IntegrationTestCase):
 			"Billing Bill Client",
 			gstin="29AABCS1234Q1Z3",
 			billing_email="accounts@billclient.example.com",
-			fixed_fee=5000,
-			fee_frequency="Monthly",
-			fee_from="2026-04-01",
+			billing_from="2026-04-01",
 		).name
 		profile(TEST_COMPANY, self.client)
 		self.filed = filing("GSTR-3B (Monthly)", "2026-09-30", "2026-10-20", status="Filed")
@@ -193,11 +280,12 @@ class TestBills(IntegrationTestCase):
 	def test_a_bill_charges_gst_on_fees_and_none_on_government_fees(self):
 		options = bill_options(self.client)
 		self.assertIn(self.filed, [row.name for row in options["filings"]])
-		self.assertEqual(options["fixed_fee"], 5000)
+		self.assertEqual([row["amount"] for row in options["recurring"]], [5000])
+		self.assertEqual([row["service"] for row in options["services"]], ["Advisory"])
 		name = create_bill(
 			self.client,
 			filings=[self.filed],
-			fixed_fee=True,
+			recurring=True,
 			lines=[
 				{"description": "Advisory on GST notice", "amount": 1000},
 				{"description": "ROC filing fee paid", "amount": 500, "government": True},
@@ -353,6 +441,25 @@ class TestBills(IntegrationTestCase):
 		company = frappe.db.get_single_value(SETTINGS, "billing_company")
 		self.assertEqual(frappe.db.get_value("Company", company, "company_logo"), "/files/firm-logo.png")
 
+	def test_services_are_billed_by_the_hour_and_lines_carry_their_sac_code(self):
+		name = create_bill(self.client, filings=[self.filed], services=[{"service": "Advisory", "qty": 2.5}])[
+			"name"
+		]
+		lines = frappe.get_all(
+			"Sales Invoice Item",
+			filters={"parent": name},
+			fields=["description", "qty", "rate", "sac_code"],
+			order_by="idx",
+		)
+		self.assertEqual(
+			[(row.qty, row.rate, row.sac_code) for row in lines], [(1, 1500, "998231"), (2.5, 2000, "998221")]
+		)
+		self.assertTrue(lines[1].description.startswith("Advisory, 2.5"))
+		with self.assertRaisesRegex(frappe.ValidationError, "not a service charged by the hour"):
+			create_bill(self.client, services=[{"service": "Fixed fee", "qty": 1}])
+		with self.assertRaisesRegex(frappe.ValidationError, "how many hours"):
+			create_bill(self.client, services=[{"service": "Advisory", "qty": 0}])
+
 	def test_a_draft_is_not_paid(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
 		with self.assertRaisesRegex(frappe.ValidationError, "Send"):
@@ -376,7 +483,7 @@ class TestBills(IntegrationTestCase):
 		)
 		self.assertEqual([row.kx_billing_key for row in drafts], [f"{self.client}|2026-11"])
 		descriptions = [row["description"] for row in bill(drafts[0].name)["items"]]
-		self.assertIn("Fixed fee, Nov 2026", descriptions)
+		self.assertTrue(any(text.startswith("Fixed fee, ") for text in descriptions))
 		self.assertTrue(any(text.startswith("GSTR-3B (Monthly)") for text in descriptions))
 
 	def test_bills_are_made_by_those_erpnext_lets_make_invoices(self):

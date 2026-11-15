@@ -5,40 +5,58 @@ import {
 	linesProblem,
 	linesToSend,
 	paymentProblem,
-	pricesProblem,
-	pricesToSend,
+	ratesProblem,
+	ratesToSend,
+	servicesProblem,
 } from "./billing";
 
-describe("prices per return", () => {
-	it("need a return each, once, and a fee of zero or more", () => {
-		expect(pricesProblem([])).toBeNull();
-		expect(pricesProblem([{ obligation_template: "", amount: 100 }])).toMatch(
-			/Choose a return/
-		);
-		expect(
-			pricesProblem([
-				{ obligation_template: "GSTR-1", amount: 100 },
-				{ obligation_template: "GSTR-1", amount: 200 },
-			])
-		).toBe("GSTR-1 has two prices.");
-		expect(pricesProblem([{ obligation_template: "GSTR-1", amount: "" }])).toMatch(
-			/fee of zero/
-		);
-		expect(pricesProblem([{ obligation_template: "GSTR-1", amount: -5 }])).toMatch(
-			/fee of zero/
-		);
-		expect(pricesProblem([{ obligation_template: "GSTR-1", amount: "0" }])).toBeNull();
+describe("rates", () => {
+	const ret = (template, amount = 100) => ({
+		kind: "Return",
+		obligation_template: template,
+		unit: "Per filing",
+		amount,
+	});
+	const svc = (service, unit = "Per hour", amount = 100) => ({
+		kind: "Service",
+		service,
+		unit,
+		amount,
 	});
 
-	it("are sent as a return and a number", () => {
+	it("each price a return per filing or a named service, once, at zero or more", () => {
+		expect(ratesProblem([])).toBeNull();
+		expect(ratesProblem([ret("")])).toMatch(/Choose a return/);
+		expect(ratesProblem([svc(" ")])).toMatch(/Name each service/);
+		expect(ratesProblem([ret("GSTR-1"), ret("GSTR-1", 200)])).toBe("GSTR-1 has two rates.");
+		expect(ratesProblem([{ ...ret("GSTR-1"), unit: "Per month" }])).toMatch(
+			/how GSTR-1 is charged/
+		);
+		expect(ratesProblem([svc("Advisory", "Per filing")])).toMatch(/how Advisory is charged/);
+		expect(ratesProblem([ret("GSTR-1", "")])).toMatch(/zero or more/);
 		expect(
-			pricesToSend([{ obligation_template: "GSTR-1", amount: "1500", name: "x" }])
-		).toEqual([{ obligation_template: "GSTR-1", amount: 1500 }]);
+			ratesProblem([ret("GSTR-1", "0"), svc("Advisory"), svc("Retainer", "Per month")])
+		).toBeNull();
+	});
+
+	it("are sent with only what each kind needs", () => {
+		expect(
+			ratesToSend([{ ...svc(" Advisory "), obligation_template: "x", sac_code: " 998231 " }])
+		).toEqual([
+			{
+				kind: "Service",
+				obligation_template: null,
+				service: "Advisory",
+				unit: "Per hour",
+				amount: 100,
+				sac_code: "998231",
+			},
+		]);
 	});
 });
 
 describe("a bill being made", () => {
-	it("adds up what is ticked, the fixed fee if chosen, and typed lines", () => {
+	it("adds up what is ticked, recurring charges if chosen, services done and typed lines", () => {
 		const filings = [
 			{ name: "CT-1", fee: 1500 },
 			{ name: "CT-2", fee: 800 },
@@ -47,12 +65,17 @@ describe("a bill being made", () => {
 			billSubtotal({
 				filings,
 				ticked: ["CT-1"],
-				fixedFee: 5000,
-				withFee: true,
+				recurring: [{ amount: 5000 }],
+				withRecurring: true,
+				services: [{ service: "Advisory", qty: "2.5" }],
+				rates: [{ service: "Advisory", amount: 2000 }],
 				lines: [{ description: "Advisory", amount: "1000" }],
 			})
-		).toBe(7500);
+		).toBe(12500);
 		expect(billSubtotal({ filings, ticked: [] })).toBe(0);
+		expect(servicesProblem([{ service: "", qty: 1 }])).toMatch(/Choose a service/);
+		expect(servicesProblem([{ service: "Advisory", qty: 0 }])).toMatch(/how many hours/);
+		expect(servicesProblem([{ service: "Advisory", qty: "1.5" }])).toBeNull();
 	});
 
 	it("needs each typed line to say what it is and an amount", () => {

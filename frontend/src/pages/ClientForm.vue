@@ -191,10 +191,12 @@
 
 			<section class="flex flex-col gap-4" aria-labelledby="fees-heading">
 				<div class="flex flex-col gap-0.5">
-					<h2 id="fees-heading" class="text-base font-semibold text-ink-gray-8">Fees</h2>
+					<h2 id="fees-heading" class="text-base font-semibold text-ink-gray-8">
+						Rates
+					</h2>
 					<p class="text-sm text-ink-gray-5">
-						A fixed fee each period, and a fee for each return filed, at the firm's
-						prices unless the client has its own below.
+						The client pays its rate card's rates, the default card's if it has none,
+						and its own rates below in their place.
 					</p>
 				</div>
 				<p
@@ -203,31 +205,30 @@
 				>
 					{{ unbilledLine }}
 				</p>
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<FormControl
-						v-model="form.fixed_fee"
-						type="number"
-						label="Fixed fee"
-						placeholder="0"
-					/>
-					<FormControl
-						v-model="form.fee_frequency"
+						v-model="form.rate_card"
 						type="select"
-						label="Billed"
-						:disabled="!Number(form.fixed_fee)"
-						:options="FEE_FREQUENCIES"
+						label="Rate card"
+						:options="[
+							{
+								label: defaultCard ? `Default (${defaultCard})` : 'Default',
+								value: '',
+							},
+							...rateCards.map((card) => ({ label: card.title, value: card.name })),
+						]"
 					/>
 					<FormControl
-						v-model="form.fee_from"
+						v-model="form.billing_from"
 						type="date"
 						:format="pickerFormat()"
-						label="From"
-						:disabled="!Number(form.fixed_fee)"
+						label="Recurring charges from"
+						description="Monthly, quarterly and yearly charges are billed from here."
 					/>
 				</div>
 				<div class="flex flex-col gap-1.5">
-					<span class="text-xs text-ink-gray-5">Own price per return</span>
-					<PriceList v-model="form.return_fees" empty="None: the firm's prices apply." />
+					<span class="text-xs text-ink-gray-5">Own rates</span>
+					<RateLines v-model="form.own_rates" empty="None: the card's rates apply." />
 				</div>
 			</section>
 
@@ -269,12 +270,12 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
-import { call, createDoc, getDoc, updateDoc } from "@/api";
+import { call, createDoc, getDoc, getList, updateDoc } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import LogoField from "@/components/LogoField.vue";
-import PriceList from "@/components/PriceList.vue";
+import RateLines from "@/components/RateLines.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";
-import { money, pricesProblem, pricesToSend } from "@/lib/billing";
+import { money, ratesProblem, ratesToSend } from "@/lib/billing";
 import { pickerFormat } from "@/lib/format";
 import { personOptions } from "@/lib/people";
 import { goBack } from "@/navigation";
@@ -292,10 +293,9 @@ const error = ref("");
 const saveError = ref("");
 const states = ref([]);
 const fees = ref(null);
-const FEE_FREQUENCIES = [
-	{ label: "Choose", value: "" },
-	...["Monthly", "Quarterly", "Yearly"].map((value) => ({ label: value, value })),
-];
+// The firm's rate cards to choose from, and the default one a client without a card pays.
+const rateCards = ref([]);
+const defaultCard = computed(() => rateCards.value.find((card) => card.is_default)?.title || "");
 // What the client would be billed for its filings now.
 const unbilledLine = computed(() => {
 	const count = fees.value.unbilled.length;
@@ -318,10 +318,9 @@ const form = reactive({
 	billing_state: "",
 	billing_email: "",
 	billing_address: "",
-	fixed_fee: "",
-	fee_frequency: "",
-	fee_from: "",
-	return_fees: [],
+	rate_card: "",
+	billing_from: "",
+	own_rates: [],
 	team: [],
 	logins: [],
 	notes: "",
@@ -349,10 +348,9 @@ function values() {
 		billing_state: form.billing_state || null,
 		billing_email: form.billing_email.trim() || null,
 		billing_address: form.billing_address.trim() || null,
-		fixed_fee: Number(form.fixed_fee) || 0,
-		fee_frequency: Number(form.fixed_fee) ? form.fee_frequency || null : null,
-		fee_from: Number(form.fixed_fee) ? form.fee_from || null : null,
-		return_fees: pricesToSend(form.return_fees),
+		rate_card: form.rate_card || null,
+		billing_from: form.billing_from || null,
+		own_rates: ratesToSend(form.own_rates),
 		team: form.team.map((user) => ({ user })),
 		logins: form.logins.map((login) => ({
 			full_name: login.full_name.trim(),
@@ -367,7 +365,7 @@ async function save() {
 	checking.value = true;
 	saveError.value = "";
 	if (!props.name && !form.client_name.trim()) return;
-	const priceProblem = pricesProblem(form.return_fees);
+	const priceProblem = ratesProblem(form.own_rates);
 	if (priceProblem) {
 		saveError.value = priceProblem;
 		return;
@@ -396,13 +394,19 @@ async function save() {
 
 onMounted(async () => {
 	try {
-		const [found, billing] = await Promise.all([
+		const [found, billing, cards] = await Promise.all([
 			call("kxcompliance.api.people_options"),
 			// The states to bill in; a firm's managers open this form, as they set billing up.
 			call("kxcompliance.api.billing_setup").catch(() => ({ states: [] })),
+			getList("Rate Card", {
+				fields: ["name", "title", "is_default"],
+				orderBy: "title asc",
+				limit: 200,
+			}).catch(() => ({ rows: [] })),
 		]);
 		people.value = found;
 		states.value = billing.states;
+		rateCards.value = cards.rows;
 		if (props.name) {
 			fees.value = await call("kxcompliance.api.client_fees", { client: props.name }).catch(
 				() => null
@@ -423,12 +427,15 @@ onMounted(async () => {
 				billing_state: client.billing_state || "",
 				billing_email: client.billing_email || "",
 				billing_address: client.billing_address || "",
-				fixed_fee: client.fixed_fee || "",
-				fee_frequency: client.fee_frequency || "",
-				fee_from: client.fee_from || "",
-				return_fees: (client.return_fees || []).map((row) => ({
-					obligation_template: row.obligation_template,
+				rate_card: client.rate_card || "",
+				billing_from: client.billing_from || "",
+				own_rates: (client.own_rates || []).map((row) => ({
+					kind: row.kind,
+					obligation_template: row.obligation_template || "",
+					service: row.service || "",
+					unit: row.unit,
 					amount: row.amount,
+					sac_code: row.sac_code || "",
 				})),
 				team: client.team.map((row) => row.user),
 				logins: client.logins.map((row) => ({

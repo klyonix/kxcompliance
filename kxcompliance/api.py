@@ -505,13 +505,6 @@ def set_up_billing(details: dict, name: str | None = None) -> dict:
 	return billing.set_up_firm((name or "").strip(), details)
 
 
-@frappe.whitelist(methods=["POST"])
-def save_return_fees(fees: list) -> list[dict]:
-	"""The firm's price for filing each return."""
-	check_app_access()
-	return billing.save_return_fees(fees)
-
-
 @frappe.whitelist(methods=["GET"])
 def client_fees(client: str) -> dict:
 	"""A client's fee plan, and its filed returns not billed yet with their fees."""
@@ -531,17 +524,21 @@ def bill_options(client: str) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def create_bill(
-	client: str, filings: list | None = None, fixed_fee: bool = False, lines: list | None = None
+	client: str,
+	filings: list | None = None,
+	recurring: bool = False,
+	lines: list | None = None,
+	services: list | None = None,
 ) -> dict:
-	"""A draft bill for a client, from filings it has not been billed for, this month's fixed fee
-	and other lines; checked and sent from its page."""
+	"""A draft bill for a client, from filings it has not been billed for, the recurring charges due
+	this month, services done and other lines; checked and sent from its page."""
 	check_app_access_or_accounts()
 	billing.check_biller()
 	check_billed_client(client)
 	if not all(isinstance(name, str) for name in filings or []):
 		frappe.throw(_("Filings are given by their names."))
-	month = getdate(nowdate()).replace(day=1) if fixed_fee else None
-	return {"name": billing.make_bill(client, filings=filings, fee_month=month, lines=lines)}
+	month = getdate(nowdate()).replace(day=1) if recurring else None
+	return {"name": billing.make_bill(client, filings=filings, month=month, lines=lines, services=services)}
 
 
 @frappe.whitelist(methods=["GET"])

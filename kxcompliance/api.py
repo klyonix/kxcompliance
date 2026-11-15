@@ -87,8 +87,62 @@ BULK_CHOICES_LIMIT = 100
 OBLIGATION_CHOICES = ("law", "frequency", "period_basis", "registration_type")
 
 # The only fields the app may change on each record; everything else stays in the Desk.
+# Who looks after a record is a manager's to change; the record's other fields are its people's.
+PEOPLE_FIELDS = ("responsible", "reviewer")
+
 EDITABLE_FIELDS = {
-	"Compliance Item": ("certificate", "reference_number", "notes"),
+	# Validity dates and the holder stay with renewals and the item's own form, which check them.
+	"Compliance Item": (
+		"certificate",
+		"reference_number",
+		"notes",
+		"title",
+		"issuing_authority",
+		"issue_date",
+		"valid_from",
+		"state",
+		"dsc_class",
+		"dsc_purpose",
+		"certifying_authority",
+		"token_serial",
+		*PEOPLE_FIELDS,
+	),
+	# Status, dates and amounts move with hearings and outcomes, and the amounts are managers' only.
+	"Legal Case": (
+		"title",
+		"case_type",
+		"forum",
+		"forum_name",
+		"bench",
+		"case_number",
+		"cnr_number",
+		"notice_reference",
+		"state",
+		"filing_date",
+		"our_role",
+		"opposing_party",
+		"advocate_contact",
+		"summary",
+		"outcome",
+		*PEOPLE_FIELDS,
+	),
+	"Trademark": (
+		"mark",
+		"mark_type",
+		"application_number",
+		"filing_date",
+		"user_claim",
+		"used_since",
+		"examination_report_on",
+		"journal_number",
+		"journal_date",
+		"opposition_notice_on",
+		"opposition_number",
+		"registration_number",
+		"registration_date",
+		"notes",
+		*PEOPLE_FIELDS,
+	),
 	"Compliance Task": (
 		"status",
 		"filed_on",
@@ -258,6 +312,11 @@ def save_changes(doctype: str, name: str, values: dict, base_modified: str | Non
 			_("The app cannot change {0} on {1}.").format(", ".join(not_allowed), _(doctype)),
 			frappe.PermissionError,
 		)
+	if set(values) & set(PEOPLE_FIELDS) and not is_approver():
+		frappe.throw(
+			_("Only a Compliance Manager can change who is responsible for or reviews {0}.").format(name),
+			frappe.PermissionError,
+		)
 	doc = frappe.get_doc(doctype, name)
 	doc.check_permission("write")
 	if base_modified and get_datetime(doc.modified) != get_datetime(base_modified):
@@ -268,6 +327,30 @@ def save_changes(doctype: str, name: str, values: dict, base_modified: str | Non
 	doc.update(values)
 	doc.save()
 	return {"name": doc.name, "modified": str(doc.modified)}
+
+
+@frappe.whitelist(methods=["GET"])
+def editable_fields(doctype: str) -> dict:
+	"""The fields the app may change on a record of this type, with each one's label, kind and choices.
+
+	`people` (who can be made responsible or reviewer) is given to managers only, who alone may
+	change those fields.
+	"""
+	check_app_access()
+	allowed = EDITABLE_FIELDS.get(doctype)
+	if not allowed:
+		frappe.throw(_("The app cannot change {0}.").format(_(doctype)), frappe.PermissionError)
+	meta = frappe.get_meta(doctype)
+	fields = {}
+	for fieldname in allowed:
+		field = meta.get_field(fieldname)
+		fields[fieldname] = {
+			"label": _(field.label),
+			"fieldtype": field.fieldtype,
+			"reqd": bool(field.reqd),
+			"options": select_options(meta, fieldname) if field.fieldtype == "Select" else [],
+		}
+	return {"fields": fields, "people": onboarding.firm_people() if is_approver() else []}
 
 
 @frappe.whitelist(methods=["POST"])

@@ -11,7 +11,12 @@
 			<!-- The activity sits beside the record on a computer, and under it on a phone. -->
 			<!-- The team's comments and history are for the team: a client's login does not see them. -->
 			<aside v-if="withActivity" class="lg:sticky lg:top-4 lg:self-start">
-				<RecordActivity :key="`${doctype}:${name}`" :doctype="doctype" :name="name" />
+				<RecordActivity
+					:key="`${doctype}:${name}`"
+					:doctype="doctype"
+					:name="name"
+					:modified="modified"
+				/>
 			</aside>
 		</div>
 	</div>
@@ -34,6 +39,8 @@ const props = defineProps({
 	name: { type: String, default: "" },
 	// [{ label, value, icon?, tone? }]
 	facts: { type: Array, default: () => [] },
+	// The record's modified time: when it changes, the activity shows the change.
+	modified: { type: String, default: "" },
 });
 
 const client = isClientLogin();

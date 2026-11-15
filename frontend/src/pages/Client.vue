@@ -4,6 +4,12 @@
 		:parent="clientLogin ? null : { label: 'Clients', route: { name: 'Clients' } }"
 	>
 		<template #actions>
+			<Button
+				v-if="client && isManager() && !clientLogin"
+				icon-left="lucide-pencil"
+				label="Edit"
+				:route="{ name: 'ClientEdit', params: { name } }"
+			/>
 			<Dropdown v-if="client && menu.length" :options="menu" align="end">
 				<Button variant="ghost" icon="lucide-ellipsis" label="More actions" />
 			</Dropdown>
@@ -285,16 +291,6 @@ const people = computed(() => {
 });
 
 const menu = computed(() => [
-	...(isManager() && !clientLogin
-		? [
-				{
-					label: "Edit client",
-					icon: "lucide-pencil",
-					onClick: () =>
-						router.push({ name: "ClientEdit", params: { name: props.name } }),
-				},
-		  ]
-		: []),
 	...deskActions("Compliance Client", props.name),
 	...(mayUseDesk()
 		? [

@@ -18,6 +18,7 @@ declare module 'vue' {
     ClientPicker: typeof import('./src/components/ClientPicker.vue')['default']
     ConnectionBanner: typeof import('./src/components/ConnectionBanner.vue')['default']
     DataTable: typeof import('./src/components/DataTable.vue')['default']
+    EditableDetails: typeof import('./src/components/EditableDetails.vue')['default']
     FactsStrip: typeof import('./src/components/FactsStrip.vue')['default']
     GettingStarted: typeof import('./src/components/GettingStarted.vue')['default']
     KanbanBoard: typeof import('./src/components/KanbanBoard.vue')['default']

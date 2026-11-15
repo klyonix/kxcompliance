@@ -10,6 +10,7 @@ from frappe.tests import IntegrationTestCase
 from kxcompliance.api import (
 	app_companies,
 	boot,
+	editable_fields,
 	full_names,
 	licence_rule_options,
 	log_notice,
@@ -80,6 +81,48 @@ class TestAppApi(IntegrationTestCase):
 		theirs = make_item("Test App Licence", responsible=OTHER_HOLDER, reviewer=MANAGER)
 		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
 			save_changes("Compliance Item", theirs.name, {"notes": "mine now"})
+
+	def test_save_changes_corrects_the_details_of_an_item_and_a_case(self):
+		item = make_item("Test App Licence", responsible=HOLDER)
+		with self.set_user(HOLDER):
+			save_changes(
+				"Compliance Item", item.name, {"title": "Trade Licence, Pune", "issue_date": "2026-01-05"}
+			)
+			case = log_notice(
+				"Show cause notice", "Tax Notice or Assessment", "Tax Officer", TEST_COMPANY, "2026-12-05"
+			)["name"]
+			save_changes(
+				"Legal Case", case, {"case_number": "ST/42/2026", "opposing_party": "GST Department"}
+			)
+		self.assertEqual(
+			frappe.db.get_value("Compliance Item", item.name, ["title", "issue_date"], as_dict=True),
+			{"title": "Trade Licence, Pune", "issue_date": frappe.utils.getdate("2026-01-05")},
+		)
+		self.assertEqual(frappe.db.get_value("Legal Case", case, "case_number"), "ST/42/2026")
+
+	def test_only_a_manager_changes_who_is_responsible(self):
+		item = make_item("Test App Licence", responsible=HOLDER)
+		with self.set_user(HOLDER), self.assertRaisesRegex(frappe.PermissionError, "Compliance Manager"):
+			save_changes("Compliance Item", item.name, {"responsible": OTHER_HOLDER})
+		with self.set_user(MANAGER):
+			save_changes("Compliance Item", item.name, {"responsible": OTHER_HOLDER, "reviewer": REVIEWER})
+		self.assertEqual(
+			frappe.db.get_value("Compliance Item", item.name, ["responsible", "reviewer"]),
+			(OTHER_HOLDER, REVIEWER),
+		)
+
+	def test_the_app_is_told_what_it_may_change_and_the_choices(self):
+		with self.set_user(HOLDER):
+			fields = editable_fields("Legal Case")
+			with self.assertRaises(frappe.PermissionError):
+				editable_fields("Compliance Obligation Template")
+		self.assertEqual(fields["fields"]["our_role"]["fieldtype"], "Select")
+		self.assertIn("Noticee", fields["fields"]["our_role"]["options"])
+		self.assertNotIn("status", fields["fields"])
+		# Only a manager is offered the people to reassign to.
+		self.assertEqual(fields["people"], [])
+		with self.set_user(MANAGER):
+			self.assertTrue(editable_fields("Legal Case")["people"])
 
 	def test_save_changes_refuses_a_change_made_on_an_older_copy(self):
 		item = make_item("Test App Licence", responsible=HOLDER)

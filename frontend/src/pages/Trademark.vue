@@ -10,10 +10,11 @@
 		:theme="row.theme"
 		:due="due"
 		:subtitle="row.detail"
-		:facts="facts"
+		:doc="mark"
+		:details="MARK_DETAILS"
 		:key-facts="keyFacts"
-		:notes="notes"
 		:may-act="mayAct"
+		:may-edit="mayEdit"
 		@changed="load"
 	>
 		<section v-if="mark?.logo || mark?.classes?.length" class="flex items-start gap-4">
@@ -44,7 +45,7 @@ import { getDoc } from "@/api";
 import { boot } from "@/boot";
 import LegalRecord from "@/components/LegalRecord.vue";
 import { canAct } from "@/lib/items";
-import { ENDED_MARK_STATUSES, markRow, plainText } from "@/lib/legal";
+import { ENDED_MARK_STATUSES, markRow } from "@/lib/legal";
 import { formatDate } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
 import { learnNames, nameOf } from "@/composables/usePeople";
@@ -61,6 +62,7 @@ const mayAct = computed(
 		!ENDED_MARK_STATUSES.includes(mark.value.status) &&
 		canAct(mark.value, boot)
 );
+const mayEdit = computed(() => canAct(mark.value, boot));
 
 const due = computed(() => {
 	const current = mark.value;
@@ -88,45 +90,38 @@ const keyFacts = computed(() => {
 	];
 });
 
-const facts = computed(() => {
-	const current = mark.value;
-	if (!current) return [];
-	return [
-		["Type", current.mark_type],
-		["Brand", current.brand],
-		["Applicant", current.applicant],
-		["Filed on", formatDate(current.filing_date)],
-		[
-			"Use",
-			current.user_claim === "Used since"
-				? `Used since ${formatDate(current.used_since)}`
-				: current.user_claim,
-		],
-		["Agent", current.agent],
-		["Examination report", formatDate(current.examination_report_on)],
-		[
-			"Journal",
-			[current.journal_number, formatDate(current.journal_date)].filter(Boolean).join(", "),
-		],
-		[
-			"Opposition",
-			[current.opposition_number, formatDate(current.opposition_notice_on)]
-				.filter(Boolean)
-				.join(", "),
-		],
-		[
-			"Registration",
-			[current.registration_number, formatDate(current.registration_date)]
-				.filter(Boolean)
-				.join(", "),
-		],
-		["Valid until", current.status === "Registered" && formatDate(current.valid_until)],
-		["Responsible", nameOf(current.responsible)],
-		["Reviewer", nameOf(current.reviewer)],
-	];
-});
-
-const notes = computed(() => [["Notes", plainText(mark.value?.notes)]]);
+// What the trademark page shows under Details, each changed where it is shown by those who may.
+const MARK_DETAILS = [
+	{ field: "mark", label: "Mark" },
+	{ field: "mark_type", label: "Type" },
+	{ field: "brand", label: "Brand", show: (current) => current.brand },
+	{ field: "applicant", label: "Applicant", show: (current) => current.applicant },
+	{ field: "application_number", label: "Application number" },
+	{ field: "filing_date", label: "Filed on" },
+	{ field: "user_claim", label: "Use" },
+	{
+		field: "used_since",
+		label: "Used since",
+		when: (current) => current.user_claim === "Used since",
+	},
+	{ field: "agent", label: "Agent", show: (current) => current.agent },
+	{ field: "examination_report_on", label: "Examination report" },
+	{ field: "journal_number", label: "Journal number" },
+	{ field: "journal_date", label: "Journal date" },
+	{ field: "opposition_number", label: "Opposition number" },
+	{ field: "opposition_notice_on", label: "Opposition notice" },
+	{ field: "registration_number", label: "Registration number" },
+	{ field: "registration_date", label: "Registered on" },
+	{
+		field: "valid_until",
+		label: "Valid until",
+		show: (current) =>
+			current.status === "Registered" ? formatDate(current.valid_until) : "",
+	},
+	{ field: "responsible", label: "Responsible" },
+	{ field: "reviewer", label: "Reviewer" },
+	{ field: "notes", label: "Notes" },
+];
 
 async function load() {
 	error.value = "";

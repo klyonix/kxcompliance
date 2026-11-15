@@ -17,6 +17,14 @@
 		<template v-else>
 			<section class="flex flex-col gap-4" aria-labelledby="client-heading">
 				<h2 id="client-heading" class="text-base font-semibold text-ink-gray-8">Client</h2>
+				<LogoField
+					v-if="name"
+					v-model="form.logo"
+					label="The client's logo, on its page and statements"
+					:alt="`${name}'s logo`"
+					doctype="Compliance Client"
+					:docname="name"
+				/>
 				<FormControl
 					v-if="!name"
 					v-model="form.client_name"
@@ -263,6 +271,7 @@ import { useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call, createDoc, getDoc, updateDoc } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import LogoField from "@/components/LogoField.vue";
 import PriceList from "@/components/PriceList.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { money, pricesProblem, pricesToSend } from "@/lib/billing";
@@ -304,6 +313,7 @@ const form = reactive({
 	contact_email: "",
 	contact_phone: "",
 	licence_check: false,
+	logo: "",
 	gstin: "",
 	billing_state: "",
 	billing_email: "",
@@ -334,6 +344,7 @@ function values() {
 		contact_email: form.contact_email.trim() || null,
 		contact_phone: form.contact_phone.trim() || null,
 		licence_check: form.licence_check ? 1 : 0,
+		logo: form.logo || null,
 		gstin: form.gstin.trim() || null,
 		billing_state: form.billing_state || null,
 		billing_email: form.billing_email.trim() || null,
@@ -407,6 +418,7 @@ onMounted(async () => {
 				contact_email: client.contact_email || "",
 				contact_phone: client.contact_phone || "",
 				licence_check: Boolean(client.licence_check),
+				logo: client.logo || "",
 				gstin: client.gstin || "",
 				billing_state: client.billing_state || "",
 				billing_email: client.billing_email || "",

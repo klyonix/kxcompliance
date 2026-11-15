@@ -213,6 +213,11 @@ export const routes = [
 		props: true,
 	},
 	{ path: "/billing", name: "Billing", component: () => import("./pages/Billing.vue") },
+	{
+		path: "/billing/settings",
+		name: "BillingSettings",
+		component: () => import("./pages/BillingSettings.vue"),
+	},
 	{ path: "/billing/new", name: "NewBill", component: () => import("./pages/NewBill.vue") },
 	{
 		// A bill's name has slashes in it (RA/26-27/0001), so it is taken whole.

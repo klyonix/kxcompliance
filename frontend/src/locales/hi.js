@@ -26,6 +26,7 @@ export default {
 	"Showing {0}": "दिखाया जा रहा है: {0}",
 	"No records": "कोई रिकॉर्ड नहीं",
 	"Bills from your firm": "आपकी फ़र्म के बिल",
+	"{0} logo": "{0} का लोगो",
 	Billing: "बिलिंग",
 	"Nothing due.": "कुछ भी बकाया नहीं।",
 	"{0} due.": "{0} बकाया।",

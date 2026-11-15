@@ -287,9 +287,9 @@ When you are working on one client.
 
 Once, before the firm's first bill.
 
-1. Open Settings, then the Billing tab.
-2. Give the firm's name, GSTIN, address, bank details and bill prefix, and save.
-3. Under Price per return, give the fee for each return the firm files. A client's own prices and fixed fee go on the client's form.
+1. Open Settings, then Billing in its list (or Settings on the Billing page).
+2. On the Firm tab give the firm's name, GST status, GSTIN, address, bank details, UPI ID, bill prefix and logo, and save.
+3. On the Rate cards tab, give the fee for each return the firm files. A client's own prices and fixed fee go on the client's form.
 
 > **Tip.** Making bills needs the Accounts User role, which a System Manager gives in the Desk.
 

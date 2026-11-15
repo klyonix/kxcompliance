@@ -39,6 +39,9 @@
   "reminder_log_days",
   "billing_tab",
   "billing_company",
+  "gst_status",
+  "billing_logo",
+  "upi_id",
   "billing_gstin",
   "billing_state",
   "column_break_billing",
@@ -303,13 +306,32 @@
    "options": "Return Fee",
    "label": "Price per Return",
    "description": "What the firm charges for filing each return; a client's own price overrides it."
+  },
+  {
+   "fieldname": "gst_status",
+   "fieldtype": "Select",
+   "label": "GST Status",
+   "options": "Registered\nNot registered\nComposition",
+   "default": "Registered",
+   "description": "Registered firms charge GST; a firm not registered, or under composition, does not."
+  },
+  {
+   "fieldname": "billing_logo",
+   "fieldtype": "Attach Image",
+   "label": "Firm Logo on Bills"
+  },
+  {
+   "fieldname": "upi_id",
+   "fieldtype": "Data",
+   "label": "UPI ID",
+   "description": "Printed on bills as a QR code for paying the amount due."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-16 10:00:00.000000",
+ "modified": "2026-11-16 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "KX Compliance Settings",

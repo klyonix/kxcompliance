@@ -31,7 +31,20 @@ WITHIN_STATE = "GST within state"
 OUTSIDE_STATE = "GST outside state"
 GST_RATE = 18
 # What the firm sets about itself for its bills, from Settings → Billing.
-FIRM_FIELDS = ("billing_gstin", "billing_state", "billing_address", "bank_details", "bill_prefix")
+FIRM_FIELDS = (
+	"gst_status",
+	"billing_gstin",
+	"billing_state",
+	"billing_address",
+	"bank_details",
+	"upi_id",
+	"bill_prefix",
+	"billing_logo",
+)
+# A firm registered for GST charges it on its bills; one not registered, or under composition
+# (which issues a bill of supply), charges none.
+REGISTERED = "Registered"
+GST_STATUSES = (REGISTERED, "Not registered", "Composition")
 # A filing is billed once it is filed (compliance_task.FILED_STATUSES).
 BILLABLE_STATUSES = ("Filed", "Filed Late")
 WITHOUT_GST = "Without GST"
@@ -76,6 +89,7 @@ def setup_state() -> dict:
 		**{field: settings.get(field) or "" for field in FIRM_FIELDS},
 		"states": [state for state in states.split("\n") if state],
 		"can_create_company": bool(frappe.has_permission("Company", "create")) and frappe.is_setup_complete(),
+		"gst_statuses": list(GST_STATUSES),
 		"return_fees": [
 			{"obligation_template": row.obligation_template, "amount": row.amount}
 			for row in settings.return_fees
@@ -96,7 +110,8 @@ def set_up_firm(name: str, details: dict) -> dict:
 
 
 def save_details(settings, details: dict):
-	"""The firm's GSTIN, state, address, bank details and bill prefix; nothing else is taken."""
+	"""The firm's GST status, GSTIN, state, address, bank details, UPI ID, bill prefix and logo;
+	nothing else is taken."""
 	not_allowed = sorted(set(details) - set(FIRM_FIELDS))
 	if not_allowed:
 		frappe.throw(_("Billing cannot set {0}.").format(", ".join(not_allowed)), frappe.PermissionError)
@@ -106,15 +121,27 @@ def save_details(settings, details: dict):
 			if not isinstance(value, str | type(None)):
 				frappe.throw(_("{0} must be a single value.").format(_(settings.meta.get_label(field))))
 			settings.set(field, (value or "").strip() or None)
+	settings.gst_status = settings.gst_status or REGISTERED
+	if settings.gst_status not in GST_STATUSES:
+		frappe.throw(
+			_("GST status is one of {0}, not {1}.").format(", ".join(GST_STATUSES), settings.gst_status)
+		)
 	settings.billing_gstin = (settings.billing_gstin or "").upper() or None
+	if settings.gst_status != "Not registered" and not settings.billing_gstin:
+		frappe.throw(_("A firm that is {0} has a GSTIN; give it.").format(_(settings.gst_status).lower()))
 	settings.billing_state = state_of(settings.billing_gstin, settings.billing_state)
 	if not settings.billing_state:
-		frappe.throw(_("Give the firm's GSTIN, or its state, so bills charge the right GST."))
+		frappe.throw(_("Give the firm's state, which bills show as where it supplies from."))
+	if settings.billing_logo and not settings.billing_logo.startswith("/files/"):
+		frappe.throw(_("Attach the firm's logo as a public file, so bills can print it."))
 	settings.save()
-	if settings.billing_gstin:
-		# ERPNext prints the company's Tax ID on its invoices; managers may not edit companies in
-		# the Desk, and this is the only field the app keeps there.
-		frappe.db.set_value("Company", settings.billing_company, "tax_id", settings.billing_gstin)
+	# ERPNext prints the company's Tax ID and logo on its documents; managers may not edit companies
+	# in the Desk, and these are the only fields the app keeps there.
+	frappe.db.set_value(
+		"Company",
+		settings.billing_company,
+		{"tax_id": settings.billing_gstin, "company_logo": settings.billing_logo},
+	)
 
 
 def make_masters(company: str):
@@ -558,7 +585,8 @@ def make_bill(
 			_("Nothing to bill {0} for: choose filings, the fixed fee or add a line.").format(client)
 		)
 	today = getdate(nowdate())
-	template = tax_template_for(plan.billing_state)
+	# Only a firm registered for GST charges it.
+	template = tax_template_for(plan.billing_state) if settings.gst_status == REGISTERED else None
 	bill = frappe.get_doc(
 		{
 			"doctype": "Sales Invoice",

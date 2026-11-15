@@ -112,6 +112,7 @@ const SETTINGS_PAGES = [
 		also: ["LicenceRuleNew", "LicenceRule", "LicenceBlocks"],
 		licenceCheck: true,
 	},
+	{ label: "Billing", route: "BillingSettings", icon: "lucide-receipt", firm: true },
 	{ label: "Reminder log", route: "ReminderLog", icon: "lucide-bell" },
 	{
 		label: "Obligation library",
@@ -139,8 +140,13 @@ const SETTINGS_PAGES = [
 	},
 ];
 
-export const settingsPagesFor = ({ licenceCheck = licenceCheckOn() } = {}) =>
-	SETTINGS_PAGES.filter((page) => !(page.licenceCheck && !licenceCheck));
+export const settingsPagesFor = ({
+	licenceCheck = licenceCheckOn(),
+	firm = boot.accountType === "CA/CS Firm",
+} = {}) =>
+	SETTINGS_PAGES.filter(
+		(page) => !(page.licenceCheck && !licenceCheck) && !(page.firm && !firm)
+	);
 
 // Whether a settings page's row is the one open, counting the pages opened from it.
 export const isSettingsPageOpen = (page, routeName) =>

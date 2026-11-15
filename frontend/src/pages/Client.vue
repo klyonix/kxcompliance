@@ -36,18 +36,26 @@
 		</div>
 
 		<template v-else>
-			<section class="flex flex-col gap-2">
-				<div class="flex flex-wrap items-center gap-2">
-					<Badge
-						:label="client.status"
-						:theme="client.status === 'Active' ? 'green' : 'gray'"
-						size="md"
-					/>
-					<span class="text-base" :class="TONE[clientTheme(client)]">{{
-						clientAttention(client)
-					}}</span>
+			<section class="flex items-start gap-4">
+				<img
+					v-if="client.logo"
+					:src="client.logo"
+					:alt="t('{0} logo', client.name)"
+					class="size-14 shrink-0 rounded-lg bg-surface-gray-1 object-contain p-1"
+				/>
+				<div class="flex min-w-0 flex-col gap-2">
+					<div class="flex flex-wrap items-center gap-2">
+						<Badge
+							:label="client.status"
+							:theme="client.status === 'Active' ? 'green' : 'gray'"
+							size="md"
+						/>
+						<span class="text-base" :class="TONE[clientTheme(client)]">{{
+							clientAttention(client)
+						}}</span>
+					</div>
+					<p class="text-base text-ink-gray-6">{{ people }}</p>
 				</div>
-				<p class="text-base text-ink-gray-6">{{ people }}</p>
 			</section>
 
 			<section class="flex flex-col gap-3" aria-labelledby="year-heading">

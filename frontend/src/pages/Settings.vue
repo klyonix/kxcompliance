@@ -279,7 +279,17 @@
 					</section>
 				</TabPanel>
 				<TabPanel v-if="firm" value="billing" class="flex flex-col gap-8 pt-2 sm:pt-6">
-					<BillingSettings />
+					<section class="flex flex-col items-start gap-3">
+						<p class="text-base text-ink-gray-6">
+							Billing has a page of its own: the firm on its bills, its GST status
+							and logo, and its rate cards.
+						</p>
+						<Button
+							icon-left="lucide-receipt"
+							label="Open billing settings"
+							:route="{ name: 'BillingSettings' }"
+						/>
+					</section>
 				</TabPanel>
 			</Tabs>
 		</template>
@@ -329,7 +339,6 @@ import { useTabQuery } from "@/composables/useTabQuery";
 import { settingsPagesFor } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
 
-const BillingSettings = defineAsyncComponent(() => import("@/components/BillingSettings.vue"));
 const NoticeEditor = defineAsyncComponent(() => import("@/components/NoticeEditor.vue"));
 
 const isMobile = useIsMobile();

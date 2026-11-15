@@ -25,7 +25,7 @@
 		</template>
 	</AppPageHeader>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6">
+	<div class="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
 		<p
 			v-if="error"
 			role="alert"
@@ -54,56 +54,60 @@
 				<Button label="Import from a sheet" :route="{ name: 'BulkSetup' }" />
 			</div>
 		</div>
-		<ul v-else class="flex flex-col gap-1" data-tour="clients-list">
-			<li v-for="client in clients" :key="client.name">
-				<RouterLink
-					:to="{ name: 'Client', params: { name: client.name } }"
-					class="flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-surface-gray-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
-				>
-					<ScoreBadge
-						:score="client.lowest_score?.score ?? null"
-						:title="
-							client.lowest_score ? `Lowest: ${client.lowest_score.company}` : ''
-						"
-					/>
-					<span class="flex min-w-0 flex-1 flex-col gap-0.5">
-						<span class="truncate text-base font-medium text-ink-gray-8">{{
-							client.name
-						}}</span>
-						<span class="truncate text-sm text-ink-gray-5">{{
-							companiesLine(client.companies)
-						}}</span>
-					</span>
-					<span class="shrink-0 text-right text-sm" :class="TONE[clientTheme(client)]">
-						{{ clientAttention(client) }}
-					</span>
-				</RouterLink>
-			</li>
-		</ul>
+		<template v-else>
+			<TextInput
+				v-model="search"
+				type="search"
+				placeholder="Search by client or company"
+				aria-label="Search by client or company"
+				class="w-full sm:w-72"
+			>
+				<template #prefix
+					><span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true"
+				/></template>
+			</TextInput>
+			<p v-if="!rows.length" class="py-10 text-center text-base text-ink-gray-5">
+				No client matches. Try another name.
+			</p>
+			<RowList
+				v-else
+				data-tour="clients-list"
+				:rows="rows"
+				:columns="[{ label: 'Lowest score' }, { label: 'What is due' }]"
+				name-label="Client"
+				:date-label="null"
+			/>
+		</template>
 	</div>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
-import { Button, Skeleton } from "frappe-ui";
+import { computed, onMounted, ref } from "vue";
+import { Button, Skeleton, TextInput } from "frappe-ui";
 import { call } from "@/api";
 import { isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
-import ScoreBadge from "@/components/ScoreBadge.vue";
+import RowList from "@/components/RowList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
-import { clientAttention, clientTheme, companiesLine } from "@/lib/clients";
+import { clientRow } from "@/lib/clients";
 import { notLoaded } from "@/offline/reachability";
 
 const isMobile = useIsMobile();
 
-const TONE = {
-	red: "font-medium text-ink-red-5",
-	amber: "text-ink-amber-5",
-	green: "text-ink-gray-5",
-};
-
 const clients = ref(null);
 const error = ref("");
+const search = ref("");
+
+// Every word typed must be in the client's name or one of its companies.
+const rows = computed(() => {
+	const words = search.value.toLowerCase().split(/\s+/).filter(Boolean);
+	return clients.value
+		.filter((client) => {
+			const text = [client.name, ...client.companies].join(" ").toLowerCase();
+			return words.every((word) => text.includes(word));
+		})
+		.map(clientRow);
+});
 
 onMounted(async () => {
 	try {

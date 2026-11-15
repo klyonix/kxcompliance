@@ -7,6 +7,10 @@
 		class="mx-auto flex w-full flex-col gap-4 px-4 py-6 sm:px-6"
 		:class="layout === 'list' && !columns.length ? 'max-w-4xl' : 'max-w-7xl'"
 	>
+		<!-- A line on what the list is for, on lists people open rarely (Settings). -->
+		<p v-if="$slots.intro" class="max-w-3xl text-base text-ink-gray-6">
+			<slot name="intro" />
+		</p>
 		<ClientPicker v-if="byClient" />
 
 		<!-- The list's own tabs and the views pinned for everyone, and search. -->
@@ -192,38 +196,13 @@
 			:rows="rows"
 		/>
 
-		<div v-else class="flex flex-col" data-tour="list-rows">
-			<div
-				class="hidden items-center gap-3 border-b border-outline-gray-1 px-3 pb-2 text-xs font-medium text-ink-gray-5 sm:flex"
-				aria-hidden="true"
-			>
-				<span class="w-8 shrink-0" />
-				<span class="flex-1">{{ t("Name") }}</span>
-				<span v-for="column in columns" :key="column.label" class="w-40 shrink-0">{{
-					t(column.label)
-				}}</span>
-				<span class="w-36 shrink-0">{{ t("Status") }}</span>
-				<span class="w-28 shrink-0 text-right">{{ t(dateLabel) }}</span>
-			</div>
-			<template v-for="group in groups" :key="group.key">
-				<h2
-					v-if="group.label"
-					class="flex items-center gap-2 px-3 pb-1 pt-4 text-sm font-semibold"
-					:class="group.key === 'overdue' ? 'text-ink-red-4' : 'text-ink-gray-7'"
-				>
-					{{ t(group.label) }}
-					<span class="font-normal text-ink-gray-5">{{ group.rows.length }}</span>
-				</h2>
-				<div class="flex flex-col [&>*+*]:border-t [&>*+*]:border-outline-gray-1">
-					<WorkRow
-						v-for="entry in group.rows"
-						:key="entry.key"
-						:row="entry"
-						:cells="entry.cells"
-					/>
-				</div>
-			</template>
-		</div>
+		<RowList
+			v-else
+			:groups="groups"
+			:columns="columns"
+			:date-label="dateLabel"
+			:name-label="nameLabel"
+		/>
 		<Button
 			v-if="hasMore && layout !== 'kanban'"
 			class="self-center"
@@ -261,7 +240,7 @@ import ClientPicker from "@/components/ClientPicker.vue";
 import DataTable from "@/components/DataTable.vue";
 import KanbanBoard from "@/components/KanbanBoard.vue";
 import ListControls from "@/components/ListControls.vue";
-import WorkRow from "@/components/WorkRow.vue";
+import RowList from "@/components/RowList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { BOARDS, moveAction } from "@/lib/boards";
@@ -269,7 +248,7 @@ import { companyFilters } from "@/lib/clientFilter";
 import { searchFilter } from "@/lib/items";
 import { parseListFilters } from "@/lib/listFilters";
 import { t } from "@/lib/i18n";
-import { choiceFilters, groupRows } from "@/lib/listViews";
+import { choiceFilters, groupBy, groupRows } from "@/lib/listViews";
 import {
 	LAYOUTS,
 	loadViews,
@@ -304,7 +283,9 @@ const props = defineProps({
 	byClient: { type: Boolean, default: true },
 	// [{ label, field, person?, value? }]: the List layout's columns on a computer, after the name.
 	columns: { type: Array, default: () => [] },
+	// null for a list without dates.
 	dateLabel: { type: String, default: "Date" },
+	nameLabel: { type: String, default: "Name" },
 	// Keys of lib/boards.js BOARDS this list offers as Kanban.
 	boards: { type: Array, default: () => [] },
 	filterBy: { type: Object, default: () => ({}) },
@@ -332,7 +313,11 @@ const listKey = computed(() =>
 	current.value.doctype ? `${props.listKey}-${current.value.value}` : props.listKey
 );
 const columns = computed(() => current.value.columns || props.columns);
-const dateLabel = computed(() => current.value.dateLabel || props.dateLabel);
+// A list without dates passes null; "" keeps the column without a heading.
+const dateLabel = computed(() =>
+	current.value.dateLabel !== undefined ? current.value.dateLabel : props.dateLabel
+);
+const nameLabel = computed(() => current.value.nameLabel || props.nameLabel);
 const filterBy = computed(() => current.value.filterBy || props.filterBy);
 const boardKeys = computed(() => current.value.boards || props.boards);
 const boardOf = (key) => (boardKeys.value.includes(key) ? BOARDS[key] : null);
@@ -693,12 +678,17 @@ const rows = computed(() =>
 		record,
 	}))
 );
-// In the view's own date order the rows fall under when they are due; another sort lists them.
-const groups = computed(() =>
-	current.value.group && !userOrder.value && !pinned.value
-		? groupRows(rows.value)
-		: [{ key: "all", label: "", rows: rows.value }]
-);
+// In the view's own order the rows fall under when they are due, or under what `group` returns
+// for each record (with `groupOrder` for the headings); another sort lists them.
+const groups = computed(() => {
+	const { group, groupOrder } = current.value;
+	if (!group || userOrder.value || pinned.value) {
+		return [{ key: "all", label: "", rows: rows.value }];
+	}
+	return typeof group === "function"
+		? groupBy(rows.value, (row) => group(row.record), groupOrder || [])
+		: groupRows(rows.value);
+});
 
 function fieldsToLoad() {
 	const base = current.value.fields || props.fields;

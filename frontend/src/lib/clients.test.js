@@ -1,7 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { clientAttention, clientTheme, companiesLine, yearFacts } from "./clients";
+import { clientAttention, clientRow, clientTheme, companiesLine, yearFacts } from "./clients";
 
 describe("a firm's clients", () => {
+	it("lists a client with its lowest score and what is due", () => {
+		const row = clientRow({
+			name: "Mehta Traders",
+			companies: ["Mehta Traders Pvt Ltd"],
+			lowest_score: { score: 62, company: "Mehta Traders Pvt Ltd" },
+			overdue: 1,
+			due_this_week: 0,
+			in_review: 0,
+		});
+		expect(row.status).toBe("Overdue");
+		expect(row.theme).toBe("red");
+		expect(row.cells).toEqual(["62 · Mehta Traders Pvt Ltd", "1 overdue"]);
+		expect(row.to.params.name).toBe("Mehta Traders");
+	});
+
 	it("says what needs attention, worst first, and colours it", () => {
 		const late = { overdue: 2, due_this_week: 1, in_review: 0 };
 		expect(clientAttention(late)).toBe("2 overdue · 1 due this week");

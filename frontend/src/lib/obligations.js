@@ -27,32 +27,61 @@ export function ruleSummary(template) {
 	)}`;
 }
 
-// [{ law, templates }] in the order the laws are offered, each law's templates by name.
-export function groupByLaw(templates, laws = []) {
-	const order = (law) => {
-		const index = laws.indexOf(law);
-		return index === -1 ? laws.length : index;
-	};
-	const groups = new Map();
-	for (const template of templates) {
-		if (!groups.has(template.law)) groups.set(template.law, []);
-		groups.get(template.law).push(template);
-	}
-	return [...groups.entries()]
-		.sort(([a], [b]) => order(a) - order(b) || String(a).localeCompare(String(b)))
-		.map(([law, rows]) => ({
-			law,
-			templates: rows.sort((a, b) => a.name.localeCompare(b.name)),
-		}));
+export const OBLIGATION_FIELDS = [
+	"name",
+	"law",
+	"form",
+	"frequency",
+	"months_after_period",
+	"due_day",
+	"due_after_event",
+	"days_after_event",
+	"event_type",
+	"is_active",
+	"is_standard",
+];
+
+// `laws` is the order the library lists them in (GST first); each tab groups its rows by law.
+export function obligationViews(laws = []) {
+	const view = (label, value, filters) => ({
+		label,
+		value,
+		filters,
+		orderBy: "name asc",
+		group: (template) => template.law,
+		groupOrder: laws,
+	});
+	return [
+		view("In use", "active", [["is_active", "=", 1]]),
+		view("Off", "off", [["is_active", "=", 0]]),
+		view("All", "all", []),
+	];
 }
 
-export function matchesSearch(template, search) {
-	const words = String(search || "")
-		.toLowerCase()
-		.split(/\s+/)
-		.filter(Boolean);
-	const text = [template.name, template.form, template.law].join(" ").toLowerCase();
-	return words.every((word) => text.includes(word));
+// The library's columns (RecordList); an obligation has no date of its own.
+export const OBLIGATION_LIST = {
+	columns: [
+		{ label: "Law", field: "law" },
+		{ label: "Form", field: "form" },
+	],
+	dateLabel: null,
+};
+
+export function obligationRow(template) {
+	let status = "Standard";
+	let theme = "green";
+	if (!template.is_active) [status, theme] = ["Off", "gray"];
+	else if (!template.is_standard) [status, theme] = ["Your own", "blue"];
+	return {
+		key: template.name,
+		kind: "obligation",
+		title: template.name,
+		detail: ruleSummary(template),
+		status,
+		theme,
+		due: { text: "", late: false },
+		to: { name: "Obligation", params: { name: template.name } },
+	};
 }
 
 // "One state per line" text ⇄ a list.

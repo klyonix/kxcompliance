@@ -16,6 +16,23 @@ export function clientTheme(client) {
 	return "green";
 }
 
+// How a client shows in the clients list (RowList).
+export function clientRow(client) {
+	const theme = clientTheme(client);
+	const score = client.lowest_score;
+	return {
+		key: client.name,
+		kind: "client",
+		title: client.name,
+		detail: companiesLine(client.companies),
+		status: { red: "Overdue", amber: "Due soon", green: "On track" }[theme],
+		theme,
+		due: { text: "", late: false },
+		cells: [score ? `${score.score} · ${score.company}` : "", clientAttention(client)],
+		to: { name: "Client", params: { name: client.name } },
+	};
+}
+
 export function companiesLine(companies) {
 	if (!companies.length) return "No companies yet";
 	if (companies.length === 1) return companies[0];

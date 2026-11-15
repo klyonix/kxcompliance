@@ -35,3 +35,42 @@ export function typeSummary(type) {
 	if (type.requires_document) parts.push("certificate needed");
 	return parts.join(" · ");
 }
+
+export const TYPE_FIELDS = [
+	"name",
+	"category",
+	"renewal_cycle_months",
+	"requires_document",
+	"is_active",
+];
+
+export const TYPE_VIEWS = [
+	{ label: "In use", value: "active", filters: [["is_active", "=", 1]], orderBy: "name asc" },
+	{ label: "Off", value: "off", filters: [["is_active", "=", 0]], orderBy: "name asc" },
+	{ label: "All", value: "all", filters: [], orderBy: "name asc" },
+];
+
+// The item types list's columns (RecordList); a type has no date of its own.
+export const TYPE_LIST = {
+	columns: [
+		{ label: "Category", field: "category" },
+		{ label: "Renews", value: (type) => renewsText(type) },
+	],
+	dateLabel: null,
+};
+
+export const renewsText = (type) =>
+	type.renewal_cycle_months ? `Every ${type.renewal_cycle_months} months` : "Does not expire";
+
+export function typeRow(type) {
+	return {
+		key: type.name,
+		kind: "item-type",
+		title: type.name,
+		detail: typeSummary(type),
+		status: type.is_active ? "In use" : "Off",
+		theme: type.is_active ? "green" : "gray",
+		due: { text: "", late: false },
+		to: { name: "ItemType", params: { name: type.name } },
+	};
+}

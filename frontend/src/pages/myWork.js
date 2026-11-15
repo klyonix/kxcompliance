@@ -12,6 +12,13 @@ export const KINDS = {
 	reminder: { label: "Reminders", icon: "lucide-bell" },
 	"privacy-request": { label: "Privacy requests", icon: "lucide-user-lock" },
 	breach: { label: "Data breaches", icon: "lucide-shield-alert" },
+	client: { label: "Clients", icon: "lucide-briefcase-business" },
+	company: { label: "Companies", icon: "lucide-building-2" },
+	person: { label: "People", icon: "lucide-user-round" },
+	"item-type": { label: "Item types", icon: "lucide-shapes" },
+	"licence-rule": { label: "Licence rules", icon: "lucide-shield-check" },
+	obligation: { label: "Obligations", icon: "lucide-book-open-check" },
+	"licence-check": { label: "Licence checks", icon: "lucide-shield-x" },
 };
 
 const LEGAL_PAGES = { "Legal Case": "LegalCase", Trademark: "Trademark" };

@@ -40,6 +40,7 @@ declare module 'vue' {
     RenewalDialog: typeof import('./src/components/RenewalDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    RowList: typeof import('./src/components/RowList.vue')['default']
     ScoreBadge: typeof import('./src/components/ScoreBadge.vue')['default']
     SyncStatus: typeof import('./src/components/SyncStatus.vue')['default']
     TourMenu: typeof import('./src/components/TourMenu.vue')['default']

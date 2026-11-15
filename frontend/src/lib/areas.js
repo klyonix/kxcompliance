@@ -41,6 +41,13 @@ const KIND_HUES = {
 	reminder: "amber",
 	"privacy-request": "violet",
 	breach: "red",
+	client: "orange",
+	company: "cyan",
+	person: "violet",
+	"item-type": "green",
+	"licence-rule": "amber",
+	obligation: "blue",
+	"licence-check": "amber",
 };
 
 export const sectionTint = (route) => TINTS[SECTION_HUES[route] || "gray"];

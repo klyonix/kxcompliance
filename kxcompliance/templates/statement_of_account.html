@@ -1,3 +1,4 @@
+{%- autoescape true -%}
 {%- macro money(v) -%}{{ frappe.utils.fmt_money(v, currency=currency) }}{%- endmacro -%}
 {%- macro date(v) -%}{{ frappe.utils.format_date(v) }}{%- endmacro -%}
 {%- macro balance(v) -%}{{ money(v | abs) }}{% if v < 0 %} {{ _("ahead") }}{% endif %}{%- endmacro -%}
@@ -161,3 +162,4 @@
 <div class="small muted" style="margin-top: 14px; text-align: center">{{ _("This is a computer-generated document and needs no signature.") }}</div>
 </body>
 </html>
+{%- endautoescape %}

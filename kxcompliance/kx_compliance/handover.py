@@ -129,6 +129,11 @@ def move_record(doctype: str, name: str, fields: tuple, from_user: str, to_user:
 		if doc.meta.has_field("reviewer") and doc.get("reviewer") == doc.get("responsible"):
 			doc.reviewer = None
 		doc.save()
+		# Some records take their people from another on save (a hearing from its case), so the
+		# change may not hold: such a record is reported as not moved, not counted as moved.
+		if any(doc.get(field) == from_user for field in fields):
+			frappe.db.rollback(save_point=SAVEPOINT)
+			return False
 		return True
 	except Exception:
 		frappe.db.rollback(save_point=SAVEPOINT)

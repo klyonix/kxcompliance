@@ -258,3 +258,41 @@ class TestCompaniesInTheApp(IntegrationTestCase):
 		values = {"company_type": "Private Limited", "default_responsible": HOLDER}
 		with self.set_user(MANAGER), self.assertRaises(frappe.PermissionError):
 			save_company("Brand New Foods Private Limited", values, new_company=True)
+
+
+class TestNobodyReviewsTheirOwn(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_company()
+		make_users()
+
+	def test_companies_set_up_before_the_rule_can_be_saved_again(self):
+		from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import profile
+		from kxcompliance.patches.v1_0.clear_self_review import execute as clear_self_review
+
+		name = profile(TEST_COMPANY).name  # MANAGER prepares its filings by default
+		# As data made before the rule could be: the default reviewer, and an obligation whose
+		# reviewer is the person who prepares it.
+		frappe.db.set_value("Company Compliance Profile", name, "default_reviewer", MANAGER)
+		row = frappe.get_doc(
+			{
+				"doctype": "Company Obligation",
+				"parent": name,
+				"parenttype": "Company Compliance Profile",
+				"parentfield": "obligations",
+				"obligation_template": "GSTR-3B (Monthly)",
+				"responsible": MANAGER,
+				"reviewer": MANAGER,
+				"start_from": "2026-04-01",
+				"idx": 99,
+			}
+		)
+		row.db_insert()
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot be both"):
+			frappe.get_doc("Company Compliance Profile", name).save()
+		clear_self_review()
+		clear_self_review()  # safe to run again
+		self.assertIsNone(frappe.db.get_value("Company Compliance Profile", name, "default_reviewer"))
+		self.assertIsNone(frappe.db.get_value("Company Obligation", row.name, "reviewer"))
+		frappe.get_doc("Company Compliance Profile", name).save()

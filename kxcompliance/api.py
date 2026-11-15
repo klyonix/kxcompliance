@@ -704,13 +704,14 @@ def client_billing(client: str) -> dict:
 
 
 def check_client_account(client: str) -> bool:
-	"""A client's account is for those who bill, and for the client's own login; True for the latter."""
-	check_reader_access()
+	"""A client's account is for those who bill (accounts staff too), and for the client's own
+	login; True for the latter."""
 	own = is_client_login()
 	if own:
 		if client != client_of_login():
 			frappe.throw(_("You can see only your own bills."), frappe.PermissionError)
 	else:
+		check_app_access_or_accounts()
 		billing.check_biller()
 		check_billed_client(client)
 	return own

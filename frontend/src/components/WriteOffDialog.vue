@@ -2,7 +2,7 @@
 	<Dialog
 		v-model:open="open"
 		:title="`Write off what is left on ${bill.name}`"
-		:actions="[{ label: 'Write off', variant: 'solid', theme: 'red', onClick: save }]"
+		:actions="actions"
 	>
 		<form class="flex flex-col gap-4" @submit.prevent>
 			<p class="text-base text-ink-gray-6">
@@ -34,6 +34,19 @@ const open = defineModel("open", { type: Boolean, default: false });
 
 const reason = ref("");
 const error = ref("");
+// The actions keep one identity, so the dialog keeps its button busy while saving; and one save
+// at a time, so a second click while the first is on its way records nothing twice.
+const actions = [{ label: "Write off", variant: "solid", theme: "red", onClick: save }];
+const saving = ref(false);
+async function save(args) {
+	if (saving.value) return;
+	saving.value = true;
+	try {
+		await record(args);
+	} finally {
+		saving.value = false;
+	}
+}
 
 watch(open, (now) => {
 	if (!now) return;
@@ -41,7 +54,7 @@ watch(open, (now) => {
 	error.value = "";
 });
 
-async function save({ close }) {
+async function record({ close }) {
 	error.value = "";
 	if (!reason.value.trim()) {
 		error.value = "Say why it is written off.";

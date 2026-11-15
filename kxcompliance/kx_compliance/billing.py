@@ -17,6 +17,7 @@ from frappe import _
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.query_builder.functions import Sum
 from frappe.utils import add_days, add_months, flt, format_date, get_first_day, getdate, nowdate
+from frappe.utils.caching import request_cache
 
 from kxcompliance.kx_compliance.onboarding import make_company
 from kxcompliance.kx_compliance.register import get_settings, is_approver
@@ -379,21 +380,25 @@ def keep_one_default(card):
 
 
 def check_client_rates(client):
-	"""A client's own rates, and a start date for any monthly, quarterly or yearly charge it pays."""
+	"""A client's own rates, and a start date for any monthly, quarterly or yearly charge chosen
+	for it: in its own rates or on the card picked for it. The default card is left out: a
+	recurring line added there must not stop every client from being saved; a client without a
+	start date is simply not charged it (recurring_due)."""
 	check_rate_lines(client.own_rates, _("Own Rates"))
 	if client.billing_from:
 		return
-	recurring = [
-		line
-		for line in rates_for([client.name or ""], {client.name or "": client})
-		.get(client.name or "", {})
-		.values()
-		if line["unit"] in RECURRING_MONTHS
-	]
+	lines = list(client.own_rates)
+	if client.rate_card:
+		lines += frappe.get_all(
+			"Rate Card Line",
+			filters={"parenttype": "Rate Card", "parent": client.rate_card},
+			fields=["service", "unit"],
+		)
+	recurring = [line for line in lines if line.get("unit") in RECURRING_MONTHS]
 	if recurring:
 		frappe.throw(
 			_("{0} pays {1} {2}; give the date its recurring charges start from.").format(
-				client.client_name, recurring[0]["service"], _(recurring[0]["unit"]).lower()
+				client.client_name, recurring[0].get("service"), _(recurring[0].get("unit")).lower()
 			)
 		)
 
@@ -503,6 +508,28 @@ def client_fees(client: str) -> dict:
 		"unbilled": unbilled,
 		"unbilled_total": sum(row.fee for row in unbilled),
 	}
+
+
+@request_cache
+def billable_clients() -> tuple[str, ...] | None:
+	"""The clients this person may bill: None for any (accounts staff, and the app's people not
+	kept to some clients), else those they may read. The app's people are kept to their clients
+	by permissions.py; Sales Invoices carry no such rule, so billing applies it here."""
+	from kxcompliance.api import APP_ROLES
+	from kxcompliance.permissions import is_restricted
+
+	user = frappe.session.user
+	if not (APP_ROLES & set(frappe.get_roles(user))) or not is_restricted(user):
+		return None
+	return tuple(frappe.get_list("Compliance Client", pluck="name", limit=0))
+
+
+def check_client_allowed(client: str | None):
+	allowed = billable_clients()
+	if allowed is not None and client not in allowed:
+		frappe.throw(
+			_("You do not work on {0}, so cannot see its bills.").format(client), frappe.PermissionError
+		)
 
 
 def check_biller():
@@ -759,7 +786,17 @@ def make_bill(
 	start = frappe.db.get_value("Compliance Client", client, "billing_from")
 	rates = rates_for([client])[client]
 	carries_recurring = company == recurring_company_of(client, client_companies(client))
-	for charge in recurring_due(rates, start, month) if month and carries_recurring else []:
+	charges = recurring_due(rates, start, month) if month and carries_recurring else []
+	if charges:
+		# A month's recurring charges go on one bill: the monthly draft's, or the first made by hand.
+		key = key or month_key(client, company, month)
+		if month_billed(key):
+			frappe.throw(
+				_("{0}'s recurring charges for {1} are already on a bill.").format(
+					company or client, format_date(month, "MMM yyyy")
+				)
+			)
+	for charge in charges:
 		items.append(
 			{
 				"item_code": FEES_ITEM,
@@ -886,6 +923,7 @@ def bill_of(name: str):
 	bill.check_permission("read")
 	if bill.company != get_settings().billing_company or not bill.compliance_client:
 		frappe.throw(_("{0} is not one of the firm's bills.").format(name), frappe.PermissionError)
+	check_client_allowed(bill.compliance_client)
 	return bill
 
 
@@ -1002,11 +1040,21 @@ def make_monthly_drafts(today: date | None = None):
 			make_monthly_draft(client, company, companies, month)
 
 
+def month_key(client: str, company: str | None, month: date) -> str:
+	"""The key of a company's bill for a month: its monthly draft, or the bill its recurring
+	charges went on."""
+	return f"{client}|{company or ''}|{month.isoformat()[:7]}"
+
+
+def month_billed(key: str) -> bool:
+	return bool(frappe.db.exists("Sales Invoice", {"kx_billing_key": key, "docstatus": ("!=", 2)}))
+
+
 def make_monthly_draft(client: str, company: str | None, companies: list[str], month: date):
 	"""The month's draft for one company of a client, if it has filings to bill or carries the
 	client's recurring charges and some are due. Made once per company and month."""
-	key = f"{client}|{company or ''}|{month.isoformat()[:7]}"
-	if frappe.db.exists("Sales Invoice", {"kx_billing_key": key, "docstatus": ("!=", 2)}):
+	key = month_key(client, company, month)
+	if month_billed(key):
 		return
 	try:
 		filings = [row.name for row in unbilled_filings(client) if company is None or row.company == company]
@@ -1043,7 +1091,10 @@ def bill_options(client: str, company: str | None = None) -> dict:
 		"company": company,
 		"recurring_company": recurring_to,
 		"filings": [row for row in unbilled_filings(client) if company is None or row.company == company],
-		"recurring": recurring_due(rates, start, month) if company == recurring_to else [],
+		# Due and not yet on a bill this month.
+		"recurring": recurring_due(rates, start, month)
+		if company == recurring_to and not month_billed(month_key(client, company, month))
+		else [],
 		"services": [line for line in rates.values() if line["unit"] in AS_DONE],
 	}
 
@@ -1188,8 +1239,28 @@ def payments_of(bill: str) -> list[dict]:
 		.orderby(entry.posting_date)
 		.orderby(entry.name)
 	).run(as_dict=True)
+	# A payment may settle several bills (an advance used against each as they are sent), so its
+	# TDS is shared by what it settled of each, and what it paid on this bill is the rest.
+	names = [row.name for row in rows] or [""]
+	deducted: dict[str, float] = {}
+	for line in frappe.get_all(
+		"Payment Entry Deduction",
+		filters={"parenttype": "Payment Entry", "parent": ("in", names)},
+		fields=["parent", "amount"],
+	):
+		deducted[line.parent] = deducted.get(line.parent, 0) + flt(line.amount)
+	settled = dict(
+		(
+			frappe.qb.from_(reference)
+			.select(reference.parent, Sum(reference.allocated_amount))
+			.where((reference.parent.isin(names)) & (reference.reference_doctype == "Sales Invoice"))
+			.groupby(reference.parent)
+		).run()
+	)
 	for row in rows:
-		row.tds = flt(row.allocated_amount - row.paid_amount, 2)
+		total = flt(settled.get(row.name))
+		row.tds = flt(deducted.get(row.name, 0) * flt(row.allocated_amount) / total, 2) if total else 0
+		row.paid_amount = flt(row.allocated_amount - row.tds, 2)
 	return rows
 
 
@@ -1205,6 +1276,7 @@ def payment_of(name: str):
 		check_biller()
 		if entry.company != get_settings().billing_company or entry.party_type != "Customer":
 			frappe.throw(_("{0} is not a payment to the firm.").format(name), frappe.PermissionError)
+		check_client_allowed(client_of_payment(entry))
 	return entry
 
 
@@ -1357,7 +1429,10 @@ def bill_filters(view: str, client: str | None, text: str | None) -> tuple[list,
 		*BILL_VIEWS[view],
 	]
 	if client:
+		check_client_allowed(client)
 		filters.append(["compliance_client", "=", client])
+	elif billable_clients() is not None:
+		filters.append(["compliance_client", "in", list(billable_clients()) or [""]])
 	text = (text or "").strip()
 	matching = [["name", "like", f"%{text}%"], ["customer_name", "like", f"%{text}%"]] if text else None
 	return filters, matching
@@ -1607,6 +1682,11 @@ def billing_summary(client: str | None = None) -> dict:
 	from kxcompliance.kx_compliance.client_reports import financial_year
 
 	check_biller()
+	if client:
+		check_client_allowed(client)
+	elif billable_clients() is not None:
+		# The firm's totals are for those who bill every client; the rest choose one of theirs.
+		frappe.throw(_("Choose one of your clients to see its billing."), frappe.PermissionError)
 	from_date, to_date = financial_year()
 	customer = frappe.db.get_value("Compliance Client", client, "customer") if client else None
 	owing = outstanding_by_client(client, getdate(nowdate()))
@@ -2047,23 +2127,33 @@ def outstanding_by_client(client: str | None, today) -> list[dict]:
 
 
 def billing_by_month(from_date, to_date, client: str | None) -> list[dict]:
-	"""The firm's sent bills month by month: how many, before GST, GST, total, received, still due."""
-	from frappe.query_builder.functions import Count, Extract
+	"""The firm's sent bills month by month: how many, before GST, GST, the total (as rounded on
+	the bill), how much of that is settled (paid, credited or written off) and still due; and the
+	credit notes made in the month, apart, so a credit is not counted as a bill."""
+	from frappe.query_builder import Case
+	from frappe.query_builder.functions import Extract
 	from pypika.enums import DatePart
 
 	invoice = frappe.qb.DocType("Sales Invoice")
 	year = Extract(DatePart.year, invoice.posting_date)
 	month = Extract(DatePart.month, invoice.posting_date)
+	bill = invoice.is_return == 0
+	total = Case().when(invoice.rounded_total != 0, invoice.rounded_total).else_(invoice.grand_total)
+
+	def of_bills(value):
+		return Sum(Case().when(bill, value).else_(0))
+
 	query = (
 		frappe.qb.from_(invoice)
 		.select(
 			year.as_("year"),
 			month.as_("month"),
-			Count(invoice.name).as_("bills"),
-			Sum(invoice.net_total).as_("before_gst"),
-			Sum(invoice.total_taxes_and_charges).as_("gst"),
-			Sum(invoice.grand_total).as_("total"),
-			Sum(invoice.outstanding_amount).as_("still_due"),
+			of_bills(1).as_("bills"),
+			of_bills(invoice.net_total).as_("before_gst"),
+			of_bills(invoice.total_taxes_and_charges).as_("gst"),
+			of_bills(total).as_("total"),
+			of_bills(invoice.outstanding_amount).as_("still_due"),
+			Sum(Case().when(bill, 0).else_(-total)).as_("credited"),
 		)
 		.where(
 			(invoice.company == get_settings().billing_company)
@@ -2080,7 +2170,8 @@ def billing_by_month(from_date, to_date, client: str | None) -> list[dict]:
 	rows = query.run(as_dict=True)
 	for row in rows:
 		row.month_name = format_date(date(int(row.year), int(row.month), 1), "MMM yyyy")
-		row.received = flt(row.total) - flt(row.still_due)
+		row.bills = int(row.bills or 0)
+		row.settled = flt(flt(row.total) - flt(row.still_due), 2)
 	return rows
 
 
@@ -2462,7 +2553,15 @@ def payments(client: str | None, text: str | None, start: int, limit: int) -> di
 		["docstatus", "=", 1],
 	]
 	if client:
+		check_client_allowed(client)
 		filters.append(["party", "=", frappe.db.get_value("Compliance Client", client, "customer") or ""])
+	elif billable_clients() is not None:
+		customers = frappe.get_all(
+			"Compliance Client",
+			filters={"name": ("in", list(billable_clients()) or [""])},
+			pluck="customer",
+		)
+		filters.append(["party", "in", [name for name in customers if name] or [""]])
 	text = (text or "").strip()
 	matching = (
 		[

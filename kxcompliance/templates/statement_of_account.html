@@ -1,0 +1,91 @@
+{%- macro money(v) -%}{{ frappe.utils.fmt_money(v, currency=currency) }}{%- endmacro -%}
+{%- macro date(v) -%}{{ frappe.utils.format_date(v) }}{%- endmacro -%}
+{%- macro balance(v) -%}{{ money(v | abs) }}{% if v < 0 %} {{ _("ahead") }}{% endif %}{%- endmacro -%}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+	body { font-family: Inter, -apple-system, sans-serif; font-size: 12px; color: #1f2328; }
+	table { width: 100%; border-collapse: collapse; }
+	.head td { vertical-align: top; }
+	.logo { max-height: 64px; max-width: 160px; }
+	.client-logo { max-height: 40px; max-width: 120px; float: right; }
+	.title { font-size: 20px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; text-align: right; }
+	.muted { color: #6b7280; }
+	.small { font-size: 11px; }
+	.box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; }
+	.lines th { background: #f3f4f6; text-align: left; font-weight: 600; padding: 7px 8px; border-bottom: 1px solid #e5e7eb; }
+	.lines th.num { text-align: right; }
+	.lines td { padding: 7px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+	.lines tr.edge td { font-weight: 700; background: #fafafa; }
+	.num { text-align: right; white-space: nowrap; }
+	.ref { white-space: nowrap; font-size: 11px; }
+	.gap { height: 14px; }
+	.pre { white-space: pre-line; }
+</style>
+</head>
+<body>
+<table class="head">
+	<tr>
+		<td style="width: 55%">
+			{% if firm.logo %}<img class="logo" src="{{ firm.logo }}"><br>{% endif %}
+			<div style="font-size: 15px; font-weight: 700; margin-top: 6px">{{ firm.name }}</div>
+			{% if firm.address %}<div class="pre muted small">{{ firm.address }}</div>{% endif %}
+			{% if firm.gstin %}<div class="small">GSTIN: <b>{{ firm.gstin }}</b></div>{% endif %}
+		</td>
+		<td style="width: 45%">
+			<div class="title">{{ _("Statement of Account") }}</div>
+			<table class="small" style="margin-top: 8px">
+				<tr><td class="muted">{{ _("From") }}</td><td class="num">{{ date(statement.from_date) }}</td></tr>
+				<tr><td class="muted">{{ _("To") }}</td><td class="num">{{ date(statement.to_date) }}</td></tr>
+				<tr><td class="muted">{{ _("Made on") }}</td><td class="num">{{ date(frappe.utils.nowdate()) }}</td></tr>
+			</table>
+		</td>
+	</tr>
+</table>
+<div class="gap"></div>
+<div class="box">
+	{% if client.logo %}<img class="client-logo" src="{{ client.logo }}">{% endif %}
+	<div class="muted small">{{ _("Client") }}</div>
+	<div style="font-weight: 700; font-size: 13px">{{ client.client_name }}</div>
+	{% if client.billing_address %}<div class="pre small">{{ client.billing_address }}</div>{% endif %}
+	{% if client.gstin %}<div class="small">GSTIN: <b>{{ client.gstin }}</b></div>{% endif %}
+</div>
+<div class="gap"></div>
+<table class="lines">
+	<tr>
+		<th style="width: 13%">{{ _("Date") }}</th>
+		<th>{{ _("Details") }}</th>
+		<th style="width: 19%">{{ _("Number") }}</th>
+		<th class="num" style="width: 13%">{{ _("Charged") }}</th>
+		<th class="num" style="width: 13%">{{ _("Paid or credited") }}</th>
+		<th class="num" style="width: 15%">{{ _("Balance") }}</th>
+	</tr>
+	<tr class="edge">
+		<td>{{ date(statement.from_date) }}</td>
+		<td colspan="4">{{ _("Opening balance") }}</td>
+		<td class="num">{{ balance(statement.opening) }}</td>
+	</tr>
+	{% for row in statement.rows %}
+	<tr>
+		<td>{{ date(row.date) }}</td>
+		<td>{{ row.detail }}</td>
+		<td class="ref">{{ row.name }}</td>
+		<td class="num">{% if row.debit %}{{ money(row.debit) }}{% endif %}</td>
+		<td class="num">{% if row.credit %}{{ money(row.credit) }}{% endif %}</td>
+		<td class="num">{{ balance(row.balance) }}</td>
+	</tr>
+	{% endfor %}
+	{% if not statement.rows %}
+	<tr><td colspan="6" class="muted">{{ _("Nothing billed or paid in these dates.") }}</td></tr>
+	{% endif %}
+	<tr class="edge">
+		<td>{{ date(statement.to_date) }}</td>
+		<td colspan="4">{% if statement.closing < 0 %}{{ _("Closing balance, paid ahead") }}{% elif statement.closing > 0 %}{{ _("Closing balance, due to the firm") }}{% else %}{{ _("Closing balance") }}{% endif %}</td>
+		<td class="num">{{ balance(statement.closing) }}</td>
+	</tr>
+</table>
+<div class="small muted" style="margin-top: 14px; text-align: center">{{ _("This is a computer-generated document and needs no signature.") }}</div>
+</body>
+</html>

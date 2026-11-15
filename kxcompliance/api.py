@@ -657,6 +657,11 @@ def bill_counts(client: str | None = None, text: str | None = None) -> dict:
 @frappe.whitelist(methods=["GET"])
 def client_billing(client: str) -> dict:
 	"""A client's bills and balance: for those who bill, or for the client's own login."""
+	return billing.client_billing(client, check_client_account(client))
+
+
+def check_client_account(client: str) -> bool:
+	"""A client's account is for those who bill, and for the client's own login; True for the latter."""
 	check_reader_access()
 	own = is_client_login()
 	if own:
@@ -665,7 +670,32 @@ def client_billing(client: str) -> dict:
 	else:
 		billing.check_biller()
 		check_billed_client(client)
-	return billing.client_billing(client, own)
+	return own
+
+
+@frappe.whitelist(methods=["GET"])
+def client_summary(client: str) -> dict:
+	"""Where a client stands with the firm this financial year, for those who bill."""
+	if check_client_account(client):
+		frappe.throw(_("Your firm's summary of your account is for the firm."), frappe.PermissionError)
+	return billing.client_summary(client)
+
+
+@frappe.whitelist(methods=["GET"])
+def statement_pdf(client: str, from_date: str | None = None, to_date: str | None = None):
+	"""A client's statement of account, this financial year unless dates are given: for those who
+	bill, and for the client's own login."""
+	from frappe.utils.pdf import get_chrome_pdf
+
+	from kxcompliance.kx_compliance.client_reports import financial_year
+
+	own = check_client_account(client)
+	year_from, year_to = financial_year()
+	html = billing.statement_html(client, from_date or year_from, to_date or year_to, own)
+	frappe.local.response.filename = f"Statement-{client}.pdf".replace("/", "-")
+	# Printed as bills are, through Chrome (their print formats' generator), not wkhtmltopdf.
+	frappe.local.response.filecontent = get_chrome_pdf(None, html, {}, None, pdf_generator="chrome")
+	frappe.local.response.type = "pdf"
 
 
 def check_billed_client(client: str):

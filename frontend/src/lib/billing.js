@@ -195,3 +195,91 @@ export const BILL_VIEWS = [
 		},
 	},
 ];
+
+// A client's year with the firm in figures (the server's billing.client_summary): what it is
+// expected to pay, what has been billed and settled, and what is left.
+export function accountFacts(summary) {
+	const { activity, commitment, outstanding, advance, unbilled_total: unbilled } = summary;
+	const late = Number(outstanding.outstanding || 0) - Number(outstanding.not_due || 0);
+	const facts = [
+		{ label: "Expected this year", value: money(commitment.total), tone: "gray" },
+		{ label: "Billed", value: money(activity.billed), tone: "gray" },
+		{ label: "Received", value: money(activity.received), tone: "gray" },
+		{
+			label: "Still due",
+			value: money(outstanding.outstanding),
+			detail: late > 0 ? `${money(late)} overdue` : "",
+			tone: late > 0 ? "red" : "gray",
+		},
+	];
+	if (activity.tds)
+		facts.push({ label: "TDS deducted", value: money(activity.tds), tone: "gray" });
+	if (activity.credited) {
+		facts.push({ label: "Credit notes", value: money(activity.credited), tone: "gray" });
+	}
+	if (activity.written_off) {
+		facts.push({ label: "Written off", value: money(activity.written_off), tone: "gray" });
+	}
+	if (advance) facts.push({ label: "Paid ahead", value: money(advance), tone: "gray" });
+	if (unbilled) facts.push({ label: "Not billed yet", value: money(unbilled), tone: "amber" });
+	return facts;
+}
+
+const PERIOD_WORDS = { "Per month": "month", "Per quarter": "quarter", "Per year": "year" };
+const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
+
+// What a client's commitment is made of, a line each: "Fixed fee, 12 months at ₹5,000".
+export const commitmentLines = (commitment) => [
+	...commitment.recurring.map((row) => ({
+		label: row.service,
+		detail: `${plural(row.periods, PERIOD_WORDS[row.unit] || "period")} at ${money(row.rate)}`,
+		amount: money(row.amount),
+	})),
+	...commitment.filings.map((row) => ({
+		label: row.return,
+		detail: `${plural(row.count, "filing")} at ${money(row.rate)}`,
+		amount: money(row.amount),
+	})),
+];
+
+// What is still due by how late it is (the server's billing.AGEING), leaving out empty columns.
+export const AGEING_LABELS = {
+	not_due: "Not due yet",
+	late_30: "1 to 30 days late",
+	late_60: "31 to 60 days late",
+	late_90: "61 to 90 days late",
+	late_more: "Over 90 days late",
+};
+export const ageingRows = (outstanding) =>
+	Object.entries(AGEING_LABELS)
+		.filter(([key]) => Number(outstanding[key]) > 0)
+		.map(([key, label]) => ({ key, label, amount: money(outstanding[key]) }));
+
+// How a rate is charged, in words: "₹1,500 a filing", "₹2,000 an hour".
+const RATE_WORDS = {
+	"Per filing": "a filing",
+	"Per hour": "an hour",
+	"Per item": "an item",
+	"Per month": "a month",
+	"Per quarter": "a quarter",
+	"Per year": "a year",
+};
+export const rateLine = (rate) => ({
+	label: rate.kind === "Return" ? rate.obligation_template : rate.service,
+	amount: `${money(rate.amount)} ${RATE_WORDS[rate.unit] || rate.unit}`,
+});
+
+// What is wrong with a statement's dates, or null.
+export function statementProblem({ from, to }) {
+	if (!from || !to) return "Give the first and last date.";
+	if (from > to) return "The first date is after the last.";
+	return null;
+}
+
+// The address a client's statement of account downloads from.
+export const statementLink = (client, from, to) =>
+	`/api/method/kxcompliance.api.statement_pdf?${new URLSearchParams({
+		client,
+		from_date: from,
+		to_date: to,
+	})}`;

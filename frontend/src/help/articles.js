@@ -116,6 +116,19 @@ export const ARTICLES = [
 		page: "BulkFiling",
 	},
 	{
+		id: "one-off-filing",
+		area: "Filings",
+		title: "How do I add a filing that is not on the schedule?",
+		when: "For a revised return, a period a company was not set up for, or a filing asked for once.",
+		steps: [
+			'Open Filings and press "One-off filing".',
+			"Choose the return from the library, the company, what it is for and when it is due.",
+			"It opens like any other filing, with that return's rules for proof, review and payment.",
+		],
+		tip: "A return that is not in the library is added there first, under Settings, Obligation library.",
+		page: "Filings",
+	},
+	{
 		id: "extend-a-due-date",
 		area: "Filings",
 		title: "The government extended a due date. What do I do?",

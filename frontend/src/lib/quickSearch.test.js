@@ -34,6 +34,7 @@ describe("quick search", () => {
 			"Start a case",
 			"Add a trademark",
 			"Record an event",
+			"Add a one-off filing",
 			"Add a signatory",
 		]);
 		const auditor = goToItems({ menu, settings: [], manager: false, records: false });

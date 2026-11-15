@@ -473,6 +473,66 @@ def chosen_values(values: dict, allowed: tuple, doctype: str) -> dict:
 	return {field: value for field, value in values.items() if value not in (None, "")}
 
 
+NEW_FILING_FIELDS = (
+	"obligation_template",
+	"company",
+	"period_label",
+	"period_end",
+	"due_date",
+	"responsible",
+	"reviewer",
+	"remarks",
+)
+
+
+@frappe.whitelist(methods=["POST"])
+def add_one_off_filing(filing: dict) -> dict:
+	"""A filing outside the company's schedule: a return from the library, for a period or reason
+	given here, by a due date. Held by whoever adds it; only a manager names someone else."""
+	check_app_access()
+	# Those who may work on filings may add one, as recording an event adds its filings; the
+	# doctype's own create permission stays with managers and the schedule.
+	frappe.has_permission("Compliance Task", "write", throw=True)
+	values = chosen_values(filing, NEW_FILING_FIELDS, "Compliance Task")
+	company, template = values.get("company"), values.get("obligation_template")
+	if company not in app_companies():
+		frappe.throw(_("You cannot add filings for {0}.").format(company), frappe.PermissionError)
+	if not template or not frappe.db.get_value("Compliance Obligation Template", template, "is_active"):
+		frappe.throw(
+			_("Choose a return from the obligation library, not {0}.").format(template or _("nothing"))
+		)
+	for field, message in (("period_label", _("Say what it is for")), ("due_date", _("Give the due date"))):
+		if not values.get(field):
+			frappe.throw(_("{0} of the {1} filing.").format(message, template))
+	user = frappe.session.user
+	responsible = values.get("responsible") or user
+	if (responsible != user or values.get("reviewer")) and not is_approver():
+		frappe.throw(
+			_("Only a Compliance Manager can choose who handles or reviews a filing."), frappe.PermissionError
+		)
+	companies.check_person(responsible, _("Responsible"))
+	companies.check_person(values.get("reviewer"), _("Reviewer"))
+	reviewer = values.get("reviewer") or frappe.db.get_value(
+		"Company Compliance Profile", company, "default_reviewer"
+	)
+	doc = frappe.get_doc(
+		{
+			"doctype": "Compliance Task",
+			**values,
+			"responsible": responsible,
+			# Nobody reviews what they prepare.
+			"reviewer": reviewer if reviewer != responsible else None,
+			"status": "Open",
+			"task_key": f"one-off|{template}|{company}|{frappe.generate_hash(length=10)}",
+		}
+	)
+	# Checked above: the person may work on filings and on this company, and chose only what
+	# a filing's form offers (as company_events.make_task does for an event's filings).
+	doc.flags.ignore_permissions = True
+	doc.insert()
+	return {"name": doc.name}
+
+
 @frappe.whitelist(methods=["POST"])
 def open_case(case: dict, next_hearing: str | None = None) -> dict:
 	"""Start a case already under way (a suit, appeal or petition), held by whoever starts it, with

@@ -43,6 +43,7 @@ const NO_TOUR = {
 	RecordEvent: "a form; each field is labelled",
 	NewNotice: "a form; each field is labelled",
 	NewCase: "a form; each field is labelled",
+	NewFiling: "a form; each field is labelled",
 	NewTrademark: "a form; each field is labelled",
 	LicenceRuleNew: "a form; each section says what it is",
 	LicenceRule: "a form; each section says what it is",

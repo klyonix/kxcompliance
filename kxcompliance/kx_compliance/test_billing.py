@@ -25,10 +25,19 @@ from kxcompliance.api import (
 	send_bill,
 	set_up_billing,
 )
-from kxcompliance.kx_compliance.billing import OUTSIDE_STATE, WITHIN_STATE, make_monthly_drafts, state_of
+from kxcompliance.kx_compliance.billing import (
+	OUTSIDE_STATE,
+	WITHIN_STATE,
+	ageing_bucket,
+	make_monthly_drafts,
+	state_of,
+)
 from kxcompliance.kx_compliance.companies import companies_overview
 from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import client, profile
 from kxcompliance.kx_compliance.register import compliance_companies
+from kxcompliance.kx_compliance.report.billing_by_month.billing_by_month import execute as by_month
+from kxcompliance.kx_compliance.report.billing_outstanding.billing_outstanding import execute as outstanding
+from kxcompliance.kx_compliance.report.unbilled_filings.unbilled_filings import execute as unbilled
 from kxcompliance.kx_compliance.test_bulk_filing import filing
 from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
@@ -284,6 +293,40 @@ class TestBills(IntegrationTestCase):
 				own_bill(draft)
 			with self.assertRaisesRegex(frappe.PermissionError, "only your own bills"):
 				client_billing("Someone Else")
+
+	def test_the_reports_age_what_is_due_count_each_month_and_list_what_is_unbilled(self):
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		send_bill(name)
+		frappe.db.set_value(
+			"Sales Invoice", name, "due_date", frappe.utils.add_days(frappe.utils.nowdate(), -45)
+		)
+		_columns, rows = outstanding({"client": self.client})
+		self.assertEqual(len(rows), 1)
+		self.assertGreaterEqual(rows[0]["late_60"], 1180)
+		self.assertEqual(
+			rows[0]["outstanding"],
+			sum(rows[0][key] for key in ("not_due", "late_30", "late_60", "late_90", "late_more")),
+		)
+		today = frappe.utils.getdate(frappe.utils.nowdate())
+		_columns, months = by_month(
+			{"from_date": today.replace(day=1), "to_date": today, "client": self.client}
+		)
+		self.assertEqual(len(months), 1)
+		self.assertGreaterEqual(months[0].bills, 1)
+		self.assertEqual(months[0].received + months[0].still_due, months[0].total)
+		_columns, waiting = unbilled({"client": self.client})
+		self.assertIn(self.filed, [row.name for row in waiting])
+		self.assertEqual({row.client for row in waiting}, {self.client})
+
+	def test_a_bill_ages_by_days_past_its_due_date(self):
+		today = "2026-11-30"
+		self.assertEqual(ageing_bucket("2026-12-05", today), "not_due")
+		self.assertEqual(ageing_bucket("2026-11-30", today), "not_due")
+		self.assertEqual(ageing_bucket("2026-11-29", today), "late_30")
+		self.assertEqual(ageing_bucket("2026-10-31", today), "late_30")
+		self.assertEqual(ageing_bucket("2026-10-30", today), "late_60")
+		self.assertEqual(ageing_bucket("2026-09-01", today), "late_90")
+		self.assertEqual(ageing_bucket("2025-01-01", today), "late_more")
 
 	def test_a_draft_is_not_paid(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]

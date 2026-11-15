@@ -39,7 +39,7 @@ const ITEM_STATUSES = [
 	"Cancelled",
 ];
 
-export const AREAS = ["Filings", "Register", "Legal", "Clients"];
+export const AREAS = ["Filings", "Register", "Legal", "Clients", "Billing"];
 
 // The icon each area's heading carries on the Reports page, the same as its side bar section.
 export const AREA_ICONS = {
@@ -47,6 +47,7 @@ export const AREA_ICONS = {
 	Register: "lucide-file-badge",
 	Legal: "lucide-scale",
 	Clients: "lucide-users",
+	Billing: "lucide-receipt",
 };
 
 export const REPORTS = [
@@ -238,14 +239,51 @@ export const REPORTS = [
 		],
 		defaults: { from_date: "yearStart", to_date: "yearEnd" },
 	},
+	// A firm's own bills, for those who may bill (the reports' roles are ERPNext's accounts roles).
+	{
+		slug: "billing-outstanding",
+		totals: true,
+		name: "Billing Outstanding",
+		area: "Billing",
+		title: "What clients owe",
+		about: "Each client's bills still due, by how late: not yet due, 1-30, 31-60, 61-90 and over 90 days.",
+		billing: true,
+		filters: [{ fieldname: "client", label: "Client", type: "link", source: "client" }],
+	},
+	{
+		slug: "billing-by-month",
+		totals: true,
+		name: "Billing by Month",
+		area: "Billing",
+		title: "Billing by month",
+		about: "Bills sent each month: before GST, GST, total, what has been received and what is still due.",
+		billing: true,
+		filters: [
+			{ fieldname: "from_date", label: "Billed from", type: "date", required: true },
+			{ fieldname: "to_date", label: "Billed to", type: "date", required: true },
+			{ fieldname: "client", label: "Client", type: "link", source: "client" },
+		],
+		defaults: { from_date: "yearStart", to_date: "yearEnd" },
+	},
+	{
+		slug: "unbilled-filings",
+		totals: true,
+		name: "Unbilled Filings",
+		area: "Billing",
+		title: "Filed, not billed",
+		about: "Returns filed for clients, with a price, that are on no bill yet, and their fees.",
+		billing: true,
+		filters: [{ fieldname: "client", label: "Client", type: "link", source: "client" }],
+	},
 ];
 
 export const reportBySlug = (slug) => REPORTS.find((report) => report.slug === slug);
 
 // The reports this person may open, by the same rules as the Desk's report roles and the side bar.
-export function reportsFor({ firm, manager, auditor, licenceCheck = !firm }) {
+export function reportsFor({ firm, manager, auditor, licenceCheck = !firm, bills = false }) {
 	return REPORTS.filter((report) => {
 		if (report.firm && !firm) return false;
+		if (report.billing && !bills) return false;
 		if (report.organisation && firm) return false;
 		if (report.licenceCheck && !licenceCheck) return false;
 		if (report.managersOrAuditors && !(manager || auditor)) return false;

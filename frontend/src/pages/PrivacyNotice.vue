@@ -10,11 +10,16 @@
 		:class="gated ? 'py-8 sm:py-12' : 'py-6'"
 	>
 		<div v-if="gated" class="flex flex-col gap-1">
-			<p class="text-sm text-ink-gray-5">Before you start</p>
-			<h1 class="text-2xl font-semibold text-ink-gray-9">How your data is used</h1>
+			<p class="text-sm text-ink-gray-5">{{ t("Before you start") }}</p>
+			<h1 class="text-2xl font-semibold text-ink-gray-9">
+				{{ t("How your data is used") }}
+			</h1>
 			<p class="text-base text-ink-gray-6">
-				Read this once. You can read it again, ask about your data or withdraw from Account
-				at any time.
+				{{
+					t(
+						"Read this once. You can read it again, ask about your data or withdraw from Account at any time."
+					)
+				}}
 			</p>
 		</div>
 
@@ -36,8 +41,12 @@
 				v-html="notice.text"
 			/>
 			<p v-if="!gated" class="text-sm text-ink-gray-5">
-				Version {{ notice.version }}.
-				{{ notice.accepted ? "You have accepted it." : "You have not accepted it yet." }}
+				{{ t("Version {0}.", notice.version) }}
+				{{
+					notice.accepted
+						? t("You have accepted it.")
+						: t("You have not accepted it yet.")
+				}}
 			</p>
 		</template>
 	</div>
@@ -52,10 +61,10 @@
 			<p v-if="saveError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ saveError }}
 			</p>
-			<Button variant="ghost" label="Sign out" @click="leave" />
+			<Button variant="ghost" :label="t('Sign out')" @click="leave" />
 			<Button
 				variant="solid"
-				label="I have read this and agree"
+				:label="t('I have read this and agree')"
 				:loading="saving"
 				@click="accept"
 			/>

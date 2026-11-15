@@ -21,6 +21,8 @@ export const boot = {
 	// Whose licences this person may check: Customer, Supplier or both.
 	partyTypes: window.party_types || [],
 	defaultCompany: window.default_company || "",
+	// The language the person reads the app in (their Frappe language), such as "hi".
+	lang: window.lang || "en",
 	// For someone at a firm's client: the client they belong to.
 	client: window.client || "",
 };

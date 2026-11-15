@@ -694,6 +694,23 @@ def my_privacy_requests() -> list[dict]:
 	return privacy.my_requests()
 
 
+# The languages the app is translated into (frontend/src/locales).
+APP_LANGUAGES = ("en", "hi")
+
+
+@frappe.whitelist(methods=["POST"])
+def set_my_language(language: str) -> dict:
+	"""Read the app in English or Hindi: the person's own Frappe language."""
+	check_can_open_app()
+	if language not in APP_LANGUAGES:
+		frappe.throw(_("The app is not available in {0}.").format(language))
+	user = frappe.get_doc("User", frappe.session.user)
+	user.language = language
+	# A person changes only their own language here; the User form would let them do the same.
+	user.save(ignore_permissions=True)
+	return {"language": language}
+
+
 @frappe.whitelist(methods=["GET"])
 def team() -> list[dict]:
 	"""Everyone on the team and their role, for the People screen (managers only)."""
@@ -898,6 +915,7 @@ def boot() -> dict:
 		"default_company": frappe.defaults.get_user_default("Company") or "",
 		"date_format": frappe.db.get_default("date_format") or "dd-mm-yyyy",
 		"account_type": settings.account_type or "",
+		"lang": frappe.local.lang or "en",
 		# A firm checks its clients' sales and purchases only for the clients it switches on.
 		"licence_check_on": settings.account_type != "CA/CS Firm"
 		or bool(frappe.db.exists("Compliance Client", {"licence_check": 1})),

@@ -1,12 +1,13 @@
 // How a firm's clients show: what needs attention, in words and colour.
 import { formatMoney } from "@/lib/format";
+import { t } from "@/lib/i18n";
 
 export function clientAttention(client) {
 	const parts = [];
-	if (client.overdue) parts.push(`${client.overdue} overdue`);
-	if (client.due_this_week) parts.push(`${client.due_this_week} due this week`);
-	if (client.in_review) parts.push(`${client.in_review} waiting for review`);
-	return parts.length ? parts.join(" · ") : "Nothing due this week";
+	if (client.overdue) parts.push(t("{0} overdue", client.overdue));
+	if (client.due_this_week) parts.push(t("{0} due this week", client.due_this_week));
+	if (client.in_review) parts.push(t("{0} waiting for review", client.in_review));
+	return parts.length ? parts.join(" · ") : t("Nothing due this week");
 }
 
 export function clientTheme(client) {
@@ -27,39 +28,41 @@ export function yearFacts(year, { client = false } = {}) {
 	const paid = (year.late_fee || 0) + (year.interest || 0);
 	return [
 		{
-			label: "Filed on time",
+			label: t("Filed on time"),
 			value: counted ? `${Math.round((year.on_time * 100) / counted)}%` : "—",
-			detail: counted ? `${year.on_time} of ${counted} filings` : "No filings due yet",
+			detail: counted
+				? t("{0} of {1} filings", year.on_time, counted)
+				: t("No filings due yet"),
 			tone: !counted || year.on_time === counted ? "gray" : year.overdue ? "red" : "amber",
 		},
 		{
-			label: "Overdue",
+			label: t("Overdue"),
 			value: String(year.overdue),
-			detail: `${year.late} filed late`,
+			detail: t("{0} filed late", year.late),
 			tone: year.overdue ? "red" : "gray",
 		},
 		{
-			label: "Late fees and interest",
+			label: t("Late fees and interest"),
 			value: formatMoney(paid, year.currency),
-			detail: paid ? "Paid on late filings" : "None paid",
+			detail: paid ? t("Paid on late filings") : t("None paid"),
 			tone: paid ? "amber" : "gray",
 		},
 		{
-			label: "Open notices and cases",
+			label: t("Open notices and cases"),
 			value: String(year.open_cases),
-			detail: "Open now",
+			detail: t("Open now"),
 			tone: year.open_cases ? "amber" : "gray",
 		},
 		{
-			label: client ? "Documents your firm needs" : "Documents awaited",
+			label: client ? t("Documents your firm needs") : t("Documents awaited"),
 			value: String(year.waiting_on_client),
-			detail: client ? "Waiting for you" : "From the client",
+			detail: client ? t("Waiting for you") : t("From the client"),
 			tone: year.waiting_on_client ? "amber" : "gray",
 		},
 		{
-			label: "DSCs expiring",
+			label: t("DSCs expiring"),
 			value: String(year.dscs_expiring),
-			detail: "Expired or within 30 days",
+			detail: t("Expired or within 30 days"),
 			tone: year.dscs_expiring ? "red" : "gray",
 		},
 	];

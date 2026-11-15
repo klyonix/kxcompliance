@@ -2,21 +2,24 @@
 	<section class="flex flex-col gap-3" aria-labelledby="privacy-heading">
 		<div class="flex flex-col gap-0.5">
 			<h2 id="privacy-heading" class="text-base font-semibold text-ink-gray-8">
-				Your privacy
+				{{ t("Your privacy") }}
 			</h2>
 			<p class="text-sm text-ink-gray-5">
-				Ask to see, correct or erase your data, or raise a grievance. A manager answers
-				within 90 days.
+				{{
+					t(
+						"Ask to see, correct or erase your data, or raise a grievance. A manager answers within 90 days."
+					)
+				}}
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2" data-tour="privacy-actions">
 			<Button
 				icon-left="lucide-scroll-text"
-				label="Privacy notice"
+				:label="t('Privacy notice')"
 				:route="{ name: 'PrivacyNotice' }"
 			/>
-			<Button icon-left="lucide-user-lock" label="Ask about my data" @click="ask" />
-			<Button variant="ghost" theme="red" label="Withdraw consent" @click="withdraw" />
+			<Button icon-left="lucide-user-lock" :label="t('Ask about my data')" @click="ask" />
+			<Button variant="ghost" theme="red" :label="t('Withdraw consent')" @click="withdraw" />
 		</div>
 
 		<p v-if="error" role="alert" class="text-sm text-ink-red-4">{{ error }}</p>
@@ -31,18 +34,18 @@
 						request.request_type
 					}}</span>
 					<Badge
-						:label="request.status"
+						:label="t(request.status)"
 						:theme="REQUEST_STATUS_THEMES[request.status]"
 					/>
 				</div>
 				<p class="text-sm text-ink-gray-6">{{ request.details }}</p>
 				<p v-if="request.response" class="text-sm text-ink-gray-8">
-					<span class="font-medium">Answer:</span> {{ request.response }}
+					<span class="font-medium">{{ t("Answer:") }}</span> {{ request.response }}
 				</p>
 				<p class="text-sm text-ink-gray-5">
 					Asked {{ formatDate(request.received_on) }}
 					<template v-if="!request.closed_on">
-						· answer due by {{ formatDate(request.due_by) }}</template
+						· {{ t("answer due by {0}", formatDate(request.due_by)) }}</template
 					>
 				</p>
 			</li>
@@ -59,6 +62,7 @@ import { Badge, Button, dialog, toast } from "frappe-ui";
 import { call } from "@/api";
 import { boot } from "@/boot";
 import { formatDate } from "@/lib/format";
+import { t } from "@/lib/i18n";
 import { REQUEST_STATUS_THEMES, REQUEST_TYPES } from "@/lib/privacy";
 import { notLoaded } from "@/offline/reachability";
 
@@ -76,27 +80,28 @@ async function load() {
 
 function ask() {
 	dialog.prompt({
-		title: "Ask about my data",
-		message:
-			"A manager answers within 90 days. Records the law requires are kept even when you ask to erase them.",
-		confirmLabel: "Send",
+		title: t("Ask about my data"),
+		message: t(
+			"A manager answers within 90 days. Records the law requires are kept even when you ask to erase them."
+		),
+		confirmLabel: t("Send"),
 		fields: [
 			{
 				name: "request_type",
-				label: "What do you want?",
+				label: t("What do you want?"),
 				type: "select",
 				required: true,
 				defaultValue: REQUEST_TYPES[0].value,
-				options: REQUEST_TYPES.map(({ label, value }) => ({ label, value })),
+				options: REQUEST_TYPES.map(({ label, value }) => ({ label: t(label), value })),
 			},
-			{ name: "details", label: "Details", type: "textarea", required: true },
+			{ name: "details", label: t("Details"), type: "textarea", required: true },
 		],
 		onConfirm: async ({ values }) => {
 			try {
 				await call("kxcompliance.api.raise_privacy_request", values, {
 					httpMethod: "POST",
 				});
-				toast.success("Sent. A manager will answer.");
+				toast.success(t("Sent. A manager will answer."));
 				await load();
 			} catch (err) {
 				toast.error(err.message);
@@ -107,10 +112,11 @@ function ask() {
 
 function withdraw() {
 	dialog.confirm({
-		title: "Withdraw consent",
-		message:
-			"You will not be able to use the app until you accept the privacy notice again. Records the law requires are kept.",
-		confirmLabel: "Withdraw",
+		title: t("Withdraw consent"),
+		message: t(
+			"You will not be able to use the app until you accept the privacy notice again. Records the law requires are kept."
+		),
+		confirmLabel: t("Withdraw"),
 		theme: "red",
 		onConfirm: async () => {
 			try {

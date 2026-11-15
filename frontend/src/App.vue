@@ -14,11 +14,11 @@
 				<MobileNavItem
 					v-for="section in tabSections"
 					:key="section.route"
-					:label="section.tabLabel || section.label"
+					:label="t(section.tabLabel || section.label)"
 					:icon="section.icon"
 					:route="{ name: section.route }"
 				/>
-				<MobileNavItem label="Account" :route="{ name: 'Account' }">
+				<MobileNavItem :label="t('Account')" :route="{ name: 'Account' }">
 					<template #default="{ active }">
 						<Avatar
 							:label="boot.userFullname || boot.user"

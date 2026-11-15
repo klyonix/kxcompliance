@@ -41,12 +41,16 @@
 			<section class="flex flex-col gap-3" aria-labelledby="year-heading">
 				<div class="flex flex-col gap-0.5">
 					<h2 id="year-heading" class="text-base font-semibold text-ink-gray-8">
-						This financial year
+						{{ t("This financial year") }}
 					</h2>
 					<p class="text-sm text-ink-gray-5">
-						Filings due {{ formatDate(client.year.from_date) }} to
-						{{ formatDate(client.year.to_date) }}; notices, documents and DSCs as of
-						today.
+						{{
+							t(
+								"Filings due {0} to {1}; notices, documents and DSCs as of today.",
+								formatDate(client.year.from_date),
+								formatDate(client.year.to_date)
+							)
+						}}
 					</p>
 				</div>
 				<dl class="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -67,7 +71,7 @@
 			<section class="flex flex-col gap-1" aria-labelledby="requests-heading">
 				<div class="flex items-center justify-between gap-3 pb-2">
 					<h2 id="requests-heading" class="text-base font-semibold text-ink-gray-8">
-						{{ clientLogin ? "Documents your firm needs" : "Document requests" }}
+						{{ clientLogin ? t("Documents your firm needs") : t("Document requests") }}
 					</h2>
 					<Button
 						v-if="mayAsk"
@@ -77,7 +81,7 @@
 					/>
 				</div>
 				<p v-if="!client.requests.length" class="text-base text-ink-gray-5">
-					{{ clientLogin ? "Nothing needed right now." : "Nothing asked for." }}
+					{{ clientLogin ? t("Nothing needed right now.") : t("Nothing asked for.") }}
 				</p>
 				<WorkRow
 					v-for="request in client.requests"
@@ -89,7 +93,7 @@
 			<section class="flex flex-col gap-3" aria-labelledby="companies-heading">
 				<div class="flex items-center justify-between gap-3">
 					<h2 id="companies-heading" class="text-base font-semibold text-ink-gray-8">
-						Companies
+						{{ t("Companies") }}
 					</h2>
 					<Button
 						v-if="isManager() && !clientLogin"
@@ -100,7 +104,7 @@
 				</div>
 				<p v-if="!client.companies.length" class="text-base text-ink-gray-5">
 					<template v-if="clientLogin">
-						Your firm has not linked your companies yet.
+						{{ t("Your firm has not linked your companies yet.") }}
 					</template>
 					<template v-else>No companies yet.</template>
 				</p>
@@ -153,7 +157,7 @@
 			<section class="flex flex-col gap-1" aria-labelledby="signatories-heading">
 				<div class="flex items-center justify-between gap-3 pb-2">
 					<h2 id="signatories-heading" class="text-base font-semibold text-ink-gray-8">
-						Signatories
+						{{ t("Signatories") }}
 					</h2>
 					<Button
 						v-if="mayRecord() && !clientLogin && client.companies.length"
@@ -166,7 +170,7 @@
 					/>
 				</div>
 				<p v-if="!client.signatories.length" class="text-base text-ink-gray-5">
-					No directors, partners or signatories recorded yet.
+					{{ t("No directors, partners or signatories recorded yet.") }}
 				</p>
 				<WorkRow
 					v-for="signatory in client.signatories"
@@ -177,10 +181,10 @@
 
 			<section class="flex flex-col gap-1" aria-labelledby="open-heading">
 				<h2 id="open-heading" class="pb-2 text-base font-semibold text-ink-gray-8">
-					Open filings
+					{{ t("Open filings") }}
 				</h2>
 				<p v-if="!client.filings.length" class="text-base text-ink-gray-5">
-					Nothing open.
+					{{ t("Nothing open.") }}
 				</p>
 				<WorkRow
 					v-for="filing in client.filings"

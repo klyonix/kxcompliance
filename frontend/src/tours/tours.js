@@ -29,6 +29,11 @@ export const TOURS = [
 				text: "Filings, the register of licences and registrations, legal work and the calendar. You see what your role gives you.",
 			},
 			{
+				target: ["notifications"],
+				title: "Notifications",
+				text: "Reminders, escalations and answers to your requests come here as well as by email. The number shows how many you have not read.",
+			},
+			{
 				target: ["getting-started"],
 				title: "Getting started",
 				text: "A few steps that make the app useful. Each one opens the screen that does it, and ticks itself off once done.",

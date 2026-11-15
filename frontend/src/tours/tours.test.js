@@ -44,6 +44,8 @@ const NO_TOUR = {
 	NewNotice: "a form; each field is labelled",
 	NewCase: "a form; each field is labelled",
 	NewFiling: "a form; each field is labelled",
+	NewBill: "a form; each part says what it is",
+	Bill: "its sections say what they are",
 	NewTrademark: "a form; each field is labelled",
 	LicenceRuleNew: "a form; each section says what it is",
 	LicenceRule: "a form; each section says what it is",

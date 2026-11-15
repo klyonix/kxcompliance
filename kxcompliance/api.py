@@ -521,6 +521,77 @@ def client_fees(client: str) -> dict:
 	return billing.client_fees(client)
 
 
+@frappe.whitelist(methods=["GET"])
+def bill_options(client: str) -> dict:
+	"""What a new bill for a client may hold."""
+	check_app_access_or_accounts()
+	check_billed_client(client)
+	return billing.bill_options(client)
+
+
+@frappe.whitelist(methods=["POST"])
+def create_bill(
+	client: str, filings: list | None = None, fixed_fee: bool = False, lines: list | None = None
+) -> dict:
+	"""A draft bill for a client, from filings it has not been billed for, this month's fixed fee
+	and other lines; checked and sent from its page."""
+	check_app_access_or_accounts()
+	billing.check_biller()
+	check_billed_client(client)
+	if not all(isinstance(name, str) for name in filings or []):
+		frappe.throw(_("Filings are given by their names."))
+	month = getdate(nowdate()).replace(day=1) if fixed_fee else None
+	return {"name": billing.make_bill(client, filings=filings, fee_month=month, lines=lines)}
+
+
+@frappe.whitelist(methods=["GET"])
+def bill(name: str) -> dict:
+	"""One of the firm's bills, for its page."""
+	check_app_access_or_accounts()
+	return billing.bill_detail(name)
+
+
+@frappe.whitelist(methods=["POST"])
+def send_bill(name: str) -> dict:
+	"""Submit a draft bill and email it to the client."""
+	check_app_access_or_accounts()
+	return billing.send_bill(name)
+
+
+@frappe.whitelist(methods=["POST"])
+def cancel_bill(name: str) -> dict:
+	"""Cancel a sent bill, or delete a draft."""
+	check_app_access_or_accounts()
+	billing.cancel_bill(name)
+	return {"name": name}
+
+
+@frappe.whitelist(methods=["GET"])
+def bill_pdf(name: str):
+	"""A bill's PDF, for those who bill (who may not read ERPNext's invoices in the Desk)."""
+	check_app_access_or_accounts()
+	bill = billing.bill_of(name)
+	frappe.local.response.filename = f"{bill.name.replace('/', '-')}.pdf"
+	frappe.local.response.filecontent = frappe.get_print("Sales Invoice", bill.name, as_pdf=True)
+	frappe.local.response.type = "pdf"
+
+
+def check_billed_client(client: str):
+	"""The app's people bill only clients they may read; accounts staff bill any of the firm's."""
+	if not frappe.db.exists("Compliance Client", client):
+		frappe.throw(_("Client {0} does not exist.").format(client), frappe.DoesNotExistError)
+	if has_app_access():
+		frappe.get_doc("Compliance Client", client).check_permission("read")
+
+
+def check_app_access_or_accounts():
+	"""The app's people, and accounts staff who bill the firm's clients."""
+	if frappe.session.user == "Guest" or not (
+		has_app_access() or billing.BILLING_ROLES & set(frappe.get_roles())
+	):
+		frappe.throw(_("You do not have access to the compliance app."), frappe.PermissionError)
+
+
 def billing_company_set() -> bool:
 	return bool(frappe.get_cached_doc("KX Compliance Settings").billing_company)
 
@@ -1446,6 +1517,10 @@ def boot() -> dict:
 		"default_company": default if default in companies else "",
 		"date_format": frappe.db.get_default("date_format") or "dd-mm-yyyy",
 		"account_type": settings.account_type or "",
+		# Billing clients: a firm set up to bill, and someone ERPNext lets make invoices.
+		"may_bill": settings.account_type == "CA/CS Firm"
+		and bool(settings.billing_company)
+		and bool(frappe.has_permission("Sales Invoice", "create")),
 		"lang": frappe.local.lang or "en",
 		# A firm checks its clients' sales and purchases only for the clients it switches on.
 		"licence_check_on": settings.account_type != "CA/CS Firm"

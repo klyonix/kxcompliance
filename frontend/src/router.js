@@ -212,6 +212,14 @@ export const routes = [
 		component: () => import("./pages/ComplianceTask.vue"),
 		props: true,
 	},
+	{ path: "/billing/new", name: "NewBill", component: () => import("./pages/NewBill.vue") },
+	{
+		// A bill's name has slashes in it (RA/26-27/0001), so it is taken whole.
+		path: "/billing/bill/:name(.*)",
+		name: "Bill",
+		component: () => import("./pages/Bill.vue"),
+		props: true,
+	},
 	{ path: "/legal", name: "Legal", component: () => import("./pages/Legal.vue") },
 	{ path: "/legal/new", name: "NewNotice", component: () => import("./pages/NewNotice.vue") },
 	{ path: "/legal/new-case", name: "NewCase", component: () => import("./pages/NewCase.vue") },

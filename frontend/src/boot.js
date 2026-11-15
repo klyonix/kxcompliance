@@ -25,6 +25,8 @@ export const boot = {
 	lang: window.lang || "en",
 	// For someone at a firm's client: the client they belong to.
 	client: window.client || "",
+	// A firm set up to bill, and someone ERPNext lets make invoices (an Accounts User).
+	mayBill: Boolean(window.may_bill),
 };
 
 const COMPLIANCE_ROLES = [

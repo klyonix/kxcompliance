@@ -50,6 +50,8 @@ export function goToItems({
 	const actions = [
 		records && { label: "New register item", icon: "lucide-plus", route: "ItemNew" },
 		records && { label: "Log a notice", icon: "lucide-scale", route: "NewNotice" },
+		records && { label: "Start a case", icon: "lucide-gavel", route: "NewCase" },
+		records && { label: "Add a trademark", icon: "lucide-stamp", route: "NewTrademark" },
 		records && {
 			label: "Record an event",
 			icon: "lucide-calendar-plus",

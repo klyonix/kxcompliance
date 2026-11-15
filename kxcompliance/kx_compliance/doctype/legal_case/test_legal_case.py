@@ -284,3 +284,40 @@ class TestLegalCaseAmounts(IntegrationTestCase):
 		self.assertEqual(
 			frappe.db.get_value("Legal Case", case.name, ["risk", "amount_involved"]), ("Probable", 250000)
 		)
+
+
+class TestStartingInTheApp(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_company()
+		make_users()
+
+	def test_a_case_under_way_starts_with_its_next_hearing_held_by_whoever_starts_it(self):
+		from kxcompliance.api import open_case
+
+		case = {
+			"title": "Recovery suit against Acme",
+			"case_type": "Litigation",
+			"forum": "District Court",
+			"case_number": "OS 41/2026",
+			"filing_date": "2026-09-01",
+			"company": TEST_COMPANY,
+			"our_role": "Petitioner",
+			"opposing_party": "Acme Traders",
+		}
+		with self.set_user(HOLDER):
+			name = open_case(case, next_hearing="2027-01-20")["name"]
+		saved = frappe.get_doc("Legal Case", name)
+		self.assertEqual((saved.responsible, saved.status, saved.case_number), (HOLDER, "Open", "OS 41/2026"))
+		self.assertEqual(str(saved.next_date), "2027-01-20")
+
+	def test_starting_a_case_sets_only_what_the_form_offers(self):
+		from kxcompliance.api import open_case
+
+		with self.assertRaisesRegex(frappe.PermissionError, "cannot set status"):
+			open_case({"title": "X", "status": "Settled"})
+		with self.assertRaisesRegex(frappe.ValidationError, "single value"):
+			open_case({"title": ["!=", ""]})
+		with self.set_user(AUDITOR), self.assertRaises(frappe.PermissionError):
+			open_case({"title": "X"})

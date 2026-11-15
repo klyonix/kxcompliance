@@ -189,3 +189,25 @@ class TestTrademark(IntegrationTestCase):
 		mark = make_trademark()
 		with self.set_user(OTHER_HOLDER), self.assertRaises(frappe.PermissionError):
 			frappe.get_doc("Trademark", mark.name).change_status("Objected")
+
+	def test_a_trademark_is_added_with_its_classes_held_by_whoever_adds_it(self):
+		from kxcompliance.api import add_trademark
+
+		mark = {
+			"mark": "NEWMARK",
+			"mark_type": "Word",
+			"application_number": "7000001",
+			"filing_date": "2026-10-01",
+			"applicant": TEST_COMPANY,
+		}
+		with self.set_user(HOLDER):
+			name = add_trademark(mark, [{"class_number": 29, "goods_or_services": "Edible oils"}])["name"]
+		saved = frappe.get_doc("Trademark", name)
+		self.assertEqual((saved.responsible, saved.status), (HOLDER, "New Application"))
+		self.assertEqual(
+			[(row.class_number, row.goods_or_services) for row in saved.classes], [(29, "Edible oils")]
+		)
+		with self.assertRaisesRegex(frappe.ValidationError, "class is a number"):
+			add_trademark(mark, [{"class_number": 9, "status": "Registered"}])
+		with self.assertRaisesRegex(frappe.PermissionError, "cannot set status"):
+			add_trademark({**mark, "status": "Registered"}, [{"class_number": 9}])

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	cancelLine,
 	caseRow,
+	classesError,
 	dateRow,
 	markRow,
 	markStatusDetails,
@@ -149,5 +150,17 @@ describe("moving a trademark on", () => {
 			"Registration date",
 		]);
 		expect(markStatusDetails("Refused", {})).toEqual({ details: {}, missing: [] });
+	});
+});
+
+describe("a new trademark's classes", () => {
+	it("are 1 to 45, each once, at least one", () => {
+		expect(classesError([])).toBe("Add at least one class.");
+		expect(classesError([{ class_number: "46" }])).toMatch(/1 to 45/);
+		expect(classesError([{ class_number: "" }])).toMatch(/1 to 45/);
+		expect(classesError([{ class_number: "9" }, { class_number: 9 }])).toBe(
+			"Class 9 is listed twice."
+		);
+		expect(classesError([{ class_number: "9" }, { class_number: "42" }])).toBeNull();
 	});
 });

@@ -209,6 +209,12 @@ export const routes = [
 	},
 	{ path: "/legal", name: "Legal", component: () => import("./pages/Legal.vue") },
 	{ path: "/legal/new", name: "NewNotice", component: () => import("./pages/NewNotice.vue") },
+	{ path: "/legal/new-case", name: "NewCase", component: () => import("./pages/NewCase.vue") },
+	{
+		path: "/legal/new-trademark",
+		name: "NewTrademark",
+		component: () => import("./pages/NewTrademark.vue"),
+	},
 	{
 		path: "/legal/case/:name",
 		name: "LegalCase",

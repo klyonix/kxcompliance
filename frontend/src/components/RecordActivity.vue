@@ -39,7 +39,7 @@
 <script setup>
 // A record's activity beside its page: Frappe's timeline (changes, comments, attachments), and a
 // comment box. The server shows it only to those who may read the record.
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { Button, FormControl } from "frappe-ui";
 import {
 	ActivityTimeline,
@@ -53,6 +53,8 @@ import { commentHtml } from "@/lib/records";
 const props = defineProps({
 	doctype: { type: String, required: true },
 	name: { type: String, required: true },
+	// The record's modified time, from its page: a change saved there shows here at once.
+	modified: { type: String, default: "" },
 });
 
 const { activities, loading, paginate, reload } = useActivityTimeline(props.doctype, props.name, [
@@ -61,6 +63,13 @@ const { activities, loading, paginate, reload } = useActivityTimeline(props.doct
 	"log",
 	"attachment_log",
 ]);
+
+watch(
+	() => props.modified,
+	(now, before) => {
+		if (before && now !== before) reload();
+	}
+);
 
 const comment = ref("");
 const sending = ref(false);

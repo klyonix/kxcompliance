@@ -18,7 +18,12 @@
 		</template>
 	</AppPageHeader>
 
-	<RecordFrame doctype="Compliance Item" :name="name" :facts="item ? keyFacts : []">
+	<RecordFrame
+		doctype="Compliance Item"
+		:name="name"
+		:facts="item ? keyFacts : []"
+		:modified="item?.modified || ''"
+	>
 		<p
 			v-if="error"
 			role="alert"
@@ -197,17 +202,14 @@
 				</ol>
 			</section>
 
-			<section class="flex flex-col gap-3" aria-labelledby="details-heading">
-				<h2 id="details-heading" class="text-base font-semibold text-ink-gray-8">
-					Details
-				</h2>
-				<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-					<div v-for="fact in facts" :key="fact.label" class="flex flex-col gap-0.5">
-						<dt class="text-sm text-ink-gray-5">{{ fact.label }}</dt>
-						<dd class="text-base text-ink-gray-8">{{ fact.value }}</dd>
-					</div>
-				</dl>
-			</section>
+			<EditableDetails
+				doctype="Compliance Item"
+				:name="name"
+				:doc="item"
+				:details="ITEM_DETAILS"
+				:may-edit="mayAct"
+				@saved="load"
+			/>
 
 			<RenewalDialog
 				v-model:open="recording"
@@ -256,6 +258,7 @@ import { createDoc, getDoc, getList, runMethod, saveChanges } from "@/api";
 import { boot, isManager } from "@/boot";
 import RenewalDialog from "@/components/RenewalDialog.vue";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import EditableDetails from "@/components/EditableDetails.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import {
@@ -338,38 +341,45 @@ const certificateLabel = computed(() => {
 	return decodeURIComponent(item.value.certificate.split("/").pop());
 });
 
-const facts = computed(() =>
-	[
-		["Type", item.value.item_type],
-		["Reference number", item.value.reference_number],
-		[
-			"Held by",
-			item.value.holder_type === "Company"
-				? item.value.company
-				: `${item.value.holder_name || item.value.holder} (${item.value.holder_type})`,
-		],
-		["Class", item.value.dsc_class],
-		["Purpose", item.value.dsc_purpose],
-		["Certifying authority", item.value.certifying_authority],
-		["Token serial number", item.value.token_serial],
-		["Company", item.value.holder_type === "Company" ? "" : item.value.company],
-		["Branch", item.value.branch],
-		["State", item.value.state],
-		["Issuing authority", item.value.issuing_authority],
-		["Issued on", formatDate(item.value.issue_date)],
-		["Valid from", formatDate(item.value.valid_from)],
-		["Responsible", nameOf(item.value.responsible)],
-		["Reviewer", nameOf(item.value.reviewer)],
-	]
-		.filter(([, value]) => value)
-		.map(([label, value]) => ({ label, value }))
-);
+// What the item page shows under Details, each changed where it is shown by those who may. The
+// holder, type and validity dates are changed with the item's own form and its renewals.
+const dsc = (current) => current.item_type === DSC_TYPE;
+const ITEM_DETAILS = [
+	{ field: "title", label: "Title" },
+	{ field: "item_type", label: "Type", show: (current) => current.item_type },
+	{ field: "reference_number", label: "Reference number" },
+	{
+		field: "holder",
+		label: "Held by",
+		show: (current) =>
+			current.holder_type === "Company"
+				? current.company
+				: `${current.holder_name || current.holder} (${current.holder_type})`,
+	},
+	{ field: "dsc_class", label: "Class", when: dsc },
+	{ field: "dsc_purpose", label: "Purpose", when: dsc },
+	{ field: "certifying_authority", label: "Certifying authority", when: dsc },
+	{ field: "token_serial", label: "Token serial number", when: dsc },
+	{
+		field: "company",
+		label: "Company",
+		show: (current) => (current.holder_type === "Company" ? "" : current.company),
+	},
+	{ field: "branch", label: "Branch", show: (current) => current.branch },
+	{ field: "state", label: "State" },
+	{ field: "issuing_authority", label: "Issuing authority" },
+	{ field: "issue_date", label: "Issued on" },
+	{ field: "valid_from", label: "Valid from" },
+	{ field: "responsible", label: "Responsible" },
+	{ field: "reviewer", label: "Reviewer" },
+	{ field: "notes", label: "Notes" },
+];
 
 const menu = computed(() => [
 	...(mayAct.value
 		? [
 				{
-					label: "Edit item",
+					label: "Edit holder, type and reminders",
 					icon: "lucide-pencil",
 					onClick: () => router.push({ name: "ItemEdit", params: { name: props.name } }),
 				},

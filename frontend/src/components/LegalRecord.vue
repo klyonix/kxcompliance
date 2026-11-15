@@ -13,7 +13,12 @@
 		</template>
 	</AppPageHeader>
 
-	<RecordFrame :doctype="doctype" :name="name" :facts="loaded ? keyFacts : []">
+	<RecordFrame
+		:doctype="doctype"
+		:name="name"
+		:facts="loaded ? keyFacts : []"
+		:modified="doc?.modified || ''"
+	>
 		<p
 			v-if="error"
 			role="alert"
@@ -51,25 +56,14 @@
 				@changed="$emit('changed')"
 			/>
 
-			<section class="flex flex-col gap-3" aria-labelledby="details-heading">
-				<h2 id="details-heading" class="text-base font-semibold text-ink-gray-8">
-					Details
-				</h2>
-				<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-					<div
-						v-for="fact in shownFacts"
-						:key="fact.label"
-						class="flex flex-col gap-0.5"
-					>
-						<dt class="text-sm text-ink-gray-5">{{ fact.label }}</dt>
-						<dd class="text-base text-ink-gray-8">{{ fact.value }}</dd>
-					</div>
-				</dl>
-				<div v-for="note in shownNotes" :key="note.label" class="flex flex-col gap-0.5">
-					<span class="text-sm text-ink-gray-5">{{ note.label }}</span>
-					<p class="whitespace-pre-line text-base text-ink-gray-8">{{ note.value }}</p>
-				</div>
-			</section>
+			<EditableDetails
+				:doctype="doctype"
+				:name="name"
+				:doc="doc"
+				:details="details"
+				:may-edit="mayEdit"
+				@saved="$emit('changed')"
+			/>
 
 			<section
 				v-if="documents.length"
@@ -97,11 +91,13 @@
 </template>
 
 <script setup>
-// The page of one case or trademark: where it stands, its dates, its details and documents.
+// The page of one case or trademark: where it stands, its dates, its details (changed where they
+// are shown) and documents.
 import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, Dropdown, Skeleton } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import EditableDetails from "@/components/EditableDetails.vue";
 import LegalDates from "@/components/LegalDates.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import { deskActions } from "@/navigation";
@@ -117,21 +113,19 @@ const props = defineProps({
 	theme: { type: String, default: "gray" },
 	due: { type: Object, default: () => ({ text: "", late: false }) },
 	subtitle: { type: String, default: "" },
-	// [[label, value]]; empty values are left out
-	facts: { type: Array, default: () => [] },
+	// The record itself, and the details shown of it (EditableDetails).
+	doc: { type: Object, default: null },
+	details: { type: Array, default: () => [] },
 	// The band across the top: [{ label, value, icon?, tone? }]
 	keyFacts: { type: Array, default: () => [] },
-	notes: { type: Array, default: () => [] },
+	// Recording hearings and dates, on a record still open.
 	mayAct: { type: Boolean, default: false },
+	// Changing the details, which stays possible once a case is closed.
+	mayEdit: { type: Boolean, default: false },
 });
 defineEmits(["changed"]);
 
 const documents = ref([]);
-
-const keep = (pairs) =>
-	pairs.filter(([, value]) => value).map(([label, value]) => ({ label, value }));
-const shownFacts = computed(() => keep(props.facts));
-const shownNotes = computed(() => keep(props.notes));
 
 const menu = computed(() => deskActions(props.doctype, props.name));
 

@@ -10,10 +10,11 @@
 		:theme="row.theme"
 		:due="due"
 		:subtitle="row.detail"
-		:facts="facts"
+		:doc="legalCase"
+		:details="CASE_DETAILS"
 		:key-facts="keyFacts"
-		:notes="notes"
 		:may-act="mayAct"
+		:may-edit="mayEdit"
 		@changed="load"
 	>
 		<section
@@ -35,7 +36,7 @@ import { getDoc } from "@/api";
 import { boot } from "@/boot";
 import LegalRecord from "@/components/LegalRecord.vue";
 import { canAct } from "@/lib/items";
-import { OPEN_CASE_STATUSES, caseRow, plainText } from "@/lib/legal";
+import { OPEN_CASE_STATUSES, caseRow } from "@/lib/legal";
 import { formatDate } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
 import { learnNames, nameOf } from "@/composables/usePeople";
@@ -48,6 +49,7 @@ const error = ref("");
 const row = computed(() => (legalCase.value ? caseRow(legalCase.value) : { detail: "" }));
 const open = computed(() => OPEN_CASE_STATUSES.includes(legalCase.value?.status));
 const mayAct = computed(() => open.value && canAct(legalCase.value, boot));
+const mayEdit = computed(() => canAct(legalCase.value, boot));
 
 const formatAmount = (value, currency) =>
 	Number(value || 0).toLocaleString(undefined, {
@@ -93,30 +95,29 @@ const keyFacts = computed(() => {
 	];
 });
 
-const facts = computed(() => {
-	const current = legalCase.value;
-	if (!current) return [];
-	return [
-		["Case number", current.case_number],
-		["CNR number", current.cnr_number],
-		["Notice reference", current.notice_reference],
-		["Forum", [current.forum_name || current.forum, current.bench].filter(Boolean).join(", ")],
-		["State", current.state],
-		["Filed or received on", formatDate(current.filing_date)],
-		["Company", current.company],
-		["Our role", current.our_role],
-		["Opposing party", current.opposing_party],
-		["Advocate", [current.advocate, current.advocate_contact].filter(Boolean).join(" · ")],
-		["Appeal of", current.appeal_of],
-		["Responsible", nameOf(current.responsible)],
-		["Reviewer", nameOf(current.reviewer)],
-	];
-});
-
-const notes = computed(() => [
-	["Summary", plainText(legalCase.value?.summary)],
-	["Outcome", plainText(legalCase.value?.outcome)],
-]);
+// What the case page shows under Details, each changed where it is shown by those who may.
+const CASE_DETAILS = [
+	{ field: "title", label: "Title" },
+	{ field: "case_type", label: "Type" },
+	{ field: "case_number", label: "Case number" },
+	{ field: "cnr_number", label: "CNR number" },
+	{ field: "notice_reference", label: "Notice reference" },
+	{ field: "forum", label: "Forum" },
+	{ field: "forum_name", label: "Forum name" },
+	{ field: "bench", label: "Bench" },
+	{ field: "state", label: "State" },
+	{ field: "filing_date", label: "Filed or received on" },
+	{ field: "company", label: "Company", show: (current) => current.company },
+	{ field: "our_role", label: "Our role" },
+	{ field: "opposing_party", label: "Opposing party" },
+	{ field: "advocate", label: "Advocate", show: (current) => current.advocate },
+	{ field: "advocate_contact", label: "Advocate's contact" },
+	{ field: "appeal_of", label: "Appeal of", show: (current) => current.appeal_of },
+	{ field: "responsible", label: "Responsible" },
+	{ field: "reviewer", label: "Reviewer" },
+	{ field: "summary", label: "Summary" },
+	{ field: "outcome", label: "Outcome" },
+];
 
 async function load() {
 	error.value = "";

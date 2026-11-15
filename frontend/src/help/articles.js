@@ -337,7 +337,7 @@ export const ARTICLES = [
 			'Press "Record payment": the amount, the date, how it was paid and its reference.',
 			"If the client deducted TDS, give it too; together they settle the bill.",
 		],
-		tip: "A part payment leaves the rest due. A payment recorded by mistake can be cancelled from the bill.",
+		tip: "A part payment leaves the rest due. Open a payment, from the bill or Billing's Payments tab, to download its receipt, email it to the client, or cancel it if it was recorded by mistake.",
 		page: "Billing",
 		firm: true,
 	},

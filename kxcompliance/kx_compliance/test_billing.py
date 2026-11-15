@@ -21,7 +21,9 @@ from kxcompliance.api import (
 	client_summary,
 	create_bill,
 	credit_bill,
+	email_receipt,
 	own_bill,
+	payment,
 	payments,
 	receipt_pdf,
 	record_advance,
@@ -707,6 +709,50 @@ class TestBills(IntegrationTestCase):
 			self.assertEqual(frappe.local.response.type, "pdf")
 			with self.assertRaisesRegex(frappe.PermissionError, "only your own"):
 				statement_pdf("Someone Else")
+
+	def test_a_payment_has_a_page_a_receipt_and_can_be_emailed(self):
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		send_bill(name)
+		paid = record_payment(name, 1000, frappe.utils.nowdate(), "UPI", reference="UPI-77", tds=180)[
+			"payment"
+		]
+		shown = payment(paid)
+		self.assertEqual(
+			(shown["client"], shown["paid_amount"], shown["tds"], shown["reference_no"]),
+			(self.client, 1000, 180, "UPI-77"),
+		)
+		self.assertEqual(
+			[(row["name"], row["allocated"], row["still_due"]) for row in shown["bills"]], [(name, 1180, 0)]
+		)
+		self.assertEqual(shown["email_to"], "accounts@billclient.example.com")
+		with self.assertRaisesRegex(frappe.ValidationError, "no email account"):
+			with patch("kxcompliance.kx_compliance.reminders.sender_address", return_value=None):
+				email_receipt(paid)
+		with (
+			patch("kxcompliance.kx_compliance.reminders.sender_address", return_value="firm@example.com"),
+			patch("frappe.sendmail") as sendmail,
+			patch("frappe.attach_print", return_value={"fname": "receipt.pdf"}),
+		):
+			self.assertEqual(email_receipt(paid)["emailed_to"], "accounts@billclient.example.com")
+		self.assertEqual(sendmail.call_args.kwargs["recipients"], ["accounts@billclient.example.com"])
+		self.assertEqual(sendmail.call_args.kwargs["reference_name"], paid)
+		with self.assertRaisesRegex(frappe.DoesNotExistError, "does not exist"):
+			payment("ACC-PAY-NOT-THERE")
+
+	def test_an_advance_has_a_page_and_a_receipt(self):
+		advance = record_advance(self.client, 500, frappe.utils.nowdate(), "Cash")["payment"]
+		shown = payment(advance)
+		self.assertEqual(
+			(shown["client"], shown["bills"], shown["unallocated_amount"]), (self.client, [], 500)
+		)
+		receipt_pdf(advance)
+		self.assertTrue(frappe.local.response.filecontent.startswith(b"%PDF"))
+		with (
+			patch("kxcompliance.api.is_client_login", return_value=True),
+			patch("kxcompliance.api.client_of_login", return_value=self.client),
+			self.assertRaisesRegex(frappe.PermissionError, "not a payment against one of your bills"),
+		):
+			receipt_pdf(advance)
 
 	def test_a_draft_is_not_paid(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]

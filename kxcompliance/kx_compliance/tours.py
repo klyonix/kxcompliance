@@ -34,6 +34,7 @@ TOURS = (
 	"client-home",
 	"billing",
 	"bill",
+	"payment",
 	"billing-settings",
 	"document-request",
 	"bulk-setup",

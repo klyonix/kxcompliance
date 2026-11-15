@@ -50,9 +50,11 @@
 					formatDate(row.posting_date)
 				}}</span>
 				<span class="flex min-w-0 flex-col">
-					<span class="truncate text-base font-medium text-ink-gray-8">{{
-						row.client || row.party_name
-					}}</span>
+					<RouterLink
+						:to="{ name: 'Payment', params: { name: row.name } }"
+						class="truncate text-base font-medium text-ink-gray-8 hover:underline"
+						>{{ row.client || row.party_name }}</RouterLink
+					>
 					<span class="truncate text-sm text-ink-gray-5">
 						<span class="sm:hidden">{{ formatDate(row.posting_date) }} · </span>
 						{{ row.mode_of_payment }}

@@ -605,6 +605,20 @@ def payments(
 	return billing.payments(client, text, max(0, cint(start)), limit)
 
 
+@frappe.whitelist(methods=["GET"])
+def payment(name: str) -> dict:
+	"""A payment the firm received, as its page shows it."""
+	check_app_access_or_accounts()
+	return billing.payment_detail(name)
+
+
+@frappe.whitelist(methods=["POST"])
+def email_receipt(name: str) -> dict:
+	"""Email a payment's receipt to the client."""
+	check_app_access_or_accounts()
+	return {"emailed_to": billing.email_receipt(name)}
+
+
 @frappe.whitelist(methods=["POST"])
 def cancel_payment(name: str) -> dict:
 	"""Cancel a payment recorded against one of the firm's bills."""
@@ -708,22 +722,25 @@ def check_billed_client(client: str):
 
 @frappe.whitelist(methods=["GET"])
 def receipt_pdf(name: str):
-	"""A payment's receipt: for those who bill, and for the client who paid."""
-	entry = frappe.get_doc("Payment Entry", name) if frappe.db.exists("Payment Entry", name) else None
-	bills = [
-		row.reference_name
-		for row in (entry.references if entry else [])
-		if row.reference_doctype == "Sales Invoice"
-	]
-	if not bills or entry.docstatus != 1:
-		frappe.throw(
-			_("{0} is not a payment against one of the firm's bills.").format(name), frappe.PermissionError
-		)
+	"""A payment's receipt: for those who bill (an advance's too), and for the client who paid."""
 	own = is_client_login()
 	if own:
+		entry = frappe.get_doc("Payment Entry", name) if frappe.db.exists("Payment Entry", name) else None
+		bills = [
+			row.reference_name
+			for row in (entry.references if entry else [])
+			if row.reference_doctype == "Sales Invoice"
+		]
+		if not bills:
+			frappe.throw(
+				_("{0} is not a payment against one of your bills.").format(name), frappe.PermissionError
+			)
 		own_bill(bills[0])
 	else:
-		billing_bill(bills[0])
+		check_app_access_or_accounts()
+		entry = billing.payment_of(name)
+	if entry.docstatus != 1:
+		frappe.throw(_("{0} is cancelled; it has no receipt.").format(name))
 	# As for a bill: a client's login may not read ERPNext's payments; its own bill was checked above.
 	frappe.flags.ignore_print_permissions = own
 	try:

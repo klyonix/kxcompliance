@@ -143,6 +143,18 @@ export function paymentProblem({ amount, tds, paid_on: paidOn, mode }, due) {
 	return null;
 }
 
+// A payment in figures, for its page: what came in, TDS deducted, how, and its reference.
+export function paymentFacts(payment) {
+	const facts = [
+		{ label: "Received", value: money(payment.paid_amount, payment.currency) },
+		{ label: "How", value: payment.mode_of_payment || "—" },
+	];
+	if (payment.tds)
+		facts.push({ label: "TDS deducted", value: money(payment.tds, payment.currency) });
+	if (payment.reference_no) facts.push({ label: "Reference", value: payment.reference_no });
+	return facts;
+}
+
 // What is wrong with an advance being recorded (the server checks the same), or null.
 export function advanceProblem({ client, amount, paid_on: paidOn, mode }) {
 	if (!client) return "Choose the client who paid.";

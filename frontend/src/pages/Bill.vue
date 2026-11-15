@@ -120,7 +120,10 @@
 					<span class="w-24 text-sm text-ink-gray-5">{{
 						formatDate(payment.posting_date)
 					}}</span>
-					<span class="min-w-0 flex-1 text-base text-ink-gray-8">
+					<RouterLink
+						:to="{ name: 'Payment', params: { name: payment.name } }"
+						class="min-w-0 flex-1 text-base text-ink-gray-8 hover:underline"
+					>
 						{{ payment.mode_of_payment }}
 						<span
 							v-if="payment.reference_no !== payment.mode_of_payment"
@@ -131,7 +134,7 @@
 						<span v-if="payment.tds" class="text-sm text-ink-gray-5">
 							· TDS {{ money(payment.tds, bill.currency) }}</span
 						>
-					</span>
+					</RouterLink>
 					<span class="text-base text-ink-gray-8">{{
 						money(payment.paid_amount, bill.currency)
 					}}</span>

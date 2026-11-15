@@ -318,7 +318,7 @@ When money comes in against a bill.
 2. Press "Record payment": the amount, the date, how it was paid and its reference.
 3. If the client deducted TDS, give it too; together they settle the bill.
 
-> **Tip.** A part payment leaves the rest due. A payment recorded by mistake can be cancelled from the bill.
+> **Tip.** A part payment leaves the rest due. Open a payment, from the bill or Billing's Payments tab, to download its receipt, email it to the client, or cancel it if it was recorded by mistake.
 
 ### A client has paid before being billed. How do I record it?
 

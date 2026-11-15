@@ -65,6 +65,17 @@ def create_roles():
 	for role in ROLES:
 		create_role(role, desk_access=1)
 	create_role(CLIENT_ROLE, desk_access=0)
+	keep_client_role_off_desk()
+
+
+def keep_client_role_off_desk():
+	"""A client's login never has the Desk. Frappe makes the roles a doctype's permissions name
+	while installing its doctypes, with the Desk on, before this app's own install runs; saving
+	the role with it off makes its users Website Users again."""
+	role = frappe.get_doc("Role", CLIENT_ROLE)
+	if role.desk_access:
+		role.desk_access = 0
+		role.save(ignore_permissions=True)  # setup record, fixed during install or migrate
 
 
 def create_role(role: str, desk_access: int):

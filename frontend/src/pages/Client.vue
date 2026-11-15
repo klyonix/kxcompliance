@@ -227,7 +227,7 @@ import { taskRow } from "@/lib/filings";
 import { DSC_TYPE, itemRow } from "@/lib/items";
 import { requestRow } from "@/lib/requests";
 import { signatoryRow } from "@/lib/signatories";
-import { deskActions } from "@/navigation";
+import { deskActions, deskPath } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({ name: { type: String, required: true } });
@@ -298,9 +298,9 @@ const menu = computed(() => [
 					label: "Client Summary report",
 					icon: "lucide-table",
 					onClick: () =>
-						(window.location.href = `/app/query-report/Client Summary?${new URLSearchParams(
-							{ client: props.name }
-						)}`),
+						(window.location.href = `${deskPath(
+							"query-report/Client Summary"
+						)}?${new URLSearchParams({ client: props.name })}`),
 				},
 		  ]
 		: []),

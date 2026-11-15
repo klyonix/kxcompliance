@@ -53,10 +53,10 @@
 			<span
 				v-for="(cell, index) in cells"
 				:key="index"
-				class="hidden w-40 shrink-0 truncate text-sm text-ink-gray-6 sm:block"
+				class="hidden w-40 shrink-0 truncate text-sm text-ink-gray-6 lg:block"
 				>{{ cell || "—" }}</span
 			>
-			<span class="hidden w-36 shrink-0 sm:flex">
+			<span v-if="statusColumn" class="hidden w-36 shrink-0 sm:flex">
 				<!-- Colour and an icon, never colour alone. -->
 				<Badge v-if="row.status" :label="t(row.status)" :theme="row.theme">
 					<template #prefix>
@@ -98,8 +98,9 @@ import { KINDS } from "@/pages/myWork";
 const props = defineProps({
 	row: { type: Object, required: true },
 	cells: { type: Array, default: () => [] },
-	// False for lists that have no date column.
+	// False for lists that have no date column, or no status column.
 	dateColumn: { type: Boolean, default: true },
+	statusColumn: { type: Boolean, default: true },
 });
 const kind = computed(() => KINDS[props.row.kind]);
 // Text colours that match each badge theme, for the phone layout.

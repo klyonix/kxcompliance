@@ -160,7 +160,7 @@ import CalendarFeed from "@/components/CalendarFeed.vue";
 import PrivacySection from "@/components/PrivacySection.vue";
 import SyncStatus from "@/components/SyncStatus.vue";
 import { ACCENTS, DENSITIES, readAppearance, saveAppearance } from "@/lib/appearance";
-import { signOut } from "@/navigation";
+import { deskPath, signOut } from "@/navigation";
 import { clearOutbox, outbox, refresh, sendWaiting } from "@/offline/outbox";
 import { discard, retry } from "@/offline/queue";
 
@@ -189,7 +189,7 @@ async function drop(entry) {
 	await refresh();
 }
 
-const openDesk = () => (window.location.href = "/app/klyonix-compliance");
+const openDesk = () => (window.location.href = deskPath("klyonix-compliance"));
 const leave = () =>
 	signOut({ unsent: outbox.waiting + outbox.needsLook.length, clear: clearOutbox });
 

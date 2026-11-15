@@ -106,7 +106,7 @@ import { useRoute } from "vue-router";
 import { Sidebar, SidebarCollapseToggle, SidebarHeader, SidebarItem } from "frappe-ui";
 import { boot, checksOnly, mayUseDesk } from "@/boot";
 import NotificationBell from "@/components/NotificationBell.vue";
-import { isSettingsPageOpen, sections, settingsPagesFor, signOut } from "@/navigation";
+import { deskPath, isSettingsPageOpen, sections, settingsPagesFor, signOut } from "@/navigation";
 import { clearOutbox, outbox } from "@/offline/outbox";
 import { sectionTint } from "@/lib/areas";
 import { paletteOpen, shortcutLabel } from "@/lib/quickSearch";
@@ -139,7 +139,7 @@ const menu = [
 	mayUseDesk() && {
 		label: "Open the Desk",
 		icon: "lucide-app-window",
-		onClick: () => (window.location.href = "/app/klyonix-compliance"),
+		onClick: () => (window.location.href = deskPath("klyonix-compliance")),
 	},
 	{
 		label: "Sign out",

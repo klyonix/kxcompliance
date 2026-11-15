@@ -37,7 +37,7 @@ describe("licence rules", () => {
 		const row = checkRow(log, { allowed: false, checkedBy: "Asha Rao" });
 		expect(row.status).toBe("Blocked");
 		expect(row.cells).toEqual(["City Pharmacy", "Asha Rao"]);
-		expect(row.href).toMatch(/\/sales-order\/SO-0007$/);
+		expect(row.href).toBe("/desk/sales-order/SO-0007");
 		expect(checkRow(log, { allowed: true, checkedBy: "" }).status).toBe("Let through");
 	});
 });

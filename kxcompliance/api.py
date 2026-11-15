@@ -37,6 +37,11 @@ from kxcompliance.kx_compliance.party_licences import (
 	requirements_for_party,
 )
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, is_approver
+from kxcompliance.kx_compliance.search import CANDIDATES as SEARCH_CANDIDATES
+from kxcompliance.kx_compliance.search import MIN_LENGTH as SEARCH_MIN_LENGTH
+from kxcompliance.kx_compliance.search import like as search_like
+from kxcompliance.kx_compliance.search import search as search_records
+from kxcompliance.kx_compliance.search import words_of as search_words
 
 APP_ROLES = frozenset({"System Manager", "Compliance Manager", "Compliance User", "Compliance Auditor"})
 # People who sell or buy may open the app for the Licence Check only, for their side of the business.
@@ -44,40 +49,6 @@ CHECK_ROLES = {"Sales User": "Customer", "Purchase User": "Supplier"}
 PARTY_NAME_FIELDS = {"Customer": "customer_name", "Supplier": "supplier_name"}
 PARTY_SEARCH_LIMIT = 20
 NAMES_LIMIT = 50
-SEARCH_LIMIT = 6
-SEARCH_MIN_LENGTH = 2
-# What the app's search looks through: the fields matched and the fields shown, per record type.
-SEARCHES = {
-	"items": (
-		"Compliance Item",
-		["title", "reference_number"],
-		["name", "title", "item_type", "status", "valid_until", "reference_number"],
-	),
-	"filings": (
-		"Compliance Task",
-		["obligation_template", "acknowledgement_number", "period_label"],
-		[
-			"name",
-			"obligation_template",
-			"period_label",
-			"company",
-			"status",
-			"is_overdue",
-			"effective_due_date",
-			"filed_on",
-		],
-	),
-	"cases": (
-		"Legal Case",
-		["title", "case_number", "notice_reference", "cnr_number"],
-		["name", "title", "case_type", "forum", "forum_name", "case_number", "status", "next_date"],
-	),
-	"trademarks": (
-		"Trademark",
-		["mark", "application_number", "registration_number"],
-		["name", "mark", "application_number", "status", "next_date"],
-	),
-}
 WORK_HORIZON_DAYS = 30
 WORK_LIMIT = 200
 # Filings that can still be filed or reviewed in bulk, and how many return-and-period choices to offer.
@@ -490,24 +461,59 @@ def full_names(users: str) -> dict[str, str]:
 
 
 @frappe.whitelist(methods=["GET"])
-def search(text: str) -> dict[str, list]:
-	"""Register items, filings, cases and trademarks whose name, number or reference contains
-	`text`, a few of each, as far as the person may read them."""
+def search(text: str, kind: str | None = None) -> dict[str, list]:
+	"""Records with every word of `text` in their name, number or reference, closest first, as far
+	as the person may read them: the register, filings, cases, trademarks, clients, companies,
+	signatories, document requests, licence rules and obligations; for managers the team; and the
+	customers and suppliers Licence Check may look at. `kind` asks for one of them only."""
 	check_reader_access()
-	text = text.strip()
-	if len(text) < SEARCH_MIN_LENGTH:
-		return {section: [] for section in SEARCHES}
-	pattern = f"%{text}%"
-	return {
-		section: frappe.get_list(
-			doctype,
-			or_filters={field: ("like", pattern) for field in matched},
-			fields=shown,
-			order_by="modified desc",
-			limit=SEARCH_LIMIT,
+	if kind is not None and not isinstance(kind, str):
+		frappe.throw(_("Search one kind at a time."), frappe.ValidationError)
+	kinds = [kind] if kind else None
+	found = search_records(text, kinds)
+	words = search_words(text)
+	if len(" ".join(words)) < SEARCH_MIN_LENGTH:
+		return found
+	if (not kind or kind == "people") and is_approver() and has_app_access():
+		found["people"] = search_people(words)
+	if not is_client_login():
+		for party_type in party_types_to_check():
+			key = f"{party_type.lower()}s"
+			if not kind or kind == key:
+				found[key] = search_party_words(party_type, words)
+	return found
+
+
+def search_people(words: list[str]) -> list[dict]:
+	"""The team members with every word in their name or email (managers only, checked by the caller)."""
+	return [
+		person
+		for person in people.team()
+		if all(word in f"{person['full_name']} {person['user']}".lower() for word in words)
+	][:SEARCH_CANDIDATES]
+
+
+def search_party_words(party_type: str, words: list[str]) -> list[dict]:
+	"""Customers or suppliers with every word in their ID or name, for Licence Check."""
+	name_field = PARTY_NAME_FIELDS[party_type]
+	table = frappe.qb.DocType(party_type)
+	query = (
+		frappe.qb.from_(table)
+		.select(
+			table.name,
+			table[name_field].as_("party_name"),
+			table[GROUP_FIELDS[party_type]].as_("party_group"),
 		)
-		for section, (doctype, matched, shown) in SEARCHES.items()
-	}
+		.where(table.disabled == 0)
+		.orderby(table[name_field])
+		.limit(SEARCH_CANDIDATES)
+	)
+	for word in words:
+		pattern = search_like(word)
+		query = query.where((table.name.like(pattern)) | (table[name_field].like(pattern)))
+	# Compliance roles do not read Customer or Supplier; Licence Check gives them names and
+	# groups only, as search_parties does.
+	return query.run(as_dict=True)
 
 
 @frappe.whitelist(methods=["GET"])

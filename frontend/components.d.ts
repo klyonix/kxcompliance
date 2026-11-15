@@ -43,6 +43,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     RowList: typeof import('./src/components/RowList.vue')['default']
     ScoreBadge: typeof import('./src/components/ScoreBadge.vue')['default']
+    SearchPalette: typeof import('./src/components/SearchPalette.vue')['default']
     SyncStatus: typeof import('./src/components/SyncStatus.vue')['default']
     TourMenu: typeof import('./src/components/TourMenu.vue')['default']
     UpdatePrompt: typeof import('./src/components/UpdatePrompt.vue')['default']

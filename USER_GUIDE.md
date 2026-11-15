@@ -17,6 +17,9 @@ This guide is the same as the Help page inside the app. In the app, each answer 
 - **Finding your way.** The menu on the left (at the bottom on a phone) lists the areas you
   can use. The question mark at the top of every page replays a short tour of that page, and
   **Help** answers the questions below.
+- **Searching.** Press Ctrl+K (⌘K on a Mac) on any page, or choose Search in the menu, and
+  type part of a name, number or reference. Every word must appear, in any order. Enter opens
+  the result, or a page or action such as "New register item".
 - **Notifications.** The bell shows reminders, escalations and answers to your requests. The
   same reminders also come by email when your organisation has switched email on.
 - **Your look.** In **Account**, choose light or dark, an accent colour, how close together

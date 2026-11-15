@@ -36,6 +36,7 @@
 			<AppSidebar />
 		</template>
 		<NotificationsDrawer />
+		<SearchPalette />
 		<UpdatePrompt />
 		<ConnectionBanner />
 		<RouterView />
@@ -56,15 +57,20 @@ import { useRoute, useRouter } from "vue-router";
 import { boot, checksOnly } from "./boot";
 import AppSidebar from "./components/AppSidebar.vue";
 import NotificationsDrawer from "./components/NotificationsDrawer.vue";
+import SearchPalette from "./components/SearchPalette.vue";
 import ConnectionBanner from "./components/ConnectionBanner.vue";
 import UpdatePrompt from "./components/UpdatePrompt.vue";
 import { useIsMobile } from "./composables/useIsMobile";
 import { sections } from "./navigation";
+import { paletteOpen } from "./lib/quickSearch";
 
 // Paint the app light or dark as chosen on the Account page, following the system by default.
 useColorScheme();
 
-// Ctrl/⌘ K anywhere, or "/" when not typing, opens search.
+const isMobile = useIsMobile();
+
+// Ctrl/⌘ K anywhere, or "/" when not typing, opens quick search over the page (the Search page
+// on a phone); Ctrl/⌘ K again closes it.
 const router = useRouter();
 const route = useRoute();
 function openSearch(event) {
@@ -74,10 +80,10 @@ function openSearch(event) {
 		(event.key === "/" && !typing);
 	if (!shortcut || checksOnly()) return;
 	event.preventDefault();
-	router.push({ name: "Search" });
+	if (isMobile.value) router.push({ name: "Search" });
+	else paletteOpen.value = event.key === "/" ? true : !paletteOpen.value;
 }
 onMounted(() => window.addEventListener("keydown", openSearch));
 onBeforeUnmount(() => window.removeEventListener("keydown", openSearch));
-const isMobile = useIsMobile();
 const tabSections = sections.filter((section) => !section.desktopOnly);
 </script>

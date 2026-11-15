@@ -118,6 +118,7 @@ def get_overview() -> dict:
 	return {
 		"sections": [
 			{
+				"key": "register",
 				"title": _("Register"),
 				"cards": [
 					card(
@@ -164,6 +165,7 @@ def get_overview() -> dict:
 				],
 			},
 			{
+				"key": "filings",
 				"title": _("Filings"),
 				"cards": [
 					card(
@@ -203,6 +205,7 @@ def get_overview() -> dict:
 				],
 			},
 			{
+				"key": "legal",
 				"title": _("Legal"),
 				"cards": [
 					card(
@@ -238,6 +241,7 @@ def get_overview() -> dict:
 				],
 			},
 			{
+				"key": "trademarks",
 				"title": _("Trademarks"),
 				"cards": [
 					card(
@@ -265,6 +269,7 @@ def get_overview() -> dict:
 				],
 			},
 			{
+				"key": "licence-check",
 				"title": _("Customer and supplier licences"),
 				"cards": [
 					card(
@@ -294,6 +299,7 @@ def get_overview() -> dict:
 				],
 			},
 			{
+				"key": "privacy",
 				"title": _("Privacy"),
 				"cards": [
 					card(

@@ -29,14 +29,18 @@
 		<RowList
 			v-else
 			data-tour="people-list"
-			:rows="rows"
+			:groups="groups"
 			:columns="[{ label: 'Last signed in' }]"
 			:date-label="null"
 			actions-width="sm:w-44"
 		>
 			<template #actions="{ row }">
+				<!-- Someone off the team has no role: their row opens their page, to hand work over. -->
+				<span v-if="row.person.on_team === false" class="text-sm text-ink-gray-5"
+					>Hand over</span
+				>
 				<FormControl
-					v-if="!row.person.is_me && !row.person.locked"
+					v-else-if="!row.person.is_me && !row.person.locked"
 					:model-value="row.person.role"
 					type="select"
 					class="w-32"
@@ -48,7 +52,7 @@
 					row.person.locked ? `${row.person.role} · admin` : row.person.role
 				}}</span>
 				<Dropdown
-					v-if="!row.person.is_me && !row.person.locked"
+					v-if="row.person.on_team !== false && !row.person.is_me && !row.person.locked"
 					:options="menuFor(row.person)"
 					align="end"
 				>
@@ -136,7 +140,24 @@ import { notLoaded } from "@/offline/reachability";
 
 const isMobile = useIsMobile();
 const people = ref(null);
-const rows = computed(() => people.value.map(personRow));
+// The team, then anyone taken off it who still holds open work, to hand it over.
+const former = ref([]);
+const groups = computed(() => [
+	{ key: "team", label: "", rows: people.value.map(personRow) },
+	...(former.value.length
+		? [
+				{
+					key: "former",
+					label: "No longer on the team, still holding work",
+					rows: former.value.map((person) => ({
+						...personRow(person),
+						status: "Off the team",
+						theme: "amber",
+					})),
+				},
+		  ]
+		: []),
+]);
 const error = ref("");
 const inviting = ref(false);
 const inviteError = ref("");
@@ -156,7 +177,10 @@ async function copyLink() {
 
 async function load() {
 	try {
-		people.value = await call("kxcompliance.api.team");
+		[people.value, former.value] = await Promise.all([
+			call("kxcompliance.api.team"),
+			call("kxcompliance.api.former_people").catch(() => []),
+		]);
 	} catch (err) {
 		error.value = err.isNetwork ? notLoaded("the team") : err.message;
 	}

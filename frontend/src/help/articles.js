@@ -271,6 +271,19 @@ export const ARTICLES = [
 		managers: true,
 	},
 	{
+		id: "hand-over-work",
+		area: "Setting up",
+		title: "Someone is leaving. How do I hand over their work?",
+		when: "When a colleague leaves, goes on leave, or moves to other clients.",
+		steps: [
+			'Open Settings, press "People" and open the person. Someone already taken off the team is listed under "No longer on the team, still holding work".',
+			'Under "Hand over their work", check what would move, choose who takes it, and press "Hand over".',
+			"Their open filings, register items, cases, trademarks, dates and document requests move, with their places as a company's default, an obligation's holder and on clients' teams. You are told when it is done; work already finished stays with them.",
+		],
+		page: "People",
+		managers: true,
+	},
+	{
 		id: "turn-on-reminders",
 		area: "Setting up",
 		title: "How do I make sure reminders go out?",

@@ -15,7 +15,9 @@ from frappe.utils.password import update_password
 from frappe.utils.password_strength import test_password_strength
 
 from kxcompliance.install import CLIENT_ROLE, ROLES
+from kxcompliance.kx_compliance.handover import RECORDS, preview
 from kxcompliance.kx_compliance.legal import CLOSED_CASE_STATUSES
+from kxcompliance.kx_compliance.onboarding import firm_people
 from kxcompliance.kx_compliance.overview import PENDING_MARK_STATUSES
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, is_approver
 
@@ -72,11 +74,12 @@ def team() -> list[dict]:
 
 def person_row(user, roles: set[str], admin: bool) -> dict:
 	"""One person as the People screen shows them; `user` has name, full_name, enabled, last_login."""
-	role = next(role for role in ROLE_LABELS if role in roles)
+	role = next((role for role in ROLE_LABELS if role in roles), None)
 	return {
 		"user": user.name,
 		"full_name": user.full_name or user.name,
-		"role": ROLE_LABELS[role],
+		# None for someone taken off the team who still holds work.
+		"role": ROLE_LABELS[role] if role else None,
 		"enabled": bool(user.enabled),
 		"last_login": str(user.last_login) if user.last_login else None,
 		"is_me": user.name == frappe.session.user,
@@ -86,15 +89,26 @@ def person_row(user, roles: set[str], admin: bool) -> dict:
 
 
 def person(user: str) -> dict:
-	"""One person on the team, for their page: their role, sign-in, and the open work they hold."""
+	"""One person on the team, for their page: their role, sign-in, and the open work they hold.
+
+	Someone taken off the team who still holds work has a page too, so it can be handed over.
+	"""
 	check_manager()
 	roles = set(frappe.get_roles(user))
-	if user in PROTECTED or not roles & set(ROLES):
-		frappe.throw(_("{0} is not on the team.").format(user), frappe.DoesNotExistError)
+	# Taken off the team, someone with no Desk role left becomes a Website User in Frappe, so the
+	# type is not asked for; a client's login never holds the firm's work.
 	row = frappe.db.get_value("User", user, ["name", "full_name", "enabled", "last_login"], as_dict=True)
+	if CLIENT_ROLE in roles:
+		row = None
+	handing_over = preview(user) if row and user not in PROTECTED else []
+	on_team = bool(roles & set(ROLES))
+	if not row or user in PROTECTED or not (on_team or any(kind["count"] for kind in handing_over)):
+		frappe.throw(_("{0} is not on the team.").format(user), frappe.DoesNotExistError)
 	return {
 		**person_row(row, roles, "System Manager" in roles),
+		"on_team": on_team,
 		"work": open_work(user),
+		"handover": handing_over,
 		"can_email": outgoing_email(),
 	}
 
@@ -268,3 +282,45 @@ def check_strength(user: str, password: str) -> str:
 		return ""
 	feedback = result.get("feedback") or {}
 	return " ".join(filter(None, [_("This password is too easy to guess."), feedback.get("warning")]))
+
+
+def start_handover(from_user: str, to_user: str) -> dict:
+	"""Hand one person's open work to someone on the team, in the background (handover.py)."""
+	check_manager()
+	if from_user == to_user:
+		frappe.throw(_("Choose someone other than {0} to take the work.").format(from_user))
+	if from_user in PROTECTED or from_user == frappe.session.user:
+		frappe.throw(_("Another manager hands over your own work."))
+	team = {person.name for person in firm_people()}
+	if to_user not in team:
+		frappe.throw(_("{0} is not on the team, so cannot take the work.").format(to_user))
+	frappe.enqueue(
+		"kxcompliance.kx_compliance.handover.run",
+		queue="long",
+		enqueue_after_commit=True,
+		from_user=from_user,
+		to_user=to_user,
+		by=frappe.session.user,
+	)
+	return {"from_user": from_user, "to_user": to_user, "started": True}
+
+
+def former_holders() -> list[dict]:
+	"""People taken off the team who still hold open work, for the People screen."""
+	check_manager()
+	holders: set[str] = set()
+	for _label, doctype, filters, fields in RECORDS:
+		for field in fields:
+			holders.update(
+				frappe.get_all(doctype, filters={**filters, field: ("is", "set")}, pluck=field, distinct=True)
+			)
+	on_team = set(
+		frappe.get_all("Has Role", filters={"role": ("in", ROLES), "parenttype": "User"}, pluck="parent")
+	)
+	former = sorted(holders - on_team - set(PROTECTED))
+	if not former:
+		return []
+	users = frappe.get_all(
+		"User", filters={"name": ("in", former)}, fields=["name", "full_name", "enabled", "last_login"]
+	)
+	return [{**person_row(user, set(), False), "on_team": False} for user in users]

@@ -18,9 +18,15 @@
 		</div>
 
 		<template v-else>
+			<p
+				v-if="!data.on_team"
+				class="rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-7"
+			>
+				No longer on the team, but still holding open work. Hand it over to someone below.
+			</p>
 			<!-- Their own role, or an administrator's, is changed elsewhere: say so instead. -->
 			<p
-				v-if="!changeable"
+				v-else-if="!changeable"
 				class="rounded-lg bg-surface-gray-2 px-3 py-2 text-base text-ink-gray-7"
 			>
 				{{
@@ -30,7 +36,11 @@
 				}}
 			</p>
 
-			<section class="flex flex-col gap-3" aria-labelledby="role-heading">
+			<section
+				v-if="data.on_team"
+				class="flex flex-col gap-3"
+				aria-labelledby="role-heading"
+			>
 				<h2 id="role-heading" class="text-base font-semibold text-ink-gray-8">Role</h2>
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup">
 					<button
@@ -86,10 +96,53 @@
 						<span class="text-sm text-ink-gray-6">{{ card.label }}</span>
 					</RouterLink>
 				</div>
-				<p class="text-sm text-ink-gray-5">
-					Removing someone from the team leaves this work with them; give it to someone
-					else from each record.
-				</p>
+			</section>
+
+			<!-- Leaving, on leave or moving to other clients: everything open goes to one person. -->
+			<section
+				v-if="!data.is_me && handingOver.length"
+				class="flex flex-col gap-3"
+				aria-labelledby="handover-heading"
+			>
+				<div class="flex flex-col gap-0.5">
+					<h2 id="handover-heading" class="text-base font-semibold text-ink-gray-8">
+						Hand over their work
+					</h2>
+					<p class="text-sm text-ink-gray-5">
+						Everything still open moves to one person, with their places on companies,
+						obligations and clients. Work already done stays with them.
+					</p>
+				</div>
+				<ul
+					class="flex flex-col rounded-lg border border-outline-gray-1 px-3 py-1 [&>*+*]:border-t [&>*+*]:border-outline-gray-1"
+				>
+					<li
+						v-for="kind in handingOver"
+						:key="kind.label"
+						class="flex items-center justify-between gap-3 py-2 text-base"
+					>
+						<span class="text-ink-gray-7">{{ kind.label }}</span>
+						<span class="font-medium tabular-nums text-ink-gray-8">{{
+							kind.count
+						}}</span>
+					</li>
+				</ul>
+				<div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+					<FormControl
+						v-model="handTo"
+						type="select"
+						class="sm:w-72"
+						label="Give it to"
+						:options="[{ label: 'Choose someone', value: '' }, ...takers]"
+					/>
+					<Button
+						variant="solid"
+						label="Hand over"
+						:disabled="!handTo"
+						:loading="handing"
+						@click="handOver"
+					/>
+				</div>
 			</section>
 
 			<section
@@ -190,13 +243,13 @@
 // change the role, email a password reset or set a temporary password, and take them off the team.
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRouter } from "vue-router";
-import { Button, Dialog, Skeleton, dialog, toast } from "frappe-ui";
+import { Button, Dialog, FormControl, Skeleton, dialog, toast } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import { formatDate } from "@/lib/format";
 import { listRoute } from "@/lib/listFilters";
-import { ROLES, personRow } from "@/lib/people";
+import { ROLES, personOptions, personRow } from "@/lib/people";
 import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({ user: { type: String, required: true } });
@@ -209,14 +262,21 @@ const sending = ref(false);
 const linkOpen = ref(false);
 const link = ref("");
 
-const changeable = computed(() => data.value && !data.value.is_me && !data.value.locked);
+const changeable = computed(
+	() => data.value && data.value.on_team && !data.value.is_me && !data.value.locked
+);
+// What a hand-over would move, kind by kind; and who on the team could take it.
+const handingOver = computed(() => (data.value?.handover || []).filter((kind) => kind.count));
+const takers = ref([]);
+const handTo = ref("");
+const handing = ref(false);
 
 const facts = computed(() => {
 	if (!data.value) return [];
 	const row = personRow(data.value);
 	return [
 		{ label: "Email", icon: "lucide-mail", value: data.value.user },
-		{ label: "Role", icon: "lucide-badge-check", value: data.value.role },
+		{ label: "Role", icon: "lucide-badge-check", value: data.value.role || "Off the team" },
 		{
 			label: "Last signed in",
 			icon: "lucide-log-in",
@@ -231,10 +291,47 @@ const facts = computed(() => {
 	];
 });
 
+async function loadTakers() {
+	try {
+		const team = await call("kxcompliance.api.people_options");
+		takers.value = personOptions(team.filter((person) => person.name !== props.user));
+	} catch {
+		// Without the list nobody can be chosen; the rest of the page still works.
+		takers.value = [];
+	}
+}
+
+function handOver() {
+	const to = takers.value.find((option) => option.value === handTo.value);
+	const total = handingOver.value.reduce((sum, kind) => sum + kind.count, 0);
+	dialog.confirm({
+		title: "Hand over their work",
+		message: `Everything open of ${data.value.full_name}'s (${total} in all) moves to ${to?.label}. It runs in the background; you are told when it is done.`,
+		confirmLabel: "Hand over",
+		onConfirm: async () => {
+			handing.value = true;
+			try {
+				await call(
+					"kxcompliance.api.hand_over_work",
+					{ from_user: props.user, to_user: handTo.value },
+					{ httpMethod: "POST" }
+				);
+				toast.success(`Handing over to ${to?.label}. You will be told when it is done.`);
+				handTo.value = "";
+			} catch (err) {
+				toast.error(err.message);
+			} finally {
+				handing.value = false;
+			}
+		},
+	});
+}
+
 async function load() {
 	error.value = "";
 	try {
 		data.value = await call("kxcompliance.api.person", { user: props.user });
+		if (data.value.handover?.some((kind) => kind.count)) loadTakers();
 	} catch (err) {
 		error.value = err.isNetwork ? notLoaded("this person", "opened") : err.message;
 	}
@@ -318,7 +415,7 @@ function askPassword() {
 function remove() {
 	dialog.confirm({
 		title: "Remove from the team",
-		message: `${data.value.full_name} can no longer open the app. Filings and items they hold stay as they are; give them to someone else from each record.`,
+		message: `${data.value.full_name} can no longer open the app. Work they hold stays with them until you hand it over, here or later from People.`,
 		confirmLabel: "Remove",
 		theme: "red",
 		onConfirm: async () => {

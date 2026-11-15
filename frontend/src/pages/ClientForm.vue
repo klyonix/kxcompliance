@@ -49,6 +49,7 @@
 						type="email"
 						label="Contact email"
 						placeholder="accounts@client.example.com"
+						description="Without a login, the client is asked for documents and reminded here, and can reply with the file."
 					/>
 					<FormControl v-model="form.contact_phone" label="Contact phone" />
 				</div>

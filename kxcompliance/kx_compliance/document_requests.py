@@ -16,7 +16,13 @@ from frappe import _
 from frappe.utils import date_diff, escape_html, formatdate, get_url, getdate, now_datetime, nowdate
 
 from kxcompliance.kx_compliance.register import get_settings
-from kxcompliance.kx_compliance.reminders import already_sent, notify, run_for_item, write_log
+from kxcompliance.kx_compliance.reminders import (
+	already_sent,
+	notify,
+	run_for_item,
+	sender_address,
+	write_log,
+)
 
 DOCTYPE = "Document Request"
 OPEN_STATUSES = ("Requested", "Uploaded")
@@ -54,11 +60,42 @@ def message(request, lines: list[str]) -> str:
 
 
 def tell_client(request, subject: str, lines: list[str]) -> bool:
-	"""Tell the client's logins about a request; False when the client has no login to tell."""
+	"""Tell the client's logins about a request, or, for a client with none, email its contact
+	(RK, 15 Nov 2026); False when nobody could be told."""
 	users = logins_of([request.client]).get(request.client, [])
-	if not users:
+	if users:
+		notify(users, subject, message(request, lines), DOCTYPE, request.name)
+		return True
+	contact = frappe.db.get_value("Compliance Client", request.client, "contact_email")
+	return email_contact(request, contact, subject, lines)
+
+
+def email_contact(request, address: str | None, subject: str, lines: list[str]) -> bool:
+	"""Email a client's contact, who has no login: what is needed, and to reply with the file.
+
+	The email is filed on the request, so the reply comes back to it and its file is taken as the
+	upload (take_emailed_file). False when there is no address or the app sends no email."""
+	sender = sender_address()
+	if not address or not sender:
 		return False
-	notify(users, subject, message(request, lines), DOCTYPE, request.name)
+	parts = [f"<p>{line}</p>" for line in lines if line]
+	if request.details:
+		parts.append(f"<p>{escape_html(request.details)}</p>")
+	parts.append(
+		"<p>"
+		+ escape_html(
+			_("Reply to this email with the file attached; it reaches {0} directly.").format(firm_name())
+		)
+		+ "</p>"
+	)
+	frappe.sendmail(
+		recipients=[address],
+		sender=sender,
+		subject=subject,
+		message="".join(parts),
+		reference_doctype=DOCTYPE,
+		reference_name=request.name,
+	)
 	return True
 
 
@@ -75,7 +112,7 @@ def asked(request):
 	if not tell_client(request, subject, lines):
 		frappe.msgprint(
 			_(
-				"{0} has no login that is on, so nobody there was told. Send them the request yourself."
+				"{0} has no login that is on and no contact email the app can write to, so nobody there was told. Send them the request yourself."
 			).format(request.client),
 			indicator="orange",
 		)
@@ -218,7 +255,17 @@ def send_reminders(today):
 		if days_left == -1:
 			planned.append((row, None, f"{DOCTYPE}|{row.name}|{row.due_date}|overdue"))
 	sent = already_sent([key for _row, _days, key in planned])
-	logins = logins_of(list({row.client for row, _days, _key in planned}))
+	clients = list({row.client for row, _days, _key in planned})
+	logins = logins_of(clients)
+	# A client with no login is reminded at its contact email, read once for all of them.
+	contacts = dict(
+		frappe.get_all(
+			"Compliance Client",
+			filters={"name": ("in", clients or [""])},
+			fields=["name", "contact_email"],
+			as_list=True,
+		)
+	)
 	for row, days_left, key in planned:
 		if key in sent:
 			continue
@@ -226,18 +273,22 @@ def send_reminders(today):
 			run_for_item(row.name, lambda row=row, key=key: tell_requester_overdue(row, key))
 		else:
 			users = logins.get(row.client, [])
+			contact = contacts.get(row.client)
 			run_for_item(
-				row.name, lambda row=row, days=days_left, key=key, users=users: remind(row, days, key, users)
+				row.name,
+				lambda row=row, days=days_left, key=key, users=users, contact=contact: remind(
+					row, days, key, users, contact
+				),
 			)
 
 
-def remind(request, days_left: int, key: str, users: list[str]):
-	if not users:
+def remind(request, days_left: int, key: str, users: list[str], contact: str | None = None):
+	if not users and not (contact and sender_address()):
 		return
 	write_log(
 		"Document Request",
 		key,
-		users,
+		users or [contact],
 		document_request=request.name,
 		rule_days=days_left,
 		due_date=request.due_date,
@@ -250,7 +301,10 @@ def remind(request, days_left: int, key: str, users: list[str]):
 		when = _("since {0}").format(formatdate(request.due_date))
 	subject = _("Reminder: {0} is due {1}").format(request.title, when)
 	lines = [escape_html(_("{0} needs {1} for {2}.").format(firm_name(), request.title, request.company))]
-	notify(users, subject, message(request, lines), DOCTYPE, request.name)
+	if users:
+		notify(users, subject, message(request, lines), DOCTYPE, request.name)
+	else:
+		email_contact(request, contact, subject, lines)
 
 
 def tell_requester_overdue(request, key: str):

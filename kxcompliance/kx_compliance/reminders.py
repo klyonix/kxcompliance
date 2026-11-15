@@ -345,13 +345,16 @@ def notify(users: list[str], subject: str, message: str, doctype: str, name: str
 	send_email(users, subject, message, doctype, name)
 
 
+def sender_address() -> str | None:
+	"""The address the app sends from: the email account chosen in its settings, if any."""
+	account = get_settings().email_account
+	return frappe.db.get_value("Email Account", account, "email_id") if account else None
+
+
 def send_email(
 	users: list[str], subject: str, message: str, doctype: str | None = None, name: str | None = None
 ):
-	account = get_settings().email_account
-	if not account:
-		return
-	sender = frappe.db.get_value("Email Account", account, "email_id")
+	sender = sender_address()
 	recipients = frappe.get_all("User", filters={"name": ("in", users), "enabled": 1}, pluck="email")
 	if not sender or not recipients:
 		return

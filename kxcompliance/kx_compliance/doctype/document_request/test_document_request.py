@@ -1,6 +1,8 @@
 # Copyright (c) 2026, KlyONIX Tech Consulting Pvt Ltd and contributors
 # For license information, please see license.txt
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -128,6 +130,41 @@ class TestDocumentRequest(IntegrationTestCase):
 		profile(OTHER_COMPANY)
 		with self.assertRaises(frappe.ValidationError):
 			ask(company=OTHER_COMPANY)
+
+	def test_a_client_with_no_login_is_asked_and_reminded_at_its_contact_email(self):
+		# A client without a login, but with a contact email the app can write to.
+		frappe.db.delete("Compliance Client Login")
+		frappe.db.set_value(
+			"Compliance Client", "Sunrise Group", "contact_email", "accounts@sunrise.example.com"
+		)
+		frappe.db.delete("User Permission", {"user": CLIENT_LOGIN, "allow": "Company"})
+		with (
+			patch(
+				"kxcompliance.kx_compliance.document_requests.sender_address",
+				return_value="compliance@firm.example.com",
+			),
+			patch("frappe.sendmail") as sendmail,
+		):
+			with self.set_user(HOLDER):
+				request = ask(compliance_task=self.filing)
+			asked_by_email = sendmail.call_args.kwargs
+			with self.change_settings(SETTINGS, enabled=1), self.freeze_time("2026-11-08"):
+				send_reminders(frappe.utils.getdate("2026-11-08"))
+		self.assertEqual(asked_by_email["recipients"], ["accounts@sunrise.example.com"])
+		# Filed on the request, so the contact's reply with the file comes back to it.
+		self.assertEqual(
+			(asked_by_email["reference_doctype"], asked_by_email["reference_name"]),
+			("Document Request", request.name),
+		)
+		self.assertIn("Reply to this email with the file attached", asked_by_email["message"])
+		self.assertNotIn("/compliance/requests/", asked_by_email["message"])
+		self.assertEqual(sendmail.call_count, 2)
+		self.assertEqual(
+			frappe.get_all(
+				"Compliance Reminder Log", filters={"document_request": request.name}, pluck="sent_to"
+			),
+			["accounts@sunrise.example.com"],
+		)
 
 	def test_the_client_uploads_and_the_firm_accepts_or_sends_it_back(self):
 		with self.set_user(HOLDER):

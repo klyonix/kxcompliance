@@ -46,6 +46,11 @@ describe("the reports", () => {
 		expect(slugs({ ...staff, auditor: true })).toContain("contingent-liabilities");
 		expect(slugs({ ...staff, firm: false })).toContain("party-licence-register");
 		expect(slugs({ ...staff, firm: false })).not.toContain("client-summary");
+		// The firm's bills, only for those who may bill.
+		expect(slugs(staff)).not.toContain("billing-outstanding");
+		expect(slugs({ ...staff, bills: true })).toEqual(
+			expect.arrayContaining(["billing-outstanding", "billing-by-month", "unbilled-filings"])
+		);
 	});
 
 	it("open with the address's filters over their defaults", () => {

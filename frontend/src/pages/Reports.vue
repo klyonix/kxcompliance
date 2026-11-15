@@ -102,6 +102,7 @@ const reports = reportsFor({
 	firm: boot.accountType === "CA/CS Firm",
 	manager: isManager(),
 	auditor: boot.roles.includes("Compliance Auditor"),
+	bills: boot.mayBill,
 });
 const recent = recentReports(reports);
 const query = ref("");

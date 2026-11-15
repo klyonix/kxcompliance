@@ -304,44 +304,55 @@ def check_fee_plan(client):
 		)
 
 
-def prices_for(client: str) -> dict[str, float]:
-	"""Each return's fee for this client: its own price, else the firm's."""
-	prices = {row.obligation_template: row.amount for row in get_settings().return_fees}
-	prices.update(
-		{
-			row.obligation_template: row.amount
-			for row in frappe.get_all(
-				"Return Fee",
-				filters={"parenttype": "Compliance Client", "parent": client},
-				fields=["obligation_template", "amount"],
-			)
-		}
-	)
-	return prices
-
-
 def unbilled_filings(client: str) -> list[dict]:
 	"""The client's filings that are filed, have a fee and are on no bill yet (sent or draft),
 	oldest first."""
-	companies = frappe.get_all("Company Compliance Profile", filters={"client": client}, pluck="company")
-	prices = prices_for(client)
-	if not companies or not prices:
+	return unbilled_for([client])
+
+
+def unbilled_for(clients: list[str]) -> list[dict]:
+	"""Filed returns with a fee that are on no bill yet (sent or draft), for these clients, oldest
+	first; each with its client and fee. Read in a few queries however many clients there are."""
+	if not clients:
+		return []
+	owner = dict(
+		frappe.get_all(
+			"Company Compliance Profile",
+			filters={"client": ("in", clients)},
+			fields=["company", "client"],
+			as_list=True,
+		)
+	)
+	firm_prices = {row.obligation_template: row.amount for row in get_settings().return_fees}
+	own_prices: dict[str, dict[str, float]] = {}
+	for row in frappe.get_all(
+		"Return Fee",
+		filters={"parenttype": "Compliance Client", "parent": ("in", clients)},
+		fields=["parent", "obligation_template", "amount"],
+	):
+		own_prices.setdefault(row.parent, {})[row.obligation_template] = row.amount
+	if not owner or not (firm_prices or own_prices):
 		return []
 	rows = frappe.get_all(
 		"Compliance Task",
 		filters={
-			"company": ("in", companies),
+			"company": ("in", list(owner)),
 			"status": ("in", BILLABLE_STATUSES),
 			"billed_in": ("is", "not set"),
-			"obligation_template": ("in", list(prices)),
 		},
 		fields=["name", "obligation_template", "period_label", "company", "filed_on"],
 		order_by="filed_on asc, name asc",
 	)
 	drafted = on_drafts([row.name for row in rows])
+	found = []
 	for row in rows:
-		row.fee = prices[row.obligation_template]
-	return [row for row in rows if row.fee and row.name not in drafted]
+		row.client = owner[row.company]
+		row.fee = own_prices.get(row.client, {}).get(
+			row.obligation_template, firm_prices.get(row.obligation_template)
+		)
+		if row.fee and row.name not in drafted:
+			found.append(row)
+	return found
 
 
 def client_fees(client: str) -> dict:
@@ -944,3 +955,99 @@ def client_billing(client: str, own: bool) -> dict:
 		result["unbilled_count"] = len(unbilled)
 		result["unbilled_total"] = sum(row.fee for row in unbilled)
 	return result
+
+
+# How late a bill is, by days past its due date: the columns of Billing Outstanding.
+AGEING = (
+	("not_due", None, 0),
+	("late_30", 1, 30),
+	("late_60", 31, 60),
+	("late_90", 61, 90),
+	("late_more", 91, None),
+)
+
+
+def ageing_bucket(due_date, today) -> str:
+	"""Which ageing column a bill falls in on `today`."""
+	late = (getdate(today) - getdate(due_date)).days
+	for key, low, high in AGEING:
+		if (low is None or late >= low) and (high is None or late <= high):
+			return key
+	return AGEING[-1][0]
+
+
+def outstanding_by_client(client: str | None, today) -> list[dict]:
+	"""Each client's sent bills still due, split by how late they are."""
+	invoice = frappe.qb.DocType("Sales Invoice")
+	query = (
+		frappe.qb.from_(invoice)
+		.select(invoice.compliance_client, invoice.due_date, invoice.outstanding_amount)
+		.where(
+			(invoice.company == get_settings().billing_company)
+			& invoice.compliance_client.isnotnull()
+			& (invoice.docstatus == 1)
+			& (invoice.outstanding_amount > 0)
+		)
+	)
+	if client:
+		query = query.where(invoice.compliance_client == client)
+	clients: dict[str, dict] = {}
+	for row in query.run(as_dict=True):
+		line = clients.setdefault(
+			row.compliance_client,
+			{"client": row.compliance_client, "bills": 0, "outstanding": 0, "oldest_due": row.due_date}
+			| {key: 0 for key, _low, _high in AGEING},
+		)
+		line["bills"] += 1
+		line["outstanding"] += flt(row.outstanding_amount)
+		line[ageing_bucket(row.due_date, today)] += flt(row.outstanding_amount)
+		line["oldest_due"] = min(getdate(line["oldest_due"]), getdate(row.due_date))
+	return sorted(clients.values(), key=lambda line: (-line["late_more"], -line["outstanding"]))
+
+
+def billing_by_month(from_date, to_date, client: str | None) -> list[dict]:
+	"""The firm's sent bills month by month: how many, before GST, GST, total, received, still due."""
+	from frappe.query_builder.functions import Count, Extract, Sum
+	from pypika.enums import DatePart
+
+	invoice = frappe.qb.DocType("Sales Invoice")
+	year = Extract(DatePart.year, invoice.posting_date)
+	month = Extract(DatePart.month, invoice.posting_date)
+	query = (
+		frappe.qb.from_(invoice)
+		.select(
+			year.as_("year"),
+			month.as_("month"),
+			Count(invoice.name).as_("bills"),
+			Sum(invoice.net_total).as_("before_gst"),
+			Sum(invoice.total_taxes_and_charges).as_("gst"),
+			Sum(invoice.grand_total).as_("total"),
+			Sum(invoice.outstanding_amount).as_("still_due"),
+		)
+		.where(
+			(invoice.company == get_settings().billing_company)
+			& invoice.compliance_client.isnotnull()
+			& (invoice.docstatus == 1)
+			& invoice.posting_date.between(from_date, to_date)
+		)
+		.groupby(year, month)
+		.orderby(year)
+		.orderby(month)
+	)
+	if client:
+		query = query.where(invoice.compliance_client == client)
+	rows = query.run(as_dict=True)
+	for row in rows:
+		row.month_name = format_date(date(int(row.year), int(row.month), 1), "MMM yyyy")
+		row.received = flt(row.total) - flt(row.still_due)
+	return rows
+
+
+def unbilled_for_clients(client: str | None) -> list[dict]:
+	"""Filed returns with a price on no bill yet, for one client or every client that has not left."""
+	clients = (
+		[client]
+		if client
+		else frappe.get_all("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name")
+	)
+	return sorted(unbilled_for(clients), key=lambda row: (row.client, str(row.filed_on or ""), row.name))

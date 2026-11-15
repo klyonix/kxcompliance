@@ -281,6 +281,42 @@ When you are working on one client.
 1. Choose the client in the box at the top of My Work, Filings or the Register.
 2. Every list then shows only that client's companies, until you choose All clients.
 
+### How do I set up billing my clients?
+
+*For: Managers, CA/CS firms.*
+
+Once, before the firm's first bill.
+
+1. Open Settings, then the Billing tab.
+2. Give the firm's name, GSTIN, address, bank details and bill prefix, and save.
+3. Under Price per return, give the fee for each return the firm files. A client's own prices and fixed fee go on the client's form.
+
+> **Tip.** Making bills needs the Accounts User role, which a System Manager gives in the Desk.
+
+### How do I bill a client?
+
+*For: CA/CS firms.*
+
+When returns are filed, or the month's fixed fee is due.
+
+1. Open the client and press "New bill".
+2. Untick any filed return to leave for later, keep the fixed fee if it is due, and add any other lines; government fees carry no GST.
+3. Press "Make the draft", check it, then "Send to client". It goes into the books and is emailed with its PDF.
+
+> **Tip.** On the 1st of each month a draft is made for each client with something to bill; find them under Billing, Drafts.
+
+### A client has paid. How do I record it?
+
+*For: CA/CS firms.*
+
+When money comes in against a bill.
+
+1. Open the bill, from Billing or the client's page.
+2. Press "Record payment": the amount, the date, how it was paid and its reference.
+3. If the client deducted TDS, give it too; together they settle the bill.
+
+> **Tip.** A part payment leaves the rest due. A payment recorded by mistake can be cancelled from the bill.
+
 ## Setting up
 
 ### How do I stop selling to customers without a licence?

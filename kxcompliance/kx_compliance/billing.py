@@ -48,6 +48,12 @@ FIRM_FIELDS = (
 # (which issues a bill of supply), charges none.
 REGISTERED = "Registered"
 GST_STATUSES = (REGISTERED, "Not registered", "Composition")
+# What a bill is called, by the firm's GST status when it is made.
+BILL_TITLES = {REGISTERED: "Tax Invoice", "Not registered": "Invoice", "Composition": "Bill of Supply"}
+COMPOSITION_NOTE = "Composition taxable person, not eligible to collect tax on supplies."
+# The layouts the firm's bills and payment receipts are printed in (print_format/).
+BILL_FORMAT = "KlyONIX Bill"
+RECEIPT_FORMAT = "KlyONIX Receipt"
 # A filing is billed once it is filed (compliance_task.FILED_STATUSES).
 BILLABLE_STATUSES = ("Filed", "Filed Late")
 WITHOUT_GST = "Without GST"
@@ -169,6 +175,17 @@ def make_masters(company: str):
 	for mode, kind in PAYMENT_MODES.items():
 		payment_mode(mode, kind, company, cash if kind == "Cash" else bank)
 	ledger(company, TDS_ACCOUNT, "Tax Assets")
+	# On a firm's site invoices and payments are the firm's bills and receipts: print them so.
+	for doctype, layout in (("Sales Invoice", BILL_FORMAT), ("Payment Entry", RECEIPT_FORMAT)):
+		make_property_setter(
+			doctype,
+			None,
+			"default_print_format",
+			layout,
+			"Data",
+			for_doctype=True,
+			validate_fields_for_doctype=False,
+		)
 
 
 def ledger(company: str, name: str, parent_name: str, account_type: str | None = None) -> str:
@@ -680,6 +697,8 @@ def make_bill(
 			"customer": customer_for(client),
 			"compliance_client": client,
 			"kx_billing_key": key,
+			# Kept on the bill, so a later change of GST status does not retitle bills already made.
+			"bill_title": BILL_TITLES[settings.gst_status or REGISTERED],
 			"posting_date": today,
 			"set_posting_time": 1,
 			"due_date": add_days(today, BILL_DUE_DAYS),
@@ -716,6 +735,13 @@ def template_taxes(template: str | None) -> list[dict]:
 	]
 
 
+def unit_word(unit: str, qty: float) -> str:
+	"""hour or hours, item or items, as the quantity reads."""
+	if unit == "Per hour":
+		return _("hour") if qty == 1 else _("hours")
+	return _("item") if qty == 1 else _("items")
+
+
 def service_line(rates: dict[tuple, dict], done: dict, default_sac: str | None) -> dict:
 	"""A service done for the client, at its rate: hours or items times the rate."""
 	if not isinstance(done, dict) or set(done) - {"service", "qty"}:
@@ -733,7 +759,7 @@ def service_line(rates: dict[tuple, dict], done: dict, default_sac: str | None) 
 		"description": _("{0}, {1} {2}").format(
 			rate["service"],
 			frappe.format(qty, {"fieldtype": "Float"}),
-			_("hours" if rate["unit"] == "Per hour" else "items"),
+			unit_word(rate["unit"], qty),
 		),
 		"qty": qty,
 		"rate": rate["amount"],
@@ -794,7 +820,15 @@ def email_bill(bill) -> str | None:
 		message=_("Please find bill {0} for {1} attached, due on {2}.").format(
 			bill.name, frappe.format(bill.grand_total, {"fieldtype": "Currency"}), format_date(bill.due_date)
 		),
-		attachments=[frappe.attach_print("Sales Invoice", bill.name, file_name=bill.name.replace("/", "-"))],
+		attachments=[
+			frappe.attach_print(
+				"Sales Invoice",
+				bill.name,
+				file_name=bill.name.replace("/", "-"),
+				print_format=BILL_FORMAT,
+				print_letterhead=False,  # the layout carries the firm's own heading
+			)
+		],
 		reference_doctype="Sales Invoice",
 		reference_name=bill.name,
 	)
@@ -1187,3 +1221,94 @@ def unbilled_for_clients(client: str | None) -> list[dict]:
 		else frappe.get_all("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name")
 	)
 	return sorted(unbilled_for(clients), key=lambda row: (row.client, str(row.filed_on or ""), row.name))
+
+
+def state_with_code(state: str | None) -> str:
+	"""Karnataka (29): a state as bills write the place of supply."""
+	codes = {name: code for code, name in GST_STATE_CODES.items()}
+	return f"{state} ({codes[state]})" if state in codes else state or ""
+
+
+def upi_qr(upi_id: str | None, payee: str, amount: float, note: str) -> str | None:
+	"""A QR code to pay `amount` by UPI, as an SVG data address for the printed bill."""
+	if not upi_id or amount <= 0:
+		return None
+	import base64
+	import io
+	from urllib.parse import urlencode
+
+	import pyqrcode
+
+	address = "upi://pay?" + urlencode(
+		{"pa": upi_id, "pn": payee, "am": f"{amount:.2f}", "cu": "INR", "tn": note}
+	)
+	svg = io.BytesIO()
+	pyqrcode.create(address).svg(svg, scale=3, quiet_zone=2, xmldecl=False)
+	return "data:image/svg+xml;base64," + base64.b64encode(svg.getvalue()).decode()
+
+
+def party_details(client: str | None) -> dict:
+	values = (
+		frappe.db.get_value(
+			"Compliance Client",
+			client,
+			["client_name", "gstin", "billing_state", "billing_address", "logo"],
+			as_dict=True,
+		)
+		if client
+		else None
+	)
+	return values or frappe._dict()
+
+
+def firm_details() -> dict:
+	settings = get_settings()
+	return frappe._dict(
+		name=settings.billing_company,
+		gst_status=settings.gst_status or REGISTERED,
+		gstin=settings.billing_gstin,
+		state=state_with_code(settings.billing_state),
+		address=settings.billing_address,
+		bank_details=settings.bank_details,
+		upi_id=settings.upi_id,
+		logo=settings.billing_logo,
+	)
+
+
+def bill_print(bill) -> dict:
+	"""What the KlyONIX Bill layout prints beside the invoice itself (a Jinja method, hooks.py)."""
+	from frappe.utils import money_in_words
+
+	firm = firm_details()
+	client = party_details(bill.get("compliance_client"))
+	total = flt(bill.rounded_total or bill.grand_total)
+	due = flt(bill.outstanding_amount) if bill.docstatus == 1 else total
+	title = bill.get("bill_title") or BILL_TITLES[firm.gst_status]
+	return {
+		"title": title,
+		"composition_note": _(COMPOSITION_NOTE) if title == BILL_TITLES["Composition"] else "",
+		"firm": firm,
+		"client": client,
+		"place_of_supply": state_with_code(client.billing_state),
+		"in_words": money_in_words(total, bill.currency),
+		"due": due,
+		"qr": upi_qr(firm.upi_id, firm.name or "", due, bill.name) if bill.docstatus != 2 else None,
+	}
+
+
+def receipt_print(entry) -> dict:
+	"""What the KlyONIX Receipt layout prints for a payment (a Jinja method, hooks.py)."""
+	from frappe.utils import money_in_words
+
+	bills = [row for row in entry.references if row.reference_doctype == "Sales Invoice"]
+	client = (
+		frappe.db.get_value("Sales Invoice", bills[0].reference_name, "compliance_client") if bills else None
+	)
+	tds = flt(sum(flt(row.amount) for row in entry.deductions))
+	return {
+		"firm": firm_details(),
+		"client": party_details(client),
+		"bills": [{"name": row.reference_name, "amount": row.allocated_amount} for row in bills],
+		"tds": tds,
+		"in_words": money_in_words(flt(entry.paid_amount), entry.paid_to_account_currency or "INR"),
+	}

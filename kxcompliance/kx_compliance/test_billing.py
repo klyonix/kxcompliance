@@ -20,14 +20,17 @@ from kxcompliance.api import (
 	client_fees,
 	create_bill,
 	own_bill,
+	receipt_pdf,
 	record_payment,
 	send_bill,
 	set_up_billing,
 )
 from kxcompliance.kx_compliance.billing import (
+	BILL_FORMAT,
 	OUTSIDE_STATE,
 	WITHIN_STATE,
 	ageing_bucket,
+	bill_print,
 	make_monthly_drafts,
 	state_of,
 )
@@ -459,6 +462,53 @@ class TestBills(IntegrationTestCase):
 			create_bill(self.client, services=[{"service": "Fixed fee", "qty": 1}])
 		with self.assertRaisesRegex(frappe.ValidationError, "how many hours"):
 			create_bill(self.client, services=[{"service": "Advisory", "qty": 0}])
+
+	def test_the_bill_prints_as_a_tax_invoice_with_its_codes_words_and_a_qr_to_pay(self):
+		self.addCleanup(set_up_billing, {**DETAILS, "bill_prefix": "TBA", "upi_id": ""})
+		set_up_billing({**DETAILS, "bill_prefix": "TBA", "upi_id": "bills@okbank"})
+		frappe.db.set_value("Compliance Client", self.client, "billing_address", "4 Lake Road, Mysuru")
+		name = create_bill(self.client, filings=[self.filed])["name"]
+		doc = frappe.get_doc("Sales Invoice", name)
+		self.assertEqual(doc.bill_title, "Tax Invoice")
+		printed = bill_print(doc)
+		self.assertEqual(printed["place_of_supply"], "Karnataka (29)")
+		self.assertIn("Thousand", printed["in_words"])
+		self.assertTrue(printed["qr"].startswith("data:image/svg+xml;base64,"))
+		html = frappe.get_print("Sales Invoice", name, doc=doc, print_format=BILL_FORMAT, no_letterhead=1)
+		for expected in (
+			"Tax Invoice",
+			"998231",
+			"29AABCS1234Q1Z3",
+			"Karnataka (29)",
+			"4 Lake Road",
+			"bills@okbank",
+			"Scan to pay",
+		):
+			self.assertIn(expected, html)
+		bill_pdf(name)
+		self.assertTrue(frappe.local.response.filecontent.startswith(b"%PDF"))
+
+	def test_a_composition_firms_bill_is_a_bill_of_supply_and_keeps_its_title(self):
+		self.addCleanup(set_up_billing, {**DETAILS, "bill_prefix": "TBA", "gst_status": "Registered"})
+		set_up_billing({**DETAILS, "gst_status": "Composition"})
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		set_up_billing({**DETAILS, "gst_status": "Registered"})
+		doc = frappe.get_doc("Sales Invoice", name)
+		printed = bill_print(doc)
+		# Made under composition, it stays a bill of supply whatever the firm is now.
+		self.assertEqual(printed["title"], "Bill of Supply")
+		self.assertIn("Composition taxable person", printed["composition_note"])
+		self.assertIsNone(printed["qr"])  # no UPI ID set
+
+	def test_a_payment_has_a_receipt(self):
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		send_bill(name)
+		payment = record_payment(name, 1180, "2026-11-10", "UPI", reference="UPI-1")["payment"]
+		html = frappe.get_print("Payment Entry", payment, print_format="KlyONIX Receipt", no_letterhead=1)
+		for expected in ("Receipt", "UPI-1", name, "Billing Bill Client"):
+			self.assertIn(expected, html)
+		receipt_pdf(payment)
+		self.assertTrue(frappe.local.response.filecontent.startswith(b"%PDF"))
 
 	def test_a_draft_is_not_paid(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]

@@ -589,7 +589,14 @@ def bill_pdf(name: str):
 	# so printing it is allowed for this one request only.
 	frappe.flags.ignore_print_permissions = own
 	try:
-		pdf = frappe.get_print("Sales Invoice", bill.name, doc=bill, as_pdf=True)
+		pdf = frappe.get_print(
+			"Sales Invoice",
+			bill.name,
+			doc=bill,
+			print_format=billing.BILL_FORMAT,
+			as_pdf=True,
+			no_letterhead=1,
+		)
 	finally:
 		frappe.flags.ignore_print_permissions = False
 	frappe.local.response.filename = f"{bill.name.replace('/', '-')}.pdf"
@@ -634,6 +641,42 @@ def check_billed_client(client: str):
 		frappe.throw(_("Client {0} does not exist.").format(client), frappe.DoesNotExistError)
 	if has_app_access():
 		frappe.get_doc("Compliance Client", client).check_permission("read")
+
+
+@frappe.whitelist(methods=["GET"])
+def receipt_pdf(name: str):
+	"""A payment's receipt: for those who bill, and for the client who paid."""
+	entry = frappe.get_doc("Payment Entry", name) if frappe.db.exists("Payment Entry", name) else None
+	bills = [
+		row.reference_name
+		for row in (entry.references if entry else [])
+		if row.reference_doctype == "Sales Invoice"
+	]
+	if not bills or entry.docstatus != 1:
+		frappe.throw(
+			_("{0} is not a payment against one of the firm's bills.").format(name), frappe.PermissionError
+		)
+	own = is_client_login()
+	if own:
+		own_bill(bills[0])
+	else:
+		billing_bill(bills[0])
+	# As for a bill: a client's login may not read ERPNext's payments; its own bill was checked above.
+	frappe.flags.ignore_print_permissions = own
+	try:
+		pdf = frappe.get_print(
+			"Payment Entry",
+			entry.name,
+			doc=entry,
+			print_format=billing.RECEIPT_FORMAT,
+			as_pdf=True,
+			no_letterhead=1,
+		)
+	finally:
+		frappe.flags.ignore_print_permissions = False
+	frappe.local.response.filename = f"{entry.name}.pdf"
+	frappe.local.response.filecontent = pdf
+	frappe.local.response.type = "pdf"
 
 
 def billing_bill(name: str):

@@ -73,6 +73,13 @@ role_home_page = {"Compliance Client": "compliance"}
 # ----------
 
 # add methods and filters to jinja environment
+# The firm's bills and receipts print with these (print_format/klyonix_bill, klyonix_receipt).
+jinja = {
+	"methods": [
+		"kxcompliance.kx_compliance.billing.bill_print",
+		"kxcompliance.kx_compliance.billing.receipt_print",
+	],
+}
 # jinja = {
 # 	"methods": "kxcompliance.utils.jinja_methods",
 # 	"filters": "kxcompliance.utils.jinja_filters"
@@ -343,6 +350,7 @@ fixtures = [
 					"Sales Invoice-kx_billing_key",
 					"Sales Invoice Item-compliance_task",
 					"Sales Invoice Item-sac_code",
+					"Sales Invoice-bill_title",
 				],
 			]
 		],

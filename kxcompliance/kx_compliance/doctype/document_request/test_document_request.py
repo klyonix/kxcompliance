@@ -230,7 +230,8 @@ class TestDocumentRequest(IntegrationTestCase):
 			filters={"attached_to_doctype": "Compliance Task", "attached_to_name": self.filing},
 			pluck="file_name",
 		)
-		self.assertIn("october-sales.csv", on_filing)
+		# Frappe adds a suffix when a file of that name is already on disk (as other tests leave).
+		self.assertTrue(any(name.startswith("october-sales") and name.endswith(".csv") for name in on_filing))
 		with self.set_user(CLIENT_LOGIN):
 			self.assertEqual(len(documents("Document Request", request.name)), 1)
 			with self.assertRaises(frappe.PermissionError):

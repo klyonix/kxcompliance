@@ -14,6 +14,28 @@ AUDITOR = "compliance-auditor@example.com"
 REVIEWER = "compliance-reviewer@example.com"
 
 
+def before_tests():
+	"""A new test site has not been through ERPNext's setup, which makes what a company needs
+	(warehouse types, UOMs, fiscal year). Complete it once, as a person would in the wizard."""
+	if frappe.is_setup_complete():
+		return
+	from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
+
+	setup_complete(
+		{
+			"language": "English",
+			"country": "India",
+			"timezone": "Asia/Kolkata",
+			"currency": "INR",
+			"company_name": "Compliance Setup Company",
+			"company_abbr": "CSCO",
+			"chart_of_accounts": "Standard",
+			"fy_start_date": "2026-04-01",
+			"fy_end_date": "2027-03-31",
+		}
+	)
+
+
 def make_company() -> str:
 	if not frappe.db.exists("Company", TEST_COMPANY):
 		frappe.get_doc(

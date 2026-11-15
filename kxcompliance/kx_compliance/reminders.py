@@ -164,8 +164,8 @@ def remind_party(item, days: int, key: str, template):
 	}
 	# Only a System Manager can write an Email Template, and Frappe renders it in its sandboxed Jinja,
 	# as it does its own notification templates.
-	subject = frappe.render_template(template.subject, context)
-	message = frappe.render_template(
+	subject = frappe.render_template(template.subject, context)  # nosemgrep
+	message = frappe.render_template(  # nosemgrep
 		template.response_html if template.use_html else template.response, context
 	)
 	write_log("Party Reminder", key, [email], item=item.name, rule_days=days, due_date=item.valid_until)

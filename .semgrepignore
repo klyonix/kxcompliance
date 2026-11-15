@@ -1,0 +1,5 @@
+# Built files and dependencies
+frontend/node_modules/
+kxcompliance/public/frontend/
+# A Jinja template served as JSON, which the JSON parser cannot read
+kxcompliance/www/compliance_manifest.json

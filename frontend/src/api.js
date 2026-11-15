@@ -86,7 +86,9 @@ async function sendFile(url, init, fetcher, file) {
 		}
 		if (err.status >= 500 && err.message === SERVER_FAILED) {
 			throw new ApiError(
-				`The server could not read ${file.name || "this file"}. Check that it opens on your device and is a PDF, image, spreadsheet or document, then upload it again.`,
+				`The server could not read ${
+					file.name || "this file"
+				}. Check that it opens on your device and is a PDF, image, spreadsheet or document, then upload it again.`,
 				err
 			);
 		}

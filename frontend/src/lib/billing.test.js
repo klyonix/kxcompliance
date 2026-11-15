@@ -281,7 +281,9 @@ describe("Billing's summary", () => {
 		expect(recurringWithoutStartLine(["Monthly retainer"])).toBe(
 			'Monthly retainer is on the client\'s rates but not billed: the client has no "Recurring charges from" date.'
 		);
-		expect(recurringWithoutStartLine(["Retainer", "Audit fee"])).toMatch(/^Retainer, Audit fee are /);
+		expect(recurringWithoutStartLine(["Retainer", "Audit fee"])).toMatch(
+			/^Retainer, Audit fee are /
+		);
 	});
 
 	it("moves a payment off cash once a reference is typed", () => {

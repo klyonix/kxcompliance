@@ -83,13 +83,15 @@ describe("filings in the app", () => {
 			markFiled: true,
 			sendBack: false,
 		});
-		expect(taskActions({ ...alone, status: "Ready for Review" }, reviewed, manager)).toMatchObject({
+		expect(
+			taskActions({ ...alone, status: "Ready for Review" }, reviewed, manager)
+		).toMatchObject({
 			markFiled: true,
 		});
 		// With a checker set, or without the manager role, someone else still checks it.
-		expect(taskActions({ ...alone, reviewer: "ravi@example.com" }, reviewed, manager)).toMatchObject(
-			{ sendForReview: true, markFiled: false }
-		);
+		expect(
+			taskActions({ ...alone, reviewer: "ravi@example.com" }, reviewed, manager)
+		).toMatchObject({ sendForReview: true, markFiled: false });
 		expect(taskActions(alone, reviewed, as("priya@example.com"))).toMatchObject({
 			sendForReview: true,
 			markFiled: false,

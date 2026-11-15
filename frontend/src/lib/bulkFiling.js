@@ -100,8 +100,11 @@ export function askPlanLine({ to_ask: toAsk, asked_already: askedAlready, no_cli
 	const parts = [
 		toAsk ? `${companiesText(toAsk)} will be asked` : "Nobody is left to ask",
 		askedAlready &&
-			`${companiesText(askedAlready)} already ${askedAlready === 1 ? "has" : "have"} a request open`,
-		noClient && `${companiesText(noClient)} ${noClient === 1 ? "is" : "are"} not linked to a client`,
+			`${companiesText(askedAlready)} already ${
+				askedAlready === 1 ? "has" : "have"
+			} a request open`,
+		noClient &&
+			`${companiesText(noClient)} ${noClient === 1 ? "is" : "are"} not linked to a client`,
 	];
 	return `${parts.filter(Boolean).join("; ")}.`;
 }

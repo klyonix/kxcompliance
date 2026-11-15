@@ -96,7 +96,8 @@ def preview(user: str) -> list[dict]:
 
 def run(from_user: str, to_user: str, by: str):
 	"""Background job: move the work, then tell the manager who started it what moved."""
-	frappe.set_user(by)
+	# The job acts as the manager who started it, so their permissions apply to what it changes.
+	frappe.set_user(by)  # nosemgrep
 	moved, failed = 0, []
 	for _label, doctype, filters, fields in RECORDS:
 		for name in held_by(from_user, doctype, filters, fields):
@@ -106,7 +107,7 @@ def run(from_user: str, to_user: str, by: str):
 				failed.append(f"{_(doctype)} {name}")
 			if (moved + len(failed)) % BATCH == 0:
 				# A job may commit as it goes, so one failure later loses nothing done before it.
-				frappe.db.commit()
+				frappe.db.commit()  # nosemgrep
 	for name in companies_of(from_user):
 		if not move_on_profile(name, from_user, to_user):
 			failed.append(f"{_('Company')} {name}")
@@ -114,7 +115,7 @@ def run(from_user: str, to_user: str, by: str):
 		if not move_on_client(name, from_user, to_user):
 			failed.append(f"{_('Client')} {name}")
 	# The work is done; the notice below goes out whatever happens to it.
-	frappe.db.commit()
+	frappe.db.commit()  # nosemgrep
 	tell_manager(by, from_user, to_user, moved, failed)
 
 

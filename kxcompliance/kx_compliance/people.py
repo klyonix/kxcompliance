@@ -299,7 +299,9 @@ def check_strength(user: str, password: str) -> str:
 	if (result.get("score") or 0) >= int(minimum) and result.get("score"):
 		return ""
 	feedback = result.get("feedback") or {}
-	return " ".join(filter(None, [_("This password is too easy to guess."), feedback.get("warning")]))
+	return " ".join(
+		part for part in (_("This password is too easy to guess."), feedback.get("warning")) if part
+	)
 
 
 def start_handover(from_user: str, to_user: str) -> dict:

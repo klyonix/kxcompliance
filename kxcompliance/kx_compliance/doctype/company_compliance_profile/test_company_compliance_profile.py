@@ -107,14 +107,22 @@ class TestOnboarding(IntegrationTestCase):
 			self.assertIn("Private Limited", options["agm_company_types"])
 			self.assertNotIn("LLP", options["agm_company_types"])
 			self.assertEqual(str(options["last_year_end"]), "2026-03-31")
-			company = {"new_company": None, "company": NEW_COMPANY} if frappe.db.exists("Company", NEW_COMPANY) else {}
+			company = (
+				{"new_company": None, "company": NEW_COMPANY}
+				if frappe.db.exists("Company", NEW_COMPANY)
+				else {}
+			)
 			complete_onboarding(answers(agm_date="2026-09-30", **company))
 		agm = frappe.get_doc("Company Compliance Profile", NEW_COMPANY).agm_dates
-		self.assertEqual([(str(row.financial_year_end), str(row.agm_date)) for row in agm], [("2026-03-31", "2026-09-30")])
+		self.assertEqual(
+			[(str(row.financial_year_end), str(row.agm_date)) for row in agm], [("2026-03-31", "2026-09-30")]
+		)
 		due = {
 			row.obligation_template: str(row.due_date)
 			for row in frappe.get_all(
-				"Compliance Task", filters={"company": NEW_COMPANY}, fields=["obligation_template", "due_date"]
+				"Compliance Task",
+				filters={"company": NEW_COMPANY},
+				fields=["obligation_template", "due_date"],
 			)
 		}
 		self.assertNotIn("AOC-4 (Financial Statements)", due)

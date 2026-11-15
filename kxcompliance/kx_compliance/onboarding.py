@@ -78,7 +78,8 @@ def options() -> dict:
 def agm_company_types() -> list[str]:
 	"""Kinds of company with filings that fall due after the AGM (AOC-4, MGT-7, ADT-1)."""
 	templates = frappe.get_all(
-		"Compliance Obligation Template", filters={"due_after_event": 1, "event_type": ("is", "not set"), "is_active": 1},
+		"Compliance Obligation Template",
+		filters={"due_after_event": 1, "event_type": ("is", "not set"), "is_active": 1},
 		pluck="name",
 	)
 	if not templates:
@@ -87,7 +88,10 @@ def agm_company_types() -> list[str]:
 	return [
 		kind
 		for kind in kinds
-		if any(frappe.get_cached_doc("Compliance Obligation Template", name).applies_to(kind) for name in templates)
+		if any(
+			frappe.get_cached_doc("Compliance Obligation Template", name).applies_to(kind)
+			for name in templates
+		)
 	]
 
 

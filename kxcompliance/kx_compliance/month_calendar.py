@@ -61,7 +61,7 @@ def filings(start, end, by_company: dict) -> list[dict]:
 			"name": row.name,
 			"date": str(row.effective_due_date),
 			"title": row.obligation_template,
-			"detail": " · ".join(filter(None, [row.period_label, row.company])),
+			"detail": " · ".join(part for part in (row.period_label, row.company) if part),
 			"status": row.status,
 			"done": row.status in FILED,
 			"overdue": bool(row.is_overdue),
@@ -89,7 +89,7 @@ def expiries(start, end, by_company: dict) -> list[dict]:
 			"name": row.name,
 			"date": str(row.valid_until),
 			"title": row.title,
-			"detail": " · ".join(filter(None, [row.item_type, row.company])),
+			"detail": " · ".join(part for part in (row.item_type, row.company) if part),
 			"status": row.status,
 			# Renewed means a new validity was recorded, which moves the item off this day.
 			"done": False,

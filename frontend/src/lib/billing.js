@@ -324,7 +324,9 @@ export const barWidth = (value, months) => {
 export function recurringWithoutStartLine(names) {
 	if (!names?.length) return "";
 	const verb = names.length > 1 ? "are" : "is";
-	return `${names.join(", ")} ${verb} on the client's rates but not billed: the client has no "Recurring charges from" date.`;
+	return `${names.join(
+		", "
+	)} ${verb} on the client's rates but not billed: the client has no "Recurring charges from" date.`;
 }
 
 // Cash carries no reference: once one is typed, the mode it most likely is. A UPI reference is
@@ -333,11 +335,12 @@ export function modeForReference(reference, modes, current) {
 	const ref = String(reference || "").trim();
 	if (!ref || current !== "Cash") return current;
 	const pick = (...names) => names.find((name) => modes.includes(name));
-	const guess = /@/.test(ref) || /^\d{12}$/.test(ref)
-		? pick("UPI")
-		: /^\d{6}$/.test(ref)
-		? pick("Cheque")
-		: pick("Bank Transfer", "Wire Transfer");
+	const guess =
+		/@/.test(ref) || /^\d{12}$/.test(ref)
+			? pick("UPI")
+			: /^\d{6}$/.test(ref)
+			? pick("Cheque")
+			: pick("Bank Transfer", "Wire Transfer");
 	return guess || modes.find((mode) => mode !== "Cash") || current;
 }
 

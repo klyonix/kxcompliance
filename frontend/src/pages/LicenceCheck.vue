@@ -73,8 +73,8 @@
 			</p>
 			<template v-else>
 				<p class="max-w-sm text-base text-ink-gray-5">
-					Licence Check works from the {{ partyLabel }}s kept in ERPNext. If you bill from
-					another system, import them once from a spreadsheet of their names; their
+					Licence Check works from the {{ partyLabel }}s kept in ERPNext. If you bill
+					from another system, import them once from a spreadsheet of their names; their
 					licences are then recorded and checked here.
 				</p>
 				<Button

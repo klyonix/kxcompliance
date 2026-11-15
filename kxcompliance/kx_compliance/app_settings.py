@@ -11,6 +11,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint
 
+from kxcompliance.kx_compliance.privacy import MAX_LOG_DAYS, MIN_LOG_DAYS, standard_notice
 from kxcompliance.kx_compliance.register import is_approver
 
 SETTINGS = "KX Compliance Settings"
@@ -25,12 +26,17 @@ FIELDS = (
 	"app_name",
 	"app_logo",
 	"account_type",
+	"privacy_notice",
+	"grievance_officer",
+	"grievance_email",
+	"reminder_log_days",
 )
 # Whole numbers and the range each may take.
 NUMBERS = {
 	"due_soon_days": (1, 365),
 	"escalate_after_days": (0, 90),
 	"generation_horizon_days": (7, 180),
+	"reminder_log_days": (MIN_LOG_DAYS, MAX_LOG_DAYS),
 }
 
 
@@ -54,6 +60,8 @@ def options() -> dict:
 	templates = frappe.get_all("Email Template", pluck="name", order_by="name asc")
 	return {
 		"values": {field: settings.get(field) for field in FIELDS},
+		"notice_version": settings.notice_version,
+		"standard_notice": standard_notice(),
 		"email_accounts": accounts,
 		"email_templates": templates,
 		"digest_days": [day for day in meta.get_field("digest_day").options.split("\n") if day],

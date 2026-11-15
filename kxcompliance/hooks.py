@@ -156,6 +156,7 @@ scheduler_events = {
 		"kxcompliance.kx_compliance.statutory.run_daily",
 		"kxcompliance.kx_compliance.legal.run_daily",
 		"kxcompliance.kx_compliance.document_requests.run_daily",
+		"kxcompliance.kx_compliance.privacy.run_daily",
 	],
 	# 	"hourly": [
 	# 		"kxcompliance.tasks.hourly"

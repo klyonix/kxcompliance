@@ -52,7 +52,8 @@
 						v-model="form.pan"
 						label="PAN"
 						placeholder="ABCDE1234F"
-						:disabled="!editable"
+						:disabled="!editable || panMasked"
+						:description="panMasked ? MASKED_NOTE : undefined"
 					/>
 					<FormControl
 						v-model="form.email"
@@ -60,7 +61,12 @@
 						label="Email"
 						:disabled="!editable"
 					/>
-					<FormControl v-model="form.mobile" label="Mobile" :disabled="!editable" />
+					<FormControl
+						v-model="form.mobile"
+						label="Mobile"
+						:disabled="!editable || mobileMasked"
+						:description="mobileMasked ? MASKED_NOTE : undefined"
+					/>
 				</div>
 				<FormControl
 					v-model="form.is_active"
@@ -159,6 +165,7 @@ import { boot, mayRecord } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { DSC_TYPE, ITEM_LIST_FIELDS, itemRow } from "@/lib/items";
+import { isMasked } from "@/lib/privacy";
 import { DESIGNATIONS } from "@/lib/signatories";
 import { notLoaded } from "@/offline/reachability";
 
@@ -167,6 +174,11 @@ const props = defineProps({ name: { type: String, default: "" } });
 const route = useRoute();
 const router = useRouter();
 const editable = mayRecord();
+// PAN and mobile come masked to all but managers, who alone may see or change them.
+const MASKED_NOTE = "Only managers see and change it in full.";
+const loaded = reactive({ pan: "", mobile: "" });
+const panMasked = computed(() => isMasked(loaded.pan));
+const mobileMasked = computed(() => isMasked(loaded.mobile));
 const ready = ref(false);
 const error = ref("");
 const saveError = ref("");
@@ -201,9 +213,10 @@ async function save() {
 		company: form.company,
 		designation: form.designation,
 		din: form.din.trim(),
-		pan: form.pan.trim(),
 		email: form.email.trim() || null,
-		mobile: form.mobile.trim() || null,
+		// Masked values are left as they are; the server keeps the real ones anyway.
+		...(panMasked.value ? {} : { pan: form.pan.trim() }),
+		...(mobileMasked.value ? {} : { mobile: form.mobile.trim() || null }),
 		is_active: form.is_active ? 1 : 0,
 		other_companies: form.other_companies
 			.filter((row) => row.company)
@@ -230,6 +243,8 @@ async function load() {
 	try {
 		if (props.name) {
 			const signatory = await getDoc("Signatory", props.name);
+			loaded.pan = signatory.pan || "";
+			loaded.mobile = signatory.mobile || "";
 			Object.assign(form, {
 				full_name: signatory.full_name,
 				company: signatory.company,

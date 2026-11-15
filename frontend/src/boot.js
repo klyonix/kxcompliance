@@ -13,6 +13,8 @@ export const boot = {
 	accountType: window.account_type || "",
 	// True for a manager on a site that has not been set up yet.
 	setupNeeded: Boolean(window.setup_needed),
+	// True until this person accepts the current privacy notice; the app shows it before anything.
+	privacyNoticeDue: Boolean(window.privacy_notice_due),
 	// Whose licences this person may check: Customer, Supplier or both.
 	partyTypes: window.party_types || [],
 	defaultCompany: window.default_company || "",

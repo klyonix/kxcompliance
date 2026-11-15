@@ -220,6 +220,38 @@ export const routes = [
 		name: "LicenceCheck",
 		component: () => import("./pages/LicenceCheck.vue"),
 	},
+	{
+		path: "/privacy",
+		name: "PrivacyNotice",
+		component: () => import("./pages/PrivacyNotice.vue"),
+	},
+	{
+		path: "/settings/privacy-requests",
+		name: "PrivacyRequests",
+		component: () => import("./pages/PrivacyRequests.vue"),
+	},
+	{
+		path: "/settings/privacy-requests/:name",
+		name: "PrivacyRequest",
+		component: () => import("./pages/PrivacyRequest.vue"),
+		props: true,
+	},
+	{
+		path: "/settings/breaches",
+		name: "Breaches",
+		component: () => import("./pages/Breaches.vue"),
+	},
+	{
+		path: "/settings/breaches/new",
+		name: "BreachNew",
+		component: () => import("./pages/BreachForm.vue"),
+	},
+	{
+		path: "/settings/breaches/:name",
+		name: "Breach",
+		component: () => import("./pages/BreachForm.vue"),
+		props: true,
+	},
 	{ path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
@@ -247,12 +279,21 @@ const MANAGER_ROUTES = [
 	"Extensions",
 	"ExtensionNew",
 	"Extension",
+	"PrivacyRequests",
+	"PrivacyRequest",
+	"Breaches",
+	"BreachNew",
+	"Breach",
 ];
 
 const router = createRouter({ history: createWebHistory("/compliance"), routes });
 
 // Someone here only for the Licence Check is kept to it (the server refuses the rest anyway).
 router.beforeEach((to) => {
+	// Everyone reads and accepts the privacy notice first, then goes where they were going.
+	if (boot.privacyNoticeDue && to.name !== "PrivacyNotice") {
+		return { name: "PrivacyNotice", query: { next: to.fullPath } };
+	}
 	// A manager on a new site sets it up before anything else.
 	if (boot.setupNeeded && to.name !== "Onboarding") return { name: "Onboarding" };
 	if (!boot.setupNeeded && to.name === "Onboarding") return { name: "MyWork" };
@@ -261,7 +302,7 @@ router.beforeEach((to) => {
 		return;
 	}
 	if (to.name === "ClientHome") return { name: "MyWork" };
-	if (checksOnly() && !["LicenceCheck", "Account", "Help"].includes(to.name)) {
+	if (checksOnly() && !["LicenceCheck", "Account", "Help", "PrivacyNotice"].includes(to.name)) {
 		return { name: "LicenceCheck" };
 	}
 	// The reminder log is for managers and auditors, who check what was sent.

@@ -137,6 +137,59 @@
 				</div>
 			</section>
 
+			<section
+				class="flex flex-col gap-4"
+				aria-labelledby="privacy-heading"
+				data-tour="settings-privacy"
+			>
+				<div class="flex flex-col gap-0.5">
+					<h2 id="privacy-heading" class="text-base font-semibold text-ink-gray-8">
+						Privacy
+					</h2>
+					<p class="text-sm text-ink-gray-5">
+						Everyone accepts the privacy notice the first time they use the app.
+						Changing it asks everyone to accept it again (now version
+						{{ options.notice_version }}).
+					</p>
+				</div>
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<FormControl v-model="form.grievance_officer" label="Grievance officer" />
+					<FormControl
+						v-model="form.grievance_email"
+						type="email"
+						label="Grievance email"
+					/>
+				</div>
+				<div class="flex flex-col gap-1.5">
+					<div class="flex items-center gap-2">
+						<span class="flex-1 text-xs text-ink-gray-5">Privacy notice</span>
+						<Button
+							v-if="!form.privacy_notice"
+							size="sm"
+							variant="ghost"
+							label="Write your own from the standard one"
+							@click="form.privacy_notice = options.standard_notice"
+						/>
+					</div>
+					<div
+						v-if="!form.privacy_notice"
+						class="prose prose-sm max-h-64 max-w-none overflow-y-auto rounded-lg bg-surface-gray-1 p-3 text-ink-gray-7"
+						v-html="options.standard_notice"
+					/>
+					<NoticeEditor v-else v-model="form.privacy_notice" />
+					<p class="text-xs text-ink-gray-5">
+						The standard notice is used until you write your own; it fills in your
+						company's name and the grievance officer. Have a lawyer read it.
+					</p>
+				</div>
+				<FormControl
+					v-model="form.reminder_log_days"
+					type="number"
+					label="Keep reminder email addresses for (days)"
+					description="Older entries in the reminder log keep the date but lose the address. At least 365."
+				/>
+			</section>
+
 			<section class="flex flex-col gap-4" aria-labelledby="account-heading">
 				<div class="flex flex-col gap-0.5">
 					<h2 id="account-heading" class="text-base font-semibold text-ink-gray-8">
@@ -178,7 +231,7 @@
 
 <script setup>
 // The app's settings for Compliance Managers: reminders, email, name and logo, and account type.
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, defineAsyncComponent, onMounted, reactive, ref } from "vue";
 import { Button, FormControl, Skeleton, TabButtons, toast } from "frappe-ui";
 import { call, upload } from "@/api";
 import { boot } from "@/boot";
@@ -186,6 +239,8 @@ import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { settingsPagesFor } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
+
+const NoticeEditor = defineAsyncComponent(() => import("@/components/NoticeEditor.vue"));
 
 const isMobile = useIsMobile();
 // Every settings page but this one, which the reader is on.

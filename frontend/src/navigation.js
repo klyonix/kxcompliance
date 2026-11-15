@@ -61,6 +61,7 @@ export const CLIENT_ROUTES = [
 	"Trademark",
 	"Account",
 	"Help",
+	"PrivacyNotice",
 ];
 const CLIENT_SECTIONS = ["Search", "ClientHome", "Filings", "Register", "Legal", "Help"];
 
@@ -114,6 +115,18 @@ const SETTINGS_PAGES = [
 		route: "Extensions",
 		icon: "lucide-calendar-clock",
 		also: ["ExtensionNew", "Extension"],
+	},
+	{
+		label: "Privacy requests",
+		route: "PrivacyRequests",
+		icon: "lucide-user-lock",
+		also: ["PrivacyRequest"],
+	},
+	{
+		label: "Data breaches",
+		route: "Breaches",
+		icon: "lucide-shield-alert",
+		also: ["BreachNew", "Breach"],
 	},
 ];
 

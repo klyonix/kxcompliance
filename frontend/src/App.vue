@@ -1,6 +1,9 @@
 <template>
-	<!-- Onboarding has the whole screen: there is nothing to navigate to until it is done. -->
-	<RouterView v-if="route.name === 'Onboarding'" />
+	<!-- Onboarding, and the privacy notice before it is accepted, have the whole screen: there is
+	nothing to navigate to until they are done. Re-read from Account, the notice is a normal page. -->
+	<RouterView
+		v-if="route.name === 'Onboarding' || (route.name === 'PrivacyNotice' && route.query.next)"
+	/>
 	<MobileShell v-else-if="isMobile">
 		<UpdatePrompt />
 		<ConnectionBanner />

@@ -21,6 +21,7 @@ from kxcompliance.kx_compliance import (
 	month_calendar,
 	onboarding,
 	people,
+	privacy,
 	score,
 	setup_import,
 	tours,
@@ -649,6 +650,47 @@ def tour_opened(tour: str) -> dict:
 	return tours.opened(tour)
 
 
+def check_can_open_app():
+	"""For what everyone who signs in to the app may do about their own data."""
+	if frappe.session.user == "Guest" or not can_open_app():
+		frappe.throw(_("You do not have access to the compliance app."), frappe.PermissionError)
+
+
+@frappe.whitelist(methods=["GET"])
+def privacy_notice() -> dict:
+	"""The privacy notice, and whether this person has accepted its current version."""
+	check_can_open_app()
+	return privacy.notice()
+
+
+@frappe.whitelist(methods=["POST"])
+def accept_privacy_notice(version: int) -> dict:
+	"""This person accepts the version of the privacy notice they were shown."""
+	check_can_open_app()
+	return privacy.accept(version)
+
+
+@frappe.whitelist(methods=["POST"])
+def withdraw_privacy_consent() -> dict:
+	"""This person withdraws their consent; the app asks for it again before they use it."""
+	check_can_open_app()
+	return privacy.withdraw()
+
+
+@frappe.whitelist(methods=["POST"])
+def raise_privacy_request(request_type: str, details: str) -> dict:
+	"""Ask to see, correct or erase one's own data, or raise a grievance."""
+	check_can_open_app()
+	return privacy.raise_request(request_type, details)
+
+
+@frappe.whitelist(methods=["GET"])
+def my_privacy_requests() -> list[dict]:
+	"""This person's own privacy requests and the answers."""
+	check_can_open_app()
+	return privacy.my_requests()
+
+
 @frappe.whitelist(methods=["GET"])
 def team() -> list[dict]:
 	"""Everyone on the team and their role, for the People screen (managers only)."""
@@ -855,4 +897,6 @@ def boot() -> dict:
 		"account_type": settings.account_type or "",
 		# Managers are taken through onboarding until the site is set up.
 		"setup_needed": not settings.setup_complete and is_approver(),
+		# Everyone reads and accepts the privacy notice before using the app.
+		"privacy_notice_due": can_open_app() and privacy.notice_due(),
 	}

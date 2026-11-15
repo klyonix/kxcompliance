@@ -1,0 +1,150 @@
+{
+ "actions": [],
+ "creation": "2026-11-15 13:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "discovered_on",
+  "board_due_by",
+  "column_break_status",
+  "status",
+  "people_affected",
+  "section_what",
+  "description",
+  "data_affected",
+  "measures_taken",
+  "section_reported",
+  "board_reported_on",
+  "column_break_reported",
+  "people_informed_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "discovered_on",
+   "fieldtype": "Datetime",
+   "label": "Discovered On",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "board_due_by",
+   "fieldtype": "Datetime",
+   "label": "Report to the Board By",
+   "read_only": 1,
+   "description": "72 hours after the breach was discovered."
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Board not told\nPeople not told\nReported",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "people_affected",
+   "fieldtype": "Int",
+   "label": "People Affected"
+  },
+  {
+   "fieldname": "section_what",
+   "fieldtype": "Section Break",
+   "label": "What happened"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "What Happened",
+   "reqd": 1
+  },
+  {
+   "fieldname": "data_affected",
+   "fieldtype": "Small Text",
+   "label": "Personal Data Affected"
+  },
+  {
+   "fieldname": "measures_taken",
+   "fieldtype": "Small Text",
+   "label": "Measures Taken"
+  },
+  {
+   "fieldname": "section_reported",
+   "fieldtype": "Section Break",
+   "label": "Reported"
+  },
+  {
+   "fieldname": "board_reported_on",
+   "fieldtype": "Datetime",
+   "label": "Board Told On"
+  },
+  {
+   "fieldname": "column_break_reported",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "people_informed_on",
+   "fieldtype": "Datetime",
+   "label": "People Affected Told On"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-15 13:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "KX Compliance",
+ "name": "Personal Data Breach",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Compliance Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Compliance Auditor",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "description": "A personal data breach, and when the Data Protection Board and the people affected were told, as the DPDP Rules require.",
+ "autoname": "format:BR-{YY}-{####}",
+ "naming_rule": "Expression",
+ "track_changes": 1,
+ "title_field": "title"
+}

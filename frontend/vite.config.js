@@ -32,7 +32,8 @@ export default defineConfig({
 				// The worker is served from /compliance_sw.js, so each built file needs its full
 				// path; index.html is only the template Frappe renders as /compliance.
 				modifyURLPrefix: { "": "/assets/kxcompliance/frontend/" },
-				globIgnores: ["**/index.html"],
+				// The privacy notice's editor is for a manager editing online; phones need not keep it.
+				globIgnores: ["**/index.html", "**/NoticeEditor-*.js", "**/NoticeEditor-*.css"],
 				inlineWorkboxRuntime: true,
 				cleanupOutdatedCaches: true,
 				navigateFallback: null,

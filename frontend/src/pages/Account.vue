@@ -29,6 +29,8 @@
 
 		<CalendarFeed v-if="!checksOnly()" />
 
+		<PrivacySection />
+
 		<section class="flex flex-col gap-3" aria-labelledby="sync-heading">
 			<h2 id="sync-heading" class="text-base font-semibold text-ink-gray-8">
 				Changes on this device
@@ -95,6 +97,7 @@ import { call } from "@/api";
 import { boot, checksOnly, isClientLogin, isManager, mayUseDesk } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import CalendarFeed from "@/components/CalendarFeed.vue";
+import PrivacySection from "@/components/PrivacySection.vue";
 import SyncStatus from "@/components/SyncStatus.vue";
 import { signOut } from "@/navigation";
 import { clearOutbox, outbox, refresh, sendWaiting } from "@/offline/outbox";

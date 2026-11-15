@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commentHtml, recordRoute } from "./records";
+import { commentHtml, recordRoute, recordWidth } from "./records";
 
 describe("where a notification's record opens", () => {
 	it("opens records with a page of their own there, and lists for the rest", () => {
@@ -18,5 +18,13 @@ describe("a comment", () => {
 			"<p>Filed today.</p><p>&lt;script&gt;alert(1)&lt;/script&gt;</p>"
 		);
 		expect(commentHtml("a\n\nb")).toBe("<p>a</p><p><br></p><p>b</p>");
+	});
+});
+
+describe("a record's width", () => {
+	it("is wide beside its activity, narrow for a new record or a client", () => {
+		expect(recordWidth("CI-26-00001")).toBe("max-w-6xl");
+		expect(recordWidth("")).toBe("max-w-3xl");
+		expect(recordWidth("CI-26-00001", { client: true })).toBe("max-w-3xl");
 	});
 });

@@ -4,77 +4,80 @@
 		:parent="{ label: 'Extensions', route: { name: 'Extensions' } }"
 	/>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6">
-		<p
-			v-if="error"
-			role="alert"
-			class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
-		>
-			{{ error }}
-		</p>
-		<Skeleton v-else-if="!ready" class="h-48 w-full rounded-lg" />
-
-		<template v-else>
-			<p class="text-base text-ink-gray-6">
-				When the government extends a due date, record it here. Open filings for the
-				periods it covers move to the new date; filed ones keep the date they were filed
-				against.
-			</p>
-			<FormControl
-				v-model="form.obligation_template"
-				type="select"
-				label="Obligation"
-				:options="[{ label: 'Choose an obligation', value: '' }, ...templateOptions]"
-			/>
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-				<FormControl
-					v-model="form.periods_ending_from"
-					type="date"
-					:format="pickerFormat()"
-					label="Periods ending from"
-				/>
-				<FormControl
-					v-model="form.periods_ending_to"
-					type="date"
-					:format="pickerFormat()"
-					label="Periods ending to"
-				/>
-				<FormControl
-					v-model="form.new_due_date"
-					type="date"
-					:format="pickerFormat()"
-					label="New due date"
-				/>
-			</div>
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-				<FormControl
-					v-model="form.notification_reference"
-					label="Notification or circular"
-					placeholder="Notification 12/2026-Central Tax"
-				/>
-				<FormControl
-					v-model="form.issued_on"
-					type="date"
-					:format="pickerFormat()"
-					label="Issued on"
-				/>
-			</div>
+	<RecordFrame :doctype="DOCTYPE" :name="name">
+		<div class="flex flex-col gap-6">
 			<p
-				v-if="preview"
-				class="rounded-lg bg-surface-gray-2 px-3 py-2 text-base text-ink-gray-7"
-				aria-live="polite"
+				v-if="error"
+				role="alert"
+				class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
 			>
-				{{ previewText(preview) }}
+				{{ error }}
 			</p>
-		</template>
-	</div>
+			<Skeleton v-else-if="!ready" class="h-48 w-full rounded-lg" />
+
+			<template v-else>
+				<p class="text-base text-ink-gray-6">
+					When the government extends a due date, record it here. Open filings for the
+					periods it covers move to the new date; filed ones keep the date they were
+					filed against.
+				</p>
+				<FormControl
+					v-model="form.obligation_template"
+					type="select"
+					label="Obligation"
+					:options="[{ label: 'Choose an obligation', value: '' }, ...templateOptions]"
+				/>
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+					<FormControl
+						v-model="form.periods_ending_from"
+						type="date"
+						:format="pickerFormat()"
+						label="Periods ending from"
+					/>
+					<FormControl
+						v-model="form.periods_ending_to"
+						type="date"
+						:format="pickerFormat()"
+						label="Periods ending to"
+					/>
+					<FormControl
+						v-model="form.new_due_date"
+						type="date"
+						:format="pickerFormat()"
+						label="New due date"
+					/>
+				</div>
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<FormControl
+						v-model="form.notification_reference"
+						label="Notification or circular"
+						placeholder="Notification 12/2026-Central Tax"
+					/>
+					<FormControl
+						v-model="form.issued_on"
+						type="date"
+						:format="pickerFormat()"
+						label="Issued on"
+					/>
+				</div>
+				<p
+					v-if="preview"
+					class="rounded-lg bg-surface-gray-2 px-3 py-2 text-base text-ink-gray-7"
+					aria-live="polite"
+				>
+					{{ previewText(preview) }}
+				</p>
+			</template>
+		</div>
+	</RecordFrame>
 
 	<div
 		v-if="ready"
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
-			class="mx-auto flex w-full max-w-3xl flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			class="mx-auto flex w-full flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			:class="recordWidth(name)"
 		>
 			<p v-if="saveError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ saveError }}
@@ -96,8 +99,10 @@ import { useRoute, useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call, createDoc, getDoc, getList, updateDoc } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RecordFrame from "@/components/RecordFrame.vue";
 import { pickerFormat } from "@/lib/format";
 import { previewText } from "@/lib/obligations";
+import { recordWidth } from "@/lib/records";
 import { notLoaded } from "@/offline/reachability";
 
 const DOCTYPE = "Compliance Due Date Extension";

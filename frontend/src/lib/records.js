@@ -34,3 +34,9 @@ export function commentHtml(text) {
 		.map((line) => `<p>${escape(line) || "<br>"}</p>`)
 		.join("");
 }
+
+// A saved record's page has its activity beside it, so it is wider than a new record's form.
+// A client's login does not see the activity. Full class names, for Tailwind to find.
+export const showsActivity = (name, { client = false } = {}) => Boolean(name) && !client;
+export const recordWidth = (name, options) =>
+	showsActivity(name, options) ? "max-w-6xl" : "max-w-3xl";

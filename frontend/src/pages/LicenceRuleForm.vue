@@ -4,157 +4,163 @@
 		:parent="{ label: 'Licence rules', route: { name: 'LicenceRules' } }"
 	/>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
-		<p
-			v-if="error"
-			role="alert"
-			class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
-		>
-			{{ error }}
-		</p>
-		<Skeleton v-else-if="!options" class="h-48 w-full rounded-lg" />
+	<RecordFrame :doctype="DOCTYPE" :name="name">
+		<div class="flex flex-col gap-8">
+			<p
+				v-if="error"
+				role="alert"
+				class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
+			>
+				{{ error }}
+			</p>
+			<Skeleton v-else-if="!options" class="h-48 w-full rounded-lg" />
 
-		<template v-else>
-			<section class="flex flex-col gap-4" aria-labelledby="rule-heading">
-				<h2 id="rule-heading" class="text-base font-semibold text-ink-gray-8">The rule</h2>
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					<FormControl
-						v-model="form.item_type"
-						type="select"
-						label="Licence"
-						:options="[
-							{ label: 'Choose the licence', value: '' },
-							...choices(options.item_types),
-						]"
-					/>
-					<FormControl
-						v-model="form.party_type"
-						type="select"
-						label="Who must hold it"
-						:options="[
-							{ label: 'Customers', value: 'Customer' },
-							{ label: 'Suppliers', value: 'Supplier' },
-						]"
-					/>
-					<FormControl
-						v-model="form.action"
-						type="select"
-						label="When it is missing"
-						:options="[
-							{ label: 'Block the document', value: 'Block' },
-							{ label: 'Only warn', value: 'Warn' },
-						]"
-					/>
-					<FormControl
-						v-model="form.grace_days"
-						type="number"
-						label="Still counts after expiry for (days)"
-					/>
-				</div>
-				<FormControl v-model="form.is_active" type="checkbox" label="In use" />
-			</section>
-
-			<section class="flex flex-col gap-3" aria-labelledby="documents-heading">
-				<div class="flex flex-col gap-0.5">
-					<h2 id="documents-heading" class="text-base font-semibold text-ink-gray-8">
-						Checked on
+			<template v-else>
+				<section class="flex flex-col gap-4" aria-labelledby="rule-heading">
+					<h2 id="rule-heading" class="text-base font-semibold text-ink-gray-8">
+						The rule
 					</h2>
-					<p class="text-sm text-ink-gray-5">
-						The {{ form.party_type === "Supplier" ? "buying" : "selling" }} documents
-						this rule is checked on when they are saved.
-					</p>
-				</div>
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-					<FormControl
-						v-for="document in partyDocuments"
-						:key="document.field"
-						v-model="form[document.field]"
-						type="checkbox"
-						:label="document.doctype"
-					/>
-				</div>
-			</section>
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<FormControl
+							v-model="form.item_type"
+							type="select"
+							label="Licence"
+							:options="[
+								{ label: 'Choose the licence', value: '' },
+								...choices(options.item_types),
+							]"
+						/>
+						<FormControl
+							v-model="form.party_type"
+							type="select"
+							label="Who must hold it"
+							:options="[
+								{ label: 'Customers', value: 'Customer' },
+								{ label: 'Suppliers', value: 'Supplier' },
+							]"
+						/>
+						<FormControl
+							v-model="form.action"
+							type="select"
+							label="When it is missing"
+							:options="[
+								{ label: 'Block the document', value: 'Block' },
+								{ label: 'Only warn', value: 'Warn' },
+							]"
+						/>
+						<FormControl
+							v-model="form.grace_days"
+							type="number"
+							label="Still counts after expiry for (days)"
+						/>
+					</div>
+					<FormControl v-model="form.is_active" type="checkbox" label="In use" />
+				</section>
 
-			<section class="flex flex-col gap-3" aria-labelledby="scope-heading">
-				<div class="flex flex-col gap-0.5">
-					<h2 id="scope-heading" class="text-base font-semibold text-ink-gray-8">
-						Only for
-					</h2>
-					<p class="text-sm text-ink-gray-5">
-						Leave a list empty for every company, every item, or every
-						{{ form.party_type === "Supplier" ? "supplier" : "customer" }}.
-					</p>
-				</div>
-				<details
-					v-if="boot.companies.length > 1"
-					class="rounded-lg border border-outline-gray-1 px-3 py-2"
-				>
-					<summary class="cursor-pointer text-base text-ink-gray-8">
-						Companies
-						<span class="text-ink-gray-5"
-							>·
-							{{
-								summary(
-									form.companies,
-									isFirm ? "every client switched on" : "every company"
-								)
-							}}</span
-						>
-					</summary>
-					<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<section class="flex flex-col gap-3" aria-labelledby="documents-heading">
+					<div class="flex flex-col gap-0.5">
+						<h2 id="documents-heading" class="text-base font-semibold text-ink-gray-8">
+							Checked on
+						</h2>
+						<p class="text-sm text-ink-gray-5">
+							The
+							{{ form.party_type === "Supplier" ? "buying" : "selling" }} documents
+							this rule is checked on when they are saved.
+						</p>
+					</div>
+					<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 						<FormControl
-							v-for="company in boot.companies"
-							:key="company"
-							v-model="form.companies[company]"
+							v-for="document in partyDocuments"
+							:key="document.field"
+							v-model="form[document.field]"
 							type="checkbox"
-							:label="company"
+							:label="document.doctype"
 						/>
 					</div>
-				</details>
-				<details class="rounded-lg border border-outline-gray-1 px-3 py-2">
-					<summary class="cursor-pointer text-base text-ink-gray-8">
-						Item groups
-						<span class="text-ink-gray-5"
-							>· {{ summary(form.item_groups, "every item") }}</span
-						>
-					</summary>
-					<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-						<FormControl
-							v-for="group in options.item_groups"
-							:key="group"
-							v-model="form.item_groups[group]"
-							type="checkbox"
-							:label="group"
-						/>
+				</section>
+
+				<section class="flex flex-col gap-3" aria-labelledby="scope-heading">
+					<div class="flex flex-col gap-0.5">
+						<h2 id="scope-heading" class="text-base font-semibold text-ink-gray-8">
+							Only for
+						</h2>
+						<p class="text-sm text-ink-gray-5">
+							Leave a list empty for every company, every item, or every
+							{{ form.party_type === "Supplier" ? "supplier" : "customer" }}.
+						</p>
 					</div>
-				</details>
-				<details class="rounded-lg border border-outline-gray-1 px-3 py-2">
-					<summary class="cursor-pointer text-base text-ink-gray-8">
-						{{ form.party_type === "Supplier" ? "Supplier" : "Customer" }} groups
-						<span class="text-ink-gray-5"
-							>· {{ summary(form.party_groups, "all of them") }}</span
-						>
-					</summary>
-					<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-						<FormControl
-							v-for="group in partyGroups"
-							:key="group"
-							v-model="form.party_groups[group]"
-							type="checkbox"
-							:label="group"
-						/>
-					</div>
-				</details>
-			</section>
-		</template>
-	</div>
+					<details
+						v-if="boot.companies.length > 1"
+						class="rounded-lg border border-outline-gray-1 px-3 py-2"
+					>
+						<summary class="cursor-pointer text-base text-ink-gray-8">
+							Companies
+							<span class="text-ink-gray-5"
+								>·
+								{{
+									summary(
+										form.companies,
+										isFirm ? "every client switched on" : "every company"
+									)
+								}}</span
+							>
+						</summary>
+						<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+							<FormControl
+								v-for="company in boot.companies"
+								:key="company"
+								v-model="form.companies[company]"
+								type="checkbox"
+								:label="company"
+							/>
+						</div>
+					</details>
+					<details class="rounded-lg border border-outline-gray-1 px-3 py-2">
+						<summary class="cursor-pointer text-base text-ink-gray-8">
+							Item groups
+							<span class="text-ink-gray-5"
+								>· {{ summary(form.item_groups, "every item") }}</span
+							>
+						</summary>
+						<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+							<FormControl
+								v-for="group in options.item_groups"
+								:key="group"
+								v-model="form.item_groups[group]"
+								type="checkbox"
+								:label="group"
+							/>
+						</div>
+					</details>
+					<details class="rounded-lg border border-outline-gray-1 px-3 py-2">
+						<summary class="cursor-pointer text-base text-ink-gray-8">
+							{{ form.party_type === "Supplier" ? "Supplier" : "Customer" }} groups
+							<span class="text-ink-gray-5"
+								>· {{ summary(form.party_groups, "all of them") }}</span
+							>
+						</summary>
+						<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+							<FormControl
+								v-for="group in partyGroups"
+								:key="group"
+								v-model="form.party_groups[group]"
+								type="checkbox"
+								:label="group"
+							/>
+						</div>
+					</details>
+				</section>
+			</template>
+		</div>
+	</RecordFrame>
 
 	<div
 		v-if="options"
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
-			class="mx-auto flex w-full max-w-3xl flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			class="mx-auto flex w-full flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			:class="recordWidth(name)"
 		>
 			<p v-if="saveError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ saveError }}
@@ -178,7 +184,9 @@ import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call, createDoc, getDoc, updateDoc } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RecordFrame from "@/components/RecordFrame.vue";
 import { CHECK_FIELDS } from "@/lib/licenceRules";
+import { recordWidth } from "@/lib/records";
 import { notLoaded } from "@/offline/reachability";
 
 const DOCTYPE = "Licence Requirement";

@@ -5,6 +5,7 @@ import { FrappeUI, FrappeUIProvider, frappeRequest, setConfig } from "frappe-ui"
 import { h } from "vue";
 
 import App from "./App.vue";
+import { getSocket } from "./socket";
 import { applyAppearance, readAppearance } from "./lib/appearance";
 import router from "./router";
 import { watchConnection } from "./offline/outbox";
@@ -15,16 +16,12 @@ import { watchForUpdates } from "./offline/updates";
 setConfig("resourceFetcher", frappeRequest);
 applyAppearance(readAppearance());
 
-// The app keeps no live connection to the server. Frappe's shared components look for one, and
-// frappe-ui's own `$socket` throws when none was set, so they are given one that does nothing:
-// they load their data when shown instead of being told of changes as they happen.
-const noLiveUpdates = { emit() {}, on() {}, off() {} };
-
-createApp({ render: () => h(FrappeUIProvider, null, { default: () => h(App) }) })
-	.provide("socket", noLiveUpdates)
-	.use(router)
-	.use(FrappeUI)
-	.mount("#app");
+// The live connection to Frappe's realtime server, for Frappe's shared components (notifications,
+// a record's activity) and the app's lists. frappe-ui's `$socket` throws until one is set.
+const socket = getSocket();
+const app = createApp({ render: () => h(FrappeUIProvider, null, { default: () => h(App) }) });
+app.config.globalProperties.$socket = socket;
+app.provide("socket", socket).use(router).use(FrappeUI).mount("#app");
 watchConnection();
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {

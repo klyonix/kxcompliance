@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+	areaKind,
 	isQuiet,
+	needingCount,
 	needsYou,
 	onTimeParts,
 	onTimeSummary,
@@ -60,5 +62,24 @@ describe("the overview", () => {
 		]);
 		expect(isQuiet(sections[0])).toBe(false);
 		expect(isQuiet({ cards: [{ value: 0 }, { value: 0 }] })).toBe(true);
+	});
+});
+
+describe("the Overview's areas", () => {
+	it("colour each area as its rows are coloured", () => {
+		expect(areaKind({ key: "filings" })).toBe("filing");
+		expect(areaKind({ key: "something-new" })).toBe("");
+	});
+
+	it("count the numbers that need someone", () => {
+		const section = {
+			cards: [
+				{ value: 2, tone: "red" },
+				{ value: 0, tone: "red" },
+				{ value: 3, tone: "blue" },
+				{ value: 1, tone: "amber" },
+			],
+		};
+		expect(needingCount(section)).toBe(2);
 	});
 });

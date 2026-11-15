@@ -49,3 +49,18 @@ export function needsYou(sections) {
 
 // A section with nothing in it is named once at the end rather than shown as a row of zeros.
 export const isQuiet = (section) => section.cards.every((card) => !card.value);
+
+// Each area of the Overview, by the server's key: the kind of row whose colour and icon it shares.
+const AREA_KINDS = {
+	register: "licence",
+	filings: "filing",
+	legal: "legal",
+	trademarks: "trademark",
+	"licence-check": "licence-rule",
+	privacy: "privacy-request",
+};
+export const areaKind = (section) => AREA_KINDS[section.key] || "";
+
+// How many of an area's numbers need someone: those with a value and a tone that is not calm.
+export const needingCount = (section) =>
+	section.cards.filter((card) => card.value && ["red", "amber"].includes(card.tone)).length;

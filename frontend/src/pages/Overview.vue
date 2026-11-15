@@ -204,30 +204,70 @@
 				<RecentActivity :entries="data.dashboard.recent" />
 			</div>
 
-			<section
-				v-for="section in busy"
-				:key="section.title"
-				class="flex flex-col gap-3"
-				:aria-label="section.title"
-			>
-				<h2 class="text-base font-semibold text-ink-gray-8">{{ section.title }}</h2>
-				<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-					<component
-						:is="opens(card, section.title) ? RouterLink : 'a'"
-						v-for="card in section.cards"
-						:key="card.label"
-						v-bind="linkTo(card, section.title)"
-						class="flex flex-col gap-1 rounded-lg border border-outline-gray-1 px-3 py-3 hover:bg-surface-gray-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
-					>
+			<!-- Each area as a card: its colour and icon, then each number on a line of its own with
+			     its status, opening the list of what it counts. Zeros stay quiet. -->
+			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2" data-tour="overview-areas">
+				<section
+					v-for="section in busy"
+					:key="section.key || section.title"
+					class="flex flex-col rounded-xl border border-outline-gray-1"
+					:aria-label="section.title"
+				>
+					<header class="flex items-center gap-3 px-4 pb-2 pt-4">
 						<span
-							class="text-2xl font-semibold tabular-nums"
-							:class="valueClass(card)"
-							>{{ card.value }}</span
+							class="flex size-8 shrink-0 items-center justify-center rounded-full"
+							:class="kindTint(areaKind(section)).tile"
 						>
-						<span class="text-sm text-ink-gray-6">{{ card.label }}</span>
-					</component>
-				</div>
-			</section>
+							<span
+								:class="KINDS[areaKind(section)]?.icon || 'lucide-layout-grid'"
+								class="size-4"
+								aria-hidden="true"
+							/>
+						</span>
+						<h2 class="flex-1 text-base font-semibold text-ink-gray-8">
+							{{ section.title }}
+						</h2>
+						<Badge
+							v-if="needingCount(section)"
+							theme="red"
+							:label="`${needingCount(section)} to look at`"
+						/>
+					</header>
+					<ul class="flex flex-col px-2 pb-2">
+						<li v-for="card in section.cards" :key="card.label">
+							<component
+								:is="opens(card, section.title) ? RouterLink : 'a'"
+								v-bind="linkTo(card, section.title)"
+								class="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-surface-gray-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
+							>
+								<span
+									class="size-4 shrink-0"
+									:class="[
+										STATUS_ICONS[card.value ? card.tone : 'gray'] ||
+											STATUS_ICONS.gray,
+										card.value ? valueClass(card) : 'text-ink-gray-4',
+									]"
+									aria-hidden="true"
+								/>
+								<span
+									class="flex-1 text-base"
+									:class="card.value ? 'text-ink-gray-8' : 'text-ink-gray-5'"
+									>{{ card.label }}</span
+								>
+								<span
+									class="text-lg font-semibold tabular-nums"
+									:class="valueClass(card)"
+									>{{ card.value }}</span
+								>
+								<span
+									class="lucide-chevron-right size-4 shrink-0 text-ink-gray-4"
+									aria-hidden="true"
+								/>
+							</component>
+						</li>
+					</ul>
+				</section>
+			</div>
 
 			<p v-if="quiet.length" class="text-sm text-ink-gray-5">
 				Nothing recorded yet: {{ quiet.map((section) => section.title).join(" · ") }}.
@@ -240,7 +280,7 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
-import { Button, Skeleton } from "frappe-ui";
+import { Badge, Button, Skeleton } from "frappe-ui";
 import { BarChart } from "frappe-ui/charts";
 import { boot } from "@/boot";
 import { call } from "@/api";
@@ -250,8 +290,13 @@ import ScoreBadge from "@/components/ScoreBadge.vue";
 import UrgencyTiles from "@/components/UrgencyTiles.vue";
 import { formatMoney } from "@/lib/format";
 import { listRoute } from "@/lib/listFilters";
+import { STATUS_ICONS } from "@/lib/status";
+import { KINDS } from "@/pages/myWork";
+import { kindTint } from "@/lib/areas";
 import {
+	areaKind,
 	isQuiet,
+	needingCount,
 	needsYou,
 	onTimeParts,
 	onTimeSummary,

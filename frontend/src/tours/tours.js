@@ -91,6 +91,11 @@ export const TOURS = [
 				title: "Compliance score",
 				text: "Each company starts at 100 and loses points for what needs fixing, so you see where to look first.",
 			},
+			{
+				target: ["overview-areas"],
+				title: "Each area",
+				text: "The register, filings, legal work and the rest, each number with its status. Open one to see the list it counts.",
+			},
 		],
 	},
 	{

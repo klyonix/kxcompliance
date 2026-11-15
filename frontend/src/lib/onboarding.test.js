@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { companyDefault, onboardingSteps, registrationProblem, setupAnswers, stateFromGstin } from "./onboarding";
+import { agmQuestion, companyDefault, onboardingSteps, registrationProblem, setupAnswers, stateFromGstin } from "./onboarding";
 
 const STATES = ["GST", "GST Composition", "LWF", "PT"];
 const row = (registration_type, registration_number = "", state = "") => ({
@@ -9,6 +9,15 @@ const row = (registration_type, registration_number = "", state = "") => ({
 });
 
 describe("onboarding", () => {
+	it("asks last year's AGM only of a company that holds one", () => {
+		const types = ["Private Limited", "One Person Company"];
+		expect(agmQuestion("Private Limited", types, "2026-03-31").label).toBe(
+			"AGM for the year ended 31 March 2026"
+		);
+		expect(agmQuestion("LLP", types, "2026-03-31")).toBeNull();
+		expect(agmQuestion("Private Limited", undefined, "2026-03-31")).toBeNull();
+	});
+
 	it("starts a firm's first client on a new company, never the firm's own", () => {
 		const made = ["Rao Desai and Co"];
 		expect(companyDefault("CA/CS Firm", made, true)).toEqual({ choice: "new", company: "" });
@@ -55,6 +64,7 @@ describe("onboarding", () => {
 				new_company: " Sunrise Foods Private Limited ",
 				company: "Old Co",
 				company_type: "Private Limited",
+				agm_date: "2026-09-25",
 				registrations: [row("GST", " 29ABCDE1234F1Z5 ", "Karnataka"), row("")],
 				responsible: "asha.rao@example.com",
 				reviewer: "",
@@ -68,6 +78,7 @@ describe("onboarding", () => {
 			new_company: "Sunrise Foods Private Limited",
 			company: "",
 			company_type: "Private Limited",
+			agm_date: "2026-09-25",
 			registrations: [
 				{
 					registration_type: "GST",

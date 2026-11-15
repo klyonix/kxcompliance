@@ -95,6 +95,38 @@ class TestOnboarding(IntegrationTestCase):
 			with self.assertRaisesRegex(frappe.ValidationError, "already set up"):
 				complete_onboarding(answers(new_company=None, company=NEW_COMPANY))
 
+	def test_last_years_agm_makes_its_filings_at_setup(self):
+		# Set up in November: the AGM for the year ended March 2026 was on 30 September, so MGT-7
+		# (60 days after) is due on 29 November and made; AOC-4 fell due in October, before setup.
+		with (
+			self.change_settings(SETTINGS, generation_horizon_days=45),
+			self.set_user("Administrator"),
+			self.freeze_time("2026-11-15"),
+		):
+			options = onboarding_options()
+			self.assertIn("Private Limited", options["agm_company_types"])
+			self.assertNotIn("LLP", options["agm_company_types"])
+			self.assertEqual(str(options["last_year_end"]), "2026-03-31")
+			company = {"new_company": None, "company": NEW_COMPANY} if frappe.db.exists("Company", NEW_COMPANY) else {}
+			complete_onboarding(answers(agm_date="2026-09-30", **company))
+		agm = frappe.get_doc("Company Compliance Profile", NEW_COMPANY).agm_dates
+		self.assertEqual([(str(row.financial_year_end), str(row.agm_date)) for row in agm], [("2026-03-31", "2026-09-30")])
+		due = {
+			row.obligation_template: str(row.due_date)
+			for row in frappe.get_all(
+				"Compliance Task", filters={"company": NEW_COMPANY}, fields=["obligation_template", "due_date"]
+			)
+		}
+		self.assertNotIn("AOC-4 (Financial Statements)", due)
+		self.assertEqual(due.get("MGT-7 / MGT-7A (Annual Return)"), "2026-11-29")
+
+	def test_an_agm_date_outside_the_year_is_refused(self):
+		with self.set_user("Administrator"), self.freeze_time("2026-11-15"):
+			for held in ("2026-03-15", "2026-12-01"):
+				with self.assertRaisesRegex(frappe.ValidationError, "year ended"):
+					complete_onboarding(answers(agm_date=held))
+		self.assertFalse(frappe.db.get_single_value(SETTINGS, "setup_complete"))
+
 	def test_a_firm_names_the_app_after_itself(self):
 		frappe.db.set_single_value(SETTINGS, "app_name", "KlyONIX Compliance")
 		with self.set_user(MANAGER), self.freeze_time("2026-11-15"):

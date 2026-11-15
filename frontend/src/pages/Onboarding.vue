@@ -125,6 +125,13 @@
 					placeholder="Private Limited, LLP, ..."
 					:error="errorFor('company_type')"
 				/>
+				<FormControl
+					v-if="agm"
+					v-model="answers.agm_date"
+					type="date"
+					:label="agm.label"
+					:description="agm.description"
+				/>
 			</div>
 
 			<!-- Registrations -->
@@ -250,6 +257,7 @@ import { useIsMobile } from "@/composables/useIsMobile";
 import {
 	ACCOUNT_CHOICES,
 	NUMBER_HINTS,
+	agmQuestion,
 	companyDefault,
 	onboardingSteps,
 	registrationProblem,
@@ -275,6 +283,7 @@ const answers = reactive({
 	new_company: "",
 	company: "",
 	company_type: "",
+	agm_date: "",
 	registrations: [],
 	responsible: "",
 	reviewer: "",
@@ -282,6 +291,13 @@ const answers = reactive({
 
 const steps = computed(() => onboardingSteps(answers.account_type));
 const stepNumber = computed(() => steps.value.indexOf(step.value) + 1);
+const agm = computed(() =>
+	agmQuestion(
+		answers.company_type,
+		options.value?.agm_company_types,
+		options.value?.last_year_end
+	)
+);
 const openCompanies = computed(() =>
 	(options.value?.companies || [])
 		.filter((company) => !company.set_up)

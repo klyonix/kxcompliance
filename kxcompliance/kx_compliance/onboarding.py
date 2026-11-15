@@ -6,9 +6,11 @@ ERPNext company or a new one), its kind, registrations and people. Completing it
 compliance profile, finds the company's obligations in the library and makes the first tasks."""
 
 import re
+from datetime import date
 
 import frappe
 from frappe import _
+from frappe.utils import formatdate, getdate, nowdate
 
 from kxcompliance.kx_compliance.register import APPROVER_ROLES, compliance_companies
 from kxcompliance.kx_compliance.statutory import generate_tasks
@@ -64,11 +66,51 @@ def options() -> dict:
 		"state_registrations": sorted(STATE_REGISTRATIONS),
 		"states": select_options("Compliance Registration", "state"),
 		"people": people,
+		"agm_company_types": agm_company_types(),
+		"last_year_end": last_year_end(getdate(nowdate())),
 		"can_create_company": bool(frappe.has_permission("Company", "create")),
 		# ERPNext's own setup (currency, fiscal year, basic records) must be done before a
 		# company can be created; running it from here is not done yet (RK, 15 Nov 2026).
 		"system_ready": bool(frappe.is_setup_complete()),
 	}
+
+
+def agm_company_types() -> list[str]:
+	"""Kinds of company with filings that fall due after the AGM (AOC-4, MGT-7, ADT-1)."""
+	templates = frappe.get_all(
+		"Compliance Obligation Template", filters={"due_after_event": 1, "event_type": ("is", "not set"), "is_active": 1},
+		pluck="name",
+	)
+	if not templates:
+		return []
+	kinds = select_options("Company Compliance Profile", "company_type")
+	return [
+		kind
+		for kind in kinds
+		if any(frappe.get_cached_doc("Compliance Obligation Template", name).applies_to(kind) for name in templates)
+	]
+
+
+def last_year_end(today: date) -> date:
+	"""The end of the last financial year that has ended: 31 March this year or last."""
+	return date(today.year if today.month > 3 else today.year - 1, 3, 31)
+
+
+def clean_agm_date(value: str | None, today: date) -> list[dict]:
+	"""Last year's AGM as the profile's AGM row, if it was given; it was held after the year ended
+	and is not in the future."""
+	if not value:
+		return []
+	if not isinstance(value, str):
+		frappe.throw(_("Give the AGM date as a single date."))
+	held, year_end = getdate(value), last_year_end(today)
+	if not year_end < held <= today:
+		frappe.throw(
+			_("The AGM for the year ended {0} is held after that and by today, not on {1}.").format(
+				formatdate(year_end), formatdate(held)
+			)
+		)
+	return [{"financial_year_end": year_end, "agm_date": held}]
 
 
 def company_abbr(name: str) -> str:
@@ -133,6 +175,7 @@ def set_up_company(
 	reviewer: str | None,
 	registrations: list[dict],
 	client: str | None = None,
+	agm_dates: list[dict] | None = None,
 ) -> tuple[int, int]:
 	"""Make the company's compliance profile, find its obligations and make its first filings;
 	returns how many obligations and filings."""
@@ -145,6 +188,7 @@ def set_up_company(
 			"default_responsible": responsible,
 			"default_reviewer": reviewer,
 			"registrations": registrations,
+			"agm_dates": agm_dates or [],
 		}
 	).insert()
 	return profile.find_obligations(), generate_tasks(company=company)
@@ -169,6 +213,11 @@ def complete(setup: dict) -> dict:
 	if reviewer and not frappe.db.exists("User", reviewer):
 		frappe.throw(_("{0} is not a user on this site.").format(reviewer))
 	registrations = clean_registrations(setup.get("registrations"))
+	agm_dates = (
+		clean_agm_date(setup.get("agm_date"), getdate(nowdate()))
+		if company_type in agm_company_types()
+		else []
+	)
 	client_name = (setup.get("client_name") or "").strip()
 	if account_type == "CA/CS Firm" and not client_name:
 		frappe.throw(_("Give the name of the client this company belongs to."))
@@ -198,7 +247,9 @@ def complete(setup: dict) -> dict:
 			.name
 		)
 
-	obligations, tasks = set_up_company(company, company_type, responsible, reviewer, registrations, client)
+	obligations, tasks = set_up_company(
+		company, company_type, responsible, reviewer, registrations, client, agm_dates=agm_dates
+	)
 
 	settings.account_type = account_type
 	if account_type == "CA/CS Firm" and (setup.get("firm_name") or "").strip():

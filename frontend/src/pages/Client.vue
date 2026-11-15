@@ -5,6 +5,12 @@
 	>
 		<template #actions>
 			<Button
+				v-if="client && boot.mayBill && !clientLogin"
+				icon-left="lucide-receipt"
+				label="New bill"
+				:route="{ name: 'NewBill', query: { client: name } }"
+			/>
+			<Button
 				v-if="client && isManager() && !clientLogin"
 				icon-left="lucide-pencil"
 				label="Edit"
@@ -223,7 +229,7 @@ import { Badge, Button, Dropdown, Skeleton } from "frappe-ui";
 import { RouterLink, useRouter } from "vue-router";
 import { chooseClient } from "@/stores/clientFilter";
 import { call } from "@/api";
-import { isClientLogin, isManager, mayRecord, mayUseDesk } from "@/boot";
+import { boot, isClientLogin, isManager, mayRecord, mayUseDesk } from "@/boot";
 import AskDocument from "@/components/AskDocument.vue";
 import ScoreBadge from "@/components/ScoreBadge.vue";
 import AppPageHeader from "@/components/AppPageHeader.vue";

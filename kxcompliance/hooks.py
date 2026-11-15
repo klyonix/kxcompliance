@@ -164,9 +164,9 @@ scheduler_events = {
 	# 	"weekly": [
 	# 		"kxcompliance.tasks.weekly"
 	# 	],
-	# 	"monthly": [
-	# 		"kxcompliance.tasks.monthly"
-	# 	],
+	"monthly": [
+		"kxcompliance.kx_compliance.billing.make_monthly_drafts",
+	],
 }
 
 # Testing
@@ -304,7 +304,11 @@ doc_events = {
 	},
 	"Sales Invoice": {
 		"validate": "kxcompliance.kx_compliance.party_licences.check_document",
-		"on_submit": "kxcompliance.kx_compliance.party_licences.check_document",
+		"on_submit": [
+			"kxcompliance.kx_compliance.party_licences.check_document",
+			"kxcompliance.kx_compliance.billing.mark_filings_billed",
+		],
+		"on_cancel": "kxcompliance.kx_compliance.billing.unmark_filings_billed",
 	},
 	"Purchase Order": {
 		"validate": "kxcompliance.kx_compliance.party_licences.check_document",
@@ -332,7 +336,13 @@ fixtures = [
 			[
 				"name",
 				"in",
-				["Sales Invoice-customer_licence_numbers", "Delivery Note-customer_licence_numbers"],
+				[
+					"Sales Invoice-customer_licence_numbers",
+					"Delivery Note-customer_licence_numbers",
+					"Sales Invoice-compliance_client",
+					"Sales Invoice-kx_billing_key",
+					"Sales Invoice Item-compliance_task",
+				],
 			]
 		],
 	}

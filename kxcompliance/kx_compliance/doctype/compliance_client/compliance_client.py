@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from kxcompliance.kx_compliance.billing import check_fee_plan, check_return_fees, state_of
+from kxcompliance.kx_compliance.billing import check_fee_plan, check_return_fees, follow_client, state_of
 from kxcompliance.kx_compliance.clients import (
 	sync_client_access,
 	sync_client_logins,
@@ -32,6 +32,7 @@ class ComplianceClient(Document):
 		# Logins first, so their users exist when the access is given.
 		sync_client_logins(self)
 		sync_client_access(self.name)
+		follow_client(self)
 
 	def on_trash(self):
 		if frappe.db.exists("Company Compliance Profile", {"client": self.name}):

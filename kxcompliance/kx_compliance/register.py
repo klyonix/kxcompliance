@@ -32,29 +32,35 @@ def compute_status(
 	*,
 	is_cancelled: bool,
 	valid_until,
-	has_certificate: bool,
-	requires_document: bool,
-	renewal_applied: bool,
+	renewal_status: str | None,
 	grace_days: int,
 	today,
 	soon_days: int,
 ) -> str:
+	"""An item's status by its dates and its open renewal (RK, 15 Nov 2026).
+
+	A missing certificate is not a status: it hid the dates, and items marked so got no
+	reminders. It is the separate `certificate_missing` flag. A planned renewal shows until the
+	licence has run out, as Expired and Lapsed must stay visible.
+	"""
 	if is_cancelled:
 		return "Cancelled"
-	if requires_document and not has_certificate:
-		return "Draft"
-	if renewal_applied:
+	if renewal_status == "Applied":
 		return "Renewal in Progress"
-	if not valid_until:
-		return "Active"
-
-	valid_until = getdate(valid_until)
-	today = getdate(today)
-	if today > valid_until:
-		return "Lapsed" if date_diff(today, valid_until) > grace_days else "Expired"
-	if date_diff(valid_until, today) <= soon_days:
+	if valid_until:
+		valid_until = getdate(valid_until)
+		today = getdate(today)
+		if today > valid_until:
+			return "Lapsed" if date_diff(today, valid_until) > grace_days else "Expired"
+	if renewal_status == "Planned":
+		return "Renewal Planned"
+	if valid_until and date_diff(valid_until, today) <= soon_days:
 		return "Due for Renewal"
 	return "Active"
+
+
+def is_certificate_missing(*, requires_document: bool, has_certificate: bool, is_cancelled: bool) -> bool:
+	return bool(requires_document and not has_certificate and not is_cancelled)
 
 
 def get_type_rules(item_types: list[str]) -> dict[str, frappe._dict]:
@@ -68,16 +74,16 @@ def get_type_rules(item_types: list[str]) -> dict[str, frappe._dict]:
 	return {row.name: row for row in rows}
 
 
-def items_with_applied_renewal(items: list[str]) -> set[str]:
+def open_renewal_statuses(items: list[str]) -> dict[str, str]:
+	"""Each item's open renewal, Planned or Applied; an item has one at most."""
 	if not items:
-		return set()
-	return set(
-		frappe.get_all(
-			"Compliance Renewal",
-			filters={"compliance_item": ("in", items), "status": "Applied"},
-			pluck="compliance_item",
-		)
+		return {}
+	rows = frappe.get_all(
+		"Compliance Renewal",
+		filters={"compliance_item": ("in", items), "status": ("in", OPEN_RENEWAL_STATUSES)},
+		fields=["compliance_item", "status"],
 	)
+	return {row.compliance_item: row.status for row in rows}
 
 
 def is_approver(user: str | None = None) -> bool:

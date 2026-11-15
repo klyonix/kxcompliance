@@ -2,8 +2,8 @@
 import { relativeDue } from "@/pages/myWork";
 
 export const ATTENTION_STATUSES = [
-	"Draft",
 	"Due for Renewal",
+	"Renewal Planned",
 	"Expired",
 	"Lapsed",
 	"Renewal in Progress",
@@ -23,6 +23,12 @@ export const REGISTER_VIEWS = [
 		label: "Active",
 		value: "active",
 		filters: [["status", "=", "Active"]],
+		orderBy: "valid_until asc",
+	},
+	{
+		label: "No certificate",
+		value: "certificate",
+		filters: [["certificate_missing", "=", 1]],
 		orderBy: "valid_until asc",
 	},
 	{
@@ -48,12 +54,13 @@ export const ITEM_LIST_FIELDS = [
 	"reviewer",
 	"holder_name",
 	"custody",
+	"certificate_missing",
 ];
 
 export function itemTheme(status) {
 	if (["Expired", "Lapsed"].includes(status)) return "red";
-	if (["Due for Renewal", "Draft"].includes(status)) return "amber";
-	if (status === "Renewal in Progress") return "blue";
+	if (status === "Due for Renewal") return "amber";
+	if (["Renewal Planned", "Renewal in Progress"].includes(status)) return "blue";
 	if (status === "Active") return "green";
 	return "gray";
 }
@@ -65,7 +72,13 @@ function dueFor(item, midnight, overdue) {
 }
 
 // A DSC is told apart by whose it is and who has the token; other items by type and number.
+// A missing certificate leads, as it is something to do whatever the dates say.
 function itemDetail(item) {
+	const details = itemFacts(item);
+	return item.certificate_missing ? `No certificate · ${details}` : details;
+}
+
+function itemFacts(item) {
 	if (item.item_type === DSC_TYPE && item.holder_name) {
 		const custody = item.custody ? `Token ${item.custody.toLowerCase()}` : "";
 		return [item.holder_name, custody || item.company].filter(Boolean).join(" · ");

@@ -18,9 +18,9 @@ frappe.query_reports["Compliance Register"] = {
 			fieldtype: "Select",
 			options: [
 				"",
-				"Draft",
 				"Active",
 				"Due for Renewal",
+				"Renewal Planned",
 				"Renewal in Progress",
 				"Expired",
 				"Lapsed",

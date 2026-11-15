@@ -30,9 +30,9 @@ export const LAWS = [
 	"Other",
 ];
 const ITEM_STATUSES = [
-	"Draft",
 	"Active",
 	"Due for Renewal",
+	"Renewal Planned",
 	"Renewal in Progress",
 	"Expired",
 	"Lapsed",

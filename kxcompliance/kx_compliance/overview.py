@@ -31,6 +31,8 @@ PENDING_MARK_STATUSES = [
 ON_TIME_MONTHS = 12
 ON_TIME_REPORT = "On-time Filing"
 OPEN_REQUEST_STATUSES = ["Open", "In Progress"]
+# A renewal planned or applied for: someone is on it.
+RENEWING = ["Renewal Planned", "Renewal in Progress"]
 
 
 def grouped_counts(doctype: str, group_by: list[str], filters: dict | None = None) -> list[dict]:
@@ -135,10 +137,21 @@ def get_overview() -> dict:
 					),
 					card(
 						_("Renewals in progress"),
-						total(own, status="Renewal in Progress"),
+						total(own, status=RENEWING),
 						"blue",
 						"Compliance Item",
-						{"status": "Renewal in Progress", "holder_type": not_party},
+						{"status": ("in", RENEWING), "holder_type": not_party},
+					),
+					card(
+						_("No certificate"),
+						count(
+							"Compliance Item",
+							{"certificate_missing": 1, "is_cancelled": 0, "holder_type": not_party},
+						),
+						"amber",
+						"Compliance Item",
+						{"certificate_missing": 1, "is_cancelled": 0, "holder_type": not_party},
+						act=True,
 					),
 					card(
 						_("Active"),

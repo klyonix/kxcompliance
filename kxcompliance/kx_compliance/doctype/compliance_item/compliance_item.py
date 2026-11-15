@@ -14,7 +14,8 @@ from kxcompliance.kx_compliance.register import (
 	compute_status,
 	due_soon_days,
 	get_type_rules,
-	items_with_applied_renewal,
+	is_certificate_missing,
+	open_renewal_statuses,
 )
 
 
@@ -27,6 +28,11 @@ class ComplianceItem(Document):
 			self.copy_reminders_from_type()
 		self.validate_dates(rules)
 		self.status = self.get_status(rules)
+		self.certificate_missing = is_certificate_missing(
+			requires_document=bool(rules.requires_document),
+			has_certificate=bool(self.certificate),
+			is_cancelled=bool(self.is_cancelled),
+		)
 
 	def set_holder(self):
 		self.holder_name = ""
@@ -104,13 +110,11 @@ class ComplianceItem(Document):
 				)
 
 	def get_status(self, rules: frappe._dict) -> str:
-		renewal_applied = not self.is_new() and self.name in items_with_applied_renewal([self.name])
+		renewal = None if self.is_new() else open_renewal_statuses([self.name]).get(self.name)
 		return compute_status(
 			is_cancelled=bool(self.is_cancelled),
 			valid_until=self.valid_until,
-			has_certificate=bool(self.certificate),
-			requires_document=bool(rules.requires_document),
-			renewal_applied=renewal_applied,
+			renewal_status=renewal,
 			grace_days=rules.grace_days or 0,
 			today=nowdate(),
 			soon_days=due_soon_days(),

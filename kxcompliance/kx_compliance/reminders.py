@@ -30,7 +30,7 @@ from kxcompliance.kx_compliance.register import (
 	escalate_after_days,
 	get_settings,
 	get_type_rules,
-	items_with_applied_renewal,
+	open_renewal_statuses,
 )
 
 QUIET_STATUSES = ("Cancelled", "Renewal in Progress")
@@ -66,7 +66,7 @@ def run_daily():
 def refresh_statuses(today):
 	items = frappe.get_all("Compliance Item", filters={"is_cancelled": 0}, fields=ITEM_FIELDS)
 	rules = get_type_rules([item.item_type for item in items])
-	applied = items_with_applied_renewal([item.name for item in items])
+	renewals = open_renewal_statuses([item.name for item in items])
 	soon = due_soon_days()
 
 	for item in items:
@@ -74,9 +74,7 @@ def refresh_statuses(today):
 		status = compute_status(
 			is_cancelled=False,
 			valid_until=item.valid_until,
-			has_certificate=bool(item.certificate),
-			requires_document=bool(type_rules.requires_document),
-			renewal_applied=item.name in applied,
+			renewal_status=renewals.get(item.name),
 			grace_days=type_rules.grace_days or 0,
 			today=today,
 			soon_days=soon,
@@ -211,7 +209,7 @@ def send_digests(today):
 	horizon = add_days(today, due_soon_days())
 	items = frappe.get_all(
 		"Compliance Item",
-		filters={"status": ("not in", ("Cancelled", "Draft")), "valid_until": ("<=", horizon)},
+		filters={"status": ("!=", "Cancelled"), "valid_until": ("<=", horizon)},
 		fields=ITEM_FIELDS,
 		order_by="valid_until asc",
 	)

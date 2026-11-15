@@ -37,6 +37,12 @@
 			<section class="flex flex-col gap-2">
 				<div class="flex flex-wrap items-center gap-2">
 					<Badge :label="item.status" :theme="itemTheme(item.status)" size="md" />
+					<Badge
+						v-if="item.certificate_missing"
+						label="No certificate"
+						theme="amber"
+						size="md"
+					/>
 					<span
 						class="text-base"
 						:class="

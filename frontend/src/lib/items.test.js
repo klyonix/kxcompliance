@@ -92,3 +92,23 @@ describe("itemRow for a digital signature", () => {
 		expect(row.detail).toBe("Ravi Rao · Sunrise Foods");
 	});
 });
+
+describe("status and the missing certificate", () => {
+	it("shows a planned renewal in blue and the missing certificate first", () => {
+		expect(itemTheme("Renewal Planned")).toBe("blue");
+		const row = itemRow(
+			{
+				name: "CI-1",
+				title: "Drug Licence, Demo City Pharmacy",
+				item_type: "Drug Licence",
+				reference_number: "KA-B1-20B-118",
+				status: "Renewal Planned",
+				valid_until: "2026-12-04",
+				certificate_missing: 1,
+			},
+			new Date("2026-11-15T10:00:00")
+		);
+		expect(row.detail).toBe("No certificate · Drug Licence · KA-B1-20B-118");
+		expect(row.theme).toBe("blue");
+	});
+});

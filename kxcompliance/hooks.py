@@ -283,8 +283,15 @@ has_permission = {
 
 calendars = ["Compliance Item", "Compliance Task", "Legal Date"]
 
-# Whoever holds a firm's work at another client's company still sees it (clients.py).
-_HOLDERS_SEE = {"on_update": "kxcompliance.kx_compliance.clients.let_holders_see"}
+# Whoever holds a firm's work at another client's company still sees it (clients.py),
+# and stops seeing it once they hold no open work there.
+_HOLDERS_SEE = {
+	"on_update": [
+		"kxcompliance.kx_compliance.clients.let_holders_see",
+		"kxcompliance.kx_compliance.clients.let_go_of_holders",
+	],
+	"after_delete": "kxcompliance.kx_compliance.clients.let_go_of_holders",
+}
 
 doc_events = {
 	"Compliance Task": _HOLDERS_SEE,

@@ -24,6 +24,8 @@ from kxcompliance.kx_compliance.score import company_scores, worst
 from kxcompliance.permissions import is_restricted
 
 ACCESS = "Compliance Client Access"
+# Companies someone kept to some clients may see only because they hold work there (let_holders_see).
+HELD = "Compliance Held Access"
 
 
 def client_companies(client: str) -> list[str]:
@@ -217,6 +219,10 @@ def remove_access(row):
 	still_needed = frappe.db.exists(ACCESS, {"user": row.user, "company": row.company})
 	if still_needed:
 		frappe.db.set_value(ACCESS, still_needed, "made_user_permission", 1)
+		return
+	# Off the team but still holding work there: they keep seeing it until it is done.
+	if still_holds(row.user, row.company):
+		note_held(row.user, row.company)
 		return
 	permission = frappe.db.get_value(
 		"User Permission", {"user": row.user, "allow": "Company", "for_value": row.company}
@@ -425,10 +431,9 @@ def let_holders_see(doc, method=None):
 
 	Someone on one client's team is kept to that client's companies by User Permissions, and
 	Frappe applies those on top of permissions.py, so work they hold at another client's company
-	would be hidden from them. They are allowed that company too; permissions.py still shows them
-	only the records there they hold, since they are not on that client's team. The permission
-	stays if the work later moves on, which shows them nothing more there than the records they
-	hold (or did, for the ones with no query conditions: signatories and company profiles).
+	would be hidden from them. They are allowed that company too, for as long as they hold open
+	work there (let_go_of_holders); permissions.py still shows them only the records there they
+	hold, since they are not on that client's team.
 	"""
 	company_field = HOLDER_COMPANY_FIELDS[doc.doctype]
 	company = doc.get(company_field)
@@ -457,3 +462,56 @@ def allow_company(user: str, company: str):
 			"apply_to_all_doctypes": 1,
 		}
 	).insert(ignore_permissions=True)
+	note_held(user, company)
+
+
+def note_held(user: str, company: str):
+	"""The app's own note that it let this person see the company for the work they hold."""
+	if not frappe.db.exists(HELD, {"user": user, "company": company}):
+		frappe.get_doc({"doctype": HELD, "user": user, "company": company, "made_user_permission": 1}).insert(
+			ignore_permissions=True
+		)
+
+
+def let_go_of_holders(doc, method=None):
+	"""on_update and after_delete: someone who held this record and now holds no open work at its
+	company stops seeing that company, if they saw it only for that work (RK, 15 Nov 2026)."""
+	company_field = HOLDER_COMPANY_FIELDS[doc.doctype]
+	before = doc.get_doc_before_save() if method != "after_delete" else None
+	pairs = {(doc.get(field), doc.get(company_field)) for field in ("responsible", "reviewer")}
+	if before:
+		pairs |= {(before.get(field), before.get(company_field)) for field in ("responsible", "reviewer")}
+	for user, company in pairs:
+		if user and company:
+			release_company(user, company)
+
+
+def release_company(user: str, company: str):
+	held = frappe.db.get_value(
+		HELD, {"user": user, "company": company}, ["name", "made_user_permission"], as_dict=True
+	)
+	if not held or still_holds(user, company):
+		return
+	frappe.delete_doc(HELD, held.name, ignore_permissions=True)  # the app's own record
+	# The team may give them the company after all; only a permission the app made is removed.
+	if held.made_user_permission and not frappe.db.exists(ACCESS, {"user": user, "company": company}):
+		permission = frappe.db.get_value(
+			"User Permission", {"user": user, "allow": "Company", "for_value": company}
+		)
+		if permission:
+			frappe.delete_doc("User Permission", permission, ignore_permissions=True)
+
+
+def still_holds(user: str, company: str) -> bool:
+	"""Whether the person is responsible for or reviewer of open work at the company: the work a
+	hand-over moves (handover.RECORDS)."""
+	from kxcompliance.kx_compliance.handover import RECORDS
+
+	for _label, doctype, open_filters, fields in RECORDS:
+		company_field = HOLDER_COMPANY_FIELDS.get(doctype)
+		if not company_field:
+			continue
+		for field in fields:
+			if frappe.db.exists(doctype, {**open_filters, company_field: company, field: user}):
+				return True
+	return False

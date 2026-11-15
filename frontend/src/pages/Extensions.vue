@@ -1,5 +1,6 @@
 <template>
 	<RecordList
+		list-key="extensions"
 		title="Due-date extensions"
 		doctype="Compliance Due Date Extension"
 		:fields="EXTENSION_FIELDS"

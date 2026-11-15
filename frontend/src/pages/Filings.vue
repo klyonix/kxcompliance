@@ -1,6 +1,7 @@
 <template>
 	<RecordList
 		title="Filings"
+		list-key="filings"
 		doctype="Compliance Task"
 		:fields="TASK_LIST_FIELDS"
 		:views="FILING_VIEWS"

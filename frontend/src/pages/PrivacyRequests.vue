@@ -1,5 +1,6 @@
 <template>
 	<RecordList
+		list-key="privacy-requests"
 		title="Privacy requests"
 		doctype="Privacy Request"
 		:fields="REQUEST_FIELDS"

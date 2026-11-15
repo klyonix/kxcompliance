@@ -1,5 +1,4 @@
-// What every list in the app shares beyond its rows: grouping by when, the filters and the sort a
-// person chose (kept in the address), and reading those back from an address anyone can edit.
+// What every list in the app shares beyond its rows: grouping by when, and "Only mine".
 
 const DAY = 24 * 60 * 60 * 1000;
 export const SOON_DAYS = 30;
@@ -30,36 +29,7 @@ export function groupRows(rows, today = new Date()) {
 	return groups.filter((group) => group.rows.length);
 }
 
-// The filters and sort in the address, kept only when the list offers them: a company the person
-// may pick, a type from the list's choices, "mine", and one of the list's sorts.
-export function readListChoices(query, { sorts = [], companies = [], types = null } = {}) {
-	const choices = {};
-	if (typeof query.sort === "string" && sorts.some((sort) => sort.value === query.sort)) {
-		choices.sort = query.sort;
-	}
-	if (typeof query.company === "string" && companies.includes(query.company)) {
-		choices.company = query.company;
-	}
-	if (typeof query.type === "string" && query.type && (!types || types.includes(query.type))) {
-		choices.type = query.type;
-	}
-	if (query.mine === "1") choices.mine = true;
-	return choices;
+// The server filter for "Only mine", given the field the list keeps the person in.
+export function choiceFilters(choices, { mineField, user }) {
+	return choices.mine && mineField && user ? [[mineField, "=", user]] : [];
 }
-
-// The server filters for the choices, given the fields the list filters on.
-export function choiceFilters(choices, { companyField = "company", typeField, mineField, user }) {
-	const filters = [];
-	if (choices.company) filters.push([companyField, "=", choices.company]);
-	if (choices.type && typeField) filters.push([typeField, "=", choices.type]);
-	if (choices.mine && mineField && user) filters.push([mineField, "=", user]);
-	return filters;
-}
-
-// The order to load in: the chosen sort, else the view's own.
-export function orderFor(choices, sorts, viewOrder) {
-	return sorts.find((sort) => sort.value === choices.sort)?.orderBy || viewOrder;
-}
-
-export const choiceCount = (choices) =>
-	["company", "type", "mine"].filter((key) => choices[key]).length;

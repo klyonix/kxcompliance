@@ -1,5 +1,6 @@
 <template>
 	<RecordList
+		list-key="reminder-log"
 		title="Reminder log"
 		doctype="Compliance Reminder Log"
 		:fields="LOG_FIELDS"

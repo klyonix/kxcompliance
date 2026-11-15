@@ -42,19 +42,15 @@ export const TASK_LIST_FIELDS = [
 	"responsible",
 ];
 
-// The filings list's columns, sorts and filters (RecordList).
+// The filings list's columns, boards and filters (RecordList).
 export const FILING_LIST = {
 	columns: [
 		{ label: "Company", field: "company" },
 		{ label: "Responsible", field: "responsible", person: true },
 	],
 	dateLabel: "Due",
-	sorts: [
-		{ label: "Due date", value: "due", orderBy: "effective_due_date asc" },
-		{ label: "Return or form", value: "name", orderBy: "obligation_template asc" },
-		{ label: "Recently changed", value: "recent", orderBy: "modified desc" },
-	],
-	filterBy: { company: true, mine: "responsible" },
+	boards: ["filings-stage"],
+	filterBy: { mine: "responsible" },
 };
 
 // The filing details the app can change, in the order the form shows them.

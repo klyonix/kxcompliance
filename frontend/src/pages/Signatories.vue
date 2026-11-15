@@ -1,6 +1,7 @@
 <template>
 	<RecordList
 		title="Signatories"
+		list-key="signatories"
 		doctype="Signatory"
 		:fields="SIGNATORY_FIELDS"
 		:views="SIGNATORY_VIEWS"

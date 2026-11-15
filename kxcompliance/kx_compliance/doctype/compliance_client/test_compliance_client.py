@@ -28,7 +28,7 @@ from kxcompliance.kx_compliance.test_utils import (
 )
 
 # These tests build their own records; skip ERPNext's generated ones.
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User"]
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User", "Customer"]
 
 SECOND_COMPANY = "Client Test Second Company"
 CLIENT_LOGIN = "asha@sunrise-client.example.com"
@@ -395,6 +395,12 @@ class TestComplianceClient(IntegrationTestCase):
 			self.assertIn(MANAGER, {row.name for row in people_options()})
 		with self.set_user(CLIENT_LOGIN), self.assertRaises(frappe.PermissionError):
 			people_options()
+
+	def test_a_clients_gstin_gives_its_billing_state(self):
+		billed = client("Sunrise Group", gstin=" 27aaaca1234f1z5 ")
+		self.assertEqual((billed.gstin, billed.billing_state), ("27AAACA1234F1Z5", "Maharashtra"))
+		with self.assertRaisesRegex(frappe.ValidationError, "not a state code"):
+			client("Sunrise Group", gstin="99AAACA1234F1Z5")
 
 
 class TestRelationshipManagerEscalation(IntegrationTestCase):

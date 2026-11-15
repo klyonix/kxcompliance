@@ -36,7 +36,15 @@
   "column_break_privacy",
   "grievance_officer",
   "grievance_email",
-  "reminder_log_days"
+  "reminder_log_days",
+  "billing_tab",
+  "billing_company",
+  "billing_gstin",
+  "billing_state",
+  "column_break_billing",
+  "billing_address",
+  "bank_details",
+  "bill_prefix"
  ],
  "fields": [
   {
@@ -237,13 +245,57 @@
    "label": "Keep Reminder Log For (Days)",
    "default": "365",
    "description": "Older entries are deleted each day. At least 365, as the DPDP Rules require logs to be kept a year."
+  },
+  {
+   "fieldname": "billing_tab",
+   "fieldtype": "Tab Break",
+   "label": "Billing"
+  },
+  {
+   "fieldname": "billing_company",
+   "fieldtype": "Link",
+   "options": "Company",
+   "label": "Billing Company",
+   "read_only": 1,
+   "description": "The firm's own company, which bills its clients. Set up from the app; kept out of the compliance lists."
+  },
+  {
+   "fieldname": "billing_gstin",
+   "fieldtype": "Data",
+   "label": "Firm GSTIN"
+  },
+  {
+   "fieldname": "billing_state",
+   "fieldtype": "Select",
+   "label": "Firm State",
+   "options": "\nAndaman and Nicobar Islands\nAndhra Pradesh\nArunachal Pradesh\nAssam\nBihar\nChandigarh\nChhattisgarh\nDadra and Nagar Haveli and Daman and Diu\nDelhi\nGoa\nGujarat\nHaryana\nHimachal Pradesh\nJammu and Kashmir\nJharkhand\nKarnataka\nKerala\nLadakh\nLakshadweep\nMadhya Pradesh\nMaharashtra\nManipur\nMeghalaya\nMizoram\nNagaland\nOdisha\nPuducherry\nPunjab\nRajasthan\nSikkim\nTamil Nadu\nTelangana\nTripura\nUttar Pradesh\nUttarakhand\nWest Bengal"
+  },
+  {
+   "fieldname": "column_break_billing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "billing_address",
+   "fieldtype": "Small Text",
+   "label": "Firm Address on Bills"
+  },
+  {
+   "fieldname": "bank_details",
+   "fieldtype": "Small Text",
+   "label": "Bank Details on Bills"
+  },
+  {
+   "fieldname": "bill_prefix",
+   "fieldtype": "Data",
+   "label": "Bill Number Prefix",
+   "description": "Bills are numbered with this, the financial year and a running number, e.g. RA/26-27/0001."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-15 13:00:00.000000",
+ "modified": "2026-11-16 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "KX Compliance Settings",

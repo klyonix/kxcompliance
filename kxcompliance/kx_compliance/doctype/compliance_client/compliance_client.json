@@ -9,7 +9,7 @@
    "link_fieldname": "client"
   }
  ],
- "modified": "2026-11-15 16:00:00.000000",
+ "modified": "2026-11-16 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "owner": "Administrator",
@@ -31,7 +31,14 @@
   "section_logins",
   "logins",
   "section_notes",
-  "notes"
+  "notes",
+  "billing_section",
+  "customer",
+  "gstin",
+  "billing_state",
+  "column_break_billing",
+  "billing_email",
+  "billing_address"
  ],
  "fields": [
   {
@@ -124,6 +131,46 @@
    "fieldtype": "Small Text",
    "label": "Notes",
    "permlevel": 1
+  },
+  {
+   "fieldname": "billing_section",
+   "fieldtype": "Section Break",
+   "label": "Billing"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "options": "Customer",
+   "label": "Customer",
+   "read_only": 1,
+   "description": "Made by the app the first time the client is billed."
+  },
+  {
+   "fieldname": "gstin",
+   "fieldtype": "Data",
+   "label": "GSTIN"
+  },
+  {
+   "fieldname": "billing_state",
+   "fieldtype": "Select",
+   "label": "Billing State",
+   "options": "\nAndaman and Nicobar Islands\nAndhra Pradesh\nArunachal Pradesh\nAssam\nBihar\nChandigarh\nChhattisgarh\nDadra and Nagar Haveli and Daman and Diu\nDelhi\nGoa\nGujarat\nHaryana\nHimachal Pradesh\nJammu and Kashmir\nJharkhand\nKarnataka\nKerala\nLadakh\nLakshadweep\nMadhya Pradesh\nMaharashtra\nManipur\nMeghalaya\nMizoram\nNagaland\nOdisha\nPuducherry\nPunjab\nRajasthan\nSikkim\nTamil Nadu\nTelangana\nTripura\nUttar Pradesh\nUttarakhand\nWest Bengal",
+   "description": "Read from the GSTIN when there is one."
+  },
+  {
+   "fieldname": "column_break_billing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "billing_email",
+   "fieldtype": "Data",
+   "options": "Email",
+   "label": "Billing Email"
+  },
+  {
+   "fieldname": "billing_address",
+   "fieldtype": "Small Text",
+   "label": "Billing Address"
   }
  ],
  "name": "Compliance Client",

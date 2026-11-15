@@ -65,6 +65,12 @@
 						icon-left="lucide-building"
 						data-tour="tab-account"
 					/>
+					<TabTrigger
+						v-if="firm"
+						value="billing"
+						label="Billing"
+						icon-left="lucide-receipt"
+					/>
 				</TabList>
 				<TabPanel value="reminders" class="flex flex-col gap-8 pt-2 sm:pt-6">
 					<section class="flex flex-col gap-4" aria-labelledby="reminders-heading">
@@ -272,12 +278,16 @@
 						/>
 					</section>
 				</TabPanel>
+				<TabPanel v-if="firm" value="billing" class="flex flex-col gap-8 pt-2 sm:pt-6">
+					<BillingSettings />
+				</TabPanel>
 			</Tabs>
 		</template>
 	</div>
 
+	<!-- Billing saves on its own; the other tabs share this. -->
 	<div
-		v-if="options"
+		v-if="options && tab !== 'billing'"
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
@@ -319,16 +329,26 @@ import { useTabQuery } from "@/composables/useTabQuery";
 import { settingsPagesFor } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
 
+const BillingSettings = defineAsyncComponent(() => import("@/components/BillingSettings.vue"));
 const NoticeEditor = defineAsyncComponent(() => import("@/components/NoticeEditor.vue"));
 
 const isMobile = useIsMobile();
 // The settings in tabs by what they are about; the open one is kept in the address.
-const tab = useTabQuery(["reminders", "branding", "privacy", "account"]);
+// A firm also bills its clients; an organisation has none to bill.
+const firm = boot.accountType === "CA/CS Firm";
+const tab = useTabQuery([
+	"reminders",
+	"branding",
+	"privacy",
+	"account",
+	...(firm ? ["billing"] : []),
+]);
 const tabOptions = [
 	{ label: "Reminders and email", value: "reminders" },
 	{ label: "Name and logo", value: "branding" },
 	{ label: "Privacy", value: "privacy" },
 	{ label: "Who this is for", value: "account" },
+	...(firm ? [{ label: "Billing", value: "billing" }] : []),
 ];
 // Every settings page but this one, which the reader is on.
 const setupPages = settingsPagesFor().filter((page) => page.route !== "Settings");

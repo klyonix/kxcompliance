@@ -138,6 +138,49 @@
 				</div>
 			</section>
 
+			<section class="flex flex-col gap-4" aria-labelledby="billing-heading">
+				<div class="flex flex-col gap-0.5">
+					<h2 id="billing-heading" class="text-base font-semibold text-ink-gray-8">
+						Billing
+					</h2>
+					<p class="text-sm text-ink-gray-5">
+						Who the firm's bills go to. GST follows the client's state against the
+						firm's.
+					</p>
+				</div>
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<FormControl
+						v-model="form.gstin"
+						label="GSTIN"
+						placeholder="27AAACA1234F1Z5"
+						description="Its state is read from it."
+					/>
+					<FormControl
+						v-model="form.billing_state"
+						type="select"
+						label="State"
+						description="Only when the client has no GSTIN."
+						:disabled="Boolean(form.gstin.trim())"
+						:options="[
+							{ label: 'Choose', value: '' },
+							...states.map((state) => ({ label: state, value: state })),
+						]"
+					/>
+				</div>
+				<FormControl
+					v-model="form.billing_email"
+					type="email"
+					label="Billing email"
+					description="Bills are emailed here; else to the contact email."
+				/>
+				<FormControl
+					v-model="form.billing_address"
+					type="textarea"
+					label="Billing address"
+					:rows="3"
+				/>
+			</section>
+
 			<section class="flex flex-col gap-3" aria-labelledby="notes-heading">
 				<h2 id="notes-heading" class="text-base font-semibold text-ink-gray-8">Notes</h2>
 				<FormControl
@@ -193,6 +236,7 @@ const people = ref([]);
 const ready = ref(false);
 const error = ref("");
 const saveError = ref("");
+const states = ref([]);
 const saving = ref(false);
 const checking = ref(false);
 const form = reactive({
@@ -203,6 +247,10 @@ const form = reactive({
 	contact_email: "",
 	contact_phone: "",
 	licence_check: false,
+	gstin: "",
+	billing_state: "",
+	billing_email: "",
+	billing_address: "",
 	team: [],
 	logins: [],
 	notes: "",
@@ -225,6 +273,10 @@ function values() {
 		contact_email: form.contact_email.trim() || null,
 		contact_phone: form.contact_phone.trim() || null,
 		licence_check: form.licence_check ? 1 : 0,
+		gstin: form.gstin.trim() || null,
+		billing_state: form.billing_state || null,
+		billing_email: form.billing_email.trim() || null,
+		billing_address: form.billing_address.trim() || null,
 		team: form.team.map((user) => ({ user })),
 		logins: form.logins.map((login) => ({
 			full_name: login.full_name.trim(),
@@ -263,7 +315,13 @@ async function save() {
 
 onMounted(async () => {
 	try {
-		people.value = await call("kxcompliance.api.people_options");
+		const [found, billing] = await Promise.all([
+			call("kxcompliance.api.people_options"),
+			// The states to bill in; a firm's managers open this form, as they set billing up.
+			call("kxcompliance.api.billing_setup").catch(() => ({ states: [] })),
+		]);
+		people.value = found;
+		states.value = billing.states;
 		learnNames(people.value.map((person) => person.name));
 		if (props.name) {
 			const client = await getDoc("Compliance Client", props.name);
@@ -274,6 +332,10 @@ onMounted(async () => {
 				contact_email: client.contact_email || "",
 				contact_phone: client.contact_phone || "",
 				licence_check: Boolean(client.licence_check),
+				gstin: client.gstin || "",
+				billing_state: client.billing_state || "",
+				billing_email: client.billing_email || "",
+				billing_address: client.billing_address || "",
 				team: client.team.map((row) => row.user),
 				logins: client.logins.map((row) => ({
 					full_name: row.full_name,

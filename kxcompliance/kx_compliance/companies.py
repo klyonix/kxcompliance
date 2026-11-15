@@ -21,7 +21,7 @@ from kxcompliance.kx_compliance.onboarding import (
 	select_options,
 	set_up_company,
 )
-from kxcompliance.kx_compliance.register import is_approver
+from kxcompliance.kx_compliance.register import compliance_companies, is_approver
 from kxcompliance.kx_compliance.score import company_scores
 from kxcompliance.kx_compliance.statutory import generate_tasks
 
@@ -49,11 +49,7 @@ def companies_overview() -> dict:
 	set_up = {row.company for row in profiles}
 	return {
 		"companies": profiles,
-		"not_set_up": [
-			name
-			for name in frappe.get_all("Company", pluck="name", order_by="name asc")
-			if name not in set_up
-		],
+		"not_set_up": [name for name in compliance_companies() if name not in set_up],
 	}
 
 
@@ -76,11 +72,7 @@ def form_options() -> dict:
 		"registration_types": select_options("Compliance Registration", "registration_type"),
 		"state_registrations": sorted(STATE_REGISTRATIONS),
 		"states": select_options("Compliance Registration", "state"),
-		"not_set_up": [
-			name
-			for name in frappe.get_all("Company", pluck="name", order_by="name asc")
-			if name not in set_up
-		],
+		"not_set_up": [name for name in compliance_companies() if name not in set_up],
 		"people": firm_people(),
 		"clients": frappe.get_list("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name"),
 		"can_create_company": bool(frappe.has_permission("Company", "create"))

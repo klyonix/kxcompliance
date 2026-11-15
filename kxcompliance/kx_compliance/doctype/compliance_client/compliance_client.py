@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from kxcompliance.kx_compliance.billing import state_of
 from kxcompliance.kx_compliance.clients import (
 	sync_client_access,
 	sync_client_logins,
@@ -21,6 +22,9 @@ class ComplianceClient(Document):
 				frappe.throw(_("Team row {0}: {1} is already on the team.").format(row.idx, row.user))
 			seen.add(row.user)
 		validate_logins(self)
+		# Bills charge GST by the client's state, which its GSTIN says when it has one.
+		self.gstin = (self.gstin or "").strip().upper() or None
+		self.billing_state = state_of(self.gstin, self.billing_state)
 
 	def on_update(self):
 		# Logins first, so their users exist when the access is given.

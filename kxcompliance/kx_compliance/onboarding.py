@@ -10,7 +10,7 @@ import re
 import frappe
 from frappe import _
 
-from kxcompliance.kx_compliance.register import APPROVER_ROLES
+from kxcompliance.kx_compliance.register import APPROVER_ROLES, compliance_companies
 from kxcompliance.kx_compliance.statutory import generate_tasks
 
 SETTINGS = "KX Compliance Settings"
@@ -58,10 +58,7 @@ def options() -> dict:
 	with_profile = set(frappe.get_all("Company Compliance Profile", pluck="company"))
 	people = firm_people()
 	return {
-		"companies": [
-			{"name": name, "set_up": name in with_profile}
-			for name in frappe.get_all("Company", pluck="name", order_by="name asc")
-		],
+		"companies": [{"name": name, "set_up": name in with_profile} for name in compliance_companies()],
 		"company_types": select_options("Company Compliance Profile", "company_type"),
 		"registration_types": select_options("Compliance Registration", "registration_type"),
 		"state_registrations": sorted(STATE_REGISTRATIONS),

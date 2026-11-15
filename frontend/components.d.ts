@@ -27,6 +27,7 @@ declare module 'vue' {
     NotificationBell: typeof import('./src/components/NotificationBell.vue')['default']
     NotificationsDrawer: typeof import('./src/components/NotificationsDrawer.vue')['default']
     PrivacySection: typeof import('./src/components/PrivacySection.vue')['default']
+    RecentActivity: typeof import('./src/components/RecentActivity.vue')['default']
     RecordList: typeof import('./src/components/RecordList.vue')['default']
     RenewalDialog: typeof import('./src/components/RenewalDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -35,6 +36,7 @@ declare module 'vue' {
     SyncStatus: typeof import('./src/components/SyncStatus.vue')['default']
     TourMenu: typeof import('./src/components/TourMenu.vue')['default']
     UpdatePrompt: typeof import('./src/components/UpdatePrompt.vue')['default']
+    UrgencyTiles: typeof import('./src/components/UrgencyTiles.vue')['default']
     WorkRow: typeof import('./src/components/WorkRow.vue')['default']
   }
 }

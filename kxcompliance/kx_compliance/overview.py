@@ -15,6 +15,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, nowdate
 
+from kxcompliance.kx_compliance.dashboard import get_dashboard
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 
 COUNT = {"COUNT": "*", "as": "count"}
@@ -316,6 +317,7 @@ def get_overview() -> dict:
 		],
 		"on_time": on_time_rate(today),
 		"scores": scores_worst_first(),
+		"dashboard": get_dashboard(today),
 	}
 
 

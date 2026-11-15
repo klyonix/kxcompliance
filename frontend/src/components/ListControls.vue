@@ -1,5 +1,6 @@
 <template>
 	<div class="flex flex-wrap items-center gap-2" data-tour="list-filter">
+		<!-- Quick filters only once someone picks them (the sliders); the line stays short. -->
 		<QuickFilter
 			v-model:filters="view.filters.conditions.value"
 			v-model:fields="view.quickFilter.fields.value"
@@ -8,9 +9,10 @@
 		/>
 		<template v-if="!view.quickFilter.customizing.value">
 			<Filter v-model="view.filters.conditions.value" :doctype="doctype" />
-			<SortBy v-model="view.sort.by.value" :doctype="doctype" />
+			<SortBy v-model="view.sort.by.value" :doctype="doctype" hide-label />
 			<ColumnSettings
 				v-if="table"
+				hide-label
 				v-model="view.columns.shown.value"
 				:doctype="doctype"
 				:can-reset="view.columns.isCustomized.value"
@@ -61,6 +63,8 @@ function report() {
 }
 
 onMounted(() => {
+	// No quick filters until someone chooses them: a state that never chose any starts without.
+	view.quickFilter.fields.value = [];
 	if (props.state) view.restore(props.state);
 	report();
 });

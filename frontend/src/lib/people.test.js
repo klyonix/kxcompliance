@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { personOptions, personRow } from "./people";
+import { filterPeople, personOptions, personRow } from "./people";
 
 describe("personOptions", () => {
 	it("names people, and adds the email only where names repeat", () => {
@@ -35,5 +35,23 @@ describe("personRow", () => {
 
 	it("marks the person looking", () => {
 		expect(personRow({ ...person, is_me: true }).title).toBe("Neha Joshi (you)");
+	});
+});
+
+describe("filtering people", () => {
+	const people = [
+		{ full_name: "Asha Rao", user: "asha@firm.example.com", role: "Manager" },
+		{ full_name: "Ravi K", user: "ravi@firm.example.com", role: "Staff" },
+	];
+
+	it("keeps a role, and names or emails with the text", () => {
+		expect(filterPeople(people, { role: "Staff" }).map((p) => p.full_name)).toEqual([
+			"Ravi K",
+		]);
+		expect(filterPeople(people, { text: "ASHA" }).map((p) => p.full_name)).toEqual([
+			"Asha Rao",
+		]);
+		expect(filterPeople(people, { text: "firm.example" })).toHaveLength(2);
+		expect(filterPeople(people)).toHaveLength(2);
 	});
 });

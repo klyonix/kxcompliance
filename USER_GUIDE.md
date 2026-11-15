@@ -97,7 +97,7 @@ For a meeting, an auditor, or the notes to the accounts.
 
 When you look at the same few records every day, or want them as a board.
 
-1. Narrow the list with the quick filters above it, the filter button for anything else, and the sort button.
+1. Narrow the list with the filter button and order it with the sort button, in the line above it. The sliders button adds quick filters to that line if you want some always at hand.
 2. Choose how to see it: as a list, as a table (its columns button picks and orders the columns) or as a Kanban board.
 3. Press "Save as a view" and name it. It is under "Views" from then on; the list also opens as you last left it on this device.
 4. A manager can share a view with everyone, or pin it beside the tabs.

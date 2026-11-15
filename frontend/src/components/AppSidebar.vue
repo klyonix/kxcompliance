@@ -118,7 +118,6 @@ import { counts } from "@/stores/work";
 import SyncStatus from "./SyncStatus.vue";
 
 const COLLAPSED_KEY = "kxcompliance:sidebar-collapsed";
-const GROUP_KEY = "kxcompliance:settings-group-open";
 
 const route = useRoute();
 const settingsPages = settingsPagesFor();
@@ -129,15 +128,13 @@ const settingsOpen = computed(() =>
 	settingsPages.some((page) => isSettingsPageOpen(page, route.name))
 );
 
-// Both choices are kept on this device, so the side bar looks the same after a reload.
+// The side bar's width is kept on this device, so it looks the same after a reload.
 const collapsed = ref(localStorage.getItem(COLLAPSED_KEY) === "1");
-const groupOpen = ref(localStorage.getItem(GROUP_KEY) === "1" || settingsOpen.value);
 watch(collapsed, (value) => localStorage.setItem(COLLAPSED_KEY, value ? "1" : "0"));
-watch(groupOpen, (value) => localStorage.setItem(GROUP_KEY, value ? "1" : "0"));
-// Opening a settings page from anywhere else (a link, a button) shows where it sits.
-watch(settingsOpen, (open) => {
-	if (open) groupOpen.value = true;
-});
+// The Settings group (RK, 15 Nov 2026): open while a settings page is, a reload included, and
+// closed again on leaving Settings. Its heading still opens it to choose a page.
+const groupOpen = ref(settingsOpen.value);
+watch(settingsOpen, (open) => (groupOpen.value = open));
 
 const menu = [
 	mayUseDesk() && {

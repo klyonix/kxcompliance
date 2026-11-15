@@ -13,7 +13,7 @@ from email.utils import parseaddr
 
 import frappe
 from frappe import _
-from frappe.utils import date_diff, escape_html, formatdate, get_url, getdate, now_datetime, nowdate
+from frappe.utils import add_days, date_diff, escape_html, formatdate, get_url, getdate, now_datetime, nowdate
 
 from kxcompliance.kx_compliance.register import get_settings
 from kxcompliance.kx_compliance.reminders import (
@@ -324,3 +324,87 @@ def tell_requester_overdue(request, key: str):
 		)
 	)
 	notify([request.requested_by], subject, f"<p>{body}</p>", DOCTYPE, request.name)
+
+
+# Asking many clients at once (RK, 15 Nov 2026): one request per open filing of a return and
+# period, as "Ask the client" makes one. Saved this many at a time in the background job.
+ASK_BATCH = 25
+ASK_SAVEPOINT = "ask_in_bulk"
+
+
+def suggested_due_date(filing_due, today=None):
+	"""A day before the filing is due, or a week from today if that is sooner; never before
+	tomorrow. The same rule as the app's single request (lib/requests.js suggestedDueDate)."""
+	today = getdate(today or nowdate())
+	week, tomorrow = add_days(today, 7), add_days(today, 1)
+	if not filing_due:
+		return week
+	day_before = add_days(getdate(filing_due), -1)
+	if day_before < tomorrow:
+		return tomorrow
+	return min(day_before, week)
+
+
+def bulk_plan(filings: list[dict]) -> dict:
+	"""Which of these filings would be asked: those of a client's company with no request open."""
+	names = [row.name for row in filings]
+	asked_already = set(
+		frappe.get_all(
+			DOCTYPE,
+			filters={"compliance_task": ("in", names or [""]), "status": ("in", OPEN_STATUSES)},
+			pluck="compliance_task",
+		)
+	)
+	companies = {row.company for row in filings}
+	with_client = set(
+		frappe.get_all(
+			"Company Compliance Profile",
+			filters={"company": ("in", list(companies) or [""]), "client": ("is", "set")},
+			pluck="company",
+		)
+	)
+	to_ask = [row for row in filings if row.name not in asked_already and row.company in with_client]
+	return {
+		"to_ask": to_ask,
+		"asked_already": sum(1 for row in filings if row.name in asked_already),
+		"no_client": sum(1 for row in filings if row.company not in with_client),
+	}
+
+
+def run_ask_in_bulk(filings: list[dict], title: str, details: str | None, by: str):
+	"""Background job: ask for the document on each filing, then tell whoever asked how it went."""
+	frappe.set_user(by)
+	asked, failed = 0, []
+	for index, row in enumerate(filings, start=1):
+		frappe.db.savepoint(ASK_SAVEPOINT)
+		try:
+			frappe.get_doc(
+				{
+					"doctype": DOCTYPE,
+					"compliance_task": row["name"],
+					# Its filing's company, never the default of whoever asked.
+					"company": row["company"],
+					"title": title,
+					"details": details,
+					"due_date": str(suggested_due_date(row.get("effective_due_date"))),
+				}
+			).insert()
+			asked += 1
+		except Exception:
+			frappe.db.rollback(save_point=ASK_SAVEPOINT)
+			frappe.log_error(title=f"Asking in bulk: {row['company']} could not be asked")
+			failed.append(row["company"])
+		if index % ASK_BATCH == 0:
+			# A job may commit as it goes, so a failure later loses nothing asked before it.
+			frappe.db.commit()
+	# Asked; the notice below goes out whatever happens to it.
+	frappe.db.commit()
+	subject = (
+		_("1 client asked for {0}").format(title)
+		if asked == 1
+		else _("{0} clients asked for {1}").format(asked, title)
+	)
+	lines = [_("Each client's request is on its filing, due a day before the filing is.")]
+	if failed:
+		lines.append(_("These could not be asked; try them one by one: {0}").format(", ".join(failed[:20])))
+	notify([by], subject, "".join(f"<p>{escape_html(line)}</p>" for line in lines), "User", by)

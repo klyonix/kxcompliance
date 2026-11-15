@@ -973,6 +973,58 @@ def bulk_filing_choices(companies: str | None = None) -> list[dict]:
 	]
 
 
+def bulk_filings_of(obligation_template: str, period_end: str, companies: str | None) -> list[dict]:
+	"""The open filings of one return and period the person may read, of one client's or all."""
+	filters = {
+		"obligation_template": obligation_template,
+		"period_end": period_end,
+		"status": ("in", BULK_STATUSES),
+	}
+	chosen = company_list(companies)
+	if chosen is not None:
+		filters["company"] = ("in", chosen or [""])
+	return frappe.get_list(
+		"Compliance Task", filters=filters, fields=["name", "company", "effective_due_date"], limit=1000
+	)
+
+
+@frappe.whitelist(methods=["GET"])
+def bulk_ask_plan(obligation_template: str, period_end: str, companies: str | None = None) -> dict:
+	"""How many clients asking for a document on a return and period would reach, and why not the rest."""
+	check_app_access()
+	plan = document_requests.bulk_plan(bulk_filings_of(obligation_template, period_end, companies))
+	return {"to_ask": len(plan["to_ask"]), "asked_already": plan["asked_already"], "no_client": plan["no_client"]}
+
+
+@frappe.whitelist(methods=["POST"])
+def ask_clients_in_bulk(
+	obligation_template: str,
+	period_end: str,
+	title: str,
+	details: str | None = None,
+	companies: str | None = None,
+) -> dict:
+	"""Ask every client with an open filing of this return and period for the same document; one
+	request per filing, made in the background, and the person is told when it is done."""
+	check_app_access()
+	frappe.has_permission("Document Request", "create", throw=True)
+	if not (title or "").strip():
+		frappe.throw(_("Say what you are asking for."))
+	plan = document_requests.bulk_plan(bulk_filings_of(obligation_template, period_end, companies))
+	if not plan["to_ask"]:
+		frappe.throw(_("Every client with this return already has a request open, or none is linked to a client."))
+	frappe.enqueue(
+		"kxcompliance.kx_compliance.document_requests.run_ask_in_bulk",
+		queue="long",
+		enqueue_after_commit=True,
+		filings=[dict(row) for row in plan["to_ask"]],
+		title=title.strip(),
+		details=(details or "").strip() or None,
+		by=frappe.session.user,
+	)
+	return {"asking": len(plan["to_ask"])}
+
+
 @frappe.whitelist(methods=["GET"])
 def licence_rule_options() -> dict:
 	"""What the licence rule screen offers: licence types, item and party groups, and the selling

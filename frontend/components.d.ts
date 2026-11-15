@@ -14,6 +14,7 @@ declare module 'vue' {
     AppPageHeader: typeof import('./src/components/AppPageHeader.vue')['default']
     AppSidebar: typeof import('./src/components/AppSidebar.vue')['default']
     AskDocument: typeof import('./src/components/AskDocument.vue')['default']
+    AskInBulk: typeof import('./src/components/AskInBulk.vue')['default']
     CalendarFeed: typeof import('./src/components/CalendarFeed.vue')['default']
     ClientPicker: typeof import('./src/components/ClientPicker.vue')['default']
     ConnectionBanner: typeof import('./src/components/ConnectionBanner.vue')['default']

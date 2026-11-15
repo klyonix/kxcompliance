@@ -92,3 +92,16 @@ export function saveLabel(steps) {
 	if (kinds.length > 1) return `Save ${steps.length}`;
 	return kinds[0] === "Filed" ? `Mark ${steps.length} filed` : `Send ${steps.length} for review`;
 }
+
+const companiesText = (count) => (count === 1 ? "1 company" : `${count} companies`);
+
+// Who asking in bulk would reach, and why not the rest.
+export function askPlanLine({ to_ask: toAsk, asked_already: askedAlready, no_client: noClient }) {
+	const parts = [
+		toAsk ? `${companiesText(toAsk)} will be asked` : "Nobody is left to ask",
+		askedAlready &&
+			`${companiesText(askedAlready)} already ${askedAlready === 1 ? "has" : "have"} a request open`,
+		noClient && `${companiesText(noClient)} ${noClient === 1 ? "is" : "are"} not linked to a client`,
+	];
+	return `${parts.filter(Boolean).join("; ")}.`;
+}

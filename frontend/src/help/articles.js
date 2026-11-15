@@ -155,6 +155,20 @@ export const ARTICLES = [
 		firm: true,
 	},
 	{
+		id: "ask-clients-in-bulk",
+		area: "Filings",
+		title: "How do I ask every client for the same document?",
+		when: "Before filing day, when each client must send the same thing, such as the month's sales register.",
+		steps: [
+			'Open Filings, press "File in bulk" and pick the return and period.',
+			'Press "Ask the clients for…", say what you need, and check how many will be asked.',
+			"Each filing gets its own request, needed a day before that filing is due. You are told when they have gone.",
+		],
+		tip: "Companies with a request already open, or not linked to a client, are left out. Choose a client at the top to ask only that client.",
+		page: "BulkFiling",
+		firm: true,
+	},
+	{
 		id: "add-a-licence",
 		area: "Register",
 		title: "How do I add a licence or certificate?",

@@ -1,9 +1,15 @@
 <template>
 	<Teleport to="body">
-		<div v-if="panelOpen" class="fixed inset-0 z-40 flex justify-end">
+		<!-- It opens beside the side bar (from the left edge on a phone, which has none), and the
+		     side bar stays usable while it is open. -->
+		<div
+			v-if="panelOpen"
+			class="fixed inset-y-0 right-0 z-40 flex justify-start"
+			:style="{ left: `${left}px` }"
+		>
 			<div class="absolute inset-0 bg-black/20" aria-hidden="true" @click="close" />
 			<aside
-				class="relative flex h-full w-full flex-col overflow-y-auto bg-surface-base shadow-xl sm:w-[26rem]"
+				class="relative flex h-full w-full flex-col overflow-y-auto border-r border-outline-gray-1 bg-surface-base shadow-xl sm:w-[26rem]"
 				role="dialog"
 				aria-modal="true"
 				aria-label="Notifications"
@@ -24,7 +30,8 @@
 </template>
 
 <script setup>
-// The notifications panel, sliding in from the right; a notification opens its record here.
+// The notifications panel, opening beside the side bar; a notification opens its record here.
+import { onBeforeUnmount, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { NotificationPanel } from "@framework/ui/components/Notifications/index.ts";
 import { deskRoute } from "@/navigation";
@@ -39,6 +46,27 @@ const TABS = [
 const router = useRouter();
 const feed = notifications();
 const close = () => (panelOpen.value = false);
+
+// Where the side bar ends, followed as it is collapsed or expanded; 0 where there is none.
+const left = ref(0);
+const sidebar = () => document.querySelector('[data-slot="sidebar"]');
+function measure() {
+	const element = sidebar();
+	left.value = element?.offsetParent ? Math.round(element.getBoundingClientRect().right) : 0;
+}
+const observer = new ResizeObserver(measure);
+watch(
+	panelOpen,
+	(open) => {
+		observer.disconnect();
+		if (!open) return;
+		measure();
+		if (sidebar()) observer.observe(sidebar());
+		observer.observe(document.body);
+	},
+	{ immediate: true }
+);
+onBeforeUnmount(() => observer.disconnect());
 
 function open(notification) {
 	feed.markAsRead(notification.name);

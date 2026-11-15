@@ -20,6 +20,7 @@ from kxcompliance.api import (
 	search,
 )
 from kxcompliance.kx_compliance.overview import desk_link, total
+from kxcompliance.kx_compliance.test_bulk_filing import filing
 from kxcompliance.kx_compliance.test_utils import (
 	AUDITOR,
 	HOLDER,
@@ -292,6 +293,17 @@ class TestAppApi(IntegrationTestCase):
 			make_item("Test App Licence", title=f"Fire NOC renewal {index}")
 		with self.set_user(MANAGER):
 			self.assertEqual(search("fire noc", kind="items")["items"][0].name, exact)
+
+	def test_a_manager_reassigns_a_filing_and_staff_cannot(self):
+		task = filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20", responsible=HOLDER)
+		with self.set_user(HOLDER), self.assertRaisesRegex(frappe.PermissionError, "Compliance Manager"):
+			save_changes("Compliance Task", task, {"responsible": OTHER_HOLDER})
+		with self.set_user(MANAGER):
+			save_changes("Compliance Task", task, {"responsible": OTHER_HOLDER, "reviewer": REVIEWER})
+		self.assertEqual(
+			frappe.db.get_value("Compliance Task", task, ["responsible", "reviewer"]),
+			(OTHER_HOLDER, REVIEWER),
+		)
 
 	def test_search_one_kind_and_the_team_for_managers_only(self):
 		with self.set_user(MANAGER):

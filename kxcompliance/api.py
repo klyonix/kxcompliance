@@ -127,6 +127,7 @@ EDITABLE_FIELDS = {
 		"interest",
 		"late_fee",
 		"remarks",
+		*PEOPLE_FIELDS,
 	),
 	"Legal Date": ("status", "attended_by", "proceedings", "order", "next_date"),
 	# Approving moves the item's dates and certificate; the renewal's own rules decide who may.

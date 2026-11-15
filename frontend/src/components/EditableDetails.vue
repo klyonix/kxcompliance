@@ -260,6 +260,8 @@ async function save() {
 }
 
 onMounted(async () => {
+	// Someone who may change nothing here (a client's login, a reader) needs no field list.
+	if (!props.mayEdit) return;
 	try {
 		const options = await call("kxcompliance.api.editable_fields", { doctype: props.doctype });
 		meta.value = options.fields;

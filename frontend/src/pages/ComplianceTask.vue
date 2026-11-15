@@ -321,17 +321,15 @@
 				/>
 			</section>
 
-			<section class="flex flex-col gap-3" aria-labelledby="details-heading">
-				<h2 id="details-heading" class="text-base font-semibold text-ink-gray-8">
-					Details
-				</h2>
-				<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-					<div v-for="fact in facts" :key="fact.label" class="flex flex-col gap-0.5">
-						<dt class="text-sm text-ink-gray-5">{{ fact.label }}</dt>
-						<dd class="text-base text-ink-gray-8">{{ fact.value }}</dd>
-					</div>
-				</dl>
-			</section>
+			<!-- A manager changes who prepares and who reviews it here; the rest is the filing's own. -->
+			<EditableDetails
+				doctype="Compliance Task"
+				:name="name"
+				:doc="task"
+				:details="FILING_DETAILS"
+				:may-edit="mayReassign"
+				@saved="load"
+			/>
 		</template>
 	</RecordFrame>
 
@@ -399,7 +397,7 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { Badge, Button, Dropdown, FormControl, Skeleton, dialog, toast } from "frappe-ui";
 import { useRouter } from "vue-router";
 import { call, getDoc, getList, uploadClientDocument } from "@/api";
-import { boot, isClientLogin, mayRecord } from "@/boot";
+import { boot, isClientLogin, isManager, mayRecord } from "@/boot";
 import AskDocument from "@/components/AskDocument.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { OPEN_REQUEST_STATUSES, REQUEST_FIELDS, requestRow } from "@/lib/requests";
@@ -424,6 +422,7 @@ import { submit } from "@/offline/queue";
 import { formatDate, pickerFormat } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
 import { learnNames, nameOf } from "@/composables/usePeople";
+import EditableDetails from "@/components/EditableDetails.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 
 const props = defineProps({ name: { type: String, required: true } });
@@ -618,27 +617,29 @@ const filingFacts = computed(() =>
 		.map(([label, value, href]) => ({ label, value, href }))
 );
 
-const facts = computed(() =>
-	[
-		["Period", task.value.period_label],
-		["Company", task.value.company],
-		["Law", task.value.law],
-		["Registration", task.value.registration_number],
-		["State", task.value.state],
-		[
-			"Due date",
-			task.value.extended_due_date
-				? `${formatDate(task.value.extended_due_date)} (extended from ${formatDate(
-						task.value.due_date
-				  )})`
-				: formatDate(task.value.due_date),
-		],
-		["Responsible", nameOf(task.value.responsible)],
-		["Reviewer", nameOf(task.value.reviewer)],
-	]
-		.filter(([, value]) => value)
-		.map(([label, value]) => ({ label, value }))
-);
+// The filing's details. Responsible and Reviewer are a manager's to change, where they are shown;
+// the others come from the obligation and the company, and show only.
+const dueText = (current) =>
+	current.extended_due_date
+		? `${formatDate(current.extended_due_date)} (extended from ${formatDate(
+				current.due_date
+		  )})`
+		: formatDate(current.due_date);
+const FILING_DETAILS = [
+	{ field: "period_label", label: "Period", show: (current) => current.period_label },
+	{ field: "company", label: "Company", show: (current) => current.company },
+	{ field: "law", label: "Law", show: (current) => current.law },
+	{
+		field: "registration_number",
+		label: "Registration",
+		show: (current) => current.registration_number,
+	},
+	{ field: "state", label: "State", show: (current) => current.state },
+	{ field: "due_date", label: "Due date", show: dueText },
+	{ field: "responsible", label: "Responsible", show: (current) => nameOf(current.responsible) },
+	{ field: "reviewer", label: "Reviewer", show: (current) => nameOf(current.reviewer) },
+];
+const mayReassign = computed(() => isManager() && !isClientLogin());
 
 const menu = computed(() => [
 	...deskActions("Compliance Task", props.name),

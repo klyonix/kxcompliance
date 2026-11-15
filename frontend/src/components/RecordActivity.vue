@@ -5,8 +5,9 @@
 		data-tour="record-activity"
 	>
 		<h2 id="activity-heading" class="text-base font-semibold text-ink-gray-8">Activity</h2>
-		<!-- Frappe's own timeline: what changed, comments and attachments, with who and when. -->
-		<div class="flex h-[28rem] flex-col">
+		<!-- Frappe's own timeline: what changed, comments and attachments, with who and when. It grows
+		     with what there is, up to a height where it scrolls. -->
+		<div class="flex max-h-[28rem] flex-col">
 			<TimelineContainer>
 				<ActivityTimeline :activities="activities" :loading="loading" :paginate="paginate">
 					<template #empty>

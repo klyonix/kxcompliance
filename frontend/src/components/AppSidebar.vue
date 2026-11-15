@@ -61,14 +61,21 @@
 				<SidebarItem
 					v-else
 					:label="section.label"
-					:icon="section.icon"
 					:route="{ name: section.route }"
 					:suffix="
 						section.count && counts[section.count]
 							? String(counts[section.count])
 							: undefined
 					"
-				/>
+				>
+					<template #prefix>
+						<span
+							:class="[section.icon, sectionTint(section.route).icon]"
+							class="size-4"
+							aria-hidden="true"
+						/>
+					</template>
+				</SidebarItem>
 			</template>
 		</div>
 		<SyncStatus v-if="!collapsed" class="px-2 pb-2" />
@@ -86,6 +93,7 @@ import { boot, checksOnly, mayUseDesk } from "@/boot";
 import NotificationBell from "@/components/NotificationBell.vue";
 import { isSettingsPageOpen, sections, settingsPagesFor, signOut } from "@/navigation";
 import { clearOutbox, outbox } from "@/offline/outbox";
+import { sectionTint } from "@/lib/areas";
 import { counts } from "@/stores/work";
 import SyncStatus from "./SyncStatus.vue";
 

@@ -23,6 +23,10 @@ from kxcompliance.kx_compliance.reminders import (
 MONTHS_IN = {"Monthly": 1, "Quarterly": 3, "Half-yearly": 6, "Yearly": 12}
 FIRST_MONTH = {"Financial Year": 4, "Calendar Year": 1}
 DEFAULT_HORIZON_DAYS = 45
+# How far past either end to look for periods that fall due inside the window though they end outside
+# it: no return is due more than a year after its period ends, or before its period begins.
+LOOK_BACK_MONTHS = 24
+LOOK_AHEAD_MONTHS = 12
 
 
 def horizon_days() -> int:
@@ -110,12 +114,7 @@ def candidate_tasks(profile, today: date) -> list[dict]:
 		if not template.is_active or template.event_type:
 			continue
 		registration = obligation.registration_number or obligation.state
-		for period_start, period_end in obligation_periods(template, obligation, limit, agm_dates):
-			due = (
-				getdate(add_days(agm_dates[period_end], template.days_after_event))
-				if template.due_after_event
-				else due_date(template, period_end)
-			)
+		for period_start, period_end, due in obligation_periods(template, obligation, limit, agm_dates):
 			candidates.append(
 				{
 					"doctype": "Compliance Task",
@@ -135,15 +134,36 @@ def candidate_tasks(profile, today: date) -> list[dict]:
 	return candidates
 
 
-def obligation_periods(template, obligation, limit: date, agm_dates: dict) -> list[tuple[date, date]]:
+def obligation_periods(template, obligation, limit: date, agm_dates: dict) -> list[tuple[date, date, date]]:
+	"""Each period with its due date, from the obligation's start up to the limit.
+
+	A period counts from the start if it ends or falls due on or after it, so a company set up in
+	November still gets last year's annual return due that month. It counts up to the limit if it
+	ends or falls due by then, so a payment due before its period ends is not made late.
+	"""
 	start = getdate(obligation.start_from)
 	if template.due_after_event:
 		return [
-			(getdate(add_days(add_months(year_end, -12), 1)), year_end)
+			(
+				getdate(add_days(add_months(year_end, -12), 1)),
+				year_end,
+				getdate(add_days(agm_dates[year_end], template.days_after_event)),
+			)
 			for year_end in sorted(agm_dates)
-			if year_end >= start
+			if max(year_end, getdate(add_days(agm_dates[year_end], template.days_after_event))) >= start
 		]
-	return periods(template.frequency, template.period_basis, start, limit)
+	found = []
+	window = periods(
+		template.frequency,
+		template.period_basis,
+		getdate(add_months(start, -LOOK_BACK_MONTHS)),
+		getdate(add_months(limit, LOOK_AHEAD_MONTHS)),
+	)
+	for period_start, period_end in window:
+		due = due_date(template, period_end)
+		if max(period_end, due) >= start and min(period_end, due) <= limit:
+			found.append((period_start, period_end, due))
+	return found
 
 
 def generate_tasks(company: str | None = None, today: date | None = None) -> int:

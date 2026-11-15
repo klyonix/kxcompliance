@@ -115,6 +115,11 @@ export function taskRow(task, today = new Date()) {
 	};
 }
 
+// A one-person team: the preparer has no one else set to check their filing.
+export function checksOwnFiling(task, user) {
+	return task.responsible === user && (!task.reviewer || task.reviewer === user);
+}
+
 // What a person may do with a task. `rules` is the task's obligation template.
 export function taskActions(task, rules, { user, roles }) {
 	const none = { edit: false, sendForReview: false, markFiled: false, sendBack: false };
@@ -122,7 +127,11 @@ export function taskActions(task, rules, { user, roles }) {
 	const approver = roles.some((role) => APPROVER_ROLES.includes(role));
 	if (!approver && ![task.responsible, task.reviewer].includes(user)) return none;
 	const inReview = task.status === "Ready for Review";
-	// The person who prepared a reviewed filing cannot also mark it filed.
+	// The person who prepared a reviewed filing cannot also mark it filed, unless they are a
+	// manager with no one else set to check it (a one-person team), who files it straight away.
+	if (rules.requires_review && approver && checksOwnFiling(task, user)) {
+		return { edit: true, sendForReview: false, markFiled: true, sendBack: false };
+	}
 	const mayMarkFiled = rules.requires_review
 		? user !== task.responsible && (user === task.reviewer || approver)
 		: true;

@@ -612,7 +612,12 @@ const filingFacts = computed(() =>
 		["Amount paid", formatAmount(task.value.amount_paid)],
 		["Interest", formatAmount(task.value.interest)],
 		["Late fee", formatAmount(task.value.late_fee)],
-		["Reviewed by", nameOf(task.value.reviewed_by)],
+		[
+			"Reviewed by",
+			task.value.filed_without_check
+				? `No second check; filed by ${nameOf(task.value.reviewed_by)}`
+				: nameOf(task.value.reviewed_by),
+		],
 		["Remarks", task.value.remarks],
 	]
 		.filter(([, value]) => value)

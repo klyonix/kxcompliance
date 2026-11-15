@@ -37,7 +37,8 @@ def make_profile(company_type: str = "Private Limited", **fields):
 	).insert()
 
 
-def obligation(template: str, start_from: str = "2026-10-01", **fields):
+# A day after September's GSTR-3B falls due (20 Oct), so October's is the first one made.
+def obligation(template: str, start_from: str = "2026-10-21", **fields):
 	return {
 		"obligation_template": template,
 		"responsible": HOLDER,
@@ -162,6 +163,32 @@ class TestComplianceTask(IntegrationTestCase):
 		self.assertEqual([row.period_label for row in rows], ["Oct 2026", "Nov 2026", "Dec 2026"])
 		self.assertEqual(str(rows[0].due_date), "2026-11-20")
 
+	def test_a_return_for_an_earlier_period_still_due_is_made(self):
+		# Set up on 1 Nov: September's GSTR-3B fell due on 20 Oct and is not made, but last year's
+		# annual return falls due on 31 Dec and is, though its year ended in March.
+		make_profile(
+			obligations=[
+				obligation("GSTR-3B (Monthly)", registration_number="29GST", start_from="2026-11-01"),
+				obligation("GSTR-9 (Annual Return)", registration_number="29GST", start_from="2026-11-01"),
+			]
+		)
+		with self.change_settings(SETTINGS, generation_horizon_days=45):
+			generate_tasks(company=TEST_COMPANY, today="2026-11-20")
+		self.assertEqual(
+			[row.period_label for row in tasks("GSTR-3B (Monthly)")], ["Oct 2026", "Nov 2026", "Dec 2026"]
+		)
+		annual = tasks("GSTR-9 (Annual Return)")
+		self.assertEqual([row.period_label for row in annual], ["FY 2025-26"])
+		self.assertEqual(str(annual[0].due_date), "2026-12-31")
+
+	def test_a_payment_due_before_its_period_ends_is_made_in_time(self):
+		# Advance tax for Oct-Dec is due on 15 Dec, inside the horizon, though the quarter ends after it.
+		make_profile(obligations=[obligation("Advance Tax", start_from="2026-11-01")])
+		with self.change_settings(SETTINGS, generation_horizon_days=30):
+			generate_tasks(company=TEST_COMPANY, today="2026-11-20")
+		rows = tasks("Advance Tax")
+		self.assertEqual([str(row.due_date) for row in rows], ["2026-12-15"])
+
 	def test_an_inactive_obligation_makes_nothing(self):
 		make_profile(obligations=[obligation("GSTR-3B (Monthly)", is_active=0)])
 		self.assertEqual(generate_tasks(company=TEST_COMPANY, today="2026-11-20"), 0)
@@ -210,6 +237,28 @@ class TestComplianceTask(IntegrationTestCase):
 		):
 			task.save()
 
+	def test_a_manager_with_no_checker_files_their_own_filing_and_it_is_recorded(self):
+		# A one-person team, at a company or a firm: no one else is set to check.
+		task = self.make_task()
+		task.responsible = MANAGER
+		task.reviewer = None
+		self.file(task)
+		task.status = "Filed"
+		with self.set_user(MANAGER):
+			task.save()
+		self.assertEqual(task.status, "Filed")
+		self.assertEqual(task.reviewed_by, MANAGER)
+		self.assertTrue(task.filed_without_check)
+
+	def test_a_preparer_without_the_manager_role_still_needs_a_checker(self):
+		task = self.make_task()
+		task.reviewer = None
+		task.save()
+		self.file(task)
+		task.status = "Filed"
+		with self.set_user(HOLDER), self.assertRaisesRegex(frappe.PermissionError, "someone else must check"):
+			task.save()
+
 	def test_the_reviewer_files_and_late_filing_is_marked(self):
 		task = self.make_task()
 		self.file(task, filed_on="2026-11-18")
@@ -218,6 +267,7 @@ class TestComplianceTask(IntegrationTestCase):
 			task.save()
 		self.assertEqual(task.status, "Filed")
 		self.assertEqual(task.reviewed_by, REVIEWER)
+		self.assertFalse(task.filed_without_check)
 
 		late = frappe.get_doc("Compliance Task", tasks("GSTR-3B (Monthly)")[0].name)
 		late.db_set("status", "Open")
@@ -244,7 +294,7 @@ class TestComplianceTask(IntegrationTestCase):
 	def test_an_extension_moves_open_tasks_and_leaves_filed_ones(self):
 		make_profile(
 			obligations=[
-				obligation("GSTR-3B (Monthly)", registration_number="29GST", start_from="2026-09-01")
+				obligation("GSTR-3B (Monthly)", registration_number="29GST", start_from="2026-09-21")
 			]
 		)
 		with self.change_settings(SETTINGS, generation_horizon_days=0):

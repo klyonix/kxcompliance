@@ -124,6 +124,17 @@
 			<p v-if="summary.commitment.unpriced" class="pt-1 text-sm text-ink-amber-5">
 				{{ unpricedLine }}
 			</p>
+			<p
+				v-if="summary.recurring_without_start?.length"
+				class="rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-4"
+			>
+				{{ recurringWaiting }}
+				<RouterLink
+					:to="{ name: 'ClientEdit', params: { name: client } }"
+					class="font-medium underline"
+					>Set the date</RouterLink
+				>
+			</p>
 		</section>
 
 		<section v-if="ageing.length" class="flex flex-col gap-1" aria-labelledby="ageing-heading">
@@ -232,7 +243,7 @@ import { call } from "@/api";
 import { isManager } from "@/boot";
 import BillingCard from "@/components/BillingCard.vue";
 import StatementDialog from "@/components/StatementDialog.vue";
-import { accountFacts, ageingRows, commitmentLines, money, rateLine } from "@/lib/billing";
+import { accountFacts, ageingRows, commitmentLines, money, rateLine, recurringWithoutStartLine } from "@/lib/billing";
 import { formatDate } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
 import { chooseClient } from "@/stores/clientFilter";
@@ -248,6 +259,10 @@ const statement = ref(false);
 
 const facts = computed(() => accountFacts(summary.value));
 const commitment = computed(() => commitmentLines(summary.value.commitment));
+const recurringWaiting = computed(() =>
+	recurringWithoutStartLine(summary.value?.recurring_without_start)
+);
+
 const ageing = computed(() => ageingRows(summary.value.outstanding));
 const rates = computed(() => summary.value.rates.map(rateLine));
 const unbilledLine = computed(() => {

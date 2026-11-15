@@ -74,6 +74,28 @@ describe("filings in the app", () => {
 		).toMatchObject({ markFiled: true, sendBack: true });
 	});
 
+	it("lets a manager with no one to check their filing mark it filed", () => {
+		const alone = { ...task, responsible: "priya@example.com", reviewer: null };
+		const manager = as("priya@example.com", "Compliance Manager");
+		expect(taskActions(alone, reviewed, manager)).toEqual({
+			edit: true,
+			sendForReview: false,
+			markFiled: true,
+			sendBack: false,
+		});
+		expect(taskActions({ ...alone, status: "Ready for Review" }, reviewed, manager)).toMatchObject({
+			markFiled: true,
+		});
+		// With a checker set, or without the manager role, someone else still checks it.
+		expect(taskActions({ ...alone, reviewer: "ravi@example.com" }, reviewed, manager)).toMatchObject(
+			{ sendForReview: true, markFiled: false }
+		);
+		expect(taskActions(alone, reviewed, as("priya@example.com"))).toMatchObject({
+			sendForReview: true,
+			markFiled: false,
+		});
+	});
+
 	it("lets the responsible person mark a filing filed when it needs no review", () => {
 		expect(taskActions(task, { requires_review: 0 }, as("asha@example.com"))).toMatchObject({
 			sendForReview: false,

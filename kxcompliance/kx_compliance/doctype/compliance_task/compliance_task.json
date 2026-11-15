@@ -37,6 +37,7 @@
   "interest",
   "late_fee",
   "reviewed_by",
+  "filed_without_check",
   "section_remarks",
   "remarks",
   "task_key",
@@ -243,6 +244,16 @@
    "read_only": 1
   },
   {
+   "default": "0",
+   "depends_on": "filed_without_check",
+   "description": "A Compliance Manager marked their own filing filed, with no one else set to check it.",
+   "fieldname": "filed_without_check",
+   "fieldtype": "Check",
+   "label": "Filed Without a Second Check",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
    "fieldname": "section_remarks",
    "fieldtype": "Section Break",
    "label": "Remarks"
@@ -285,7 +296,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-16 10:00:00.000000",
+ "modified": "2026-11-16 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Task",

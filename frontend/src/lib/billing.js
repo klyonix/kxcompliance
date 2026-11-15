@@ -319,3 +319,10 @@ export const barWidth = (value, months) => {
 	const most = Math.max(...months.map((month) => Number(month.total) || 0), 0);
 	return most > 0 ? Math.round((Math.max(Number(value) || 0, 0) / most) * 100) : 0;
 };
+
+// Recurring charges on a client's rates that are not billed, as it has no date to bill them from.
+export function recurringWithoutStartLine(names) {
+	if (!names?.length) return "";
+	const verb = names.length > 1 ? "are" : "is";
+	return `${names.join(", ")} ${verb} on the client's rates but not billed: the client has no "Recurring charges from" date.`;
+}

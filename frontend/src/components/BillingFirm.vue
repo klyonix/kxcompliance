@@ -18,7 +18,7 @@
 			Bills go out from {{ setup.company }}.
 		</p>
 		<p
-			v-else-if="!setup.can_create_company"
+			v-else-if="!setup.can_create_company && !setup.suggested_name"
 			class="rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-4"
 		>
 			Setting billing up makes the firm's own company in ERPNext, which needs a System
@@ -29,6 +29,11 @@
 			v-model="name"
 			label="Firm's name on its bills"
 			placeholder="Rao & Associates"
+			:description="
+				setup.suggested_name && name.trim() === setup.suggested_name
+					? 'This company is already in ERPNext; bills go out from it.'
+					: ''
+			"
 			required
 		/>
 
@@ -115,7 +120,7 @@
 				variant="solid"
 				:label="setup.company ? 'Save billing details' : 'Set up billing'"
 				:loading="saving"
-				:disabled="!setup.company && !setup.can_create_company"
+				:disabled="!setup.company && !setup.can_create_company && !setup.suggested_name"
 				@click="save"
 			/>
 		</div>
@@ -161,6 +166,7 @@ watch(
 	() => props.setup,
 	(state) => {
 		for (const field of FIELDS) form[field] = state[field] || "";
+		if (!state.company && !name.value) name.value = state.suggested_name || "";
 		form.gst_status = form.gst_status || "Registered";
 	},
 	{ immediate: true }

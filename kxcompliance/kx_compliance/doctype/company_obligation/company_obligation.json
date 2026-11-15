@@ -50,7 +50,7 @@
    "options": "User"
   },
   {
-   "description": "Tasks are made for periods ending on or after this date.",
+   "description": "Tasks are made for periods that end or fall due on or after this date.",
    "fieldname": "start_from",
    "fieldtype": "Date",
    "label": "Start From",
@@ -67,7 +67,7 @@
  "index_web_pages_for_search": 0,
  "istable": 1,
  "links": [],
- "modified": "2026-11-15 01:08:09.744208",
+ "modified": "2026-11-15 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Company Obligation",

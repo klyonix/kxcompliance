@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { onboardingSteps, registrationProblem, setupAnswers, stateFromGstin } from "./onboarding";
+import { companyDefault, onboardingSteps, registrationProblem, setupAnswers, stateFromGstin } from "./onboarding";
 
 const STATES = ["GST", "GST Composition", "LWF", "PT"];
 const row = (registration_type, registration_number = "", state = "") => ({
@@ -9,6 +9,18 @@ const row = (registration_type, registration_number = "", state = "") => ({
 });
 
 describe("onboarding", () => {
+	it("starts a firm's first client on a new company, never the firm's own", () => {
+		const made = ["Rao Desai and Co"];
+		expect(companyDefault("CA/CS Firm", made, true)).toEqual({ choice: "new", company: "" });
+		expect(companyDefault("Organisation", made, true)).toEqual({
+			choice: "existing",
+			company: "Rao Desai and Co",
+		});
+		// Someone who cannot create companies chooses one, firm or not.
+		expect(companyDefault("CA/CS Firm", made, false).choice).toBe("existing");
+		expect(companyDefault("Organisation", [], true)).toEqual({ choice: "new", company: "" });
+	});
+
 	it("asks a firm for its name before the first client's company", () => {
 		expect(onboardingSteps("Organisation")).toEqual([
 			"who",

@@ -3,6 +3,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The side bar a step darker than the page, in dark as in light; frappe-ui leaves it clear in
+   dark, so the two run together. */
+[data-theme="dark"] {
+	--surface-sidebar: oklch(17% 0 0);
+}
+
 /* Tours (driver.js), drawn in the app's own colours, light and dark. */
 .driver-popover.kx-tour {
 	background: var(--surface-elevation-2, var(--surface-base));

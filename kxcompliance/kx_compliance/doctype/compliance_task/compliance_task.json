@@ -39,7 +39,8 @@
   "reviewed_by",
   "section_remarks",
   "remarks",
-  "task_key"
+  "task_key",
+  "billed_in"
  ],
  "fields": [
   {
@@ -270,11 +271,21 @@
    "read_only": 1,
    "search_index": 1,
    "depends_on": "eval:doc.company_event"
+  },
+  {
+   "fieldname": "billed_in",
+   "fieldtype": "Link",
+   "options": "Sales Invoice",
+   "label": "Billed In",
+   "read_only": 1,
+   "search_index": 1,
+   "no_copy": 1,
+   "description": "The firm's bill that charged for this filing; cleared if that bill is cancelled."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-15 18:00:00.000000",
+ "modified": "2026-11-16 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Task",

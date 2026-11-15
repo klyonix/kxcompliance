@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from kxcompliance.kx_compliance.billing import state_of
+from kxcompliance.kx_compliance.billing import check_fee_plan, check_return_fees, state_of
 from kxcompliance.kx_compliance.clients import (
 	sync_client_access,
 	sync_client_logins,
@@ -25,6 +25,8 @@ class ComplianceClient(Document):
 		# Bills charge GST by the client's state, which its GSTIN says when it has one.
 		self.gstin = (self.gstin or "").strip().upper() or None
 		self.billing_state = state_of(self.gstin, self.billing_state)
+		check_fee_plan(self)
+		check_return_fees(self.return_fees, _("Own Price per Return"))
 
 	def on_update(self):
 		# Logins first, so their users exist when the access is given.

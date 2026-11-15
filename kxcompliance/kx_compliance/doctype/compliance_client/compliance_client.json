@@ -9,7 +9,7 @@
    "link_fieldname": "client"
   }
  ],
- "modified": "2026-11-16 09:00:00.000000",
+ "modified": "2026-11-16 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "owner": "Administrator",
@@ -38,7 +38,12 @@
   "billing_state",
   "column_break_billing",
   "billing_email",
-  "billing_address"
+  "billing_address",
+  "fees_section",
+  "fixed_fee",
+  "fee_frequency",
+  "fee_from",
+  "return_fees"
  ],
  "fields": [
   {
@@ -171,6 +176,39 @@
    "fieldname": "billing_address",
    "fieldtype": "Small Text",
    "label": "Billing Address"
+  },
+  {
+   "fieldname": "fees_section",
+   "fieldtype": "Section Break",
+   "label": "Fees"
+  },
+  {
+   "fieldname": "fixed_fee",
+   "fieldtype": "Currency",
+   "label": "Fixed Fee",
+   "non_negative": 1,
+   "description": "A retainer billed every period, on top of any fee per return."
+  },
+  {
+   "fieldname": "fee_frequency",
+   "fieldtype": "Select",
+   "label": "Billed",
+   "options": "\nMonthly\nQuarterly\nYearly",
+   "depends_on": "fixed_fee"
+  },
+  {
+   "fieldname": "fee_from",
+   "fieldtype": "Date",
+   "label": "Billed From",
+   "depends_on": "fixed_fee",
+   "description": "The first period's start; the fee is billed for each period from then."
+  },
+  {
+   "fieldname": "return_fees",
+   "fieldtype": "Table",
+   "options": "Return Fee",
+   "label": "Own Price per Return",
+   "description": "Only where this client pays differently from the firm's prices."
   }
  ],
  "name": "Compliance Client",

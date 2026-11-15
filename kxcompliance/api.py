@@ -505,6 +505,22 @@ def set_up_billing(details: dict, name: str | None = None) -> dict:
 	return billing.set_up_firm((name or "").strip(), details)
 
 
+@frappe.whitelist(methods=["POST"])
+def save_return_fees(fees: list) -> list[dict]:
+	"""The firm's price for filing each return."""
+	check_app_access()
+	return billing.save_return_fees(fees)
+
+
+@frappe.whitelist(methods=["GET"])
+def client_fees(client: str) -> dict:
+	"""A client's fee plan, and its filed returns not billed yet with their fees."""
+	check_app_access()
+	billing.check_firm_manager()
+	frappe.get_doc("Compliance Client", client).check_permission("read")
+	return billing.client_fees(client)
+
+
 def billing_company_set() -> bool:
 	return bool(frappe.get_cached_doc("KX Compliance Settings").billing_company)
 

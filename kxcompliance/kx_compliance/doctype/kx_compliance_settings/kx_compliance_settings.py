@@ -6,9 +6,12 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, now_datetime
 
+from kxcompliance.kx_compliance.billing import check_return_fees
+
 
 class KXComplianceSettings(Document):
 	def validate(self):
+		check_return_fees(self.return_fees, _("Price per Return"))
 		# The installed app's icon is fetched without signing in, so it has to be public.
 		if self.app_logo and self.app_logo.startswith("/private/"):
 			frappe.throw(_("Attach the App Logo as a public file, so phones can show it."))

@@ -181,6 +181,48 @@
 				/>
 			</section>
 
+			<section class="flex flex-col gap-4" aria-labelledby="fees-heading">
+				<div class="flex flex-col gap-0.5">
+					<h2 id="fees-heading" class="text-base font-semibold text-ink-gray-8">Fees</h2>
+					<p class="text-sm text-ink-gray-5">
+						A fixed fee each period, and a fee for each return filed, at the firm's
+						prices unless the client has its own below.
+					</p>
+				</div>
+				<p
+					v-if="fees?.unbilled.length"
+					class="rounded-lg bg-surface-gray-2 px-3 py-2 text-base text-ink-gray-7"
+				>
+					{{ unbilledLine }}
+				</p>
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+					<FormControl
+						v-model="form.fixed_fee"
+						type="number"
+						label="Fixed fee"
+						placeholder="0"
+					/>
+					<FormControl
+						v-model="form.fee_frequency"
+						type="select"
+						label="Billed"
+						:disabled="!Number(form.fixed_fee)"
+						:options="FEE_FREQUENCIES"
+					/>
+					<FormControl
+						v-model="form.fee_from"
+						type="date"
+						:format="pickerFormat()"
+						label="From"
+						:disabled="!Number(form.fixed_fee)"
+					/>
+				</div>
+				<div class="flex flex-col gap-1.5">
+					<span class="text-xs text-ink-gray-5">Own price per return</span>
+					<PriceList v-model="form.return_fees" empty="None: the firm's prices apply." />
+				</div>
+			</section>
+
 			<section class="flex flex-col gap-3" aria-labelledby="notes-heading">
 				<h2 id="notes-heading" class="text-base font-semibold text-ink-gray-8">Notes</h2>
 				<FormControl
@@ -221,7 +263,10 @@ import { useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call, createDoc, getDoc, updateDoc } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import PriceList from "@/components/PriceList.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";
+import { money, pricesProblem, pricesToSend } from "@/lib/billing";
+import { pickerFormat } from "@/lib/format";
 import { personOptions } from "@/lib/people";
 import { goBack } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
@@ -237,6 +282,18 @@ const ready = ref(false);
 const error = ref("");
 const saveError = ref("");
 const states = ref([]);
+const fees = ref(null);
+const FEE_FREQUENCIES = [
+	{ label: "Choose", value: "" },
+	...["Monthly", "Quarterly", "Yearly"].map((value) => ({ label: value, value })),
+];
+// What the client would be billed for its filings now.
+const unbilledLine = computed(() => {
+	const count = fees.value.unbilled.length;
+	return `${count} filed ${count === 1 ? "return" : "returns"} not billed yet: ${money(
+		fees.value.unbilled_total
+	)}.`;
+});
 const saving = ref(false);
 const checking = ref(false);
 const form = reactive({
@@ -251,6 +308,10 @@ const form = reactive({
 	billing_state: "",
 	billing_email: "",
 	billing_address: "",
+	fixed_fee: "",
+	fee_frequency: "",
+	fee_from: "",
+	return_fees: [],
 	team: [],
 	logins: [],
 	notes: "",
@@ -277,6 +338,10 @@ function values() {
 		billing_state: form.billing_state || null,
 		billing_email: form.billing_email.trim() || null,
 		billing_address: form.billing_address.trim() || null,
+		fixed_fee: Number(form.fixed_fee) || 0,
+		fee_frequency: Number(form.fixed_fee) ? form.fee_frequency || null : null,
+		fee_from: Number(form.fixed_fee) ? form.fee_from || null : null,
+		return_fees: pricesToSend(form.return_fees),
 		team: form.team.map((user) => ({ user })),
 		logins: form.logins.map((login) => ({
 			full_name: login.full_name.trim(),
@@ -291,6 +356,11 @@ async function save() {
 	checking.value = true;
 	saveError.value = "";
 	if (!props.name && !form.client_name.trim()) return;
+	const priceProblem = pricesProblem(form.return_fees);
+	if (priceProblem) {
+		saveError.value = priceProblem;
+		return;
+	}
 	saving.value = true;
 	try {
 		const saved = props.name
@@ -322,6 +392,11 @@ onMounted(async () => {
 		]);
 		people.value = found;
 		states.value = billing.states;
+		if (props.name) {
+			fees.value = await call("kxcompliance.api.client_fees", { client: props.name }).catch(
+				() => null
+			);
+		}
 		learnNames(people.value.map((person) => person.name));
 		if (props.name) {
 			const client = await getDoc("Compliance Client", props.name);
@@ -336,6 +411,13 @@ onMounted(async () => {
 				billing_state: client.billing_state || "",
 				billing_email: client.billing_email || "",
 				billing_address: client.billing_address || "",
+				fixed_fee: client.fixed_fee || "",
+				fee_frequency: client.fee_frequency || "",
+				fee_from: client.fee_from || "",
+				return_fees: (client.return_fees || []).map((row) => ({
+					obligation_template: row.obligation_template,
+					amount: row.amount,
+				})),
 				team: client.team.map((row) => row.user),
 				logins: client.logins.map((row) => ({
 					full_name: row.full_name,

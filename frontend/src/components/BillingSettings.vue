@@ -89,6 +89,34 @@
 			</div>
 		</template>
 	</section>
+
+	<section v-if="setup?.company" class="flex flex-col gap-4" aria-labelledby="prices-heading">
+		<div class="flex flex-col gap-0.5">
+			<h2 id="prices-heading" class="text-base font-semibold text-ink-gray-8">
+				Price per return
+			</h2>
+			<p class="text-sm text-ink-gray-5">
+				What the firm charges for filing each return. A client's own price, set on the
+				client, takes its place. Returns with no price are not billed.
+			</p>
+		</div>
+		<PriceList
+			v-model="prices"
+			empty="No prices yet: filings are not billed until a return has one."
+		/>
+		<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+			<p v-if="pricesError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
+				{{ pricesError }}
+			</p>
+			<Button
+				variant="solid"
+				label="Save prices"
+				:loading="savingPrices"
+				:disabled="Boolean(pricesProblem(prices))"
+				@click="savePrices"
+			/>
+		</div>
+	</section>
 </template>
 
 <script setup>
@@ -96,6 +124,8 @@
 import { onMounted, reactive, ref } from "vue";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call } from "@/api";
+import PriceList from "@/components/PriceList.vue";
+import { pricesProblem, pricesToSend } from "@/lib/billing";
 
 const FIELDS = [
 	"billing_gstin",
@@ -111,9 +141,30 @@ const name = ref("");
 const error = ref("");
 const saveError = ref("");
 const saving = ref(false);
+const prices = ref([]);
+const pricesError = ref("");
+const savingPrices = ref(false);
+
+async function savePrices() {
+	pricesError.value = "";
+	savingPrices.value = true;
+	try {
+		prices.value = await call(
+			"kxcompliance.api.save_return_fees",
+			{ fees: pricesToSend(prices.value) },
+			{ httpMethod: "POST" }
+		);
+		toast.success("Prices saved");
+	} catch (err) {
+		pricesError.value = err.message;
+	} finally {
+		savingPrices.value = false;
+	}
+}
 
 function fill(state) {
 	setup.value = state;
+	prices.value = (state.return_fees || []).map((row) => ({ ...row }));
 	for (const field of FIELDS) form[field] = state[field] || "";
 }
 

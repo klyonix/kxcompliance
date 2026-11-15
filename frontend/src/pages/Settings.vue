@@ -31,180 +31,243 @@
 				/>
 			</nav>
 
-			<section class="flex flex-col gap-4" aria-labelledby="reminders-heading">
-				<div class="flex flex-col gap-0.5">
-					<h2 id="reminders-heading" class="text-base font-semibold text-ink-gray-8">
-						Reminders and email
-					</h2>
-					<p class="text-sm text-ink-gray-5">
-						Reminders, escalations and the weekly summary go out once a day.
-					</p>
-				</div>
+			<Tabs v-model="tab">
+				<!-- A phone has no room for the row of tabs: they become a list to choose from. -->
 				<FormControl
-					v-model="form.enabled"
-					type="checkbox"
-					label="Send reminders, escalations and the weekly summary"
-				/>
-				<FormControl
-					v-model="form.email_account"
+					v-if="isMobile"
+					v-model="tab"
 					type="select"
-					label="Send email from"
-					:options="accountOptions"
-					description="Without an account, people are told in the app only."
+					:options="tabOptions"
+					aria-label="Show"
 				/>
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					<FormControl
-						v-model="form.due_soon_days"
-						type="number"
-						label="Due soon (days before expiry)"
+				<TabList v-else class="overflow-x-auto">
+					<TabTrigger
+						value="reminders"
+						label="Reminders and email"
+						icon-left="lucide-bell"
+						data-tour="tab-reminders"
 					/>
-					<FormControl
-						v-model="form.escalate_after_days"
-						type="number"
-						label="Tell managers after (days overdue)"
+					<TabTrigger
+						value="branding"
+						label="Name and logo"
+						icon-left="lucide-image"
+						data-tour="tab-branding"
 					/>
-					<FormControl
-						v-model="form.digest_day"
-						type="select"
-						label="Weekly summary on"
-						:options="options.digest_days.map((day) => ({ label: day, value: day }))"
+					<TabTrigger
+						value="privacy"
+						label="Privacy"
+						icon-left="lucide-shield-check"
+						data-tour="tab-privacy"
 					/>
-					<FormControl
-						v-model="form.generation_horizon_days"
-						type="number"
-						label="Show filings (days before the period ends)"
+					<TabTrigger
+						value="account"
+						label="Who this is for"
+						icon-left="lucide-building"
+						data-tour="tab-account"
 					/>
-				</div>
-				<FormControl
-					v-model="form.party_email_template"
-					type="select"
-					label="Email to customers and suppliers before their licence expires"
-					:options="templateOptions"
-				/>
-			</section>
-
-			<section class="flex flex-col gap-4" aria-labelledby="branding-heading">
-				<div class="flex flex-col gap-0.5">
-					<h2 id="branding-heading" class="text-base font-semibold text-ink-gray-8">
-						Name and logo
-					</h2>
-					<p class="text-sm text-ink-gray-5">
-						Shown in the app's header and when it is installed on a phone.
-					</p>
-				</div>
-				<FormControl
-					v-model="form.app_name"
-					label="Name"
-					placeholder="KlyONIX Compliance"
-				/>
-				<div class="flex items-center gap-3">
-					<img
-						v-if="form.app_logo"
-						:src="form.app_logo"
-						alt="Logo"
-						class="size-12 rounded-lg object-cover"
-					/>
-					<span
-						v-else
-						class="flex size-12 items-center justify-center rounded-lg bg-surface-gray-2 text-ink-gray-5"
-						><span class="lucide-image size-5" aria-hidden="true"
-					/></span>
-					<div class="flex flex-col gap-1">
-						<div class="flex gap-2">
-							<Button
-								:label="form.app_logo ? 'Replace logo' : 'Upload logo'"
-								:loading="uploading"
-								@click="logoInput?.click()"
+				</TabList>
+				<TabPanel value="reminders" class="flex flex-col gap-8 pt-2 sm:pt-6">
+					<section class="flex flex-col gap-4" aria-labelledby="reminders-heading">
+						<div class="flex flex-col gap-0.5">
+							<h2
+								id="reminders-heading"
+								class="text-base font-semibold text-ink-gray-8"
+							>
+								Reminders and email
+							</h2>
+							<p class="text-sm text-ink-gray-5">
+								Reminders, escalations and the weekly summary go out once a day.
+							</p>
+						</div>
+						<FormControl
+							v-model="form.enabled"
+							type="checkbox"
+							label="Send reminders, escalations and the weekly summary"
+						/>
+						<FormControl
+							v-model="form.email_account"
+							type="select"
+							label="Send email from"
+							:options="accountOptions"
+							description="Without an account, people are told in the app only."
+						/>
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<FormControl
+								v-model="form.due_soon_days"
+								type="number"
+								label="Due soon (days before expiry)"
 							/>
-							<Button
-								v-if="form.app_logo"
-								variant="ghost"
-								label="Remove"
-								@click="form.app_logo = ''"
+							<FormControl
+								v-model="form.escalate_after_days"
+								type="number"
+								label="Tell managers after (days overdue)"
+							/>
+							<FormControl
+								v-model="form.digest_day"
+								type="select"
+								label="Weekly summary on"
+								:options="
+									options.digest_days.map((day) => ({ label: day, value: day }))
+								"
+							/>
+							<FormControl
+								v-model="form.generation_horizon_days"
+								type="number"
+								label="Show filings (days before the period ends)"
 							/>
 						</div>
-						<span class="text-sm text-ink-gray-5"
-							>A square image, at least 512 by 512 pixels.</span
-						>
-					</div>
-					<input
-						ref="logoInput"
-						type="file"
-						accept="image/png,image/jpeg,image/svg+xml"
-						class="hidden"
-						@change="uploadLogo"
-					/>
-				</div>
-			</section>
-
-			<section
-				class="flex flex-col gap-4"
-				aria-labelledby="privacy-heading"
-				data-tour="settings-privacy"
-			>
-				<div class="flex flex-col gap-0.5">
-					<h2 id="privacy-heading" class="text-base font-semibold text-ink-gray-8">
-						Privacy
-					</h2>
-					<p class="text-sm text-ink-gray-5">
-						Everyone accepts the privacy notice the first time they use the app.
-						Changing it asks everyone to accept it again (now version
-						{{ options.notice_version }}).
-					</p>
-				</div>
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					<FormControl v-model="form.grievance_officer" label="Grievance officer" />
-					<FormControl
-						v-model="form.grievance_email"
-						type="email"
-						label="Grievance email"
-					/>
-				</div>
-				<div class="flex flex-col gap-1.5">
-					<div class="flex items-center gap-2">
-						<span class="flex-1 text-xs text-ink-gray-5">Privacy notice</span>
-						<Button
-							v-if="!form.privacy_notice"
-							size="sm"
-							variant="ghost"
-							label="Write your own from the standard one"
-							@click="form.privacy_notice = options.standard_notice"
+						<FormControl
+							v-model="form.party_email_template"
+							type="select"
+							label="Email to customers and suppliers before their licence expires"
+							:options="templateOptions"
 						/>
-					</div>
-					<div
-						v-if="!form.privacy_notice"
-						class="prose prose-sm max-h-64 max-w-none overflow-y-auto rounded-lg bg-surface-gray-1 p-3 text-ink-gray-7"
-						v-html="options.standard_notice"
-					/>
-					<NoticeEditor v-else v-model="form.privacy_notice" />
-					<p class="text-xs text-ink-gray-5">
-						The standard notice is used until you write your own; it fills in your
-						company's name and the grievance officer. Have a lawyer read it.
-					</p>
-				</div>
-				<FormControl
-					v-model="form.reminder_log_days"
-					type="number"
-					label="Keep reminder email addresses for (days)"
-					description="Older entries in the reminder log keep the date but lose the address. At least 365."
-				/>
-			</section>
-
-			<section class="flex flex-col gap-4" aria-labelledby="account-heading">
-				<div class="flex flex-col gap-0.5">
-					<h2 id="account-heading" class="text-base font-semibold text-ink-gray-8">
-						Who this is for
-					</h2>
-					<p class="text-sm text-ink-gray-5">
-						A CA/CS firm gets clients, client logins, document requests and the client
-						filter; an organisation does not.
-					</p>
-				</div>
-				<TabButtons
-					v-model="form.account_type"
-					:options="options.account_types.map((kind) => ({ label: kind, value: kind }))"
-				/>
-			</section>
+					</section>
+				</TabPanel>
+				<TabPanel value="branding" class="flex flex-col gap-8 pt-2 sm:pt-6">
+					<section class="flex flex-col gap-4" aria-labelledby="branding-heading">
+						<div class="flex flex-col gap-0.5">
+							<h2
+								id="branding-heading"
+								class="text-base font-semibold text-ink-gray-8"
+							>
+								Name and logo
+							</h2>
+							<p class="text-sm text-ink-gray-5">
+								Shown in the app's header and when it is installed on a phone.
+							</p>
+						</div>
+						<FormControl
+							v-model="form.app_name"
+							label="Name"
+							placeholder="KlyONIX Compliance"
+						/>
+						<div class="flex items-center gap-3">
+							<img
+								v-if="form.app_logo"
+								:src="form.app_logo"
+								alt="Logo"
+								class="size-12 rounded-lg object-cover"
+							/>
+							<span
+								v-else
+								class="flex size-12 items-center justify-center rounded-lg bg-surface-gray-2 text-ink-gray-5"
+								><span class="lucide-image size-5" aria-hidden="true"
+							/></span>
+							<div class="flex flex-col gap-1">
+								<div class="flex gap-2">
+									<Button
+										:label="form.app_logo ? 'Replace logo' : 'Upload logo'"
+										:loading="uploading"
+										@click="logoInput?.click()"
+									/>
+									<Button
+										v-if="form.app_logo"
+										variant="ghost"
+										label="Remove"
+										@click="form.app_logo = ''"
+									/>
+								</div>
+								<span class="text-sm text-ink-gray-5"
+									>A square image, at least 512 by 512 pixels.</span
+								>
+							</div>
+							<input
+								ref="logoInput"
+								type="file"
+								accept="image/png,image/jpeg,image/svg+xml"
+								class="hidden"
+								@change="uploadLogo"
+							/>
+						</div>
+					</section>
+				</TabPanel>
+				<TabPanel value="privacy" class="flex flex-col gap-8 pt-2 sm:pt-6">
+					<section
+						class="flex flex-col gap-4"
+						aria-labelledby="privacy-heading"
+						data-tour="settings-privacy"
+					>
+						<div class="flex flex-col gap-0.5">
+							<h2
+								id="privacy-heading"
+								class="text-base font-semibold text-ink-gray-8"
+							>
+								Privacy
+							</h2>
+							<p class="text-sm text-ink-gray-5">
+								Everyone accepts the privacy notice the first time they use the
+								app. Changing it asks everyone to accept it again (now version
+								{{ options.notice_version }}).
+							</p>
+						</div>
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<FormControl
+								v-model="form.grievance_officer"
+								label="Grievance officer"
+							/>
+							<FormControl
+								v-model="form.grievance_email"
+								type="email"
+								label="Grievance email"
+							/>
+						</div>
+						<div class="flex flex-col gap-1.5">
+							<div
+								class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1"
+							>
+								<span class="text-xs text-ink-gray-5">Privacy notice</span>
+								<Button
+									v-if="!form.privacy_notice"
+									size="sm"
+									variant="ghost"
+									label="Write your own from the standard one"
+									@click="form.privacy_notice = options.standard_notice"
+								/>
+							</div>
+							<div
+								v-if="!form.privacy_notice"
+								class="prose prose-sm max-h-64 max-w-none overflow-y-auto rounded-lg bg-surface-gray-1 p-3 text-ink-gray-7"
+								v-html="options.standard_notice"
+							/>
+							<NoticeEditor v-else v-model="form.privacy_notice" />
+							<p class="text-xs text-ink-gray-5">
+								The standard notice is used until you write your own; it fills in
+								your company's name and the grievance officer. Have a lawyer read
+								it.
+							</p>
+						</div>
+						<FormControl
+							v-model="form.reminder_log_days"
+							type="number"
+							label="Keep reminder email addresses for (days)"
+							description="Older entries in the reminder log keep the date but lose the address. At least 365."
+						/>
+					</section>
+				</TabPanel>
+				<TabPanel value="account" class="flex flex-col gap-8 pt-2 sm:pt-6">
+					<section class="flex flex-col gap-4" aria-labelledby="account-heading">
+						<div class="flex flex-col gap-0.5">
+							<h2
+								id="account-heading"
+								class="text-base font-semibold text-ink-gray-8"
+							>
+								Who this is for
+							</h2>
+							<p class="text-sm text-ink-gray-5">
+								A CA/CS firm gets clients, client logins, document requests and the
+								client filter; an organisation does not.
+							</p>
+						</div>
+						<TabButtons
+							v-model="form.account_type"
+							:options="
+								options.account_types.map((kind) => ({ label: kind, value: kind }))
+							"
+						/>
+					</section>
+				</TabPanel>
+			</Tabs>
 		</template>
 	</div>
 
@@ -232,17 +295,36 @@
 <script setup>
 // The app's settings for Compliance Managers: reminders, email, name and logo, and account type.
 import { computed, defineAsyncComponent, onMounted, reactive, ref } from "vue";
-import { Button, FormControl, Skeleton, TabButtons, toast } from "frappe-ui";
+import {
+	Button,
+	FormControl,
+	Skeleton,
+	TabButtons,
+	TabList,
+	TabPanel,
+	TabTrigger,
+	Tabs,
+	toast,
+} from "frappe-ui";
 import { call, upload } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
+import { useTabQuery } from "@/composables/useTabQuery";
 import { settingsPagesFor } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
 
 const NoticeEditor = defineAsyncComponent(() => import("@/components/NoticeEditor.vue"));
 
 const isMobile = useIsMobile();
+// The settings in tabs by what they are about; the open one is kept in the address.
+const tab = useTabQuery(["reminders", "branding", "privacy", "account"]);
+const tabOptions = [
+	{ label: "Reminders and email", value: "reminders" },
+	{ label: "Name and logo", value: "branding" },
+	{ label: "Privacy", value: "privacy" },
+	{ label: "Who this is for", value: "account" },
+];
 // Every settings page but this one, which the reader is on.
 const setupPages = settingsPagesFor().filter((page) => page.route !== "Settings");
 const options = ref(null);

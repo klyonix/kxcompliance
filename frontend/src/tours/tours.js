@@ -586,17 +586,17 @@ export const TOURS = [
 				text: "People, companies, the obligation library, due-date extensions and register item types each have a page under Settings.",
 			},
 			{
-				target: ["section:reminders-heading"],
+				target: ["section:reminders-heading", "tab-reminders"],
 				title: "Reminders",
 				text: "Choose the email account and switch reminders on. People are reminded before things fall due, and managers are told when they are overdue.",
 			},
 			{
-				target: ["section:branding-heading"],
+				target: ["section:branding-heading", "tab-branding"],
 				title: "Your name and logo",
 				text: "Shown in the app and on phones where it is installed.",
 			},
 			{
-				target: ["settings-privacy"],
+				target: ["settings-privacy", "tab-privacy"],
 				title: "Privacy",
 				text: "The privacy notice everyone accepts, your grievance officer, and how long reminder email addresses are kept.",
 			},
@@ -665,17 +665,17 @@ export const TOURS = [
 		managers: true,
 		steps: [
 			{
-				target: ["section:company-heading"],
+				target: ["section:company-heading", "tab-company"],
 				title: "The company",
 				text: "Its kind and the people who handle and review its work by default.",
 			},
 			{
-				target: ["section:registrations-heading"],
+				target: ["section:registrations-heading", "tab-registrations"],
 				title: "Registrations",
 				text: "GST, TAN, PF and the rest. Each one brings the returns it needs.",
 			},
 			{
-				target: ["section:obligations-heading"],
+				target: ["section:obligations-heading", "tab-obligations"],
 				title: "Obligations",
 				text: "Every return that applies, who handles it, and which ones do not apply.",
 			},

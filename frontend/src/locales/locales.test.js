@@ -16,6 +16,7 @@ const CLIENT_FILES = [
 	"components/PrivacySection.vue",
 	"components/BillingCard.vue",
 	"components/StatementDialog.vue",
+	"components/ThemeToggle.vue",
 	"pages/myWork.js",
 	"lib/clients.js",
 	"lib/items.js",

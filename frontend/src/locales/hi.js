@@ -33,6 +33,8 @@ export default {
 	"{0} due, {1} of it overdue.": "{0} बकाया, जिसमें से {1} की तारीख़ निकल चुकी है।",
 	"No bills yet.": "अभी कोई बिल नहीं।",
 	"Statement of account": "खाते का विवरण",
+	"Switch to light": "हल्के रंग में बदलें",
+	"Switch to dark": "गहरे रंग में बदलें",
 	"Download PDF": "PDF डाउनलोड करें",
 	"Every bill, payment and credit between these dates, with the balance after each.":
 		"इन तारीख़ों के बीच हर बिल, भुगतान और क्रेडिट, और हर एक के बाद की बाकी राशि।",

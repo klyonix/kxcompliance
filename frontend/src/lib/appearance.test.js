@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULTS, applyAppearance, readAppearance, saveAppearance } from "./appearance";
+import { ACCENTS, DEFAULTS, applyAppearance, readAppearance, saveAppearance } from "./appearance";
 
 const memory = (value) => {
 	const store = new Map(value === undefined ? [] : [["kxcompliance:appearance", value]]);
@@ -36,5 +36,14 @@ describe("how the app looks", () => {
 		});
 		applyAppearance(DEFAULTS, root);
 		expect(root.dataset.accent).toBe("graphite");
+	});
+});
+
+describe("accent swatches", () => {
+	it("show each accent in light and in dark", () => {
+		for (const accent of ACCENTS) {
+			expect(accent.swatch, accent.value).toMatch(/^oklch\(/);
+			expect(accent.dark, accent.value).toMatch(/^oklch\(/);
+		}
 	});
 });

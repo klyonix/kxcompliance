@@ -87,6 +87,8 @@ describe("tours", () => {
 		expect(ids(staff)).not.toContain("client-home");
 		expect(ids({ ...staff, manager: true })).toContain("settings");
 		expect(ids({ ...staff, firm: false })).toContain("licence-check");
+		expect(ids({ ...staff, licenceCheck: false })).not.toContain("licence-check");
+		expect(ids({ ...staff, licenceCheck: true })).toContain("licence-check");
 		expect(ids({ ...staff, firm: false })).not.toContain("clients");
 		const client = ids({ client: true, manager: false, firm: true, checks: false });
 		expect(client).toContain("client-home");

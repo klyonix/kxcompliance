@@ -244,9 +244,7 @@ const NoticeEditor = defineAsyncComponent(() => import("@/components/NoticeEdito
 
 const isMobile = useIsMobile();
 // Every settings page but this one, which the reader is on.
-const setupPages = settingsPagesFor({ firm: boot.accountType === "CA/CS Firm" }).filter(
-	(page) => page.route !== "Settings"
-);
+const setupPages = settingsPagesFor().filter((page) => page.route !== "Settings");
 const options = ref(null);
 const saved = ref({});
 const form = reactive({});

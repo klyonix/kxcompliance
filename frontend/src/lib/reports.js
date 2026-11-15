@@ -130,7 +130,7 @@ export const REPORTS = [
 		area: "Register",
 		title: "Customer and supplier licences",
 		about: "The licences your customers and suppliers hold, and whether each is valid.",
-		organisation: true,
+		licenceCheck: true,
 		filters: [
 			select("holder_type", "Held by", ["Customer", "Supplier"]),
 			{ fieldname: "item_type", label: "Licence", type: "link", source: "itemType" },
@@ -243,10 +243,11 @@ export const REPORTS = [
 export const reportBySlug = (slug) => REPORTS.find((report) => report.slug === slug);
 
 // The reports this person may open, by the same rules as the Desk's report roles and the side bar.
-export function reportsFor({ firm, manager, auditor }) {
+export function reportsFor({ firm, manager, auditor, licenceCheck = !firm }) {
 	return REPORTS.filter((report) => {
 		if (report.firm && !firm) return false;
 		if (report.organisation && firm) return false;
+		if (report.licenceCheck && !licenceCheck) return false;
 		if (report.managersOrAuditors && !(manager || auditor)) return false;
 		return true;
 	});

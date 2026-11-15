@@ -93,11 +93,12 @@
 import { computed, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { Button, TextInput } from "frappe-ui";
-import { boot, isManager } from "@/boot";
+import { boot, isManager, licenceCheckOn } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { AREA_ICONS, AREAS, matchReports, recentReports, reportsFor } from "@/lib/reports";
 
 const reports = reportsFor({
+	licenceCheck: licenceCheckOn(),
 	firm: boot.accountType === "CA/CS Firm",
 	manager: isManager(),
 	auditor: boot.roles.includes("Compliance Auditor"),

@@ -4,7 +4,7 @@
 // driver.js, the library Frappe's own Desk tours and KlyONIX One use, is loaded when a tour
 // starts rather than with the page, so someone who never sees a tour never downloads it.
 import { call } from "@/api";
-import { boot, checksOnly, isClientLogin, isManager } from "@/boot";
+import { boot, checksOnly, isClientLogin, isManager, licenceCheckOn } from "@/boot";
 import { TOURS, tourById, tourFor } from "./tours";
 
 const isFirm = () => boot.accountType === "CA/CS Firm";
@@ -28,6 +28,9 @@ export function toursForReader(reader = {}) {
 		)
 			return false;
 		if (tour.organisation && firm) return false;
+		// An organisation always checks licences; a firm once a client is switched on.
+		if (tour.licenceCheck && !(reader.licenceCheck ?? (!firm || licenceCheckOn())))
+			return false;
 		return true;
 	});
 }

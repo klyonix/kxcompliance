@@ -75,3 +75,17 @@ export function billState(bill) {
 		theme: bill.status === "Overdue" ? "red" : "blue",
 	};
 }
+
+// What is wrong with a payment being recorded (the server checks the same), or null.
+export function paymentProblem({ amount, tds, paid_on: paidOn, mode }, due) {
+	const paid = Number(amount);
+	const deducted = Number(tds) || 0;
+	if (!(paid > 0)) return "Give the amount received, above zero.";
+	if (deducted < 0) return "TDS is zero or more.";
+	if (paid + deducted > Number(due) + 0.005) {
+		return `That and the TDS come to more than the ${due} still due.`;
+	}
+	if (!paidOn) return "Give the date it was received.";
+	if (!mode) return "Say how it was paid.";
+	return null;
+}

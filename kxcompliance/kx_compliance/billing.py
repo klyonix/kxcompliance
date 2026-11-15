@@ -41,6 +41,9 @@ BILLING_ROLES = frozenset({"System Manager", "Compliance Manager", "Accounts Man
 # A bill is due this many days after it is made.
 BILL_DUE_DAYS = 15
 FEE_MONTHS = {"Monthly": 1, "Quarterly": 3, "Yearly": 12}
+# How clients pay, each into the firm's cash or its bank (Mode of Payment, type).
+PAYMENT_MODES = {"Cash": "Cash", "Bank Transfer": "Bank", "UPI": "Bank", "Cheque": "Bank"}
+TDS_ACCOUNT = "TDS Receivable"
 
 
 def check_firm_manager():
@@ -129,6 +132,56 @@ def make_masters(company: str):
 	if without not in [row.item_tax_template for row in item.taxes]:
 		item.append("taxes", {"item_tax_template": without})
 		item.save()
+	# Payments: into cash or the firm's bank, and TDS the client deducts, kept as an asset.
+	bank = bank_ledger(company)
+	cash = frappe.db.get_value("Company", company, "default_cash_account")
+	for mode, kind in PAYMENT_MODES.items():
+		payment_mode(mode, kind, company, cash if kind == "Cash" else bank)
+	ledger(company, TDS_ACCOUNT, "Tax Assets")
+
+
+def ledger(company: str, name: str, parent_name: str, account_type: str | None = None) -> str:
+	"""An account under one of the company's groups, made only if it is not there."""
+	existing = frappe.db.get_value("Account", {"company": company, "account_name": name, "is_group": 0})
+	if existing:
+		return existing
+	parent = frappe.db.get_value("Account", {"company": company, "account_name": parent_name, "is_group": 1})
+	if not parent:
+		frappe.throw(_("{0} has no {1} account to keep {2} under.").format(company, parent_name, name))
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Account",
+				"company": company,
+				"account_name": name,
+				"parent_account": parent,
+				"account_type": account_type,
+			}
+		)
+		.insert()
+		.name
+	)
+
+
+def bank_ledger(company: str) -> str:
+	"""The company's bank account in the books: its default, else one made under Bank Accounts."""
+	bank = frappe.db.get_value("Company", company, "default_bank_account")
+	if bank:
+		return bank
+	bank = ledger(company, "Bank", "Bank Accounts", "Bank")
+	# ERPNext keeps the company's default bank on the company; the app sets only this, once.
+	frappe.db.set_value("Company", company, "default_bank_account", bank)
+	return bank
+
+
+def payment_mode(mode: str, kind: str, company: str, account: str):
+	"""A way of paying, which pays into this account for the company."""
+	if not frappe.db.exists("Mode of Payment", mode):
+		frappe.get_doc({"doctype": "Mode of Payment", "mode_of_payment": mode, "type": kind}).insert()
+	doc = frappe.get_doc("Mode of Payment", mode)
+	if not any(row.company == company for row in doc.accounts):
+		doc.append("accounts", {"company": company, "default_account": account})
+		doc.save()
 
 
 def item_tax_template(company: str, accounts: list[str]) -> str:
@@ -698,4 +751,99 @@ def bill_detail(name: str) -> dict:
 			for row in bill.items
 		],
 		"taxes": [{"description": row.description, "amount": row.tax_amount} for row in bill.taxes],
+		"payments": payments_of(bill.name) if bill.docstatus == 1 else [],
+		"modes": list(PAYMENT_MODES),
 	}
+
+
+def record_payment(
+	name: str, amount: float, paid_on: str, mode: str, reference: str | None = None, tds: float = 0
+) -> str:
+	"""A payment against a sent bill, in full or in part, as ERPNext's own Payment Entry from the
+	bill. TDS the client deducted is recorded beside it, so the bill is settled by both."""
+	bill = bill_of(name)
+	if bill.docstatus != 1:
+		frappe.throw(_("Send {0} before recording a payment against it.").format(name))
+	amount, tds = flt(amount, 2), flt(tds, 2)
+	if amount <= 0 or tds < 0:
+		frappe.throw(_("A payment is an amount above zero, and TDS zero or more."))
+	due = flt(bill.outstanding_amount, 2)
+	if amount + tds > due:
+		frappe.throw(
+			_("{0} and TDS {1} come to more than the {2} still due on {3}.").format(amount, tds, due, name)
+		)
+	if getdate(paid_on) > getdate(nowdate()):
+		frappe.throw(_("A payment cannot be dated {0}, after today.").format(format_date(paid_on)))
+	if mode not in PAYMENT_MODES:
+		frappe.throw(_("Pay by one of {0}, not {1}.").format(", ".join(PAYMENT_MODES), mode))
+	from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+
+	account = frappe.db.get_value(
+		"Mode of Payment Account", {"parent": mode, "company": bill.company}, "default_account"
+	)
+	entry = get_payment_entry("Sales Invoice", bill.name, party_amount=amount)
+	entry.posting_date = getdate(paid_on)
+	entry.mode_of_payment = mode
+	if account:
+		entry.paid_to = account
+	entry.paid_amount = entry.received_amount = amount
+	entry.reference_no = (reference or "").strip() or mode
+	entry.reference_date = getdate(paid_on)
+	for row in entry.references:
+		row.allocated_amount = amount + tds
+	if tds:
+		entry.append(
+			"deductions",
+			{
+				"account": frappe.db.get_value(
+					"Account", {"company": bill.company, "account_name": TDS_ACCOUNT, "is_group": 0}
+				),
+				"cost_center": frappe.db.get_value("Company", bill.company, "cost_center"),
+				"amount": tds,
+				"description": _("TDS deducted by the client"),
+			},
+		)
+	entry.insert()
+	entry.submit()
+	return entry.name
+
+
+def payments_of(bill: str) -> list[dict]:
+	"""The payments received against a bill, oldest first, each with any TDS deducted."""
+	reference = frappe.qb.DocType("Payment Entry Reference")
+	entry = frappe.qb.DocType("Payment Entry")
+	rows = (
+		frappe.qb.from_(reference)
+		.join(entry)
+		.on(entry.name == reference.parent)
+		.select(
+			entry.name,
+			entry.posting_date,
+			entry.mode_of_payment,
+			entry.reference_no,
+			entry.paid_amount,
+			reference.allocated_amount,
+		)
+		.where(
+			(reference.reference_doctype == "Sales Invoice")
+			& (reference.reference_name == bill)
+			& (entry.docstatus == 1)
+		)
+		.orderby(entry.posting_date)
+		.orderby(entry.name)
+	).run(as_dict=True)
+	for row in rows:
+		row.tds = flt(row.allocated_amount - row.paid_amount, 2)
+	return rows
+
+
+def cancel_payment(name: str):
+	"""Cancel a payment recorded against one of the firm's bills; the bill is due again."""
+	entry = frappe.get_doc("Payment Entry", name)
+	bills = [row.reference_name for row in entry.references if row.reference_doctype == "Sales Invoice"]
+	if not bills:
+		frappe.throw(_("{0} is not a payment against one of the firm's bills.").format(name))
+	bill_of(bills[0])  # who may bill, and a bill of the firm's
+	if entry.docstatus != 1:
+		frappe.throw(_("{0} is not a recorded payment.").format(name))
+	entry.cancel()

@@ -253,11 +253,38 @@ class TestAppApi(IntegrationTestCase):
 			self.assertIn(mine, found)
 			self.assertNotIn(theirs, found)
 			self.assertEqual(search(" T ")["items"], [])
-			self.assertEqual(set(search("TL/2026")), {"items", "filings", "cases", "trademarks"})
+			# Staff search the records they work on; the team is a manager's to search.
+			kinds = set(search("TL/2026"))
+			self.assertTrue({"items", "filings", "cases", "trademarks", "signatories"} <= kinds)
+			self.assertNotIn("people", kinds)
 		with self.set_user(MANAGER):
 			self.assertIn(theirs, [row.name for row in search("4472")["items"]])
 		with self.set_user(OUTSIDER), self.assertRaises(frappe.PermissionError):
 			search("TL/2026")
+
+	def test_search_matches_every_word_in_any_order_closest_first(self):
+		exact = make_item("Test App Licence", title="Fire NOC", reference_number="FN/77").name
+		longer = make_item("Test App Licence", title="Fire NOC Pune Warehouse").name
+		elsewhere = make_item(
+			"Test App Licence", title="Warehouse permit", reference_number="NOC-FIRE-9"
+		).name
+		with self.set_user(MANAGER):
+			found = [row.name for row in search("noc fire")["items"]]
+			self.assertEqual(found[:2], [exact, longer])
+			self.assertIn(elsewhere, found)
+			self.assertEqual([row.name for row in search("pune fire")["items"]], [longer])
+			# % and _ are looked for as typed, not as wildcards.
+			self.assertEqual(search("fire %")["items"], [])
+
+	def test_search_one_kind_and_the_team_for_managers_only(self):
+		with self.set_user(MANAGER):
+			only_items = search("Test", kind="items")
+			self.assertEqual(set(only_items), {"items"})
+			self.assertIn(
+				HOLDER, [person["user"] for person in search("compliance", kind="people")["people"]]
+			)
+		with self.set_user(HOLDER):
+			self.assertNotIn("people", search("compliance"))
 
 	def test_the_manifest_carries_the_sites_name_and_logo(self):
 		with self.change_settings(

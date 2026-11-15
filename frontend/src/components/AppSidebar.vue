@@ -58,6 +58,21 @@
 						</div>
 					</template>
 				</template>
+				<!-- Search opens quick search over the page, as Ctrl/⌘ K does. -->
+				<SidebarItem
+					v-else-if="section.route === 'Search'"
+					:label="t(section.label)"
+					:suffix="shortcut"
+					:on-click="openSearch"
+				>
+					<template #prefix>
+						<span
+							:class="[section.icon, sectionTint(section.route).icon]"
+							class="size-4"
+							aria-hidden="true"
+						/>
+					</template>
+				</SidebarItem>
 				<SidebarItem
 					v-else
 					:label="t(section.label)"
@@ -94,6 +109,7 @@ import NotificationBell from "@/components/NotificationBell.vue";
 import { isSettingsPageOpen, sections, settingsPagesFor, signOut } from "@/navigation";
 import { clearOutbox, outbox } from "@/offline/outbox";
 import { sectionTint } from "@/lib/areas";
+import { paletteOpen, shortcutLabel } from "@/lib/quickSearch";
 import { counts } from "@/stores/work";
 import SyncStatus from "./SyncStatus.vue";
 
@@ -102,6 +118,9 @@ const GROUP_KEY = "kxcompliance:settings-group-open";
 
 const route = useRoute();
 const settingsPages = settingsPagesFor();
+// Search opens quick search, with its keyboard shortcut beside it.
+const shortcut = shortcutLabel();
+const openSearch = () => (paletteOpen.value = true);
 const settingsOpen = computed(() =>
 	settingsPages.some((page) => isSettingsPageOpen(page, route.name))
 );

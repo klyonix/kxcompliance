@@ -900,6 +900,9 @@ def boot() -> dict:
 		"account_type": settings.account_type or "",
 		# Managers are taken through onboarding until the site is set up.
 		"setup_needed": not settings.setup_complete and is_approver(),
+		# Where the browser reaches Frappe's realtime server in development; behind a proxy in
+		# production it is the site's own address.
+		"socketio_port": frappe.conf.socketio_port or 9000,
 		# Everyone reads and accepts the privacy notice before using the app.
 		"privacy_notice_due": can_open_app() and privacy.notice_due(),
 	}

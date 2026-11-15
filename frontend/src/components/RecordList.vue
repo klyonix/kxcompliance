@@ -234,7 +234,7 @@
 // computer), `dateLabel`, `boards` (Kanban boards, from lib/boards.js), `filterBy.mine` (the field
 // "Only mine" narrows) and `group` (Overdue / Next 30 days / Later). Filters, sort and the
 // Table's columns are Frappe's own list controls (ListControls).
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
 	Button,
@@ -272,6 +272,7 @@ import {
 	writeLast,
 } from "@/lib/savedViews";
 import { PERSON_FIELDS } from "@/lib/table";
+import { watchDoctype } from "@/socket";
 import { chosenCompanies, loadClients } from "@/stores/clientFilter";
 import { notLoaded } from "@/offline/reachability";
 
@@ -833,6 +834,18 @@ watch(search, () => {
 		load();
 	}, 300);
 });
+// Someone else's change to a record of this type reloads the list and its counts.
+let stopWatching = null;
+function watchCurrent() {
+	stopWatching?.();
+	stopWatching = watchDoctype(currentDoctype.value, reloadAll);
+}
+watch(currentDoctype, watchCurrent);
+onBeforeUnmount(() => stopWatching?.());
+
 // The rows load once the controls report their filters (and the clients are known).
-onMounted(loadSaved);
+onMounted(() => {
+	loadSaved();
+	watchCurrent();
+});
 </script>

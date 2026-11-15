@@ -12,8 +12,10 @@ from kxcompliance.api import (
 	bill_options,
 	billing_setup,
 	cancel_bill,
+	cancel_payment,
 	client_fees,
 	create_bill,
+	record_payment,
 	save_return_fees,
 	send_bill,
 	set_up_billing,
@@ -209,6 +211,35 @@ class TestBills(IntegrationTestCase):
 		cancel_bill(name)
 		self.assertEqual(frappe.db.get_value("Sales Invoice", name, "docstatus"), 2)
 		self.assertIsNone(frappe.db.get_value("Compliance Task", self.filed, "billed_in"))
+
+	def test_a_bill_is_paid_in_parts_with_tds_and_a_payment_can_be_undone(self):
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 10000}])["name"]
+		send_bill(name)
+		self.assertEqual(bill(name)["outstanding_amount"], 11800)  # 10,000 and 18% GST
+		first = record_payment(name, 5000, "2026-11-10", "Bank Transfer", reference="UTR123", tds=1000)[
+			"payment"
+		]
+		shown = bill(name)
+		self.assertEqual(shown["outstanding_amount"], 5800)
+		self.assertEqual(
+			[(row["mode_of_payment"], row["paid_amount"], row["tds"]) for row in shown["payments"]],
+			[("Bank Transfer", 5000, 1000)],
+		)
+		with self.assertRaisesRegex(frappe.ValidationError, "more than the"):
+			record_payment(name, 6000, "2026-11-11", "Cash")
+		with self.assertRaisesRegex(frappe.ValidationError, "after today"):
+			record_payment(name, 100, "2999-01-01", "Cash")
+		with self.assertRaisesRegex(frappe.ValidationError, "Pay by one of"):
+			record_payment(name, 100, "2026-11-11", "Barter")
+		record_payment(name, 5800, "2026-11-12", "UPI")
+		self.assertEqual(bill(name)["outstanding_amount"], 0)
+		cancel_payment(first)
+		self.assertEqual(bill(name)["outstanding_amount"], 6000)
+
+	def test_a_draft_is_not_paid(self):
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		with self.assertRaisesRegex(frappe.ValidationError, "Send"):
+			record_payment(name, 100, "2026-11-10", "Cash")
 
 	def test_a_client_outside_the_firms_state_pays_igst(self):
 		frappe.db.set_value("Compliance Client", self.client, {"gstin": None, "billing_state": "Maharashtra"})

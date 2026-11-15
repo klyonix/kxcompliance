@@ -80,6 +80,59 @@
 				</dl>
 			</section>
 
+			<section
+				v-if="bill.docstatus === 1"
+				class="flex flex-col gap-2"
+				aria-labelledby="payments-heading"
+			>
+				<div class="flex items-center justify-between gap-3">
+					<h2 id="payments-heading" class="text-base font-semibold text-ink-gray-8">
+						Payments
+					</h2>
+					<Button
+						v-if="Number(bill.outstanding_amount) > 0"
+						size="sm"
+						icon-left="lucide-indian-rupee"
+						label="Record payment"
+						@click="paying = true"
+					/>
+				</div>
+				<p v-if="!bill.payments.length" class="text-base text-ink-gray-5">
+					Nothing received yet.
+				</p>
+				<div
+					v-for="payment in bill.payments"
+					:key="payment.name"
+					class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-outline-gray-1 py-2 last:border-b-0"
+				>
+					<span class="w-24 text-sm text-ink-gray-5">{{
+						formatDate(payment.posting_date)
+					}}</span>
+					<span class="min-w-0 flex-1 text-base text-ink-gray-8">
+						{{ payment.mode_of_payment }}
+						<span
+							v-if="payment.reference_no !== payment.mode_of_payment"
+							class="text-sm text-ink-gray-5"
+						>
+							· {{ payment.reference_no }}</span
+						>
+						<span v-if="payment.tds" class="text-sm text-ink-gray-5">
+							· TDS {{ money(payment.tds, bill.currency) }}</span
+						>
+					</span>
+					<span class="text-base text-ink-gray-8">{{
+						money(payment.paid_amount, bill.currency)
+					}}</span>
+					<Button
+						variant="ghost"
+						size="sm"
+						icon="lucide-undo-2"
+						:aria-label="`Cancel the payment of ${formatDate(payment.posting_date)}`"
+						@click="undoPayment(payment)"
+					/>
+				</div>
+			</section>
+
 			<p v-if="actionError" role="alert" class="text-base text-ink-red-4">
 				{{ actionError }}
 			</p>
@@ -110,6 +163,7 @@
 			</div>
 		</template>
 	</div>
+	<PaymentDialog v-if="bill" v-model:open="paying" :bill="bill" @saved="load" />
 </template>
 
 <script setup>
@@ -119,6 +173,7 @@ import { RouterLink, useRouter } from "vue-router";
 import { Badge, Button, Skeleton, dialog, toast } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import PaymentDialog from "@/components/PaymentDialog.vue";
 import { billState, money } from "@/lib/billing";
 import { formatDate } from "@/lib/format";
 
@@ -129,6 +184,7 @@ const bill = ref(null);
 const error = ref("");
 const actionError = ref("");
 const busy = ref("");
+const paying = ref(false);
 
 const state = computed(() => billState(bill.value));
 const parent = computed(() =>
@@ -195,6 +251,29 @@ function cancel() {
 				if (draft) router.replace(parent.value.route);
 				else await load();
 			}),
+	});
+}
+
+function undoPayment(payment) {
+	dialog.confirm({
+		title: `Cancel the payment of ${money(payment.paid_amount, bill.value.currency)}?`,
+		message: "It is reversed in the books and the bill is due again by that much.",
+		confirmLabel: "Cancel payment",
+		theme: "red",
+		onConfirm: async () => {
+			actionError.value = "";
+			try {
+				await call(
+					"kxcompliance.api.cancel_payment",
+					{ name: payment.name },
+					{ httpMethod: "POST" }
+				);
+				toast.success("Payment cancelled");
+				await load();
+			} catch (err) {
+				actionError.value = err.message;
+			}
+		},
 	});
 }
 

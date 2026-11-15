@@ -566,6 +566,23 @@ def cancel_bill(name: str) -> dict:
 	return {"name": name}
 
 
+@frappe.whitelist(methods=["POST"])
+def record_payment(
+	name: str, amount: float, paid_on: str, mode: str, reference: str | None = None, tds: float = 0
+) -> dict:
+	"""A payment received against a sent bill, in full or part, with any TDS the client deducted."""
+	check_app_access_or_accounts()
+	return {"payment": billing.record_payment(name, amount, paid_on, mode, reference, tds)}
+
+
+@frappe.whitelist(methods=["POST"])
+def cancel_payment(name: str) -> dict:
+	"""Cancel a payment recorded against one of the firm's bills."""
+	check_app_access_or_accounts()
+	billing.cancel_payment(name)
+	return {"name": name}
+
+
 @frappe.whitelist(methods=["GET"])
 def bill_pdf(name: str):
 	"""A bill's PDF, for those who bill (who may not read ERPNext's invoices in the Desk)."""

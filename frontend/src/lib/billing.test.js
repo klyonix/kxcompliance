@@ -4,6 +4,7 @@ import {
 	billSubtotal,
 	linesProblem,
 	linesToSend,
+	paymentProblem,
 	pricesProblem,
 	pricesToSend,
 } from "./billing";
@@ -80,5 +81,18 @@ describe("a bill being made", () => {
 				status: "Overdue",
 			}).label
 		).toBe("Overdue");
+	});
+});
+
+describe("a payment being recorded", () => {
+	const due = 11800;
+	it("is above zero, with TDS no more than what is left, dated and paid somehow", () => {
+		const good = { amount: 5000, tds: 1000, paid_on: "2026-11-10", mode: "UPI" };
+		expect(paymentProblem(good, due)).toBeNull();
+		expect(paymentProblem({ ...good, amount: 0 }, due)).toMatch(/above zero/);
+		expect(paymentProblem({ ...good, tds: -1 }, due)).toMatch(/zero or more/);
+		expect(paymentProblem({ ...good, amount: 11000 }, due)).toMatch(/more than the 11800/);
+		expect(paymentProblem({ ...good, paid_on: "" }, due)).toMatch(/date/);
+		expect(paymentProblem({ ...good, mode: "" }, due)).toMatch(/how it was paid/);
 	});
 });

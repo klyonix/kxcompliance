@@ -40,6 +40,7 @@ declare module 'vue' {
     NotificationBell: typeof import('./src/components/NotificationBell.vue')['default']
     NotificationsDrawer: typeof import('./src/components/NotificationsDrawer.vue')['default']
     OutcomeDialog: typeof import('./src/components/OutcomeDialog.vue')['default']
+    PaymentDialog: typeof import('./src/components/PaymentDialog.vue')['default']
     PriceList: typeof import('./src/components/PriceList.vue')['default']
     PrivacySection: typeof import('./src/components/PrivacySection.vue')['default']
     RecentActivity: typeof import('./src/components/RecentActivity.vue')['default']

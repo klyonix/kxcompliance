@@ -17,3 +17,4 @@ kxcompliance.patches.v1_0.rename_default_app_name
 kxcompliance.patches.v1_0.set_privacy_defaults
 kxcompliance.patches.v1_0.recompute_item_status
 kxcompliance.patches.v1_0.complete_billing_masters
+kxcompliance.patches.v1_0.complete_billing_masters #2026-11-16 payments

@@ -4,7 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from kxcompliance.kx_compliance.legal import run_daily
+from kxcompliance.kx_compliance.legal import check_status_change, run_daily
 from kxcompliance.kx_compliance.move_old_trackers import move_hearings
 from kxcompliance.kx_compliance.report.case_register.case_register import execute as case_register
 from kxcompliance.kx_compliance.report.contingent_liabilities.contingent_liabilities import (
@@ -75,6 +75,46 @@ class TestLegalCase(IntegrationTestCase):
 		case.status = "Open"
 		case.save()
 		self.assertIsNone(case.closed_on)
+
+	def test_closing_a_case_cancels_its_scheduled_dates(self):
+		case = make_case()
+		done = make_date(case.name, "2026-02-01", kind="Reply Due")
+		done.status = "Done"
+		done.save()
+		hearing = make_date(case.name, "2027-03-01", kind="Hearing")
+		with self.set_user(HOLDER):
+			frappe.get_doc("Legal Case", case.name).change_status(
+				"Disposed - In Our Favour", outcome="Suit decreed with costs", closed_on="2026-11-01"
+			)
+		case.reload()
+		self.assertEqual((case.status, str(case.closed_on)), ("Disposed - In Our Favour", "2026-11-01"))
+		self.assertIn("Suit decreed", case.outcome)
+		self.assertEqual(frappe.db.get_value("Legal Date", hearing.name, "status"), "Cancelled")
+		# What already happened stays as it was, and nothing is left to remind about.
+		self.assertEqual(frappe.db.get_value("Legal Date", done.name, "status"), "Done")
+		self.assertIsNone(case.next_date)
+
+	def test_a_case_is_not_closed_in_the_future_or_moved_to_its_own_status(self):
+		case = make_case()
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot be in the future"):
+			case.change_status("Settled", closed_on="2999-01-01")
+		with self.assertRaisesRegex(frappe.ValidationError, "already Open"):
+			frappe.get_doc("Legal Case", case.name).change_status("Open")
+		with self.assertRaisesRegex(frappe.ValidationError, "not a status"):
+			frappe.get_doc("Legal Case", case.name).change_status("Won")
+
+	def test_only_its_holder_reviewer_or_a_manager_changes_its_status(self):
+		case = make_case()
+		case.load_doc_before_save()
+		case.status = "Stayed"
+		for user in (HOLDER, REVIEWER, MANAGER):
+			with self.set_user(user):
+				check_status_change(case)
+		with (
+			self.set_user(OTHER_HOLDER),
+			self.assertRaisesRegex(frappe.PermissionError, "from Open to Stayed"),
+		):
+			check_status_change(case)
 
 	def test_an_amount_needs_a_risk(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "Set the Risk"):
@@ -229,3 +269,18 @@ class TestLegalCaseAmounts(IntegrationTestCase):
 			mine.opposing_party = "Acme Traders"
 			mine.save()
 		self.assertEqual(frappe.db.get_value("Legal Case", case.name, "amount_involved"), 500000)
+
+	def test_a_manager_alone_changes_amounts_and_risk_in_the_app(self):
+		from kxcompliance.api import editable_fields, save_changes
+
+		case = make_case()
+		with self.set_user(HOLDER):
+			self.assertNotIn("risk", editable_fields("Legal Case")["fields"])
+			with self.assertRaisesRegex(frappe.PermissionError, "cannot change amount_involved"):
+				save_changes("Legal Case", case.name, {"amount_involved": 1, "risk": "Remote"})
+		with self.set_user(MANAGER):
+			self.assertIn("risk", editable_fields("Legal Case")["fields"])
+			save_changes("Legal Case", case.name, {"risk": "Probable", "amount_involved": 250000})
+		self.assertEqual(
+			frappe.db.get_value("Legal Case", case.name, ["risk", "amount_involved"]), ("Probable", 250000)
+		)

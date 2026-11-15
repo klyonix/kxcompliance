@@ -64,3 +64,14 @@ describe("editing details in place", () => {
 		expect(mayChangeField("title", { mayEdit: false, people: [] })).toBe(false);
 	});
 });
+
+describe("amounts edited in place", () => {
+	const amount = { fieldtype: "Currency" };
+	it("reads as a number and sends one only when it changed", () => {
+		expect(controlFor(amount)).toBe("number");
+		expect(readValue(amount, 250000)).toBe((250000).toLocaleString());
+		expect(changeFor(amount, 250000, "250000")).toBeNull();
+		expect(changeFor(amount, 250000, "300000")).toBe(300000);
+		expect(changeFor(amount, 250000, "")).toBe(0);
+	});
+});

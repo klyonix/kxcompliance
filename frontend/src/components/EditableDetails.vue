@@ -48,6 +48,7 @@
 						<FormControl
 							v-else
 							v-model="draft"
+							:type="entry.control === 'number' ? 'number' : 'text'"
 							:aria-label="entry.label"
 							:disabled="saving"
 							@keydown.enter.prevent="save"

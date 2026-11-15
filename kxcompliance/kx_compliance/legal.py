@@ -140,3 +140,40 @@ def pass_people_to_dates(doctype: str, name: str, responsible: str | None, revie
 			& (legal_date.status == "Scheduled")
 		)
 	).run()
+
+
+def check_status_change(doc):
+	"""Once a case or trademark exists, its status is changed by whoever holds it or reviews it, or
+	by a Compliance Manager. Held here so every way of saving keeps the rule."""
+	from kxcompliance.kx_compliance.register import is_approver
+
+	if doc.is_new() or not doc.has_value_changed("status") or is_approver():
+		return
+	if frappe.session.user in (doc.responsible, doc.reviewer):
+		return
+	before = (doc.get_doc_before_save() or {}).get("status")
+	frappe.throw(
+		_(
+			"Only whoever holds or reviews {0}, or a Compliance Manager, can change its status from {1} to {2}."
+		).format(doc.name, _(before), _(doc.status)),
+		frappe.PermissionError,
+	)
+
+
+def scheduled_dates(doctype: str, name: str) -> list[str]:
+	return frappe.get_all(
+		"Legal Date",
+		filters={"reference_doctype": doctype, "reference_name": name, "status": "Scheduled"},
+		pluck="name",
+		order_by="date asc",
+	)
+
+
+def cancel_scheduled_dates(doctype: str, name: str, reason: str):
+	"""A closed case has nothing left to attend: its scheduled hearings and deadlines are cancelled,
+	so no reminder or escalation goes out for them."""
+	for date_name in scheduled_dates(doctype, name):
+		legal_date = frappe.get_doc("Legal Date", date_name)
+		legal_date.status = "Cancelled"
+		legal_date.proceedings = legal_date.proceedings or reason
+		legal_date.save()

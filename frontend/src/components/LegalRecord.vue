@@ -43,13 +43,16 @@
 					>
 						{{ due.text }}
 					</span>
+					<slot name="status-actions" />
 				</div>
 				<p v-if="subtitle" class="text-base text-ink-gray-6">{{ subtitle }}</p>
 			</section>
 
 			<slot />
 
+			<!-- Read again whenever the record is saved: closing a case cancels its dates. -->
 			<LegalDates
+				:key="doc?.modified"
 				:doctype="doctype"
 				:name="name"
 				:may-act="mayAct"

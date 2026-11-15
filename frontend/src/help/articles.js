@@ -218,6 +218,19 @@ export const ARTICLES = [
 		page: "Legal",
 	},
 	{
+		id: "close-a-case",
+		area: "Legal",
+		title: "A case is decided, settled or withdrawn. How do I close it?",
+		when: "When the final order comes, or the matter is settled or withdrawn.",
+		steps: [
+			"Open the case from Legal.",
+			'Press "Change status" and choose how it ended.',
+			"Give the date and the outcome. Any hearings or deadlines still scheduled are listed, and are cancelled when you close it.",
+		],
+		tip: "Use the same button to mark a case stayed or reserved for order, or to open it again if it is appealed or restored.",
+		page: "Legal",
+	},
+	{
 		id: "add-a-client",
 		area: "Clients",
 		title: "How do I add a client?",

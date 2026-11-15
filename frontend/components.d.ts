@@ -16,6 +16,7 @@ declare module 'vue' {
     AskDocument: typeof import('./src/components/AskDocument.vue')['default']
     AskInBulk: typeof import('./src/components/AskInBulk.vue')['default']
     CalendarFeed: typeof import('./src/components/CalendarFeed.vue')['default']
+    CaseStatusDialog: typeof import('./src/components/CaseStatusDialog.vue')['default']
     ClientPicker: typeof import('./src/components/ClientPicker.vue')['default']
     ConnectionBanner: typeof import('./src/components/ConnectionBanner.vue')['default']
     DataTable: typeof import('./src/components/DataTable.vue')['default']

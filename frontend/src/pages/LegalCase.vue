@@ -17,6 +17,16 @@
 		:may-edit="mayEdit"
 		@changed="load"
 	>
+		<template #status-actions>
+			<Button
+				v-if="mayChangeStatus"
+				class="ml-auto"
+				size="sm"
+				icon-left="lucide-gavel"
+				:label="open ? 'Change status' : 'Open it again'"
+				@click="statusOpen = true"
+			/>
+		</template>
 		<section
 			v-if="exposure"
 			class="grid grid-cols-3 gap-3 rounded-lg bg-surface-gray-1 px-4 py-3"
@@ -28,12 +38,20 @@
 			</div>
 		</section>
 	</LegalRecord>
+	<CaseStatusDialog
+		v-if="legalCase"
+		v-model:open="statusOpen"
+		:legal-case="legalCase"
+		@changed="load"
+	/>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { Button } from "frappe-ui";
 import { getDoc } from "@/api";
-import { boot } from "@/boot";
+import { boot, isManager } from "@/boot";
+import CaseStatusDialog from "@/components/CaseStatusDialog.vue";
 import LegalRecord from "@/components/LegalRecord.vue";
 import { canAct } from "@/lib/items";
 import { OPEN_CASE_STATUSES, caseRow } from "@/lib/legal";
@@ -50,6 +68,9 @@ const row = computed(() => (legalCase.value ? caseRow(legalCase.value) : { detai
 const open = computed(() => OPEN_CASE_STATUSES.includes(legalCase.value?.status));
 const mayAct = computed(() => open.value && canAct(legalCase.value, boot));
 const mayEdit = computed(() => canAct(legalCase.value, boot));
+// Whoever holds or reviews the case, or a manager; the server keeps the same rule.
+const mayChangeStatus = computed(() => canAct(legalCase.value, boot));
+const statusOpen = ref(false);
 
 const formatAmount = (value, currency) =>
 	Number(value || 0).toLocaleString(undefined, {
@@ -116,6 +137,10 @@ const CASE_DETAILS = [
 	{ field: "appeal_of", label: "Appeal of", show: (current) => current.appeal_of },
 	{ field: "responsible", label: "Responsible" },
 	{ field: "reviewer", label: "Reviewer" },
+	// Managers alone receive and change these; the band above sums them up.
+	{ field: "risk", label: "Risk", when: () => isManager() },
+	{ field: "amount_involved", label: "Amount involved", when: () => isManager() },
+	{ field: "provision", label: "Provision", when: () => isManager() },
 	{ field: "summary", label: "Summary" },
 	{ field: "outcome", label: "Outcome" },
 ];

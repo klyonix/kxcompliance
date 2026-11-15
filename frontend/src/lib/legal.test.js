@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+	cancelLine,
 	caseRow,
 	dateRow,
 	markRow,
+	nextCaseStatuses,
 	nextDateError,
 	outcomeValues,
 	plainText,
@@ -115,5 +117,18 @@ describe("legal in the app", () => {
 			"Demand of ₹4.2 lakh"
 		);
 		expect(plainText(null)).toBe("");
+	});
+});
+
+describe("moving a case on", () => {
+	it("offers every status but the one it has", () => {
+		expect(nextCaseStatuses("Open")).not.toContain("Open");
+		expect(nextCaseStatuses("Settled")).toContain("Open");
+		expect(nextCaseStatuses("Open")).toHaveLength(6);
+	});
+	it("says which dates closing cancels", () => {
+		expect(cancelLine(0)).toBe("");
+		expect(cancelLine(1)).toMatch(/^Its 1 scheduled date will be cancelled/);
+		expect(cancelLine(3)).toMatch(/^Its 3 scheduled dates/);
 	});
 });

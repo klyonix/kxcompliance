@@ -627,14 +627,9 @@ export const TOURS = [
 		managers: true,
 		steps: [
 			{
-				target: ["section:set-up-heading"],
-				title: "Set up",
-				text: "Companies the calendar makes filings for. Open one to change its registrations or who handles each obligation.",
-			},
-			{
-				target: ["section:not-set-up-heading"],
-				title: "Not set up yet",
-				text: "Companies in ERPNext that are not tracked yet. Open one to set it up.",
+				target: ["list-rows"],
+				title: "Set up, and not yet",
+				text: "First the companies the calendar makes filings for: open one to change its registrations or who handles each obligation. Under them, companies in ERPNext not tracked yet: open one to set it up.",
 			},
 		],
 	},
@@ -669,12 +664,12 @@ export const TOURS = [
 		managers: true,
 		steps: [
 			{
-				target: ["obligations-show"],
+				target: ["list-tabs"],
 				title: "In use or off",
 				text: "Switch off an obligation your clients never have, and it stops making filings.",
 			},
 			{
-				target: ["obligations-list"],
+				target: ["list-rows"],
 				title: "Grouped by law",
 				text: "Standard ones come with the app and stay current with each update. Open one to see its rules or set your own late fees.",
 			},
@@ -692,7 +687,7 @@ export const TOURS = [
 		managers: true,
 		steps: [
 			{
-				target: ["item-types-list"],
+				target: ["list-rows"],
 				title: "Kinds of item",
 				text: "How often each kind renews, how long it stays valid after expiry, and when reminders go out.",
 			},
@@ -732,7 +727,7 @@ export const TOURS = [
 				text: "Say which licences a customer or supplier must hold. A sale or purchase without them is blocked, or only warned about, when it is saved.",
 			},
 			{
-				target: ["licence-rules-list"],
+				target: ["list-rows"],
 				title: "Each rule",
 				text: "The licence, who must hold it, and the documents it is checked on. Open one to change it or switch it off.",
 			},

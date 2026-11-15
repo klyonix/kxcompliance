@@ -4,7 +4,7 @@
 		:parent="{ label: 'Licence rules', route: { name: 'LicenceRules' } }"
 	/>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6 sm:px-6">
+	<div class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
 		<p class="text-base text-ink-gray-6">
 			Sales and purchases a licence rule stopped or warned about. A manager can let a blocked
 			document through once, with a reason that is kept.
@@ -24,52 +24,38 @@
 		<p v-else-if="!rows.length" class="py-12 text-center text-base text-ink-gray-5">
 			{{ EMPTY[view] }}
 		</p>
-		<ul v-else class="flex flex-col" data-tour="licence-blocks-list">
-			<li
-				v-for="row in rows"
-				:key="row.name"
-				class="flex flex-col gap-2 border-b border-outline-gray-1 py-3 sm:flex-row sm:items-start"
-			>
-				<div class="flex min-w-0 flex-1 flex-col gap-0.5">
-					<a
-						:href="documentLink(row.reference_doctype, row.reference_name)"
-						class="text-base font-medium text-ink-gray-8 hover:underline"
-						>{{ row.reference_doctype }} {{ row.reference_name }}</a
-					>
-					<span class="text-sm text-ink-gray-6"
-						>{{ row.party }} · {{ row.item_type }}</span
-					>
-					<span v-if="row.message" class="text-sm text-ink-gray-5">{{
-						row.message
-					}}</span>
-					<span class="text-sm text-ink-gray-5">{{
-						[formatDateTime(row.checked_on), nameOf(row.checked_by)]
-							.filter(Boolean)
-							.join(" · ")
-					}}</span>
-				</div>
-				<Badge v-if="allowed.has(key(row))" label="Let through" theme="green" />
+		<RowList
+			v-else
+			data-tour="licence-blocks-list"
+			:rows="shown"
+			name-label="Document"
+			:columns="[{ label: 'Customer or supplier' }, { label: 'Checked by' }]"
+			date-label="Checked"
+			actions-width="sm:w-36"
+		>
+			<template #actions="{ row }">
 				<Button
-					v-else-if="view === 'blocked' && isManager()"
+					v-if="!row.allowed && view === 'blocked' && isManager()"
 					label="Allow this once"
-					@click="allowOnce(row)"
+					@click="allowOnce(row.log)"
 				/>
-			</li>
-		</ul>
+			</template>
+		</RowList>
 	</div>
 </template>
 
 <script setup>
 // Documents a licence rule blocked or warned about, and those let through once by a manager.
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Badge, Button, Skeleton, TabButtons, dialog, toast } from "frappe-ui";
+import { Button, Skeleton, TabButtons, dialog, toast } from "frappe-ui";
 import { createDoc, getList } from "@/api";
 import { isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RowList from "@/components/RowList.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { formatDateTime } from "@/lib/format";
-import { CHECK_VIEWS, documentLink, latestPerDocument, overrideKey } from "@/lib/licenceRules";
+import { CHECK_VIEWS, checkRow, latestPerDocument, overrideKey } from "@/lib/licenceRules";
 import { notLoaded } from "@/offline/reachability";
 
 const EMPTY = {
@@ -87,6 +73,15 @@ const rows = ref(null);
 const allowed = ref(new Set());
 const error = ref("");
 const key = (row) => overrideKey(row.reference_doctype, row.reference_name);
+const shown = computed(() =>
+	rows.value.map((log) =>
+		checkRow(log, {
+			allowed: allowed.value.has(key(log)),
+			checkedBy: nameOf(log.checked_by),
+			checkedOn: formatDateTime(log.checked_on),
+		})
+	)
+);
 
 async function load() {
 	rows.value = null;

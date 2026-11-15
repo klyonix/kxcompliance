@@ -1,5 +1,6 @@
 // Licence rules: which licences a customer or supplier must hold before a sale or purchase, and
 // the documents a rule was checked on (blocks, warnings and the ones let through once).
+import { deskRoute } from "@/navigation";
 
 export const CHECK_FIELDS = [
 	"check_quotation",
@@ -53,6 +54,58 @@ export function latestPerDocument(logs) {
 	});
 }
 
-// The Desk page of a selling or buying document, where it is finished once let through.
-export const documentLink = (doctype, name) =>
-	`/app/${doctype.toLowerCase().replace(/ /g, "-")}/${encodeURIComponent(name)}`;
+// One selling or buying document a rule was checked on (RowList); it opens in the Desk, where it
+// is finished once let through. `allowed` says whether a manager let it through once; `checkedBy`
+// and `checkedOn` are the person's name and the time, written for reading.
+export function checkRow(log, { allowed, checkedBy, checkedOn = "" }) {
+	return {
+		key: log.name,
+		kind: "licence-check",
+		title: `${log.reference_doctype} ${log.reference_name}`,
+		detail: [log.message, log.item_type].filter(Boolean).join(" · "),
+		status: allowed ? "Let through" : log.result,
+		theme: allowed ? "green" : log.result === "Blocked" ? "red" : "amber",
+		due: { text: checkedOn, late: false },
+		cells: [log.party, checkedBy],
+		href: deskRoute(log.reference_doctype, log.reference_name),
+		log,
+		allowed,
+	};
+}
+
+export const RULE_VIEWS = [
+	{
+		label: "In use",
+		value: "active",
+		filters: [["is_active", "=", 1]],
+		orderBy: "item_type asc",
+	},
+	{ label: "Off", value: "off", filters: [["is_active", "=", 0]], orderBy: "item_type asc" },
+	{ label: "All", value: "all", filters: [], orderBy: "item_type asc" },
+];
+
+// The licence rules list's columns (RecordList); a rule has no date of its own.
+export const RULE_LIST = {
+	nameLabel: "Licence",
+	columns: [
+		{
+			label: "Who must hold it",
+			value: (rule) => (rule.party_type === "Supplier" ? "Suppliers" : "Customers"),
+		},
+	],
+	dateLabel: null,
+};
+
+// `documents` are the selling and buying documents a rule can check (licence_rule_options).
+export function ruleRow(rule, documents) {
+	return {
+		key: rule.name,
+		kind: "licence-rule",
+		title: rule.item_type,
+		detail: ruleSummary(rule, documents),
+		status: rule.is_active ? rule.action : "Off",
+		theme: !rule.is_active ? "gray" : rule.action === "Block" ? "red" : "amber",
+		due: { text: "", late: false },
+		to: { name: "LicenceRule", params: { name: rule.name } },
+	};
+}

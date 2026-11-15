@@ -1,8 +1,22 @@
 <template>
-	<AppPageHeader
+	<RecordList
 		title="Register item types"
+		list-key="item-types"
+		doctype="Compliance Item Type"
+		:fields="TYPE_FIELDS"
+		:views="TYPE_VIEWS"
+		:to-row="typeRow"
+		v-bind="TYPE_LIST"
+		search-field="name"
+		search-placeholder="Search by name"
+		:by-client="false"
+		:empty="empty"
 		:parent="{ label: 'Settings', route: { name: 'Settings' } }"
 	>
+		<template #intro>
+			A type sets how often its items renew, how long after expiry they still count, whether
+			a certificate is needed, and when reminders go out.
+		</template>
 		<template #actions>
 			<Button
 				variant="solid"
@@ -11,75 +25,22 @@
 				:route="{ name: 'ItemTypeNew' }"
 			/>
 		</template>
-	</AppPageHeader>
-
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6 sm:px-6">
-		<p class="text-base text-ink-gray-6">
-			A type sets how often its items renew, how long after expiry they still count, whether
-			a certificate is needed, and when reminders go out.
-		</p>
-		<p
-			v-if="error"
-			role="alert"
-			class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
-		>
-			{{ error }}
-		</p>
-		<div v-else-if="!types" class="flex flex-col gap-3" aria-busy="true">
-			<Skeleton v-for="index in 5" :key="index" class="h-12 w-full rounded-lg" />
-		</div>
-		<ul v-else class="flex flex-col" data-tour="item-types-list">
-			<li v-for="type in types" :key="type.name">
-				<RouterLink
-					:to="{ name: 'ItemType', params: { name: type.name } }"
-					class="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-gray-2"
-				>
-					<span class="flex min-w-0 flex-1 flex-col">
-						<span
-							class="truncate text-base font-medium"
-							:class="type.is_active ? 'text-ink-gray-8' : 'text-ink-gray-5'"
-							>{{ type.name }}</span
-						>
-						<span class="truncate text-sm text-ink-gray-5">{{
-							typeSummary(type)
-						}}</span>
-					</span>
-					<span v-if="!type.is_active" class="text-sm text-ink-gray-5">Not in use</span>
-				</RouterLink>
-			</li>
-		</ul>
-	</div>
+	</RecordList>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
-import { RouterLink } from "vue-router";
-import { Button, Skeleton } from "frappe-ui";
-import { getList } from "@/api";
-import AppPageHeader from "@/components/AppPageHeader.vue";
-import { typeSummary } from "@/lib/itemTypes";
-import { notLoaded } from "@/offline/reachability";
+import { Button } from "frappe-ui";
+import RecordList from "@/components/RecordList.vue";
+import { TYPE_FIELDS, TYPE_LIST, TYPE_VIEWS, typeRow } from "@/lib/itemTypes";
 
-const types = ref(null);
-const error = ref("");
-
-onMounted(async () => {
-	try {
-		types.value = (
-			await getList("Compliance Item Type", {
-				fields: [
-					"name",
-					"category",
-					"renewal_cycle_months",
-					"requires_document",
-					"is_active",
-				],
-				orderBy: "name asc",
-				limit: 500,
-			})
-		).rows;
-	} catch (err) {
-		error.value = err.isNetwork ? notLoaded("the item types") : err.message;
-	}
-});
+function empty(view, searching) {
+	if (searching) return { title: "No matches", detail: "Try another name, or look under All." };
+	return view === "off"
+		? { title: "No type is switched off", detail: "Types you stop using appear here." }
+		: {
+				title: "No item types yet",
+				detail: "Add the kinds of licence, registration and certificate you keep.",
+				action: { label: "Add a type", route: { name: "ItemTypeNew" } },
+		  };
+}
 </script>

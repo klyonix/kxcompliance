@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { personOptions } from "./people";
+import { personOptions, personRow } from "./people";
 
 describe("personOptions", () => {
 	it("names people, and adds the email only where names repeat", () => {
@@ -16,5 +16,24 @@ describe("personOptions", () => {
 			"Asha Rao",
 			"nobody@example.com",
 		]);
+	});
+});
+
+describe("personRow", () => {
+	const person = {
+		user: "neha@example.com",
+		full_name: "Neha Joshi",
+		enabled: 1,
+		last_login: "2026-11-14 10:00:00",
+	};
+
+	it("says whether someone uses the app", () => {
+		expect(personRow(person).status).toBe("Active");
+		expect(personRow({ ...person, last_login: null }).status).toBe("Not signed in yet");
+		expect(personRow({ ...person, enabled: 0 }).status).toBe("Switched off");
+	});
+
+	it("marks the person looking", () => {
+		expect(personRow({ ...person, is_me: true }).title).toBe("Neha Joshi (you)");
 	});
 });

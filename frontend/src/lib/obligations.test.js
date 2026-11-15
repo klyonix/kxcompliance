@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	dueText,
 	extensionViews,
-	groupByLaw,
-	matchesSearch,
+	obligationRow,
+	obligationViews,
 	ordinal,
 	previewText,
 	ruleSummary,
@@ -51,28 +51,27 @@ describe("obligation rules in words", () => {
 });
 
 describe("listing the library", () => {
-	const templates = [
-		{ name: "TDS Return 26Q", law: "TDS/TCS", form: "26Q" },
-		{ name: "GSTR-3B (Monthly)", law: "GST", form: "GSTR-3B" },
-		{ name: "GSTR-1 (Monthly)", law: "GST", form: "GSTR-1" },
-		{ name: "Local Body Return", law: "Municipal" },
-	];
+	const template = {
+		name: "GSTR-3B (Monthly)",
+		law: "GST",
+		frequency: "Monthly",
+		months_after_period: 1,
+		due_day: 20,
+		is_active: 1,
+		is_standard: 1,
+	};
 
-	it("groups by law in the order the laws are offered, names in order", () => {
-		const groups = groupByLaw(templates, ["GST", "Income Tax", "TDS/TCS"]);
-		expect(groups.map((group) => group.law)).toEqual(["GST", "TDS/TCS", "Municipal"]);
-		expect(groups[0].templates.map((row) => row.name)).toEqual([
-			"GSTR-1 (Monthly)",
-			"GSTR-3B (Monthly)",
-		]);
+	it("marks standard, own and switched-off obligations", () => {
+		expect(obligationRow(template).status).toBe("Standard");
+		expect(obligationRow({ ...template, is_standard: 0 }).status).toBe("Your own");
+		expect(obligationRow({ ...template, is_standard: 0, is_active: 0 }).status).toBe("Off");
 	});
 
-	it("finds by name, form or law, every word", () => {
-		expect(
-			templates.filter((row) => matchesSearch(row, "gst 3b")).map((row) => row.name)
-		).toEqual(["GSTR-3B (Monthly)"]);
-		expect(templates.filter((row) => matchesSearch(row, "tds")).length).toBe(1);
-		expect(templates.filter((row) => matchesSearch(row, "")).length).toBe(4);
+	it("groups every tab by law, in the order the laws are offered", () => {
+		const views = obligationViews(["GST", "Income Tax"]);
+		expect(views.map((view) => view.value)).toEqual(["active", "off", "all"]);
+		expect(views[0].group(template)).toBe("GST");
+		expect(views[2].groupOrder).toEqual(["GST", "Income Tax"]);
 	});
 
 	it("reads states one per line", () => {

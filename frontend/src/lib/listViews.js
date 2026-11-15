@@ -33,3 +33,22 @@ export function groupRows(rows, today = new Date()) {
 export function choiceFilters(choices, { mineField, user }) {
 	return choices.mine && mineField && user ? [[mineField, "=", user]] : [];
 }
+
+// Rows in the order given, under a heading for each value of `labelOf(row)`, the headings in the
+// order they first appear (or in `order`, when given). For lists grouped by what they are rather
+// than when they are due, such as the obligation library by law.
+export function groupBy(rows, labelOf, order = []) {
+	const groups = new Map(order.map((label) => [label, []]));
+	for (const row of rows) {
+		const label = labelOf(row) || "";
+		if (!groups.has(label)) groups.set(label, []);
+		groups.get(label).push(row);
+	}
+	return [...groups]
+		.filter(([, grouped]) => grouped.length)
+		.map(([label, grouped]) => ({
+			key: label || "none",
+			label: label || "Other",
+			rows: grouped,
+		}));
+}

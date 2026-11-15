@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { choiceFilters, groupRows } from "./listViews";
+import { choiceFilters, groupBy, groupRows } from "./listViews";
 
 const TODAY = new Date("2026-11-15T10:00:00");
 const row = (key, date, late = false) => ({ key, date, due: { text: "", late } });
@@ -44,5 +44,28 @@ describe("only mine", () => {
 			choiceFilters({ mine: false }, { mineField: "responsible", user: "neha@example.com" })
 		).toEqual([]);
 		expect(choiceFilters({ mine: true }, { user: "neha@example.com" })).toEqual([]);
+	});
+});
+
+describe("groupBy", () => {
+	const rows = [
+		{ key: 1, law: "Income Tax" },
+		{ key: 2, law: "GST" },
+		{ key: 3, law: "Income Tax" },
+		{ key: 4, law: "" },
+	];
+
+	it("keeps the order rows first show each heading in", () => {
+		expect(groupBy(rows, (row) => row.law).map((group) => group.label)).toEqual([
+			"Income Tax",
+			"GST",
+			"Other",
+		]);
+	});
+
+	it("follows a given order and leaves out empty headings", () => {
+		const groups = groupBy(rows, (row) => row.law, ["GST", "Labour", "Income Tax"]);
+		expect(groups.map((group) => group.label)).toEqual(["GST", "Income Tax", "Other"]);
+		expect(groups[1].rows.map((row) => row.key)).toEqual([1, 3]);
 	});
 });

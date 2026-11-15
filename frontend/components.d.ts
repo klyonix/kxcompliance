@@ -11,16 +11,19 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AdvanceDialog: typeof import('./src/components/AdvanceDialog.vue')['default']
     AppPageHeader: typeof import('./src/components/AppPageHeader.vue')['default']
     AppSidebar: typeof import('./src/components/AppSidebar.vue')['default']
     AskDocument: typeof import('./src/components/AskDocument.vue')['default']
     AskInBulk: typeof import('./src/components/AskInBulk.vue')['default']
     BillingCard: typeof import('./src/components/BillingCard.vue')['default']
     BillingFirm: typeof import('./src/components/BillingFirm.vue')['default']
+    BillingReminders: typeof import('./src/components/BillingReminders.vue')['default']
     CalendarFeed: typeof import('./src/components/CalendarFeed.vue')['default']
     CaseStatusDialog: typeof import('./src/components/CaseStatusDialog.vue')['default']
     ClientPicker: typeof import('./src/components/ClientPicker.vue')['default']
     ConnectionBanner: typeof import('./src/components/ConnectionBanner.vue')['default']
+    CreditDialog: typeof import('./src/components/CreditDialog.vue')['default']
     DataTable: typeof import('./src/components/DataTable.vue')['default']
     EditableDetails: typeof import('./src/components/EditableDetails.vue')['default']
     FactsStrip: typeof import('./src/components/FactsStrip.vue')['default']
@@ -43,6 +46,7 @@ declare module 'vue' {
     NotificationsDrawer: typeof import('./src/components/NotificationsDrawer.vue')['default']
     OutcomeDialog: typeof import('./src/components/OutcomeDialog.vue')['default']
     PaymentDialog: typeof import('./src/components/PaymentDialog.vue')['default']
+    PaymentsList: typeof import('./src/components/PaymentsList.vue')['default']
     PrivacySection: typeof import('./src/components/PrivacySection.vue')['default']
     RateCards: typeof import('./src/components/RateCards.vue')['default']
     RateLines: typeof import('./src/components/RateLines.vue')['default']
@@ -61,5 +65,6 @@ declare module 'vue' {
     UpdatePrompt: typeof import('./src/components/UpdatePrompt.vue')['default']
     UrgencyTiles: typeof import('./src/components/UrgencyTiles.vue')['default']
     WorkRow: typeof import('./src/components/WorkRow.vue')['default']
+    WriteOffDialog: typeof import('./src/components/WriteOffDialog.vue')['default']
   }
 }

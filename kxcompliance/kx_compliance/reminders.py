@@ -404,10 +404,12 @@ def write_log(
 	rule_days: int | None = None,
 	due_date=None,
 	document_request: str | None = None,
+	sales_invoice: str | None = None,
 ):
 	frappe.get_doc(
 		{
 			"doctype": "Compliance Reminder Log",
+			"sales_invoice": sales_invoice,
 			"compliance_item": item,
 			"compliance_task": task,
 			"legal_date": legal_date,

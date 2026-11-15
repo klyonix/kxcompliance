@@ -9,6 +9,7 @@
   "compliance_task",
   "legal_date",
   "document_request",
+  "sales_invoice",
   "kind",
   "rule_days",
   "due_date",
@@ -89,12 +90,19 @@
    "hidden": 1,
    "label": "Log Key",
    "unique": 1
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "options": "Sales Invoice",
+   "label": "Bill",
+   "read_only": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-15 01:08:09.744208",
+ "modified": "2026-11-16 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Reminder Log",

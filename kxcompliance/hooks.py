@@ -164,6 +164,7 @@ scheduler_events = {
 		"kxcompliance.kx_compliance.legal.run_daily",
 		"kxcompliance.kx_compliance.document_requests.run_daily",
 		"kxcompliance.kx_compliance.privacy.run_daily",
+		"kxcompliance.kx_compliance.billing.send_overdue_reminders",
 	],
 	# 	"hourly": [
 	# 		"kxcompliance.tasks.hourly"

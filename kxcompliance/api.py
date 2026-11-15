@@ -573,6 +573,39 @@ def record_payment(
 
 
 @frappe.whitelist(methods=["POST"])
+def credit_bill(name: str, reason: str, amount: float | None = None, line: str | None = None) -> dict:
+	"""A credit note against a sent bill: every line left, or one line in full or in part."""
+	check_app_access_or_accounts()
+	return {"credit_note": billing.credit_note(name, reason, amount, line)}
+
+
+@frappe.whitelist(methods=["POST"])
+def write_off_bill(name: str, reason: str) -> dict:
+	"""Write off what is still due on a sent bill."""
+	check_app_access_or_accounts()
+	return {"journal_entry": billing.write_off(name, reason)}
+
+
+@frappe.whitelist(methods=["POST"])
+def record_advance(client: str, amount: float, paid_on: str, mode: str, reference: str | None = None) -> dict:
+	"""Money a client pays before it is billed."""
+	check_app_access_or_accounts()
+	billing.check_biller()
+	check_billed_client(client)
+	return {"payment": billing.record_advance(client, amount, paid_on, mode, reference)}
+
+
+@frappe.whitelist(methods=["GET"])
+def payments(
+	client: str | None = None, text: str | None = None, start: int = 0, page_length: int = 20
+) -> dict:
+	"""One page of the payments the firm has received."""
+	check_app_access_or_accounts()
+	limit = min(max(1, cint(page_length)), MAX_PAGE_LENGTH)
+	return billing.payments(client, text, max(0, cint(start)), limit)
+
+
+@frappe.whitelist(methods=["POST"])
 def cancel_payment(name: str) -> dict:
 	"""Cancel a payment recorded against one of the firm's bills."""
 	check_app_access_or_accounts()

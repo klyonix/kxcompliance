@@ -19,11 +19,15 @@ from kxcompliance.api import (
 	client_billing,
 	client_fees,
 	create_bill,
+	credit_bill,
 	own_bill,
+	payments,
 	receipt_pdf,
+	record_advance,
 	record_payment,
 	send_bill,
 	set_up_billing,
+	write_off_bill,
 )
 from kxcompliance.kx_compliance.billing import (
 	BILL_FORMAT,
@@ -32,6 +36,7 @@ from kxcompliance.kx_compliance.billing import (
 	ageing_bucket,
 	bill_print,
 	make_monthly_drafts,
+	send_overdue_reminders,
 	state_of,
 )
 from kxcompliance.kx_compliance.companies import companies_overview
@@ -302,6 +307,16 @@ class TestBills(IntegrationTestCase):
 		self.assertEqual(sorted(row["description"] for row in shown["taxes"]), ["Output CGST", "Output SGST"])
 		self.assertEqual(shown["total_taxes_and_charges"], 1350)
 		self.assertEqual(shown["grand_total"], 9350)
+		# A typed fee carries the firm's SAC code; a government fee none.
+		sac = dict(
+			frappe.get_all(
+				"Sales Invoice Item",
+				filters={"parent": name},
+				fields=["description", "sac_code"],
+				as_list=True,
+			)
+		)
+		self.assertEqual((sac["Advisory on GST notice"], sac["ROC filing fee paid"]), ("998221", None))
 		# A filing on a draft is not offered for another bill.
 		self.assertNotIn(self.filed, [row.name for row in bill_options(self.client)["filings"]])
 
@@ -509,6 +524,89 @@ class TestBills(IntegrationTestCase):
 			self.assertIn(expected, html)
 		receipt_pdf(payment)
 		self.assertTrue(frappe.local.response.filecontent.startswith(b"%PDF"))
+
+	def test_a_credit_note_lowers_what_is_due_and_a_filing_credited_in_full_is_freed(self):
+		name = create_bill(
+			self.client, filings=[self.filed], lines=[{"description": "Advisory", "amount": 1000}]
+		)["name"]
+		send_bill(name)
+		self.assertEqual(bill(name)["outstanding_amount"], 2950)  # 2,500 and GST
+		advisory = bill(name)["items"][1]["name"]
+		with self.assertRaisesRegex(frappe.ValidationError, "Say why"):
+			credit_bill(name, "")
+		with self.assertRaisesRegex(frappe.ValidationError, "Choose the line"):
+			credit_bill(name, "Too vague", amount=100)
+		with self.assertRaisesRegex(frappe.ValidationError, "at most its"):
+			credit_bill(name, "Too much", amount=1200, line=advisory)
+		part = credit_bill(name, "Advisory charged twice", amount=500, line=advisory)["credit_note"]
+		self.assertTrue(part.startswith("TBA/CN/"))
+		printed = bill_print(frappe.get_doc("Sales Invoice", part))
+		self.assertEqual(
+			(printed["title"], printed["against"]["name"], printed["qr"]), ("Credit Note", name, None)
+		)
+		shown = bill(name)
+		self.assertEqual(shown["outstanding_amount"], 2360)  # 590 credited
+		self.assertEqual([row.name for row in shown["credit_notes"]], [part])
+		self.assertEqual([row["creditable"] for row in shown["items"]], [1500, 0])
+		with self.assertRaisesRegex(frappe.ValidationError, "credited already"):
+			credit_bill(name, "Again", amount=100, line=advisory)
+		self.assertEqual(frappe.db.get_value("Compliance Task", self.filed, "billed_in"), name)
+
+		rest = credit_bill(name, "Filed by the client itself")["credit_note"]  # every line left
+		self.assertEqual(bill(name)["outstanding_amount"], 590)  # the advisory not credited
+		# Its line credited in full, the filing may be billed again; undoing the credit bills it again.
+		self.assertIsNone(frappe.db.get_value("Compliance Task", self.filed, "billed_in"))
+		with self.assertRaisesRegex(frappe.ValidationError, "Every line"):
+			credit_bill(name, "Once more")
+		frappe.get_doc("Sales Invoice", rest).cancel()
+		self.assertEqual(frappe.db.get_value("Compliance Task", self.filed, "billed_in"), name)
+
+	def test_what_is_left_on_a_bill_is_written_off(self):
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		send_bill(name)
+		record_payment(name, 1150, "2026-11-10", "UPI")
+		with self.assertRaisesRegex(frappe.ValidationError, "Say why"):
+			write_off_bill(name, " ")
+		write_off_bill(name, "Bank charges deducted by the client")
+		shown = bill(name)
+		self.assertEqual(shown["outstanding_amount"], 0)
+		self.assertEqual([row.amount for row in shown["written_off"]], [30])
+		with self.assertRaisesRegex(frappe.ValidationError, "nothing still due"):
+			write_off_bill(name, "Again")
+		with self.assertRaisesRegex(frappe.ValidationError, "still due"):
+			credit_bill(name, "Settled already")
+
+	def test_an_advance_is_used_against_the_next_bill_sent(self):
+		advance = record_advance(self.client, 2000, "2026-11-01", "Bank Transfer", reference="UTR-ADV")[
+			"payment"
+		]
+		listed = {row.name: row for row in payments(client=self.client)["rows"]}
+		self.assertEqual((listed[advance].unallocated_amount, listed[advance].client), (2000, self.client))
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		self.assertEqual(bill(name)["advance_held"], 2000)
+		send_bill(name)
+		self.assertEqual(bill(name)["outstanding_amount"], 0)  # 1,180 of the advance used
+		self.assertEqual(frappe.db.get_value("Payment Entry", advance, "unallocated_amount"), 820)
+		cancel_payment(advance)
+		self.assertEqual(bill(name)["outstanding_amount"], 1180)
+
+	def test_an_overdue_bill_is_reminded_once_at_each_step(self):
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		send_bill(name)
+		frappe.db.set_value("Sales Invoice", name, "due_date", "2026-11-01")
+		frappe.db.set_single_value(SETTINGS, {"overdue_reminders": 1, "reminder_steps": "3, 15"})
+		frappe.clear_document_cache(SETTINGS, SETTINGS)
+		self.addCleanup(frappe.db.set_single_value, SETTINGS, "overdue_reminders", 0)
+		with patch(
+			"kxcompliance.kx_compliance.billing.email_bill", return_value="accounts@billclient.example.com"
+		) as email:
+			send_overdue_reminders(frappe.utils.getdate("2026-11-03"))  # 2 days late: not yet
+			send_overdue_reminders(frappe.utils.getdate("2026-11-05"))  # 4 days: the 3-day step
+			send_overdue_reminders(frappe.utils.getdate("2026-11-06"))  # same step: not again
+			send_overdue_reminders(frappe.utils.getdate("2026-11-20"))  # 19 days: the 15-day step
+		self.assertEqual([call.kwargs["overdue_days"] for call in email.call_args_list], [3, 15])
+		logged = frappe.get_all("Compliance Reminder Log", filters={"sales_invoice": name}, pluck="rule_days")
+		self.assertEqual(sorted(logged), [3, 15])
 
 	def test_a_draft_is_not_paid(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]

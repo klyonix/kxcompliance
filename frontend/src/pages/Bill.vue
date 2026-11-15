@@ -23,6 +23,18 @@
 				<p v-if="bill.docstatus === 0" class="text-base text-ink-gray-6">
 					A draft: nothing is in the books and the client has not seen it. Check it, then
 					send it.
+					<template v-if="Number(bill.advance_held) > 0">
+						The {{ money(bill.advance_held, bill.currency) }} the client paid ahead is
+						used against it when it is sent.
+					</template>
+				</p>
+				<p v-if="bill.is_return" class="text-base text-ink-gray-6">
+					A credit note against
+					<RouterLink
+						:to="{ name: 'Bill', params: { name: bill.return_against } }"
+						class="text-ink-gray-8 underline"
+						>{{ bill.return_against }}</RouterLink
+					>: {{ bill.remarks }}
 				</p>
 			</section>
 
@@ -81,7 +93,7 @@
 			</section>
 
 			<section
-				v-if="bill.docstatus === 1"
+				v-if="bill.docstatus === 1 && !bill.is_return"
 				class="flex flex-col gap-2"
 				aria-labelledby="payments-heading"
 			>
@@ -145,6 +157,51 @@
 				</div>
 			</section>
 
+			<section
+				v-if="bill.credit_notes.length || bill.written_off.length"
+				class="flex flex-col gap-2"
+				aria-labelledby="credits-heading"
+			>
+				<h2 id="credits-heading" class="text-base font-semibold text-ink-gray-8">
+					Credits and write-offs
+				</h2>
+				<div
+					v-for="note in bill.credit_notes"
+					:key="note.name"
+					class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-outline-gray-1 py-2 last:border-b-0"
+				>
+					<span class="w-24 text-sm text-ink-gray-5">{{
+						formatDate(note.posting_date)
+					}}</span>
+					<span class="min-w-0 flex-1 text-base text-ink-gray-8">
+						<RouterLink
+							:to="{ name: 'Bill', params: { name: note.name } }"
+							class="hover:underline"
+							>Credit note {{ note.name }}</RouterLink
+						>
+						<span class="text-sm text-ink-gray-5"> · {{ note.remarks }}</span>
+					</span>
+					<span class="text-base text-ink-gray-8">{{
+						money(-note.grand_total, bill.currency)
+					}}</span>
+				</div>
+				<div
+					v-for="entry in bill.written_off"
+					:key="entry.name"
+					class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-outline-gray-1 py-2 last:border-b-0"
+				>
+					<span class="w-24 text-sm text-ink-gray-5">{{
+						formatDate(entry.posting_date)
+					}}</span>
+					<span class="min-w-0 flex-1 text-base text-ink-gray-8">
+						{{ entry.user_remark }}
+					</span>
+					<span class="text-base text-ink-gray-8">{{
+						money(entry.amount, bill.currency)
+					}}</span>
+				</div>
+			</section>
+
 			<p v-if="actionError" role="alert" class="text-base text-ink-red-4">
 				{{ actionError }}
 			</p>
@@ -152,9 +209,21 @@
 				<Button
 					v-if="bill.docstatus !== 2"
 					theme="red"
-					:label="bill.docstatus === 0 ? 'Delete draft' : 'Cancel bill'"
+					:label="cancelLabel"
 					:loading="busy === 'cancel'"
 					@click="cancel"
+				/>
+				<Button
+					v-if="Number(bill.outstanding_amount) > 0"
+					icon-left="lucide-eraser"
+					label="Write off"
+					@click="writingOff = true"
+				/>
+				<Button
+					v-if="creditable"
+					icon-left="lucide-receipt-text"
+					label="Credit note"
+					@click="crediting = true"
 				/>
 				<Button
 					icon-left="lucide-file-down"
@@ -175,17 +244,24 @@
 			</div>
 		</template>
 	</div>
-	<PaymentDialog v-if="bill" v-model:open="paying" :bill="bill" @saved="load" />
+	<template v-if="bill">
+		<PaymentDialog v-model:open="paying" :bill="bill" @saved="load" />
+		<CreditDialog v-if="creditable" v-model:open="crediting" :bill="bill" @saved="load" />
+		<WriteOffDialog v-model:open="writingOff" :bill="bill" @saved="load" />
+	</template>
 </template>
 
 <script setup>
-// One of the firm's bills: its lines, GST and totals, and sending, the PDF or cancelling it.
+// One of the firm's bills (or a credit note): its lines, GST and totals, payments, credits and
+// write-offs, and sending, the PDF or cancelling it.
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import { Badge, Button, Skeleton, dialog, toast } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import CreditDialog from "@/components/CreditDialog.vue";
 import PaymentDialog from "@/components/PaymentDialog.vue";
+import WriteOffDialog from "@/components/WriteOffDialog.vue";
 import { billState, money } from "@/lib/billing";
 import { formatDate } from "@/lib/format";
 
@@ -197,6 +273,20 @@ const error = ref("");
 const actionError = ref("");
 const busy = ref("");
 const paying = ref(false);
+const crediting = ref(false);
+const writingOff = ref(false);
+
+const creditable = computed(
+	() =>
+		bill.value?.docstatus === 1 &&
+		!bill.value.is_return &&
+		Number(bill.value.outstanding_amount) > 0 &&
+		bill.value.items.some((line) => Number(line.creditable) > 0)
+);
+const cancelLabel = computed(() => {
+	if (bill.value.docstatus === 0) return "Delete draft";
+	return bill.value.is_return ? "Cancel credit note" : "Cancel bill";
+});
 
 const state = computed(() => billState(bill.value));
 const parent = computed(() =>

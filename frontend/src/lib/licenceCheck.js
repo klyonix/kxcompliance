@@ -90,3 +90,35 @@ export function licenceState(licence, checkedOn) {
 		detail: `Valid until ${formatDate(licence.valid_until)}`,
 	};
 }
+
+// A customer or supplier found by the search, as a row that opens their check.
+export function partyRow(result, partyType) {
+	return {
+		key: result.name,
+		kind: partyType === "Supplier" ? "supplier" : "customer",
+		title: result.party_name || result.name,
+		detail: result.name !== result.party_name ? result.name : "",
+		status: "",
+		due: { text: "", late: false },
+		cells: [result.party_group || ""],
+		to: { query: { party_type: partyType, party: result.name } },
+	};
+}
+
+// A licence the party holds, as a row; it opens its register item for those who may read it.
+export function heldRow(licence, checkedOn, { linked = false } = {}) {
+	const state = licenceState(licence, checkedOn);
+	return {
+		key: licence.name || `${licence.item_type}-${licence.reference_number}`,
+		kind: "licence",
+		title: licence.item_type,
+		detail: [licence.reference_number, state.detail].filter(Boolean).join(" · "),
+		status: state.label,
+		theme: state.theme,
+		due: { text: "", late: false },
+		to:
+			linked && licence.name
+				? { name: "ComplianceItem", params: { name: licence.name } }
+				: null,
+	};
+}

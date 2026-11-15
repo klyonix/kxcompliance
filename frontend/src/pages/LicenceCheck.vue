@@ -1,201 +1,224 @@
 <template>
-	<AppPageHeader title="Licence Check" />
-
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6">
-		<template v-if="!party">
-			<p class="text-base text-ink-gray-6">
-				Find a {{ boot.partyTypes.length > 1 ? "customer or supplier" : partyLabel }} to
-				see whether a sale or purchase would go through, and which licences they hold.
-			</p>
-			<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-				<TabButtons
-					v-if="boot.partyTypes.length > 1"
-					v-model="partyType"
-					:options="boot.partyTypes.map((value) => ({ label: value, value }))"
-				/>
-				<TextInput
-					v-model="search"
-					type="search"
-					class="flex-1"
-					:placeholder="`Search ${partyLabel}s by name or ID`"
-					:aria-label="`Search ${partyLabel}s`"
-				>
-					<template #prefix
-						><span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true"
-					/></template>
-				</TextInput>
-			</div>
-
-			<p v-if="searchError" role="alert" class="text-base text-ink-red-4">
-				{{ searchError }}
-			</p>
-			<div v-else-if="searching && !results.length" class="flex flex-col gap-3">
-				<Skeleton v-for="index in 4" :key="index" class="h-10 w-full rounded-lg" />
-			</div>
-			<p v-else-if="!results.length" class="py-10 text-center text-base text-ink-gray-5">
-				{{ search.trim() ? `No ${partyLabel} matches “${search.trim()}”.` : "" }}
-			</p>
-			<ul v-else class="flex flex-col gap-1">
-				<li v-for="result in results" :key="result.name">
-					<RouterLink
-						:to="{ query: { party_type: partyType, party: result.name } }"
-						class="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-gray-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
-					>
-						<Avatar :label="result.party_name || result.name" size="lg" />
-						<span class="flex min-w-0 flex-1 flex-col">
-							<span class="truncate text-base font-medium text-ink-gray-8">{{
-								result.party_name || result.name
-							}}</span>
-							<span class="truncate text-sm text-ink-gray-5">{{
-								[
-									result.name !== result.party_name && result.name,
-									result.party_group,
-								]
-									.filter(Boolean)
-									.join(" · ")
-							}}</span>
-						</span>
-						<span
-							class="lucide-chevron-right size-4 text-ink-gray-4"
-							aria-hidden="true"
-						/>
-					</RouterLink>
-				</li>
-			</ul>
+	<AppPageHeader
+		:title="party ? check?.party_name || party : 'Licence Check'"
+		:parent="party ? { label: 'Licence Check', route: { query: {} } } : null"
+	>
+		<template v-if="party" #actions>
+			<!-- A phone's header keeps the name: the button is its icon alone there. -->
+			<Button
+				v-if="isMobile"
+				variant="ghost"
+				icon="lucide-search"
+				label="Check another"
+				:route="{ query: {} }"
+			/>
+			<Button
+				v-else
+				icon-left="lucide-search"
+				label="Check another"
+				:route="{ query: {} }"
+			/>
 		</template>
+	</AppPageHeader>
+
+	<!-- Finding the customer or supplier. -->
+	<div v-if="!party" class="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-6 sm:px-6">
+		<p class="max-w-3xl text-base text-ink-gray-6">
+			Find a {{ boot.partyTypes.length > 1 ? "customer or supplier" : partyLabel }} to see
+			whether a sale or purchase would go through, and which licences they hold.
+		</p>
+		<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+			<TabButtons
+				v-if="boot.partyTypes.length > 1"
+				v-model="partyType"
+				:options="boot.partyTypes.map((value) => ({ label: `${value}s`, value }))"
+			/>
+			<TextInput
+				v-model="search"
+				type="search"
+				class="flex-1 sm:max-w-sm"
+				:placeholder="`Search ${partyLabel}s by name or ID`"
+				:aria-label="`Search ${partyLabel}s`"
+			>
+				<template #prefix
+					><span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true"
+				/></template>
+			</TextInput>
+		</div>
+
+		<p v-if="searchError" role="alert" class="text-base text-ink-red-4">
+			{{ searchError }}
+		</p>
+		<div v-else-if="searching && !results.length" class="flex flex-col gap-3">
+			<Skeleton v-for="index in 4" :key="index" class="h-10 w-full rounded-lg" />
+		</div>
+		<div
+			v-else-if="!results.length"
+			class="flex flex-col items-center gap-2 py-16 text-center"
+		>
+			<span
+				class="flex size-12 items-center justify-center rounded-full bg-surface-gray-2 text-ink-gray-6"
+			>
+				<span class="lucide-search-x size-6" aria-hidden="true" />
+			</span>
+			<p class="text-lg font-medium text-ink-gray-8">
+				{{
+					search.trim()
+						? `No ${partyLabel} matches “${search.trim()}”`
+						: `No ${partyLabel}s yet`
+				}}
+			</p>
+			<p class="max-w-sm text-base text-ink-gray-5">Try part of the name or the ID.</p>
+		</div>
+		<RowList
+			v-else
+			:rows="results.map((result) => partyRow(result, partyType))"
+			:name-label="partyType"
+			:columns="[{ label: 'Group' }]"
+			status-label=""
+			:date-label="null"
+		/>
+	</div>
+
+	<!-- One customer's or supplier's check. -->
+	<RecordFrame v-else :facts="facts">
+		<p
+			v-if="checkError"
+			role="alert"
+			class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
+		>
+			{{ checkError }}
+		</p>
+		<div v-else-if="!check" class="flex flex-col gap-3" aria-busy="true">
+			<Skeleton class="h-20 w-full rounded-xl" />
+			<Skeleton class="h-28 w-full rounded-lg" />
+			<Skeleton class="h-16 w-full rounded-lg" />
+		</div>
 
 		<template v-else>
-			<div class="flex items-center gap-3">
-				<Avatar :label="check?.party_name || party" size="xl" />
-				<div class="flex min-w-0 flex-1 flex-col">
-					<span class="truncate text-lg font-semibold text-ink-gray-8">{{
-						check?.party_name || party
-					}}</span>
-					<span class="truncate text-sm text-ink-gray-5">{{
-						[partyType, check?.party_group].filter(Boolean).join(" · ")
-					}}</span>
-				</div>
-				<Button label="Check another" :route="{ query: {} }" />
-			</div>
-
-			<p
-				v-if="checkError"
-				role="alert"
-				class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
+			<section
+				class="flex items-start gap-4 rounded-xl px-4 py-4"
+				:class="VERDICT_STYLES[answer.theme].box"
+				role="status"
 			>
-				{{ checkError }}
-			</p>
-			<div v-else-if="!check" class="flex flex-col gap-3" aria-busy="true">
-				<Skeleton class="h-20 w-full rounded-lg" />
-				<Skeleton class="h-16 w-full rounded-lg" />
-				<Skeleton class="h-16 w-full rounded-lg" />
-			</div>
-
-			<template v-else>
-				<section
-					class="flex items-start gap-3 rounded-lg px-4 py-3"
-					:class="VERDICT_STYLES[answer.theme]"
-					role="status"
+				<span
+					class="flex size-10 shrink-0 items-center justify-center rounded-full"
+					:class="VERDICT_STYLES[answer.theme].icon"
 				>
-					<span :class="answer.icon" class="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-					<div class="flex flex-col gap-0.5">
-						<p class="text-base font-semibold">{{ answer.title }}</p>
-						<p v-if="answer.detail" class="text-base">{{ answer.detail }}</p>
-					</div>
-				</section>
-
-				<section
-					v-if="check.requirements.length"
-					class="flex flex-col gap-3"
-					aria-labelledby="needed-heading"
-				>
-					<h2 id="needed-heading" class="text-base font-semibold text-ink-gray-8">
-						Licences needed
-					</h2>
-					<ul class="flex flex-col">
-						<li
-							v-for="requirement in check.requirements"
-							:key="requirement.item_type"
-							class="flex flex-col gap-1 border-b border-outline-gray-1 py-3 last:border-b-0"
-						>
-							<div class="flex flex-wrap items-center gap-2">
-								<span class="text-base font-medium text-ink-gray-8">{{
-									requirement.item_type
-								}}</span>
-								<Badge v-bind="requirementState(requirement)" />
-								<span class="text-sm text-ink-gray-5">
-									{{ requirement.action === "Block" ? "Blocks" : "Warns" }}
-									<template v-if="requirement.grace_days">
-										· {{ requirement.grace_days }} days' grace</template
-									>
-								</span>
-							</div>
-							<p class="text-sm text-ink-gray-6">{{ coverage(requirement) }}</p>
-							<p v-if="requirement.message" class="text-base text-ink-gray-7">
-								{{ requirement.message }}
-							</p>
-						</li>
-					</ul>
-				</section>
-
-				<section class="flex flex-col gap-3" aria-labelledby="held-heading">
-					<h2 id="held-heading" class="text-base font-semibold text-ink-gray-8">
-						Licences held
-					</h2>
-					<p v-if="!check.licences.length" class="text-base text-ink-gray-5">
-						None recorded.
+					<span :class="answer.icon" class="size-5" aria-hidden="true" />
+				</span>
+				<div class="flex flex-col gap-0.5">
+					<p class="text-lg font-semibold">{{ answer.title }}</p>
+					<p v-if="answer.detail" class="text-base">{{ answer.detail }}</p>
+					<p class="text-sm opacity-80">
+						Checked for {{ formatDate(check.checked_on) }}.
 					</p>
-					<ul v-else class="flex flex-col">
-						<li
-							v-for="(licence, index) in check.licences"
-							:key="index"
-							class="flex items-center gap-3 border-b border-outline-gray-1 py-2.5 last:border-b-0"
-						>
-							<span class="flex min-w-0 flex-1 flex-col">
-								<span class="truncate text-base text-ink-gray-8">{{
-									licence.item_type
-								}}</span>
-								<span class="truncate text-sm text-ink-gray-5">{{
-									[
-										licence.reference_number,
-										licenceState(licence, check.checked_on).detail,
-									]
-										.filter(Boolean)
-										.join(" · ")
-								}}</span>
-							</span>
-							<Badge v-bind="licenceState(licence, check.checked_on)" />
-						</li>
-					</ul>
-				</section>
+				</div>
+			</section>
 
-				<p class="text-sm text-ink-gray-5">
-					Checked for {{ formatDate(check.checked_on) }}.
+			<section
+				v-if="check.requirements.length"
+				class="flex flex-col gap-3"
+				aria-labelledby="needed-heading"
+			>
+				<h2 id="needed-heading" class="text-base font-semibold text-ink-gray-8">
+					Licences needed
+				</h2>
+				<ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+					<li
+						v-for="requirement in check.requirements"
+						:key="requirement.item_type"
+						class="flex flex-col gap-2 rounded-lg border border-outline-gray-1 px-4 py-3"
+					>
+						<div class="flex items-start gap-2">
+							<span
+								class="mt-0.5 size-4 shrink-0"
+								:class="[
+									STATUS_ICONS[requirementState(requirement).theme],
+									STATUS_TEXT[requirementState(requirement).theme],
+								]"
+								aria-hidden="true"
+							/>
+							<span class="flex-1 text-base font-medium text-ink-gray-8">{{
+								requirement.item_type
+							}}</span>
+							<Badge v-bind="requirementState(requirement)" />
+						</div>
+						<p class="text-sm text-ink-gray-6">
+							{{ requirement.action === "Block" ? "Blocks" : "Warns" }}
+							<template v-if="requirement.grace_days">
+								· {{ requirement.grace_days }} days' grace</template
+							>
+							· {{ coverage(requirement) }}
+						</p>
+						<p v-if="requirement.message" class="text-sm text-ink-gray-7">
+							{{ requirement.message }}
+						</p>
+					</li>
+				</ul>
+			</section>
+
+			<section class="flex flex-col gap-3" aria-labelledby="held-heading">
+				<h2 id="held-heading" class="text-base font-semibold text-ink-gray-8">
+					Licences held
+				</h2>
+				<p v-if="!check.licences.length" class="text-base text-ink-gray-5">
+					None recorded.
 				</p>
-			</template>
+				<RowList
+					v-else
+					:rows="
+						check.licences.map((licence) =>
+							heldRow(licence, check.checked_on, { linked: !checksOnly() })
+						)
+					"
+					name-label="Licence"
+					:date-label="null"
+				/>
+			</section>
 		</template>
-	</div>
+	</RecordFrame>
 </template>
 
 <script setup>
+// Licence Check: find a customer or supplier, then see whether a sale or purchase with them
+// would go through today, the licences it needs and the ones they hold.
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
-import { Avatar, Badge, Button, Skeleton, TabButtons, TextInput } from "frappe-ui";
+import { Badge, Button, Skeleton, TabButtons, TextInput } from "frappe-ui";
 import { call } from "@/api";
-import { boot } from "@/boot";
+import { boot, checksOnly } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RecordFrame from "@/components/RecordFrame.vue";
+import RowList from "@/components/RowList.vue";
+import { useIsMobile } from "@/composables/useIsMobile";
 import { formatDate } from "@/lib/format";
-import { coverage, licenceState, requirementState, verdict } from "@/lib/licenceCheck";
+import { coverage, heldRow, partyRow, requirementState, verdict } from "@/lib/licenceCheck";
+import { STATUS_ICONS } from "@/lib/status";
 import { notLoaded } from "@/offline/reachability";
 
+// The answer's colours, and its icon on a stronger tint of the same.
 const VERDICT_STYLES = {
-	red: "bg-surface-red-1 text-ink-red-7",
-	amber: "bg-surface-amber-1 text-ink-amber-7",
-	green: "bg-surface-green-1 text-ink-green-7",
-	gray: "bg-surface-gray-2 text-ink-gray-7",
+	red: { box: "bg-surface-red-1 text-ink-red-7", icon: "bg-surface-red-2 text-ink-red-6" },
+	amber: {
+		box: "bg-surface-amber-1 text-ink-amber-7",
+		icon: "bg-surface-amber-2 text-ink-amber-7",
+	},
+	green: {
+		box: "bg-surface-green-1 text-ink-green-7",
+		icon: "bg-surface-green-2 text-ink-green-7",
+	},
+	gray: { box: "bg-surface-gray-2 text-ink-gray-7", icon: "bg-surface-gray-3 text-ink-gray-7" },
+};
+const STATUS_TEXT = {
+	red: "text-ink-red-4",
+	amber: "text-ink-amber-5",
+	green: "text-ink-green-5",
+	gray: "text-ink-gray-5",
 };
 
 const route = useRoute();
+const isMobile = useIsMobile();
 
 const partyType = ref(
 	boot.partyTypes.includes(route.query.party_type) ? route.query.party_type : boot.partyTypes[0]
@@ -211,6 +234,34 @@ const searchError = ref("");
 const check = ref(null);
 const checkError = ref("");
 const answer = computed(() => (check.value ? verdict(check.value) : null));
+
+// The band across the top of a check.
+const facts = computed(() => {
+	if (!check.value) return [];
+	const current = check.value;
+	const failing = current.requirements.filter((row) => row.result !== "ok").length;
+	return [
+		{
+			label: partyType.value,
+			icon: partyType.value === "Supplier" ? "lucide-truck" : "lucide-store",
+			value: current.party,
+		},
+		{ label: "Group", icon: "lucide-folder", value: current.party_group || "None" },
+		{
+			label: "Licences needed",
+			icon: "lucide-shield-check",
+			value: failing
+				? `${failing} of ${current.requirements.length} missing`
+				: String(current.requirements.length),
+			tone: failing ? "red" : "plain",
+		},
+		{
+			label: "Licences held",
+			icon: "lucide-file-badge",
+			value: String(current.licences.length),
+		},
+	];
+});
 
 const friendly = (err, what) => (err.isNetwork ? notLoaded(what) : err.message);
 

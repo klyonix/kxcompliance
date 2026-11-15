@@ -460,6 +460,7 @@ def check_party(party_type: str, party: str) -> dict:
 		"requirements": requirements,
 		"licences": [
 			{
+				"name": licence.name,
 				"item_type": licence.item_type,
 				"reference_number": licence.reference_number,
 				"status": licence.status,

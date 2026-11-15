@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { coverage, licenceState, requirementState, verdict } from "./licenceCheck";
+import {
+	coverage,
+	heldRow,
+	licenceState,
+	partyRow,
+	requirementState,
+	verdict,
+} from "./licenceCheck";
 
 const drug = {
 	item_type: "Drug Licence",
@@ -71,5 +78,32 @@ describe("the licence check", () => {
 		expect(licenceState({ valid: false, valid_until: "2027-06-30" }, on).label).toBe(
 			"Not yet in force"
 		);
+	});
+});
+
+describe("the licence check's rows", () => {
+	it("open a found customer's or supplier's check", () => {
+		const row = partyRow(
+			{ name: "CUST-0007", party_name: "City Pharmacy", party_group: "Retail" },
+			"Customer"
+		);
+		expect(row.kind).toBe("customer");
+		expect(row.detail).toBe("CUST-0007");
+		expect(row.to).toEqual({ query: { party_type: "Customer", party: "CUST-0007" } });
+	});
+
+	it("open a held licence only for those who may read the register", () => {
+		const licence = {
+			name: "CI-26-00004",
+			item_type: "Drug Licence",
+			reference_number: "KA-21B-77",
+			valid_until: "2027-12-19",
+			valid: true,
+		};
+		expect(heldRow(licence, "2026-11-15", { linked: true }).to.params.name).toBe(
+			"CI-26-00004"
+		);
+		expect(heldRow(licence, "2026-11-15").to).toBeNull();
+		expect(heldRow(licence, "2026-11-15").status).toBe("Valid");
 	});
 });

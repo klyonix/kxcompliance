@@ -48,6 +48,8 @@ const KIND_HUES = {
 	"licence-rule": "amber",
 	obligation: "blue",
 	"licence-check": "amber",
+	customer: "amber",
+	supplier: "teal",
 };
 
 export const sectionTint = (route) => TINTS[SECTION_HUES[route] || "gray"];

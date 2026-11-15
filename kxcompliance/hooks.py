@@ -3,7 +3,7 @@ app_title = "KlyONIX Compliance"
 app_publisher = "KlyONIX Tech Consulting Pvt Ltd"
 app_description = "Simple Compliance Management app"
 app_email = "hello@klyonix.com"
-app_license = "mit"
+app_license = "agpl-3.0"
 
 # Apps
 # ------------------

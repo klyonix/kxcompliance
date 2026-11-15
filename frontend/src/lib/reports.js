@@ -41,6 +41,14 @@ const ITEM_STATUSES = [
 
 export const AREAS = ["Filings", "Register", "Legal", "Clients"];
 
+// The icon each area's heading carries on the Reports page, the same as its side bar section.
+export const AREA_ICONS = {
+	Filings: "lucide-calendar-check",
+	Register: "lucide-file-badge",
+	Legal: "lucide-scale",
+	Clients: "lucide-users",
+};
+
 export const REPORTS = [
 	{
 		slug: "on-time-filing",
@@ -242,6 +250,40 @@ export function reportsFor({ firm, manager, auditor }) {
 		if (report.managersOrAuditors && !(manager || auditor)) return false;
 		return true;
 	});
+}
+
+// The reports whose title or line on what it answers holds every word typed, in any order.
+export function matchReports(reports, query) {
+	const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+	if (!words.length) return reports;
+	return reports.filter((report) => {
+		const text = `${report.title} ${report.about} ${report.area}`.toLowerCase();
+		return words.every((word) => text.includes(word));
+	});
+}
+
+const RECENT_KEY = "kxcompliance:recent-reports";
+const RECENT_MAX = 3;
+
+// The reports last opened on this device, newest first, so the ones used daily sit on top.
+export function recentReports(reports, storage = localStorage) {
+	let slugs = [];
+	try {
+		slugs = JSON.parse(storage.getItem(RECENT_KEY) || "[]");
+	} catch {
+		slugs = [];
+	}
+	if (!Array.isArray(slugs)) return [];
+	return slugs
+		.map((slug) => reports.find((report) => report.slug === slug))
+		.filter(Boolean)
+		.slice(0, RECENT_MAX);
+}
+
+export function rememberOpened(slug, storage = localStorage) {
+	const kept = recentReports(REPORTS, storage).map((report) => report.slug);
+	const slugs = [slug, ...kept.filter((other) => other !== slug)].slice(0, RECENT_MAX);
+	storage.setItem(RECENT_KEY, JSON.stringify(slugs));
 }
 
 // The financial year (April to March) holding `today`.

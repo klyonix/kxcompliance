@@ -7,7 +7,10 @@ import {
 	financialYear,
 	initialFilters,
 	linkRoute,
+	matchReports,
 	missingRequired,
+	recentReports,
+	rememberOpened,
 	reportBySlug,
 	reportsFor,
 	rowsOf,
@@ -86,5 +89,37 @@ describe("the reports", () => {
 		expect(toCsv(columns.slice(0, 2), [{ name: 'A, "B"', late_fee: 5 }])).toBe(
 			'Case,Late Fees\n"A, ""B""",5'
 		);
+	});
+});
+
+describe("finding a report", () => {
+	const all = reportsFor({ firm: true, manager: true, auditor: false });
+
+	it("matches every word typed, in any order, in the title or its line", () => {
+		expect(matchReports(all, "").length).toBe(all.length);
+		expect(matchReports(all, "on-time filing").map((report) => report.slug)).toContain(
+			all.find((report) => report.title === "On-time filing").slug
+		);
+		expect(matchReports(all, "nothing like this")).toEqual([]);
+	});
+
+	it("keeps the reports opened lately, newest first, three at most", () => {
+		const store = new Map();
+		const storage = {
+			getItem: (key) => store.get(key) ?? null,
+			setItem: (key, value) => store.set(key, value),
+		};
+		for (const report of all.slice(0, 4)) rememberOpened(report.slug, storage);
+		rememberOpened(all[1].slug, storage);
+		expect(recentReports(all, storage).map((report) => report.slug)).toEqual([
+			all[1].slug,
+			all[3].slug,
+			all[2].slug,
+		]);
+	});
+
+	it("shrugs off a damaged list", () => {
+		const storage = { getItem: () => "{not json", setItem: () => {} };
+		expect(recentReports(all, storage)).toEqual([]);
 	});
 });

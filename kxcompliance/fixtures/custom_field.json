@@ -101,5 +101,21 @@
   "no_copy": 0,
   "print_hide": 0,
   "read_only": 0
+ },
+ {
+  "allow_on_submit": 0,
+  "description": "What the bill is called: Tax Invoice, Invoice or Bill of Supply, by the firm's GST status when it was made.",
+  "doctype": "Custom Field",
+  "dt": "Sales Invoice",
+  "fieldname": "bill_title",
+  "fieldtype": "Data",
+  "insert_after": "kx_billing_key",
+  "label": "Bill Title",
+  "modified": "2026-11-16 18:00:00.000000",
+  "module": "KX Compliance",
+  "name": "Sales Invoice-bill_title",
+  "no_copy": 1,
+  "print_hide": 1,
+  "read_only": 1
  }
 ]

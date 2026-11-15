@@ -126,6 +126,18 @@
 					<Button
 						variant="ghost"
 						size="sm"
+						icon="lucide-file-down"
+						:aria-label="`Receipt for the payment of ${formatDate(
+							payment.posting_date
+						)}`"
+						:href="`/api/method/kxcompliance.api.receipt_pdf?name=${encodeURIComponent(
+							payment.name
+						)}`"
+						target="_blank"
+					/>
+					<Button
+						variant="ghost"
+						size="sm"
 						icon="lucide-undo-2"
 						:aria-label="`Cancel the payment of ${formatDate(payment.posting_date)}`"
 						@click="undoPayment(payment)"

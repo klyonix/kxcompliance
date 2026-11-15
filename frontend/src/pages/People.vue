@@ -131,14 +131,8 @@ import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RowList from "@/components/RowList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
-import { personRow } from "@/lib/people";
+import { ROLES, personRow } from "@/lib/people";
 import { notLoaded } from "@/offline/reachability";
-
-const ROLES = [
-	{ label: "Manager", detail: "Sets up companies, clients and settings, and approves filings." },
-	{ label: "Staff", detail: "Prepares filings, keeps the register and handles legal work." },
-	{ label: "Auditor", detail: "Can read everything and change nothing." },
-];
 
 const isMobile = useIsMobile();
 const people = ref(null);

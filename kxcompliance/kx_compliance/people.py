@@ -11,9 +11,13 @@ the Desk, so a manager can neither make an administrator nor lock one out.
 import frappe
 from frappe import _
 from frappe.utils import validate_email_address
+from frappe.utils.password import update_password
+from frappe.utils.password_strength import test_password_strength
 
 from kxcompliance.install import CLIENT_ROLE, ROLES
-from kxcompliance.kx_compliance.register import is_approver
+from kxcompliance.kx_compliance.legal import CLOSED_CASE_STATUSES
+from kxcompliance.kx_compliance.overview import PENDING_MARK_STATUSES
+from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, is_approver
 
 # The words the app uses for each role.
 ROLE_LABELS = {
@@ -62,22 +66,60 @@ def team() -> list[dict]:
 		fields=["name", "full_name", "enabled", "last_login"],
 	)
 	order = list(ROLE_LABELS)
-	people = []
-	for user in users:
-		role = next(role for role in order if role in roles[user.name])
-		people.append(
+	people = [person_row(user, roles[user.name], user.name in admins) for user in users]
+	return sorted(people, key=lambda person: (order.index(BY_LABEL[person["role"]]), person["full_name"]))
+
+
+def person_row(user, roles: set[str], admin: bool) -> dict:
+	"""One person as the People screen shows them; `user` has name, full_name, enabled, last_login."""
+	role = next(role for role in ROLE_LABELS if role in roles)
+	return {
+		"user": user.name,
+		"full_name": user.full_name or user.name,
+		"role": ROLE_LABELS[role],
+		"enabled": bool(user.enabled),
+		"last_login": str(user.last_login) if user.last_login else None,
+		"is_me": user.name == frappe.session.user,
+		# An administrator's access is managed in the Desk, not here.
+		"locked": admin,
+	}
+
+
+def person(user: str) -> dict:
+	"""One person on the team, for their page: their role, sign-in, and the open work they hold."""
+	check_manager()
+	roles = set(frappe.get_roles(user))
+	if user in PROTECTED or not roles & set(ROLES):
+		frappe.throw(_("{0} is not on the team.").format(user), frappe.DoesNotExistError)
+	row = frappe.db.get_value("User", user, ["name", "full_name", "enabled", "last_login"], as_dict=True)
+	return {
+		**person_row(row, roles, "System Manager" in roles),
+		"work": open_work(user),
+		"can_email": outgoing_email(),
+	}
+
+
+def open_work(user: str) -> list[dict]:
+	"""The open filings, register items, cases and trademarks someone is responsible for: each
+	count with the filters it counted, so the app opens the list of exactly those."""
+	kinds = (
+		("Filings", "Compliance Task", [["status", "not in", list(CLOSED_TASK_STATUSES)]]),
+		("Register items", "Compliance Item", [["is_cancelled", "=", 0]]),
+		("Legal cases", "Legal Case", [["status", "not in", list(CLOSED_CASE_STATUSES)]]),
+		("Trademarks", "Trademark", [["status", "in", list(PENDING_MARK_STATUSES)]]),
+	)
+	work = []
+	for label, doctype, open_filters in kinds:
+		filters = [["responsible", "=", user], *open_filters]
+		work.append(
 			{
-				"user": user.name,
-				"full_name": user.full_name or user.name,
-				"role": ROLE_LABELS[role],
-				"enabled": bool(user.enabled),
-				"last_login": str(user.last_login) if user.last_login else None,
-				"is_me": user.name == frappe.session.user,
-				# An administrator's access is managed in the Desk, not here.
-				"locked": user.name in admins,
+				"label": label,
+				"doctype": doctype,
+				"filters": filters,
+				"value": frappe.db.count(doctype, filters),
 			}
 		)
-	return sorted(people, key=lambda person: (order.index(BY_LABEL[person["role"]]), person["full_name"]))
+	return work
 
 
 def outgoing_email() -> bool:
@@ -175,3 +217,54 @@ def new_sign_in_link(user: str) -> dict:
 	if frappe.db.get_value("User", user, "last_login"):
 		frappe.throw(_("{0} has signed in before; they can reset their own password.").format(user))
 	return {"user": user, "link": sign_in_link(frappe.get_doc("User", user))}
+
+
+def send_password_reset(user: str) -> dict:
+	"""Email someone Frappe's link to set a new password themselves; the manager never sees it."""
+	check_manager()
+	check_changeable(user)
+	if not outgoing_email():
+		frappe.throw(
+			_(
+				"This site cannot send email yet, so the reset link cannot be sent. Set a temporary password instead."
+			)
+		)
+	frappe.get_doc("User", user)._reset_password(send_email=True)
+	return {"user": user, "emailed": True}
+
+
+MIN_PASSWORD_LENGTH = 8
+
+
+def set_temporary_password(user: str, password: str) -> dict:
+	"""Give someone a password to pass on in person, for a site that cannot send email.
+
+	It ends every session they have open, and the change is noted on their user record.
+	"""
+	check_manager()
+	check_changeable(user)
+	if not isinstance(password, str) or len(password) < MIN_PASSWORD_LENGTH:
+		frappe.throw(_("A password needs at least {0} characters.").format(MIN_PASSWORD_LENGTH))
+	weak = check_strength(user, password)
+	if weak:
+		frappe.throw(weak)
+	update_password(user, password, logout_all_sessions=True)
+	frappe.get_doc("User", user).add_comment(
+		"Info", _("{0} set a temporary password from the People screen.").format(frappe.session.user)
+	)
+	return {"user": user}
+
+
+def check_strength(user: str, password: str) -> str:
+	"""Why the site's password policy refuses this password, or "" when it passes (or is off)."""
+	if not frappe.get_system_settings("enable_password_policy"):
+		return ""
+	details = frappe.db.get_value(
+		"User", user, ["first_name", "middle_name", "last_name", "email", "birth_date"]
+	)
+	result = test_password_strength(password, user_inputs=details)
+	minimum = frappe.get_system_settings("minimum_password_score") or 0
+	if (result.get("score") or 0) >= int(minimum) and result.get("score"):
+		return ""
+	feedback = result.get("feedback") or {}
+	return " ".join(filter(None, [_("This password is too easy to guess."), feedback.get("warning")]))

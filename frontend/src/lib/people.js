@@ -16,7 +16,15 @@ export function personOptions(people) {
 	});
 }
 
-// One person on the People page (RowList); their role and actions sit beside the row.
+// The app's three roles, as the People screens offer them.
+export const ROLES = [
+	{ label: "Manager", detail: "Sets up companies, clients and settings, and approves filings." },
+	{ label: "Staff", detail: "Prepares filings, keeps the register and handles legal work." },
+	{ label: "Auditor", detail: "Can read everything and change nothing." },
+];
+
+// One person on the People page (RowList); their role and actions sit beside the row, and the
+// row opens their page.
 export function personRow(person) {
 	let status = "Active";
 	let theme = "green";
@@ -31,6 +39,7 @@ export function personRow(person) {
 		theme,
 		due: { text: "", late: false },
 		cells: [person.last_login ? formatDate(person.last_login) : ""],
+		to: { name: "Person", params: { user: person.user } },
 		person,
 	};
 }

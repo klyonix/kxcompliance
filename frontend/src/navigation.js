@@ -83,7 +83,7 @@ export const sections = sectionsFor({ checks: checksOnly(), client: isClientLogi
 // `also` lists the routes opened from a page, so its row stays marked while one is open.
 const SETTINGS_PAGES = [
 	{ label: "General", route: "Settings", icon: "lucide-sliders-horizontal" },
-	{ label: "People", route: "People", icon: "lucide-users" },
+	{ label: "People", route: "People", icon: "lucide-users", also: ["Person"] },
 	{
 		label: "Companies",
 		route: "Companies",

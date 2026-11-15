@@ -616,7 +616,31 @@ export const TOURS = [
 			{
 				target: ["people-list"],
 				title: "The team",
-				text: "Change someone's role, or take them off the team. The work they hold stays as it is.",
+				text: "Change someone's role here, or open them for their password and the work they hold.",
+			},
+		],
+	},
+	{
+		id: "person",
+		title: "A person",
+		route: "Person",
+		record: true,
+		managers: true,
+		steps: [
+			{
+				target: ["section:role-heading"],
+				title: "Their role",
+				text: "Manager, Staff or Auditor. Choose another and it changes at once.",
+			},
+			{
+				target: ["section:work-heading"],
+				title: "What they hold",
+				text: "Their open filings, register items, cases and trademarks. Each number opens the list.",
+			},
+			{
+				target: ["section:sign-in-heading"],
+				title: "Signing in",
+				text: "Email them a password reset, or set a temporary password to pass on in person.",
 			},
 		],
 	},

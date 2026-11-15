@@ -35,6 +35,8 @@ from kxcompliance.api import (
 	write_off_bill,
 )
 from kxcompliance.kx_compliance.billing import (
+	billing_party,
+	firms_own_companies,
 	BILL_FORMAT,
 	OUTSIDE_STATE,
 	WITHIN_STATE,
@@ -166,6 +168,29 @@ class TestBillingSetup(IntegrationTestCase):
 			self.assertNotIn(company, compliance_companies())
 			self.assertNotIn(company, app_companies())
 			self.assertNotIn(company, companies_overview()["not_set_up"])
+
+	def test_a_firm_bills_from_the_company_erpnexts_setup_made_under_its_name(self):
+		own = "Billing Own Name Associates"
+		if not frappe.db.exists("Company", own):
+			frappe.get_doc(
+				{
+					"doctype": "Company",
+					"company_name": own,
+					"abbr": "BONA",
+					"default_currency": "INR",
+					"country": "India",
+				}
+			).insert()
+		with self.change_settings(SETTINGS, account_type="CA/CS Firm", billing_company=None):
+			self.assertIn(own, firms_own_companies())
+			self.assertEqual(set_up_billing(DETAILS, name=own)["company"], own)
+
+	def test_a_clients_company_is_not_taken_as_the_firms(self):
+		profile(TEST_COMPANY, client("Billing Setup Client").name)
+		with self.change_settings(SETTINGS, account_type="CA/CS Firm", billing_company=None):
+			self.assertNotIn(TEST_COMPANY, firms_own_companies())
+			with self.assertRaisesRegex(frappe.ValidationError, "client Billing Setup Client"):
+				set_up_billing(DETAILS, name=TEST_COMPANY)
 
 	def test_billing_is_for_a_firms_managers_and_takes_only_its_details(self):
 		with self.change_settings(SETTINGS, account_type="Organisation"):
@@ -1011,6 +1036,31 @@ class TestBills(IntegrationTestCase):
 		shown = bill(name)
 		self.assertEqual([row["description"] for row in shown["taxes"]], ["Output IGST"])
 		self.assertEqual(shown["total_taxes_and_charges"], 180)
+
+	def test_a_retainer_with_no_date_to_bill_from_is_named_not_dropped(self):
+		frappe.db.set_value("Compliance Client", self.client, "billing_from", None)
+		options = bill_options(self.client)
+		self.assertEqual(options["recurring"], [])
+		self.assertEqual(options["recurring_without_start"], ["Fixed fee"])
+		self.assertEqual(client_summary(self.client)["recurring_without_start"], ["Fixed fee"])
+		frappe.db.set_value("Compliance Client", self.client, "billing_from", "2026-04-01")
+		self.assertEqual(bill_options(self.client)["recurring_without_start"], [])
+
+	def test_a_company_with_only_a_gst_registration_is_billed_in_its_state(self):
+		# The GSTIN was given in setup as the company's registration, not as a billing GSTIN.
+		frappe.db.set_value("Compliance Client", self.client, {"gstin": None, "billing_state": None})
+		company = frappe.get_doc("Company Compliance Profile", TEST_COMPANY)
+		company.append(
+			"registrations",
+			{"registration_type": "GST", "registration_number": "29AABCK1234Q1Z3", "state": "Karnataka"},
+		)
+		company.save()
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		shown = bill(name)
+		self.assertEqual(
+			[row["description"] for row in shown["taxes"]], ["Output CGST", "Output SGST"]
+		)
+		self.assertEqual(billing_party(self.client, TEST_COMPANY).gstin, "29AABCK1234Q1Z3")
 
 	def test_each_month_brings_one_draft_per_client_with_something_to_bill(self):
 		with patch("frappe.db.commit"), patch("frappe.db.rollback"):

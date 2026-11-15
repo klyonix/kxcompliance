@@ -86,10 +86,19 @@ class ComplianceTask(Document):
 				)
 			)
 
+	def checks_own_filing(self, user: str) -> bool:
+		"""A Compliance Manager who prepared this filing and has no one else set to check it."""
+		return user == self.responsible and self.reviewer in (None, "", user) and is_approver(user)
+
 	def mark_filed(self, rules):
 		user = frappe.session.user
+		self.filed_without_check = 0
 		if rules.requires_review:
-			if user == self.responsible:
+			if self.checks_own_filing(user):
+				# A one-person team: a manager with no one else to check their filing files it, and
+				# the filing says so.
+				self.filed_without_check = 1
+			elif user == self.responsible:
 				frappe.throw(
 					_("{0} prepared {1}, so someone else must check it and mark it filed.").format(
 						user, self.name

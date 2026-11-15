@@ -101,8 +101,11 @@ def setup_state() -> dict:
 	"""Whether billing is set up, and the firm's details for its bills."""
 	settings = get_settings()
 	states = settings.meta.get_field("billing_state").options or ""
+	own = [] if settings.billing_company else firms_own_companies()
 	return {
 		"company": settings.billing_company,
+		# The company ERPNext's own setup made under the firm's name, offered as the one to bill from.
+		"suggested_name": own[0] if len(own) == 1 else "",
 		**{field: settings.get(field) or "" for field in FIRM_FIELDS},
 		"states": [state for state in states.split("\n") if state],
 		"can_create_company": bool(frappe.has_permission("Company", "create")) and frappe.is_setup_complete(),
@@ -110,13 +113,35 @@ def setup_state() -> dict:
 	}
 
 
+def firms_own_companies() -> list[str]:
+	"""Companies that are no client's: the firm's own, such as the one ERPNext's setup made."""
+	clients = set(
+		frappe.get_all("Company Compliance Profile", filters={"client": ("is", "set")}, pluck="company")
+	)
+	return [name for name in frappe.get_all("Company", pluck="name", order_by="creation") if name not in clients]
+
+
+def firm_company(name: str) -> str:
+	"""The firm's company under this name: the existing one if it is the firm's own, else a new one."""
+	if not frappe.db.exists("Company", name):
+		return make_company(name)
+	client = frappe.db.get_value("Company Compliance Profile", {"company": name}, "client")
+	if client:
+		frappe.throw(
+			_("{0} is a company of the client {1}; give the firm's own name for its bills.").format(
+				name, client
+			)
+		)
+	return name
+
+
 def set_up_firm(name: str, details: dict) -> dict:
-	"""Make the firm's own company and what billing needs on it, once; then keep its details."""
+	"""Take the firm's own company, made if it is not there, and what billing needs on it, once;
+	then keep its details."""
 	check_firm_manager()
 	settings = frappe.get_doc(SETTINGS)
 	if not settings.billing_company:
-		company = make_company(name)
-		settings.billing_company = company
+		settings.billing_company = firm_company(name)
 	save_details(settings, details)
 	make_masters(settings.billing_company)
 	return setup_state()
@@ -650,17 +675,36 @@ def billing_party(client: str | None, company: str | None = None) -> frappe._dic
 		if company
 		else None
 	) or frappe._dict()
+	# With no billing GSTIN of its own, the company's GST registration says where it is.
+	registered = frappe._dict() if own.billing_gstin else gst_registration(company)
 	return frappe._dict(
 		client=client,
 		company=company,
 		client_name=company or base.client_name,
 		group=base.client_name if company else None,
-		gstin=own.billing_gstin or base.gstin,
-		billing_state=own.billing_state or base.billing_state,
+		gstin=own.billing_gstin or registered.gstin or base.gstin,
+		billing_state=own.billing_state or registered.state or base.billing_state,
 		billing_address=own.billing_address or base.billing_address,
 		email=own.billing_email or base.billing_email or base.contact_email,
 		logo=base.logo,
 	)
+
+
+def gst_registration(company: str | None) -> frappe._dict:
+	"""The company's GSTIN and its state, when it has one GST registration; with several, which
+	one a bill is to is the profile's billing GSTIN to say."""
+	if not company:
+		return frappe._dict()
+	rows = frappe.get_all(
+		"Compliance Registration",
+		filters={"parent": company, "parenttype": "Company Compliance Profile", "registration_type": "GST"},
+		fields=["registration_number", "state"],
+		limit=2,
+	)
+	if len(rows) != 1:
+		return frappe._dict()
+	gstin = (rows[0].registration_number or "").strip().upper()
+	return frappe._dict(gstin=gstin or None, state=rows[0].state or GST_STATE_CODES.get(gstin[:2]))
 
 
 def tax_template_for(client_state: str | None) -> str | None:
@@ -717,6 +761,15 @@ def recurring_due(rates: dict[tuple, dict], start, month: date) -> list[dict]:
 				}
 			)
 	return due
+
+
+def recurring_without_start(rates: dict[tuple, dict], start) -> list[str]:
+	"""The client's recurring charges, when it has no date to bill them from and so none is billed."""
+	if start:
+		return []
+	return [
+		line["service"] for line in rates.values() if RECURRING_MONTHS.get(line["unit"]) and line["amount"]
+	]
 
 
 def starts_period(start, months: int, month: date) -> bool:
@@ -1095,6 +1148,7 @@ def bill_options(client: str, company: str | None = None) -> dict:
 		"recurring": recurring_due(rates, start, month)
 		if company == recurring_to and not month_billed(month_key(client, company, month))
 		else [],
+		"recurring_without_start": recurring_without_start(rates, start) if company == recurring_to else [],
 		"services": [line for line in rates.values() if line["unit"] in AS_DONE],
 	}
 
@@ -1520,6 +1574,7 @@ def client_summary(client: str) -> dict:
 	return {
 		"year": {"from_date": from_date, "to_date": to_date},
 		"commitment": commitment(client, rates, values.billing_from, from_date, to_date),
+		"recurring_without_start": recurring_without_start(rates, values.billing_from),
 		"activity": year_activity(client, values.customer, from_date, to_date),
 		"outstanding": ageing[0] if ageing else {"outstanding": 0} | {key: 0 for key, _low, _high in AGEING},
 		"advance": advance_held(values.customer),

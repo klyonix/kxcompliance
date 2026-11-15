@@ -70,6 +70,18 @@
 				</label>
 			</section>
 
+<p
+				v-if="options.recurring_without_start?.length"
+				class="rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-4"
+			>
+				{{ recurringWaiting }}
+				<RouterLink
+					:to="{ name: 'ClientEdit', params: { name: client } }"
+					class="font-medium underline"
+					>Set the date</RouterLink
+				>
+			</p>
+
 			<label
 				v-if="options.recurring.length"
 				class="flex items-start gap-3 rounded-lg bg-surface-gray-1 px-3 py-2.5"
@@ -210,7 +222,7 @@ import { useRoute, useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
-import { billSubtotal, linesProblem, linesToSend, money, servicesProblem } from "@/lib/billing";
+import { billSubtotal, linesProblem, linesToSend, money, servicesProblem, recurringWithoutStartLine } from "@/lib/billing";
 
 const route = useRoute();
 const router = useRouter();
@@ -219,6 +231,10 @@ const fromClient = Boolean(route.query.client);
 const client = ref(String(route.query.client || ""));
 const clients = ref([]);
 const options = ref(null);
+
+const recurringWaiting = computed(() =>
+	recurringWithoutStartLine(options.value?.recurring_without_start)
+);
 const ticked = ref([]);
 const withRecurring = ref(false);
 const services = ref([]);

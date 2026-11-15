@@ -19,6 +19,7 @@ import {
 	statementLink,
 	statementProblem,
 	summaryFacts,
+	recurringWithoutStartLine,
 } from "./billing";
 
 describe("rates", () => {
@@ -271,5 +272,13 @@ describe("Billing's summary", () => {
 		expect(barWidth(500, months)).toBe(25);
 		expect(barWidth(-100, months)).toBe(0);
 		expect(barWidth(10, [])).toBe(0);
+	});
+
+	it("says which recurring charges wait for a date to bill from", () => {
+		expect(recurringWithoutStartLine([])).toBe("");
+		expect(recurringWithoutStartLine(["Monthly retainer"])).toBe(
+			'Monthly retainer is on the client\'s rates but not billed: the client has no "Recurring charges from" date.'
+		);
+		expect(recurringWithoutStartLine(["Retainer", "Audit fee"])).toMatch(/^Retainer, Audit fee are /);
 	});
 });

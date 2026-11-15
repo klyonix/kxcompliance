@@ -250,6 +250,7 @@ import { useIsMobile } from "@/composables/useIsMobile";
 import {
 	ACCOUNT_CHOICES,
 	NUMBER_HINTS,
+	companyDefault,
 	onboardingSteps,
 	registrationProblem,
 	setupAnswers,
@@ -357,6 +358,18 @@ function stepIsComplete() {
 	return true;
 }
 
+function startCompanyStep() {
+	if (!options.value) return;
+	const start = companyDefault(
+		answers.account_type,
+		openCompanies.value,
+		Boolean(options.value.can_create_company)
+	);
+	companyChoice.value = start.choice;
+	answers.company = start.company;
+}
+watch(() => answers.account_type, startCompanyStep);
+
 async function next() {
 	checking.value = true;
 	if (!stepIsComplete()) return;
@@ -392,11 +405,7 @@ const finish = () => (window.location.href = "/compliance");
 onMounted(async () => {
 	try {
 		options.value = await call("kxcompliance.api.onboarding_options");
-		// After ERPNext's own setup there is usually a company already, and it is the one meant.
-		if (openCompanies.value.length || !options.value.can_create_company) {
-			companyChoice.value = "existing";
-			answers.company = openCompanies.value.length === 1 ? openCompanies.value[0] : "";
-		}
+		startCompanyStep();
 		addRegistration();
 	} catch (err) {
 		error.value = err.message;

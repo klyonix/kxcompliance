@@ -395,3 +395,34 @@ class TestComplianceClient(IntegrationTestCase):
 			self.assertIn(MANAGER, {row.name for row in people_options()})
 		with self.set_user(CLIENT_LOGIN), self.assertRaises(frappe.PermissionError):
 			people_options()
+
+
+class TestRelationshipManagerEscalation(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_company()
+		make_users()
+		company(SECOND_COMPANY, "CTSC")
+		company(OTHER_COMPANY, "CTOC")
+
+	def test_an_overdue_filing_also_goes_to_the_clients_relationship_manager(self):
+		from unittest.mock import patch
+
+		from kxcompliance.kx_compliance.reminders import relationship_managers
+		from kxcompliance.kx_compliance.statutory import send_task_escalations
+
+		client("Sunrise Group", relationship_manager=OTHER_HOLDER)
+		profile(SECOND_COMPANY, "Sunrise Group")
+		left = client("Moonlight Traders", relationship_manager=HOLDER, status="Left")
+		profile(OTHER_COMPANY, left.name)
+		self.assertEqual(
+			relationship_managers([SECOND_COMPANY, OTHER_COMPANY, TEST_COMPANY, None]),
+			{SECOND_COMPANY: OTHER_HOLDER},
+		)
+		overdue = task(SECOND_COMPANY)
+		with patch("kxcompliance.kx_compliance.statutory.notify") as notify:
+			send_task_escalations(frappe.utils.getdate("2026-12-31"))
+		sent = {call.args[4]: call.args[0] for call in notify.call_args_list}
+		self.assertIn(OTHER_HOLDER, sent[overdue])
+		self.assertIn(MANAGER, sent[overdue])

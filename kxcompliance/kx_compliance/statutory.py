@@ -15,6 +15,7 @@ from kxcompliance.kx_compliance.reminders import (
 	already_sent,
 	compliance_managers,
 	notify,
+	relationship_managers,
 	run_for_item,
 	write_log,
 )
@@ -258,13 +259,16 @@ def send_task_escalations(today: date):
 	due = [(task, f"{task.name}|escalation|{task.effective_due_date}") for task in tasks]
 	sent = already_sent([key for _task, key in due])
 	managers = compliance_managers()
+	looking_after = relationship_managers(task.company for task, _key in due)
 	for task, key in due:
 		if key not in sent:
-			run_for_item(task.name, lambda task=task, key=key: escalate_task(task, key, managers))
+			to = [*managers, looking_after.get(task.company)]
+			run_for_item(task.name, lambda task=task, key=key, to=to: escalate_task(task, key, to))
 
 
 def escalate_task(task, key: str, managers: list[str]):
-	recipients = [user for user in [task.reviewer, *managers] if user]
+	"""`managers`: the compliance managers, and the client's relationship manager on a firm."""
+	recipients = list(dict.fromkeys(user for user in [task.reviewer, *managers] if user))
 	title = f"{task.obligation_template} ({task.period_label})"
 	subject = _("Overdue filing: {0}").format(title)
 	message = _("{0} for {1} was due on {2} and is not filed. It is held by {3}.").format(

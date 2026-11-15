@@ -12,6 +12,7 @@ from kxcompliance.kx_compliance.reminders import (
 	already_sent,
 	compliance_managers,
 	notify,
+	relationship_managers,
 	run_for_item,
 	write_log,
 )
@@ -40,6 +41,7 @@ DATE_FIELDS = [
 	"date",
 	"responsible",
 	"reviewer",
+	"company",
 ]
 
 
@@ -121,13 +123,16 @@ def send_escalations(today):
 	due = [(row, f"{row.name}|escalation|{row.date}") for row in rows]
 	sent = already_sent([key for _row, key in due])
 	managers = compliance_managers()
+	looking_after = relationship_managers(row.company for row, _key in due)
 	for row, key in due:
 		if key not in sent:
-			run_for_item(row.name, lambda row=row, key=key: escalate(row, key, managers))
+			to = [*managers, looking_after.get(row.company)]
+			run_for_item(row.name, lambda row=row, key=key, to=to: escalate(row, key, to))
 
 
 def escalate(row, key: str, managers: list[str]):
-	recipients = [user for user in [row.reviewer, *managers] if user]
+	"""`managers`: the compliance managers, and the client's relationship manager on a firm."""
+	recipients = list(dict.fromkeys(user for user in [row.reviewer, *managers] if user))
 	subject = _("No outcome recorded: {0}").format(label(row))
 	message = _("{0} was on {1} and nothing has been recorded since. It is held by {2}.").format(
 		escape_html(label(row)), formatdate(row.date), escape_html(row.responsible)

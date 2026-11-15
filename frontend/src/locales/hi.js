@@ -165,6 +165,7 @@ export default {
 	"Filings due {0} to {1}; notices, documents and DSCs as of today.":
 		"{0} से {1} तक देय फ़ाइलिंग; नोटिस, दस्तावेज़ और DSC आज की स्थिति में।",
 	"Documents your firm needs": "आपकी फ़र्म को चाहिए दस्तावेज़",
+	"Documents to send": "भेजने के दस्तावेज़",
 	"Document requests": "दस्तावेज़ अनुरोध",
 	"Nothing needed right now.": "अभी कुछ नहीं चाहिए।",
 	"Nothing asked for.": "कुछ नहीं माँगा गया।",

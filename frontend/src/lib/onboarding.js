@@ -24,6 +24,10 @@ export const NUMBER_HINTS = {
 	IEC: "ABCDE1234F",
 	FSSAI: "11226999000123",
 	"Stock Exchange": "NSE: SYMBOL",
+	CIN: "U25209KA2015PTC012345",
+	LLPIN: "AAB-1234",
+	PAN: "ABCDE1234F",
+	Udyam: "UDYAM-KR-03-0012345",
 };
 
 export function onboardingSteps(accountType) {

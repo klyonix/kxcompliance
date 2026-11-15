@@ -254,6 +254,11 @@ def complete(setup: dict) -> dict:
 	settings.account_type = account_type
 	if account_type == "CA/CS Firm" and (setup.get("firm_name") or "").strip():
 		settings.app_name = setup["firm_name"].strip()
+	# The privacy notice names a grievance officer; until the site names its own, the person who
+	# set the app up answers, as a manager does the requests.
+	if not settings.grievance_officer and not settings.grievance_email:
+		settings.grievance_officer = frappe.utils.get_fullname(frappe.session.user)
+		settings.grievance_email = frappe.db.get_value("User", frappe.session.user, "email")
 	settings.setup_complete = 1
 	settings.save()
 	return {"company": company, "client": client, "obligations": obligations, "tasks": tasks}

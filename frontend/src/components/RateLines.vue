@@ -4,7 +4,7 @@
 		<p v-if="!rows.length" class="text-base text-ink-gray-5">{{ empty }}</p>
 		<div
 			v-if="rows.length"
-			class="hidden grid-cols-[1fr_9rem_7rem_6rem_2rem] gap-2 px-1 text-xs font-medium text-ink-gray-5 sm:grid"
+			class="hidden grid-cols-[minmax(12rem,1fr)_9rem_7rem_6rem_2rem] gap-2 px-1 text-xs font-medium text-ink-gray-5 lg:grid"
 			aria-hidden="true"
 		>
 			<span>Return or service</span>
@@ -16,9 +16,9 @@
 		<div
 			v-for="(row, index) in rows"
 			:key="index"
-			class="grid grid-cols-2 items-start gap-2 border-b border-outline-gray-1 pb-2 sm:grid-cols-[1fr_9rem_7rem_6rem_2rem] sm:border-0 sm:pb-0"
+			class="grid grid-cols-2 items-start gap-2 border-b border-outline-gray-1 pb-2 lg:grid-cols-[minmax(12rem,1fr)_9rem_7rem_6rem_2rem] lg:border-0 lg:pb-0"
 		>
-			<div class="col-span-2 sm:col-span-1">
+			<div class="col-span-2 lg:col-span-1">
 				<Combobox
 					v-if="row.kind === 'Return'"
 					v-model="row.obligation_template"

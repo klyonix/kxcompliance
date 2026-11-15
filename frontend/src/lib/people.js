@@ -16,12 +16,22 @@ export function personOptions(people) {
 	});
 }
 
-// The app's three roles, as the People screens offer them.
-export const ROLES = [
-	{ label: "Manager", detail: "Sets up companies, clients and settings, and approves filings." },
-	{ label: "Staff", detail: "Prepares filings, keeps the register and handles legal work." },
-	{ label: "Auditor", detail: "Can read everything and change nothing." },
-];
+// The app's three roles, as the People screens offer them; only a firm has clients to set up.
+export function roleChoices(firm) {
+	return [
+		{
+			label: "Manager",
+			detail: firm
+				? "Sets up companies, clients and settings, and approves filings."
+				: "Sets up companies and settings, and approves filings.",
+		},
+		{ label: "Staff", detail: "Prepares filings, keeps the register and handles legal work." },
+		{ label: "Auditor", detail: "Can read everything and change nothing." },
+	];
+}
+
+// An example address for the invitation, at the firm or the company.
+export const inviteEmailHint = (firm) => (firm ? "neha@yourfirm.in" : "neha@yourcompany.in");
 
 // One person on the People page (RowList); their role and actions sit beside the row, and the
 // row opens their page.

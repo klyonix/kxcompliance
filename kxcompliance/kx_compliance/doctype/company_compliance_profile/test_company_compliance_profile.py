@@ -120,6 +120,14 @@ class TestOnboarding(IntegrationTestCase):
 		self.assertNotIn("AOC-4 (Financial Statements)", due)
 		self.assertEqual(due.get("MGT-7 / MGT-7A (Annual Return)"), "2026-11-29")
 
+	def test_whoever_sets_the_app_up_is_the_grievance_officer_until_one_is_named(self):
+		frappe.db.set_single_value(SETTINGS, {"grievance_officer": None, "grievance_email": None})
+		with self.set_user(MANAGER), self.freeze_time("2026-11-15"):
+			complete_onboarding(answers(new_company=None, company=TEST_COMPANY))
+		self.assertEqual(frappe.db.get_single_value(SETTINGS, "grievance_email"), MANAGER)
+		self.assertTrue(frappe.db.get_single_value(SETTINGS, "grievance_officer"))
+		frappe.delete_doc("Company Compliance Profile", TEST_COMPANY, force=True)
+
 	def test_an_agm_date_outside_the_year_is_refused(self):
 		with self.set_user("Administrator"), self.freeze_time("2026-11-15"):
 			for held in ("2026-03-15", "2026-12-01"):

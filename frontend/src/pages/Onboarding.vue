@@ -216,7 +216,9 @@
 					<span class="lucide-circle-check mt-0.5 size-5 shrink-0" aria-hidden="true" />
 					<p class="text-base">
 						{{ result.company }} has {{ result.obligations }} recurring filings in its
-						calendar; {{ result.tasks }} are due in the coming weeks.
+						calendar. The first {{ result.tasks }} are made, each with who prepares it;
+						the rest are made as their dates come near. My Work shows those that are
+						yours.
 					</p>
 				</div>
 			</div>

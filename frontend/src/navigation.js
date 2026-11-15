@@ -76,14 +76,18 @@ const CLIENT_SECTIONS = ["Search", "ClientHome", "Filings", "Register", "Legal",
 export function sectionsFor({ checks, client }) {
 	if (checks) return ALL_SECTIONS.filter((section) => section.route === "LicenceCheck");
 	if (client) return ALL_SECTIONS.filter((section) => CLIENT_SECTIONS.includes(section.route));
+	const firm = boot.accountType === "CA/CS Firm";
+	// A firm's manager finds Billing before it is set up; it opens the setup.
+	const setUpBilling = firm && isManager() && !boot.billingSetUp;
 	return ALL_SECTIONS.filter((section) => {
-		const firm = boot.accountType === "CA/CS Firm";
 		if (section.managers && !isManager()) return false;
 		if (section.firm && !firm) return false;
 		if (section.clientLogin) return false;
-		if (section.billing && !boot.mayBill) return false;
+		if (section.billing && !boot.mayBill && !setUpBilling) return false;
 		return !(section.licenceCheck && !licenceCheckOn());
-	});
+	}).map((section) =>
+		section.billing && !boot.mayBill ? { ...section, route: "BillingSettings" } : section
+	);
 }
 
 export const sections = sectionsFor({ checks: checksOnly(), client: isClientLogin() });

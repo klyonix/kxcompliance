@@ -57,6 +57,24 @@ def checklist() -> dict:
 			"detail": _("Someone else to hold or review work, so filings get a second look."),
 			"done": colleagues() > 0,
 		},
+		*(
+			[
+				{
+					"key": "billing",
+					"label": _("Set up billing"),
+					"detail": _("The firm's GSTIN, bank details and rates, so filed work turns into bills."),
+					"done": bool(settings.billing_company),
+				}
+			]
+			if is_firm()
+			else []
+		),
+		{
+			"key": "privacy",
+			"label": _("Name your grievance officer"),
+			"detail": _("The person and email the privacy notice gives for questions about personal data."),
+			"done": bool(settings.grievance_officer and settings.grievance_email),
+		},
 		{
 			"key": "reminders",
 			"label": _("Turn on reminders"),

@@ -340,3 +340,10 @@ export function modeForReference(reference, modes, current) {
 		: pick("Bank Transfer", "Wire Transfer");
 	return guess || modes.find((mode) => mode !== "Cash") || current;
 }
+
+// The first bill number this financial year (April to March) with the firm's prefix.
+export function billNumberExample(prefix, today = new Date()) {
+	const start = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+	const year = `${String(start).slice(-2)}-${String(start + 1).slice(-2)}`;
+	return `${String(prefix || "").trim() || "RA"}/${year}/0001`;
+}

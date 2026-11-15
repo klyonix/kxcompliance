@@ -207,6 +207,7 @@ class TestPeople(IntegrationTestCase):
 				result = getting_started_checklist()
 				steps = {step["key"]: step["done"] for step in result["steps"]}
 				self.assertFalse(steps["reminders"])
+				self.assertIn("privacy", steps)
 				self.assertTrue(steps["colleague"])  # the test users are on the team
 				self.assertTrue(result["show"])
 				hide_getting_started()

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterPeople, personOptions, personRow } from "./people";
+import { filterPeople, inviteEmailHint, personOptions, personRow, roleChoices } from "./people";
 
 describe("personOptions", () => {
 	it("names people, and adds the email only where names repeat", () => {
@@ -53,5 +53,11 @@ describe("filtering people", () => {
 		]);
 		expect(filterPeople(people, { text: "firm.example" })).toHaveLength(2);
 		expect(filterPeople(people)).toHaveLength(2);
+	});
+
+	it("speaks of clients only on a firm's site", () => {
+		expect(roleChoices(true)[0].detail).toContain("clients");
+		expect(roleChoices(false)[0].detail).not.toContain("clients");
+		expect(inviteEmailHint(false)).toBe("neha@yourcompany.in");
 	});
 });

@@ -1,0 +1,155 @@
+{
+ "actions": [],
+ "creation": "2026-11-15 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "label",
+  "list_key",
+  "layout",
+  "board",
+  "base_view",
+  "column_break_sharing",
+  "is_shared",
+  "is_pinned",
+  "section_state",
+  "filters",
+  "order_by",
+  "columns",
+  "quick_filters"
+ ],
+ "fields": [
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "label": "Label",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "list_key",
+   "fieldtype": "Data",
+   "label": "List",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "description": "Which list of the app it is for, such as register or filings."
+  },
+  {
+   "fieldname": "layout",
+   "fieldtype": "Select",
+   "label": "Layout",
+   "options": "List\nTable\nKanban",
+   "default": "List",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "board",
+   "fieldtype": "Data",
+   "label": "Kanban Board",
+   "description": "Which board, for a Kanban view."
+  },
+  {
+   "fieldname": "base_view",
+   "fieldtype": "Data",
+   "label": "Starts From",
+   "description": "The list's own tab the view narrows, such as Needs attention."
+  },
+  {
+   "fieldname": "column_break_sharing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_shared",
+   "fieldtype": "Check",
+   "label": "Shared With Everyone",
+   "description": "Only a Compliance Manager can share a view."
+  },
+  {
+   "fieldname": "is_pinned",
+   "fieldtype": "Check",
+   "label": "Pinned",
+   "description": "Shown first, for everyone it is shared with."
+  },
+  {
+   "fieldname": "section_state",
+   "fieldtype": "Section Break",
+   "label": "What It Shows"
+  },
+  {
+   "fieldname": "filters",
+   "fieldtype": "JSON",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "order_by",
+   "fieldtype": "Data",
+   "label": "Order By"
+  },
+  {
+   "fieldname": "columns",
+   "fieldtype": "JSON",
+   "label": "Columns"
+  },
+  {
+   "fieldname": "quick_filters",
+   "fieldtype": "JSON",
+   "label": "Quick Filters"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-15 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "KX Compliance",
+ "name": "Compliance List View",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Compliance Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Compliance User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Compliance Auditor",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Compliance Client",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "description": "A view someone saved of one of the app's lists: its filters, columns, sort and layout. Their own, or shared with everyone by a manager.",
+ "autoname": "hash",
+ "naming_rule": "Random",
+ "track_changes": 0,
+ "title_field": "label"
+}

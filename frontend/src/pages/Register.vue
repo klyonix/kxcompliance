@@ -1,6 +1,7 @@
 <template>
 	<RecordList
 		title="Register"
+		list-key="register"
 		doctype="Compliance Item"
 		:fields="ITEM_LIST_FIELDS"
 		:views="REGISTER_VIEWS"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { choiceCount, choiceFilters, groupRows, orderFor, readListChoices } from "./listViews";
+import { choiceFilters, groupRows } from "./listViews";
 
 const TODAY = new Date("2026-11-15T10:00:00");
 const row = (key, date, late = false) => ({ key, date, due: { text: "", late } });
@@ -35,43 +35,14 @@ describe("grouping a list by when", () => {
 	});
 });
 
-describe("filters and sort from the address", () => {
-	const sorts = [
-		{ label: "Expiry date", value: "expiry", orderBy: "valid_until asc" },
-		{ label: "Name", value: "name", orderBy: "title asc" },
-	];
-
-	it("keeps only what the list offers", () => {
+describe("only mine", () => {
+	it("narrows to the person in the list's field, and to nothing without one", () => {
 		expect(
-			readListChoices(
-				{ sort: "name", company: "Demo Ltd", type: "FSSAI Licence", mine: "1" },
-				{ sorts, companies: ["Demo Ltd"], types: ["FSSAI Licence"] }
-			)
-		).toEqual({ sort: "name", company: "Demo Ltd", type: "FSSAI Licence", mine: true });
+			choiceFilters({ mine: true }, { mineField: "responsible", user: "neha@example.com" })
+		).toEqual([["responsible", "=", "neha@example.com"]]);
 		expect(
-			readListChoices(
-				{ sort: "creation desc; drop", company: "Someone Else", type: ["x"], mine: "yes" },
-				{ sorts, companies: ["Demo Ltd"], types: ["FSSAI Licence"] }
-			)
-		).toEqual({});
-	});
-
-	it("turns the choices into server filters and an order", () => {
-		const choices = { company: "Demo Ltd", type: "FSSAI Licence", mine: true, sort: "name" };
-		expect(
-			choiceFilters(choices, {
-				companyField: "applicant",
-				typeField: "item_type",
-				mineField: "responsible",
-				user: "neha@example.com",
-			})
-		).toEqual([
-			["applicant", "=", "Demo Ltd"],
-			["item_type", "=", "FSSAI Licence"],
-			["responsible", "=", "neha@example.com"],
-		]);
-		expect(orderFor(choices, sorts, "valid_until asc")).toBe("title asc");
-		expect(orderFor({}, sorts, "valid_until asc")).toBe("valid_until asc");
-		expect(choiceCount(choices)).toBe(3);
+			choiceFilters({ mine: false }, { mineField: "responsible", user: "neha@example.com" })
+		).toEqual([]);
+		expect(choiceFilters({ mine: true }, { user: "neha@example.com" })).toEqual([]);
 	});
 });

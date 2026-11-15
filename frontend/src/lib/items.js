@@ -1,5 +1,4 @@
 // Rules for showing a Compliance Item, kept apart from the screens so they can be tested.
-import { getList } from "@/api";
 import { relativeDue } from "@/pages/myWork";
 
 export const ATTENTION_STATUSES = [
@@ -48,7 +47,7 @@ export const REGISTER_VIEWS = [
 	{ label: "All", value: "all", filters: [], orderBy: "valid_until asc", group: true },
 ];
 
-// The Register's columns, sorts and filters (RecordList). "Held by" is the customer, supplier or
+// The Register's columns, boards and filters (RecordList). "Held by" is the customer, supplier or
 // person for theirs, and the company for its own.
 export const REGISTER_LIST = {
 	columns: [
@@ -62,27 +61,8 @@ export const REGISTER_LIST = {
 		{ label: "Responsible", field: "responsible", person: true },
 	],
 	dateLabel: "Expires",
-	sorts: [
-		{ label: "Expiry date", value: "expiry", orderBy: "valid_until asc" },
-		{ label: "Name", value: "name", orderBy: "title asc" },
-		{ label: "Recently changed", value: "recent", orderBy: "modified desc" },
-	],
-	filterBy: {
-		company: true,
-		type: {
-			field: "item_type",
-			label: "Type",
-			load: async () =>
-				(
-					await getList("Compliance Item Type", {
-						fields: ["name"],
-						orderBy: "name asc",
-						limit: 500,
-					})
-				).rows.map((row) => row.name),
-		},
-		mine: "responsible",
-	},
+	boards: ["register-status", "register-responsible"],
+	filterBy: { mine: "responsible" },
 };
 
 export const ITEM_LIST_FIELDS = [

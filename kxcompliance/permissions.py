@@ -189,3 +189,24 @@ def has_client_permission(doc, ptype: str | None = None, user: str | None = None
 		or user in {row.user for row in doc.team}
 		or user in {row.user for row in doc.logins if row.enabled}
 	)
+
+
+def list_view_query_conditions(user: str | None = None) -> str:
+	"""Saved list views: a person's own, and the shared ones."""
+	user = user or frappe.session.user
+	if user == "Administrator":
+		return ""
+	quoted = frappe.db.escape(user)
+	return f"(`tabCompliance List View`.`owner` = {quoted} or `tabCompliance List View`.`is_shared` = 1)"
+
+
+def has_list_view_permission(doc, ptype: str | None = None, user: str | None = None) -> bool:
+	"""Read one's own views and shared ones; change one's own, or a shared one as a manager."""
+	from kxcompliance.kx_compliance.register import is_approver
+
+	user = user or frappe.session.user
+	if user == "Administrator" or doc.owner == user or doc.is_new():
+		return True
+	if ptype in (None, "read", "select", "print"):
+		return bool(doc.is_shared)
+	return bool(doc.is_shared) and is_approver(user)

@@ -252,6 +252,7 @@ after_migrate = "kxcompliance.install.after_migrate"
 permission_query_conditions = {
 	"Compliance Client": "kxcompliance.permissions.client_query_conditions",
 	"Compliance Item": "kxcompliance.permissions.item_query_conditions",
+	"Compliance List View": "kxcompliance.permissions.list_view_query_conditions",
 	"Compliance Renewal": "kxcompliance.permissions.renewal_query_conditions",
 	"Compliance Task": "kxcompliance.permissions.task_query_conditions",
 	"Document Request": "kxcompliance.permissions.document_request_query_conditions",
@@ -263,6 +264,7 @@ permission_query_conditions = {
 has_permission = {
 	"Compliance Client": "kxcompliance.permissions.has_client_permission",
 	"Compliance Item": "kxcompliance.permissions.has_item_permission",
+	"Compliance List View": "kxcompliance.permissions.has_list_view_permission",
 	"Compliance Renewal": "kxcompliance.permissions.has_renewal_permission",
 	"Compliance Task": "kxcompliance.permissions.has_task_permission",
 	"Document Request": "kxcompliance.permissions.has_document_request_permission",

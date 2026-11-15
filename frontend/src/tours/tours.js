@@ -149,6 +149,16 @@ export const TOURS = [
 				title: "Filter and sort",
 				text: "Narrow the list to one company, one type, or only what you are responsible for, and sort it by date or name. Your choice stays in the address, so Back returns to it.",
 			},
+			{
+				target: ["list-layout"],
+				title: "List, table or Kanban",
+				text: "Show the list as rows, as a table whose columns you choose, or as a Kanban board. A board moves a record when you drag its card, or from its arrows on a phone.",
+			},
+			{
+				target: ["list-views"],
+				title: "Your views",
+				text: "Save the filters, sort and layout you use as a view, and open it from here. A manager can share a view with everyone, or pin it beside the tabs.",
+			},
 		],
 	},
 	{
@@ -262,6 +272,16 @@ export const TOURS = [
 				target: ["list-filter"],
 				title: "Filter and sort",
 				text: "Narrow the list to one company, one type, or only what you are responsible for, and sort it by date or name. Your choice stays in the address, so Back returns to it.",
+			},
+			{
+				target: ["list-layout"],
+				title: "List, table or Kanban",
+				text: "Show the list as rows, as a table whose columns you choose, or as a Kanban board. A board moves a record when you drag its card, or from its arrows on a phone.",
+			},
+			{
+				target: ["list-views"],
+				title: "Your views",
+				text: "Save the filters, sort and layout you use as a view, and open it from here. A manager can share a view with everyone, or pin it beside the tabs.",
 			},
 		],
 	},

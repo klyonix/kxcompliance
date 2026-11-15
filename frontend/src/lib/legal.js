@@ -108,7 +108,6 @@ export const MARK_LIST_FIELDS = [
 ];
 
 const RESPONSIBLE = { label: "Responsible", field: "responsible", person: true };
-const BY_RECENT = { label: "Recently changed", value: "recent", orderBy: "modified desc" };
 
 export function dateRow(legalDate, today = new Date()) {
 	return {
@@ -176,11 +175,7 @@ export const LEGAL_VIEWS = [
 		group: true,
 		columns: [{ label: "Company", field: "company" }, RESPONSIBLE],
 		dateLabel: "Date",
-		sorts: [
-			{ label: "Date", value: "date", orderBy: "date asc" },
-			{ label: "Case or mark", value: "name", orderBy: "reference_title asc" },
-		],
-		filterBy: { company: true, mine: "responsible" },
+		filterBy: { mine: "responsible" },
 	},
 	{
 		label: "Cases",
@@ -194,13 +189,9 @@ export const LEGAL_VIEWS = [
 		searchPlaceholder: "Search cases",
 		group: true,
 		columns: [{ label: "Forum", field: "forum_name" }, RESPONSIBLE],
+		boards: ["cases-status"],
 		dateLabel: "Next date",
-		sorts: [
-			{ label: "Next date", value: "next", orderBy: "next_date asc" },
-			{ label: "Title", value: "name", orderBy: "title asc" },
-			BY_RECENT,
-		],
-		filterBy: { company: true, mine: "responsible" },
+		filterBy: { mine: "responsible" },
 	},
 	{
 		label: "Trademarks",
@@ -216,12 +207,7 @@ export const LEGAL_VIEWS = [
 		group: true,
 		columns: [{ label: "Applicant", field: "applicant" }, RESPONSIBLE],
 		dateLabel: "Next date",
-		sorts: [
-			{ label: "Next date", value: "next", orderBy: "next_date asc" },
-			{ label: "Mark", value: "name", orderBy: "mark asc" },
-			BY_RECENT,
-		],
-		filterBy: { company: true, mine: "responsible" },
+		filterBy: { mine: "responsible" },
 	},
 ];
 

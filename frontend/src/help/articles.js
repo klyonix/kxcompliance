@@ -428,4 +428,17 @@ export const ARTICLES = [
 		],
 		page: "Signatories",
 	},
+	{
+		id: "list-views",
+		area: "Getting started",
+		title: "How do I see a list my way, and keep it?",
+		when: "When you look at the same few records every day, or want them as a board.",
+		steps: [
+			"Narrow the list with the quick filters above it, the filter button for anything else, and the sort button.",
+			"Choose how to see it: as a list, as a table (its columns button picks and orders the columns) or as a Kanban board.",
+			'Press "Save as a view" and name it. It is under "Views" from then on; the list also opens as you last left it on this device.',
+			"A manager can share a view with everyone, or pin it beside the tabs.",
+		],
+		page: "Register",
+	},
 ];

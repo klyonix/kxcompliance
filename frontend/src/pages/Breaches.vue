@@ -1,5 +1,6 @@
 <template>
 	<RecordList
+		list-key="breaches"
 		title="Data breaches"
 		doctype="Personal Data Breach"
 		:fields="BREACH_FIELDS"

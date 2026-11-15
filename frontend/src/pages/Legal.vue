@@ -1,5 +1,5 @@
 <template>
-	<RecordList title="Legal" :views="LEGAL_VIEWS" :empty="empty">
+	<RecordList title="Legal" list-key="legal" :views="LEGAL_VIEWS" :empty="empty">
 		<template #actions>
 			<Button
 				v-if="mayRecord()"

@@ -56,8 +56,18 @@
 					</p>
 				</section>
 
+				<!-- The firm changes what it asked for, by when, while the request is open. -->
+				<EditableDetails
+					v-if="!clientLogin"
+					doctype="Document Request"
+					:name="name"
+					:doc="request"
+					:details="REQUEST_DETAILS"
+					:may-edit="mayChange"
+					@saved="load"
+				/>
 				<section
-					v-if="request.details"
+					v-else-if="request.details"
 					class="flex flex-col gap-2"
 					aria-labelledby="needed-heading"
 				>
@@ -185,6 +195,7 @@ import { Badge, Button, Dropdown, Skeleton, dialog, toast } from "frappe-ui";
 import { call, getDoc, runMethod, uploadRequestDocument } from "@/api";
 import { isClientLogin, mayRecord } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import EditableDetails from "@/components/EditableDetails.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { learnNames, nameOf } from "@/composables/usePeople";
@@ -217,6 +228,13 @@ const row = computed(() => requestRow(request.value, { client: clientLogin }));
 const isOpen = computed(() => OPEN_REQUEST_STATUSES.includes(request.value?.status));
 // The firm may also upload a document the client sent another way.
 const mayUpload = computed(() => isOpen.value && (clientLogin || mayRecord()));
+// Changed only while open; the client is told of a change while it waits on them.
+const mayChange = computed(() => !clientLogin && mayRecord() && isOpen.value);
+const REQUEST_DETAILS = [
+	{ field: "title", label: "Document" },
+	{ field: "due_date", label: "Needed by" },
+	{ field: "details", label: "Details for the client" },
+];
 const mayCheck = computed(
 	() => !clientLogin && mayRecord() && request.value?.status === "Uploaded"
 );

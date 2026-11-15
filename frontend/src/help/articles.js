@@ -151,6 +151,7 @@ export const ARTICLES = [
 			'Press "Ask the client", say what you need and by when.',
 			"The client is emailed and uploads it from their own login. You are told when it comes.",
 		],
+		tip: "Until it is accepted, change what you asked for or the date on the request's page; the client is told.",
 		page: "Filings",
 		firm: true,
 	},

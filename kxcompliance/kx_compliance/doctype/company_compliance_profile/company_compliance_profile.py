@@ -22,6 +22,24 @@ class CompanyComplianceProfile(Document):
 					)
 				)
 			seen.add(key)
+		self.check_nobody_reviews_their_own()
+
+	def check_nobody_reviews_their_own(self):
+		"""Whoever prepares a filing cannot also be its reviewer: for the company's defaults, and
+		for each obligation's own people, which its filings take."""
+		if self.default_reviewer and self.default_reviewer == self.default_responsible:
+			frappe.throw(
+				_("{0} cannot be both the default responsible person and the default reviewer.").format(
+					self.default_reviewer
+				)
+			)
+		for row in self.obligations:
+			if row.reviewer and row.reviewer == row.responsible:
+				frappe.throw(
+					_("Obligations row {0}: {1} is responsible for {2}, so cannot also review it.").format(
+						row.idx, row.reviewer, row.obligation_template
+					)
+				)
 
 	def on_update(self):
 		# A company moving between clients changes who on the firm's team can see it.

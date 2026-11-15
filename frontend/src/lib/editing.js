@@ -19,8 +19,10 @@ export function noteText(html) {
 export const PEOPLE_FIELDS = ["responsible", "reviewer"];
 
 const NUMBER_TYPES = ["Currency", "Float", "Int"];
+// Plain text over several lines (a note, by contrast, is kept as HTML).
+const LONG_TEXT_TYPES = ["Small Text", "Text", "Long Text"];
 
-// The control for a field's kind: text, number, date, select, person or note.
+// The control for a field's kind: text, longtext, number, date, select, person or note.
 export function controlFor(meta) {
 	if (!meta) return null;
 	if (NUMBER_TYPES.includes(meta.fieldtype)) return "number";
@@ -28,6 +30,7 @@ export function controlFor(meta) {
 	if (meta.fieldtype === "Select") return "select";
 	if (meta.fieldtype === "Link") return "person";
 	if (meta.fieldtype === "Text Editor") return "note";
+	if (LONG_TEXT_TYPES.includes(meta.fieldtype)) return "longtext";
 	return "text";
 }
 
@@ -53,8 +56,9 @@ export function changeFor(meta, before, typed) {
 		const number = String(typed ?? "").trim() === "" ? 0 : Number(typed);
 		return number === Number(before || 0) ? null : number;
 	}
-	const value =
-		control === "text" || control === "note" ? String(typed || "").trim() : typed || "";
+	const value = ["text", "note", "longtext"].includes(control)
+		? String(typed || "").trim()
+		: typed || "";
 	if (control === "note") {
 		return value === noteText(before) ? null : value ? commentHtml(value) : "";
 	}

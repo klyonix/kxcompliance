@@ -2,14 +2,20 @@
 // contrast (light, dark or system is frappe-ui's own useColorScheme). Each is a data attribute
 // on <html> that index.css reads; status colours never change, so red always means overdue.
 
+// Each with how it looks in light and in dark (index.css draws dark in lighter tones).
 export const ACCENTS = [
-	{ value: "graphite", label: "Graphite", swatch: "oklch(25% 0 0)" },
-	{ value: "blue", label: "Blue", swatch: "oklch(50% 0.17 255)" },
-	{ value: "teal", label: "Teal", swatch: "oklch(50% 0.1 195)" },
-	{ value: "green", label: "Green", swatch: "oklch(50% 0.14 150)" },
-	{ value: "violet", label: "Violet", swatch: "oklch(50% 0.19 295)" },
-	{ value: "orange", label: "Orange", swatch: "oklch(55% 0.17 45)" },
-	{ value: "rose", label: "Rose", swatch: "oklch(52% 0.19 10)" },
+	{ value: "graphite", label: "Graphite", swatch: "oklch(25% 0 0)", dark: "oklch(92% 0 0)" },
+	{ value: "blue", label: "Blue", swatch: "oklch(50% 0.17 255)", dark: "oklch(80% 0.11 255)" },
+	{ value: "teal", label: "Teal", swatch: "oklch(50% 0.1 195)", dark: "oklch(82% 0.09 195)" },
+	{ value: "green", label: "Green", swatch: "oklch(50% 0.14 150)", dark: "oklch(82% 0.12 150)" },
+	{
+		value: "violet",
+		label: "Violet",
+		swatch: "oklch(50% 0.19 295)",
+		dark: "oklch(80% 0.11 295)",
+	},
+	{ value: "orange", label: "Orange", swatch: "oklch(55% 0.17 45)", dark: "oklch(82% 0.12 55)" },
+	{ value: "rose", label: "Rose", swatch: "oklch(52% 0.19 10)", dark: "oklch(80% 0.11 10)" },
 ];
 
 export const DENSITIES = [

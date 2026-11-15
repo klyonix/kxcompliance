@@ -65,12 +65,6 @@
 						icon-left="lucide-building"
 						data-tour="tab-account"
 					/>
-					<TabTrigger
-						v-if="firm"
-						value="billing"
-						label="Billing"
-						icon-left="lucide-receipt"
-					/>
 				</TabList>
 				<TabPanel value="reminders" class="flex flex-col gap-8 pt-2 sm:pt-6">
 					<section class="flex flex-col gap-4" aria-labelledby="reminders-heading">
@@ -278,26 +272,13 @@
 						/>
 					</section>
 				</TabPanel>
-				<TabPanel v-if="firm" value="billing" class="flex flex-col gap-8 pt-2 sm:pt-6">
-					<section class="flex flex-col items-start gap-3">
-						<p class="text-base text-ink-gray-6">
-							Billing has a page of its own: the firm on its bills, its GST status
-							and logo, and its rate cards.
-						</p>
-						<Button
-							icon-left="lucide-receipt"
-							label="Open billing settings"
-							:route="{ name: 'BillingSettings' }"
-						/>
-					</section>
-				</TabPanel>
 			</Tabs>
 		</template>
 	</div>
 
-	<!-- Billing saves on its own; the other tabs share this. -->
+	<!-- One save for every tab. -->
 	<div
-		v-if="options && tab !== 'billing'"
+		v-if="options"
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
@@ -342,22 +323,14 @@ import { notLoaded } from "@/offline/reachability";
 const NoticeEditor = defineAsyncComponent(() => import("@/components/NoticeEditor.vue"));
 
 const isMobile = useIsMobile();
-// The settings in tabs by what they are about; the open one is kept in the address.
-// A firm also bills its clients; an organisation has none to bill.
-const firm = boot.accountType === "CA/CS Firm";
-const tab = useTabQuery([
-	"reminders",
-	"branding",
-	"privacy",
-	"account",
-	...(firm ? ["billing"] : []),
-]);
+// The settings in tabs by what they are about; the open one is kept in the address. Billing has
+// a page of its own, Settings › Billing.
+const tab = useTabQuery(["reminders", "branding", "privacy", "account"]);
 const tabOptions = [
 	{ label: "Reminders and email", value: "reminders" },
 	{ label: "Name and logo", value: "branding" },
 	{ label: "Privacy", value: "privacy" },
 	{ label: "Who this is for", value: "account" },
-	...(firm ? [{ label: "Billing", value: "billing" }] : []),
 ];
 // Every settings page but this one, which the reader is on.
 const setupPages = settingsPagesFor().filter((page) => page.route !== "Settings");

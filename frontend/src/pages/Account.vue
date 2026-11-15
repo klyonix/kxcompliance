@@ -38,12 +38,13 @@
 						:title="accent.label"
 						class="flex size-8 items-center justify-center rounded-full ring-offset-2 ring-offset-surface-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
 						:class="look.accent === accent.value ? 'ring-2 ring-outline-gray-5' : ''"
-						:style="{ background: accent.swatch }"
+						:style="{ background: dark ? accent.dark : accent.swatch }"
 						@click="change('accent', accent.value)"
 					>
 						<span
 							v-if="look.accent === accent.value"
-							class="lucide-check size-4 text-white"
+							class="lucide-check size-4"
+							:class="dark ? 'text-black' : 'text-white'"
 							aria-hidden="true"
 						/>
 					</button>
@@ -150,7 +151,7 @@
 </template>
 
 <script setup>
-import { reactive } from "vue";
+import { computed, reactive } from "vue";
 import { Avatar, Button, FormControl, TabButtons, useColorScheme } from "frappe-ui";
 import { call } from "@/api";
 import { boot, checksOnly, isClientLogin, isManager, mayUseDesk } from "@/boot";
@@ -164,7 +165,9 @@ import { deskPath, signOut } from "@/navigation";
 import { clearOutbox, outbox, refresh, sendWaiting } from "@/offline/outbox";
 import { discard, retry } from "@/offline/queue";
 
-const { colorScheme, setColorScheme } = useColorScheme();
+const { colorScheme, resolvedColorScheme, setColorScheme } = useColorScheme();
+// The swatches show each accent as the page will draw it.
+const dark = computed(() => resolvedColorScheme.value === "dark");
 const look = reactive(readAppearance());
 function change(key, value) {
 	look[key] = value;

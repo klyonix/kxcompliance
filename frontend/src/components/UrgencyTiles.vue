@@ -27,7 +27,7 @@
 						<span class="truncate">{{ part.label }}</span>
 						<span class="tabular-nums">{{ part.value }}</span>
 					</RouterLink>
-					<span v-else class="flex justify-between gap-2 text-ink-gray-5">
+					<span v-else class="flex justify-between gap-2 text-ink-gray-6">
 						<span class="truncate">{{ part.label }}</span>
 						<span class="tabular-nums">{{ part.value }}</span>
 					</span>

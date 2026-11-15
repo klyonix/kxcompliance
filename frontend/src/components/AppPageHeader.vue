@@ -43,6 +43,7 @@
 			<span v-if="$slots.actions" class="flex items-center gap-2" data-tour="page-actions">
 				<slot name="actions" />
 			</span>
+			<ThemeToggle />
 			<TourMenu />
 		</div>
 	</PageHeader>
@@ -61,6 +62,7 @@ import {
 } from "frappe-ui";
 import { checksOnly } from "@/boot";
 import NotificationBell from "@/components/NotificationBell.vue";
+import ThemeToggle from "@/components/ThemeToggle.vue";
 import TourMenu from "@/components/TourMenu.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { goBack } from "@/navigation";

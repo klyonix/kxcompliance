@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { boot, checksOnly, isClientLogin, isManager } from "./boot";
-import { CLIENT_ROUTES } from "./navigation";
+import { CLIENT_ROUTES, firstRunRoute } from "./navigation";
 import { noteNoResponse } from "./offline/reachability";
 
 export const routes = [
@@ -327,13 +327,9 @@ const router = createRouter({ history: createWebHistory("/compliance"), routes }
 
 // Someone here only for the Licence Check is kept to it (the server refuses the rest anyway).
 router.beforeEach((to) => {
-	// Everyone reads and accepts the privacy notice first, then goes where they were going.
-	if (boot.privacyNoticeDue && to.name !== "PrivacyNotice") {
-		return { name: "PrivacyNotice", query: { next: to.fullPath } };
-	}
-	// A manager on a new site sets it up before anything else.
-	if (boot.setupNeeded && to.name !== "Onboarding") return { name: "Onboarding" };
-	if (!boot.setupNeeded && to.name === "Onboarding") return { name: "MyWork" };
+	// The privacy notice first, then a new site's setup (navigation.firstRunRoute).
+	const first = firstRunRoute(to, boot);
+	if (first) return first;
 	if (isClientLogin()) {
 		if (!CLIENT_ROUTES.includes(to.name)) return { name: "ClientHome" };
 		return;

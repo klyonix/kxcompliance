@@ -195,3 +195,18 @@ export async function signOut({ unsent, clear }) {
 	});
 	window.location.href = "/login?redirect-to=/compliance";
 }
+
+// Where someone is sent first on a site, or null to go where they meant to: the privacy notice
+// before anything, the setup wizard next on a new site, and never back to the wizard once set up.
+// The notice is left alone while setup is due, or each would send to the other for ever (a new
+// site's first sign-in has both due).
+export function firstRunRoute(to, { privacyNoticeDue, setupNeeded }) {
+	if (privacyNoticeDue) {
+		return to.name === "PrivacyNotice"
+			? null
+			: { name: "PrivacyNotice", query: { next: to.fullPath } };
+	}
+	if (setupNeeded && to.name !== "Onboarding") return { name: "Onboarding" };
+	if (!setupNeeded && to.name === "Onboarding") return { name: "MyWork" };
+	return null;
+}

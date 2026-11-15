@@ -21,7 +21,26 @@ class DocumentRequest(Document):
 					"Status of {0} changes only by uploading, accepting, sending back or withdrawing it."
 				).format(self.name)
 			)
+		elif self.status not in document_requests.OPEN_STATUSES:
+			changes = [
+				_(self.meta.get_label(field))
+				for field in document_requests.CHANGEABLE
+				if self.has_value_changed(field)
+			]
+			if changes:
+				frappe.throw(
+					_("{0} is {1}, so its {2} can no longer be changed.").format(
+						self.name, _(self.status), ", ".join(changes)
+					)
+				)
 		self.is_overdue = int(self.status == "Requested" and getdate(self.due_date) < getdate(nowdate()))
+
+	def on_update(self):
+		# A new request is announced by after_insert; a change, only while it waits on the client.
+		if self.get_doc_before_save() is None or self.status != "Requested":
+			return
+		if any(self.has_value_changed(field) for field in document_requests.CHANGEABLE):
+			document_requests.changed(self)
 
 	def set_company_and_client(self):
 		self.filing_label = ""

@@ -195,8 +195,16 @@ class TestDocumentRequest(IntegrationTestCase):
 			fields=["title", "client", "due_date", "requested_by"],
 		)
 		self.assertEqual(len(made), 1)
-		self.assertEqual((made[0].title, made[0].client, made[0].requested_by), ("October purchase register", "Sunrise Group", HOLDER))
-		self.assertTrue(notified(CLIENT_LOGIN, frappe.get_all("Document Request", filters={"compliance_task": self.filing}, pluck="name")[0]))
+		self.assertEqual(
+			(made[0].title, made[0].client, made[0].requested_by),
+			("October purchase register", "Sunrise Group", HOLDER),
+		)
+		self.assertTrue(
+			notified(
+				CLIENT_LOGIN,
+				frappe.get_all("Document Request", filters={"compliance_task": self.filing}, pluck="name")[0],
+			)
+		)
 		self.assertFalse(frappe.db.exists("Document Request", {"compliance_task": unlinked}))
 		# Asked once: the same return again skips every filing just asked.
 		with self.set_user(HOLDER):
@@ -242,6 +250,37 @@ class TestDocumentRequest(IntegrationTestCase):
 		self.assertEqual((request.status, request.accepted_by), ("Accepted", HOLDER))
 		with self.assertRaises(frappe.ValidationError):
 			upload_as(CLIENT_LOGIN, request.name)
+
+	def test_the_firm_changes_an_open_request_and_the_client_is_told(self):
+		from kxcompliance.api import save_changes
+
+		with self.set_user(HOLDER):
+			request = ask(compliance_task=self.filing)
+		frappe.db.delete(
+			"Notification Log", {"document_type": "Document Request", "document_name": request.name}
+		)
+		with self.set_user(HOLDER):
+			save_changes(
+				"Document Request",
+				request.name,
+				{"due_date": "2026-11-14", "title": "October purchase register"},
+			)
+		request.reload()
+		self.assertEqual((str(request.due_date), request.title), ("2026-11-14", "October purchase register"))
+		self.assertTrue(notified(CLIENT_LOGIN, request.name))
+		# The client's own login reads the request but cannot change it.
+		with self.set_user(CLIENT_LOGIN), self.assertRaises(frappe.PermissionError):
+			save_changes("Document Request", request.name, {"due_date": "2026-12-01"})
+
+	def test_an_accepted_or_withdrawn_request_is_not_changed(self):
+		request = ask(company=TEST_COMPANY)
+		request.withdraw()
+		request.reload()
+		request.due_date = "2026-12-01"
+		with self.assertRaisesRegex(
+			frappe.ValidationError, "Withdrawn, so its Due Date can no longer be changed"
+		):
+			request.save()
 
 	def test_status_moves_only_through_its_actions(self):
 		request = ask(company=TEST_COMPANY)

@@ -138,6 +138,8 @@ EDITABLE_FIELDS = {
 		*PEOPLE_FIELDS,
 	),
 	# A scheduled date may also be moved; one with an outcome may not (the doctype checks).
+	# While it is open; the doctype refuses changes once it is accepted or withdrawn.
+	"Document Request": ("title", "details", "due_date"),
 	"Legal Date": ("status", "attended_by", "proceedings", "order", "next_date", "date", "time", "purpose"),
 	# Approving moves the item's dates and certificate; the renewal's own rules decide who may.
 	"Compliance Renewal": (

@@ -75,3 +75,15 @@ describe("amounts edited in place", () => {
 		expect(changeFor(amount, 250000, "")).toBe(0);
 	});
 });
+
+describe("long plain text edited in place", () => {
+	const details = { fieldtype: "Small Text" };
+	it("is edited over several lines and sent back as typed, not as HTML", () => {
+		expect(controlFor(details)).toBe("longtext");
+		expect(readValue(details, "One row\nper invoice")).toBe("One row\nper invoice");
+		expect(changeFor(details, "Old", " As Excel\nOne row per invoice ")).toBe(
+			"As Excel\nOne row per invoice"
+		);
+		expect(changeFor(details, "Same", "Same")).toBeNull();
+	});
+});

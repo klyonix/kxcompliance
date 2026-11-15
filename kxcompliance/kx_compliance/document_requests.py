@@ -118,6 +118,23 @@ def asked(request):
 		)
 
 
+# What the firm may still change on a request while it is open, and the client is told of.
+CHANGEABLE = ("title", "details", "due_date")
+
+
+def changed(request):
+	"""A request still waiting on the client was changed: tell them what is needed now."""
+	subject = _("{0} changed what it needs: {1}").format(firm_name(), request.title)
+	lines = [
+		escape_html(
+			_("Please upload {0} for {1} by {2}.").format(
+				request.title, request.company, formatdate(request.due_date)
+			)
+		)
+	]
+	tell_client(request, subject, lines)
+
+
 def sent_back(request):
 	subject = _("Please send {0} again").format(request.title)
 	lines = [

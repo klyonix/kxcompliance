@@ -20,7 +20,7 @@
 						@keydown.esc.prevent="cancel"
 					>
 						<FormControl
-							v-if="entry.control === 'note'"
+							v-if="entry.multiline"
 							v-model="draft"
 							type="textarea"
 							:rows="4"
@@ -57,7 +57,7 @@
 						<p v-if="error" role="alert" class="text-sm text-ink-red-4">{{ error }}</p>
 						<div class="flex items-center gap-2">
 							<Button
-								v-if="entry.control === 'note'"
+								v-if="entry.multiline"
 								size="sm"
 								variant="solid"
 								label="Save"
@@ -85,7 +85,7 @@
 							class="min-w-0 flex-1 break-words text-base"
 							:class="[
 								entry.value ? 'text-ink-gray-8' : 'text-ink-gray-4',
-								{ 'whitespace-pre-line': entry.control === 'note' },
+								{ 'whitespace-pre-line': entry.multiline },
 							]"
 							>{{ entry.value || "Add" }}</span
 						>
@@ -98,7 +98,7 @@
 					<span
 						v-else
 						class="block break-words py-1 text-base text-ink-gray-8"
-						:class="{ 'whitespace-pre-line': entry.control === 'note' }"
+						:class="{ 'whitespace-pre-line': entry.multiline }"
 						>{{ entry.value }}</span
 					>
 				</dd>
@@ -149,6 +149,7 @@ const props = defineProps({
 });
 const emit = defineEmits(["saved"]);
 
+const MULTILINE = ["note", "longtext"];
 const meta = ref({});
 const people = ref([]);
 const editing = ref("");
@@ -178,7 +179,9 @@ const entries = computed(() =>
 				editable,
 				control,
 				meta: fieldMeta,
-				wide: detail.wide || control === "note",
+				// Several lines: a note (kept as rich text) or long plain text.
+				multiline: MULTILINE.includes(control),
+				wide: detail.wide || MULTILINE.includes(control),
 				options:
 					control === "person"
 						? [

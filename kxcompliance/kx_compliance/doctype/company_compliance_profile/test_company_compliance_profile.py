@@ -188,6 +188,34 @@ class TestCompaniesInTheApp(IntegrationTestCase):
 		self.assertIn(made["company"], [row.company for row in overview["companies"]])
 		self.assertNotIn(made["company"], overview["not_set_up"])
 
+	def test_each_obligation_has_its_own_reviewer_never_its_preparer(self):
+		from kxcompliance.api import company_detail, save_company
+
+		values = {
+			"company_type": "Private Limited",
+			"default_responsible": HOLDER,
+			"default_reviewer": REVIEWER,
+		}
+		with self.set_user(MANAGER):
+			save_company(APP_COMPANY, values)
+			first = company_detail(APP_COMPANY)["obligations"][0]
+			values["obligations"] = [
+				{"name": first["name"], "is_active": 1, "responsible": "", "reviewer": MANAGER}
+			]
+			save_company(APP_COMPANY, values)
+			row = next(
+				row for row in company_detail(APP_COMPANY)["obligations"] if row["name"] == first["name"]
+			)
+			# Left to the company's default, the row takes that person, so its filings have one.
+			self.assertEqual((row["responsible"], row["reviewer"]), (HOLDER, MANAGER))
+			values["obligations"] = [
+				{"name": first["name"], "is_active": 1, "responsible": MANAGER, "reviewer": MANAGER}
+			]
+			with self.assertRaisesRegex(frappe.ValidationError, "cannot also review it"):
+				save_company(APP_COMPANY, values)
+			with self.assertRaisesRegex(frappe.ValidationError, "default reviewer"):
+				save_company(APP_COMPANY, {**values, "obligations": [], "default_reviewer": HOLDER})
+
 	def test_a_companys_agm_dates_are_kept_and_checked(self):
 		from kxcompliance.api import company_detail, save_company
 

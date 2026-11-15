@@ -164,6 +164,8 @@ When you need a sales register, bank statement or anything else to file.
 2. Press "Ask the client", say what you need and by when.
 3. The client is emailed and uploads it from their own login. You are told when it comes.
 
+> **Tip.** Until it is accepted, change what you asked for or the date on the request's page; the client is told.
+
 ### How do I ask every client for the same document?
 
 *For: CA/CS firms.*

@@ -283,7 +283,7 @@
 								</h2>
 								<p class="text-sm text-ink-gray-5">
 									The filings the company makes. Untick one that does not apply;
-									set who handles each.
+									set who prepares each and who reviews it.
 								</p>
 							</div>
 							<div
@@ -323,7 +323,14 @@
 									type="select"
 									:options="[{ label: 'Company default', value: '' }, ...people]"
 									:aria-label="`Responsible for ${row.obligation_template}`"
-									class="sm:w-56"
+									class="sm:w-48"
+								/>
+								<FormControl
+									v-model="row.reviewer"
+									type="select"
+									:options="[{ label: 'No reviewer', value: '' }, ...people]"
+									:aria-label="`Reviewer of ${row.obligation_template}`"
+									class="sm:w-48"
 								/>
 							</div>
 						</section>

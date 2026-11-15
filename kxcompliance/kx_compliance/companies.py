@@ -233,5 +233,6 @@ def update_obligations(profile, changes: list):
 		check_person(change.get("responsible"), _("Responsible"))
 		check_person(change.get("reviewer"), _("Reviewer"))
 		row.is_active = cint(change.get("is_active"))
-		row.responsible = change.get("responsible") or None
+		# Left to the company's default, a row takes that person: its filings need one.
+		row.responsible = change.get("responsible") or profile.default_responsible
 		row.reviewer = change.get("reviewer") or None

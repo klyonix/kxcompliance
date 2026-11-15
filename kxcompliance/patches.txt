@@ -14,3 +14,4 @@ kxcompliance.patches.v1_0.reword_trademark_deadlines
 kxcompliance.patches.v1_0.mark_existing_sites_set_up
 kxcompliance.patches.v1_0.fill_legal_date_company
 kxcompliance.patches.v1_0.rename_default_app_name
+kxcompliance.patches.v1_0.set_privacy_defaults

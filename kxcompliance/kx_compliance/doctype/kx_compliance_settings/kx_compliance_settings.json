@@ -28,7 +28,15 @@
   "sender",
   "column_break_xxxx",
   "expiry_threshold",
-  "set_interval"
+  "set_interval",
+  "privacy_tab",
+  "privacy_notice",
+  "notice_version",
+  "notice_changed_on",
+  "column_break_privacy",
+  "grievance_officer",
+  "grievance_email",
+  "reminder_log_days"
  ],
  "fields": [
   {
@@ -183,13 +191,59 @@
    "label": "Onboarding Done",
    "read_only": 1,
    "description": "Set when onboarding in the app finishes. Until then, managers who open the app are taken to it."
+  },
+  {
+   "fieldname": "privacy_tab",
+   "fieldtype": "Tab Break",
+   "label": "Privacy"
+  },
+  {
+   "fieldname": "privacy_notice",
+   "fieldtype": "Text Editor",
+   "label": "Privacy Notice",
+   "description": "Shown to everyone the first time they sign in to the app, and again whenever it changes. Left empty, the app's standard notice is used."
+  },
+  {
+   "fieldname": "notice_version",
+   "fieldtype": "Int",
+   "label": "Notice Version",
+   "default": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notice_changed_on",
+   "fieldtype": "Datetime",
+   "label": "Notice Changed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_privacy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "grievance_officer",
+   "fieldtype": "Data",
+   "label": "Grievance Officer"
+  },
+  {
+   "fieldname": "grievance_email",
+   "fieldtype": "Data",
+   "label": "Grievance Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "reminder_log_days",
+   "fieldtype": "Int",
+   "label": "Keep Reminder Log For (Days)",
+   "default": "365",
+   "description": "Older entries are deleted each day. At least 365, as the DPDP Rules require logs to be kept a year."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-15 01:08:09.744208",
+ "modified": "2026-11-15 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "KX Compliance Settings",

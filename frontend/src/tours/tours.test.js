@@ -27,7 +27,6 @@ const serverTours = readFileSync(
 const NO_TOUR = {
 	Onboarding: "the setup wizard explains each step itself",
 	Search: "one search box",
-	Account: "a few settings, each labelled",
 	ItemNew: "a form; each field is labelled",
 	ItemEdit: "a form; each field is labelled",
 	CompanyNew: "the company tour plays on the same page",
@@ -45,6 +44,8 @@ const NO_TOUR = {
 	NewNotice: "a form; each field is labelled",
 	LicenceRuleNew: "a form; each section says what it is",
 	LicenceRule: "a form; each section says what it is",
+	PrivacyNotice: "the notice itself, read before anything else",
+	BreachNew: "a form; each section says what it is",
 };
 
 describe("tours", () => {
@@ -92,6 +93,7 @@ describe("tours", () => {
 		expect(client).not.toContain("bulk-filing");
 		expect(ids({ client: false, manager: false, firm: false, checks: true })).toEqual([
 			"licence-check",
+			"account",
 			"help",
 		]);
 	});

@@ -17,7 +17,7 @@ export function toursForReader(reader = {}) {
 	const checks = reader.checks ?? checksOnly();
 	return TOURS.filter((tour) => {
 		if (client) return Boolean(tour.client);
-		if (checks) return ["licence-check", "help"].includes(tour.id);
+		if (checks) return ["licence-check", "help", "account"].includes(tour.id);
 		if (tour.staff === false) return false;
 		if (tour.managers && !manager) return false;
 		if (tour.firm && !firm) return false;

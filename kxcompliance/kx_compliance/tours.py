@@ -46,6 +46,11 @@ TOURS = (
 	"reminder-log",
 	"reports",
 	"report",
+	"account",
+	"privacy-requests",
+	"privacy-request",
+	"breaches",
+	"breach",
 	"help",
 )
 

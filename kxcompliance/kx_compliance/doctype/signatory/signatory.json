@@ -79,7 +79,8 @@
    "fieldname": "pan",
    "fieldtype": "Data",
    "label": "PAN",
-   "in_global_search": 1
+   "in_global_search": 1,
+   "mask": 1
   },
   {
    "fieldname": "section_contact",
@@ -100,7 +101,8 @@
    "fieldname": "mobile",
    "fieldtype": "Data",
    "label": "Mobile",
-   "options": "Phone"
+   "options": "Phone",
+   "mask": 1
   },
   {
    "fieldname": "section_companies",
@@ -117,7 +119,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-15 01:08:09.744208",
+ "modified": "2026-11-15 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Signatory",
@@ -134,7 +136,8 @@
    "print": 1,
    "report": 1,
    "email": 1,
-   "share": 1
+   "share": 1,
+   "mask": 1
   },
   {
    "role": "Compliance Manager",
@@ -146,7 +149,8 @@
    "print": 1,
    "report": 1,
    "email": 1,
-   "share": 1
+   "share": 1,
+   "mask": 1
   },
   {
    "role": "Compliance User",

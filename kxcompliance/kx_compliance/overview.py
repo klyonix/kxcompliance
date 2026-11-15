@@ -30,6 +30,7 @@ PENDING_MARK_STATUSES = [
 ]
 ON_TIME_MONTHS = 12
 ON_TIME_REPORT = "On-time Filing"
+OPEN_REQUEST_STATUSES = ["Open", "In Progress"]
 
 
 def grouped_counts(doctype: str, group_by: list[str], filters: dict | None = None) -> list[dict]:
@@ -274,6 +275,27 @@ def get_overview() -> dict:
 						"red",
 						"Licence Check Log",
 						{"result": "Blocked"},
+						act=True,
+					),
+				],
+			},
+			{
+				"title": _("Privacy"),
+				"cards": [
+					card(
+						_("Privacy requests to answer"),
+						count("Privacy Request", {"status": ("in", OPEN_REQUEST_STATUSES)}),
+						"amber",
+						"Privacy Request",
+						{"status": ("in", OPEN_REQUEST_STATUSES)},
+						act=True,
+					),
+					card(
+						_("Breaches not yet reported"),
+						count("Personal Data Breach", {"status": ("!=", "Reported")}),
+						"red",
+						"Personal Data Breach",
+						{"status": ("!=", "Reported")},
 						act=True,
 					),
 				],

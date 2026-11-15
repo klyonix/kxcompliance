@@ -500,6 +500,11 @@ export const TOURS = [
 				title: "Your name and logo",
 				text: "Shown in the app and on phones where it is installed.",
 			},
+			{
+				target: ["settings-privacy"],
+				title: "Privacy",
+				text: "The privacy notice everyone accepts, your grievance officer, and how long reminder email addresses are kept.",
+			},
 		],
 	},
 	{
@@ -715,6 +720,79 @@ export const TOURS = [
 				target: ["report-download"],
 				title: "Download",
 				text: "As Excel or CSV, for a spreadsheet or to send on.",
+			},
+		],
+	},
+	{
+		id: "account",
+		title: "Account",
+		route: "Account",
+		client: true,
+		steps: [
+			{
+				target: ["privacy-actions"],
+				title: "Your privacy",
+				text: "Read the privacy notice again, ask to see, correct or erase your data, or withdraw your consent. The answers to your requests show here.",
+			},
+		],
+	},
+	{
+		id: "privacy-requests",
+		title: "Privacy requests",
+		route: "PrivacyRequests",
+		managers: true,
+		steps: [
+			{
+				title: "Privacy requests",
+				text: "Anyone using the app can ask from Account to see, correct or erase their data, or raise a grievance. Each comes here, to be answered within 90 days.",
+			},
+			{
+				target: ["list-tabs"],
+				title: "To answer, then answered",
+				text: "Waiting requests come first, the one due soonest on top. Open one to answer it.",
+			},
+		],
+	},
+	{
+		id: "privacy-request",
+		title: "A privacy request",
+		route: "PrivacyRequest",
+		managers: true,
+		steps: [
+			{
+				target: ["privacy-answer"],
+				title: "Answer it",
+				text: "Mark it in progress while you work on it. When it is done or declined, write the answer: the person is told in the app, and by email when the app sends email.",
+			},
+		],
+	},
+	{
+		id: "breaches",
+		title: "Data breaches",
+		route: "Breaches",
+		managers: true,
+		steps: [
+			{
+				title: "Data breaches",
+				text: "If personal data is lost, stolen, or seen by someone who should not see it, record it here at once. The Data Protection Board must be told within 72 hours, and each person affected without delay.",
+			},
+			{
+				target: ["page-actions"],
+				title: "Record a breach",
+				text: "Say when it was found and what happened. The list shows how many hours are left to tell the Board.",
+			},
+		],
+	},
+	{
+		id: "breach",
+		title: "A data breach",
+		route: "Breach",
+		managers: true,
+		steps: [
+			{
+				target: ["breach-reported"],
+				title: "Who was told",
+				text: "Fill in when the Board and the people affected were told. Until both are in, the breach stays on the Overview.",
 			},
 		],
 	},

@@ -13,7 +13,7 @@
 		</template>
 	</AppPageHeader>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
+	<RecordFrame :doctype="doctype" :name="name" :facts="loaded ? keyFacts : []">
 		<p
 			v-if="error"
 			role="alert"
@@ -93,7 +93,7 @@
 				</a>
 			</section>
 		</template>
-	</div>
+	</RecordFrame>
 </template>
 
 <script setup>
@@ -103,6 +103,7 @@ import { Badge, Button, Dropdown, Skeleton } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import LegalDates from "@/components/LegalDates.vue";
+import RecordFrame from "@/components/RecordFrame.vue";
 import { deskActions } from "@/navigation";
 
 const props = defineProps({
@@ -118,6 +119,8 @@ const props = defineProps({
 	subtitle: { type: String, default: "" },
 	// [[label, value]]; empty values are left out
 	facts: { type: Array, default: () => [] },
+	// The band across the top: [{ label, value, icon?, tone? }]
+	keyFacts: { type: Array, default: () => [] },
 	notes: { type: Array, default: () => [] },
 	mayAct: { type: Boolean, default: false },
 });

@@ -11,6 +11,7 @@
 		:due="due"
 		:subtitle="row.detail"
 		:facts="facts"
+		:key-facts="keyFacts"
 		:notes="notes"
 		:may-act="mayAct"
 		@changed="load"
@@ -73,6 +74,22 @@ const exposure = computed(() => {
 		{ label: "Involved", value: formatAmount(current.amount_involved, current.currency) },
 		{ label: "Provided", value: formatAmount(current.provision, current.currency) },
 		{ label: "Risk", value: current.risk || "Not rated" },
+	];
+});
+
+// The band across the top: the next date, where the case is heard, who handles it, whose it is.
+const keyFacts = computed(() => {
+	const current = legalCase.value;
+	return [
+		{
+			label: "Next date",
+			icon: "lucide-calendar-clock",
+			value: current.next_date ? formatDate(current.next_date) : "Not set",
+			tone: row.value.due.late ? "red" : "plain",
+		},
+		{ label: "Forum", icon: "lucide-landmark", value: current.forum_name || current.forum },
+		{ label: "Responsible", icon: "lucide-user-round", value: nameOf(current.responsible) },
+		{ label: "Company", icon: "lucide-building-2", value: current.company },
 	];
 });
 

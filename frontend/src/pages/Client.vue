@@ -10,7 +10,7 @@
 		</template>
 	</AppPageHeader>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
+	<RecordFrame doctype="Compliance Client" :name="name" :facts="client ? keyFacts : []">
 		<p
 			v-if="error"
 			role="alert"
@@ -189,7 +189,7 @@
 				/>
 			</section>
 		</template>
-	</div>
+	</RecordFrame>
 
 	<AskDocument
 		v-if="mayAsk"
@@ -208,6 +208,7 @@ import { isClientLogin, isManager, mayRecord, mayUseDesk } from "@/boot";
 import AskDocument from "@/components/AskDocument.vue";
 import ScoreBadge from "@/components/ScoreBadge.vue";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RecordFrame from "@/components/RecordFrame.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { clientAttention, clientTheme, yearFacts } from "@/lib/clients";
@@ -230,6 +231,30 @@ const TONE = {
 const FACT_TONE = { red: "text-ink-red-4", amber: "text-ink-amber-4", gray: "text-ink-gray-8" };
 
 const client = ref(null);
+
+// The band across the top: who looks after the client, and how much there is to do.
+const keyFacts = computed(() => [
+	{
+		label: "Relationship manager",
+		icon: "lucide-user-round",
+		value: nameOf(client.value.relationship_manager),
+	},
+	{
+		label: "Companies",
+		icon: "lucide-building-2",
+		value: String(client.value.companies.length),
+	},
+	{
+		label: "Open filings",
+		icon: "lucide-calendar-check",
+		value: String(client.value.filings.length),
+	},
+	{
+		label: "Documents asked for",
+		icon: "lucide-file-up",
+		value: String(client.value.requests.length),
+	},
+]);
 const error = ref("");
 const clientLogin = isClientLogin();
 const router = useRouter();

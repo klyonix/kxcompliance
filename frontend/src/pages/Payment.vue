@@ -38,6 +38,9 @@
 					/>
 					<span class="text-base text-ink-gray-6">{{ received }}</span>
 				</div>
+				<p v-if="payment.paid_by_company" class="text-sm text-ink-gray-5">
+					Paid from {{ payment.paid_by_company }}.
+				</p>
 				<p v-if="payment.emailed" class="text-sm text-ink-gray-5">
 					{{
 						payment.emailed === 1

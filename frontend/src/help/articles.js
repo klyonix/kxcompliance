@@ -319,11 +319,11 @@ export const ARTICLES = [
 		title: "How do I bill a client?",
 		when: "When returns are filed, services are done, or the month's recurring charges are due.",
 		steps: [
-			'Open the client and press "New bill".',
+			'Open the client and press "New bill". For a client with several companies, choose the company billed: its filings, its GSTIN and its state\'s GST go on the bill.',
 			"Untick any filed return to leave for later, keep the recurring charges if they are due, add services done (hours or items) and any other lines; government fees carry no GST.",
 			'Press "Make the draft", check it, then "Send to client". It goes into the books and is emailed with its PDF.',
 		],
-		tip: "On the 1st of each month a draft is made for each client with something to bill; find them under Billing, Drafts.",
+		tip: "On the 1st of each month a draft is made for each company with something to bill; find them under Billing, Drafts. A company's own GSTIN and address go on its company's Billing tab; the client's recurring charges go on the bills of the company chosen on the client's form.",
 		page: "Billing",
 		firm: true,
 	},
@@ -403,7 +403,7 @@ export const ARTICLES = [
 		steps: [
 			'Open the client, choose the "Billing" tab and press "Statement of account".',
 			'Choose the dates, which start as the financial year, and press "Download PDF".',
-			"It shows the balance at the start, then each bill, payment, TDS, credit note and write-off with the balance after it, and the balance at the end, with both logos.",
+			"It opens with a summary and what is still due by how late, then a section for each company with every bill, payment, TDS, credit note and write-off and the balance after each, then the bills still open, with both logos.",
 		],
 		tip: "A client with a login can download its own from its home. Its copy shows a write-off as a balance adjusted, without the firm's reason.",
 		page: "Billing",

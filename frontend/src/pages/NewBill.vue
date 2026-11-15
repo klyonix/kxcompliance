@@ -7,9 +7,9 @@
 		@submit.prevent="save"
 	>
 		<p class="text-base text-ink-gray-6">
-			A draft bill for a client, from the returns filed for it, its recurring charges,
-			services and anything else. GST is added by the client's state. Check it on its page,
-			then send it.
+			A draft bill for one of a client's companies, from the returns filed for it, the
+			client's recurring charges, services and anything else. GST is added by the company's
+			state. Check it on its page, then send it.
 		</p>
 		<p v-if="error" role="alert" class="text-base text-ink-red-4">{{ error }}</p>
 
@@ -24,6 +24,20 @@
 			]"
 		/>
 
+		<FormControl
+			v-if="options && options.companies.length > 1"
+			:model-value="options.company"
+			type="select"
+			label="Company billed"
+			:options="options.companies.map((name) => ({ label: name, value: name }))"
+			:description="
+				options.company === options.recurring_company
+					? 'This company carries the client\'s recurring charges.'
+					: `The client's recurring charges go on ${options.recurring_company}'s bills.`
+			"
+			@update:model-value="chooseCompany"
+		/>
+
 		<Skeleton v-if="client && !options && !error" class="h-40 w-full rounded-lg" />
 
 		<template v-else-if="options">
@@ -32,7 +46,8 @@
 					Returns filed, not billed yet
 				</h2>
 				<p v-if="!options.filings.length" class="text-base text-ink-gray-5">
-					None: every priced return filed for {{ client }} is billed or on a draft.
+					None: every priced return filed for {{ options.company || client }} is billed
+					or on a draft.
 				</p>
 				<label
 					v-for="filing in options.filings"
@@ -231,12 +246,16 @@ const subtotal = computed(() =>
 		: 0
 );
 
-async function loadOptions() {
+async function loadOptions(company = route.query.company || null) {
 	options.value = null;
 	error.value = "";
 	if (!client.value) return;
 	try {
-		options.value = await call("kxcompliance.api.bill_options", { client: client.value });
+		options.value = await call("kxcompliance.api.bill_options", {
+			client: client.value,
+			// Left out until one is chosen: the server starts with the client's first company.
+			...(company ? { company } : {}),
+		});
 		// Everything there is to bill starts ticked; the person unticks what waits.
 		ticked.value = options.value.filings.map((filing) => filing.name);
 		withRecurring.value = options.value.recurring.length > 0;
@@ -245,6 +264,9 @@ async function loadOptions() {
 		error.value = err.message;
 	}
 }
+
+// Another company: what may be billed is that company's.
+const chooseCompany = (company) => loadOptions(company);
 
 const unitOf = (service) => options.value?.services.find((rate) => rate.service === service)?.unit;
 
@@ -257,6 +279,7 @@ async function save() {
 			"kxcompliance.api.create_bill",
 			{
 				client: client.value,
+				company: options.value.company,
 				filings: ticked.value,
 				recurring: withRecurring.value,
 				services: services.value.map((row) => ({
@@ -276,7 +299,7 @@ async function save() {
 	}
 }
 
-watch(client, loadOptions);
+watch(client, () => loadOptions());
 onMounted(async () => {
 	if (!fromClient) {
 		clients.value = (await call("kxcompliance.api.client_choices").catch(() => [])).map(

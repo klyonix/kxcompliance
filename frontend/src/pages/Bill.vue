@@ -16,7 +16,8 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<Badge :label="state.label" :theme="state.theme" size="md" />
 					<span class="text-base text-ink-gray-6">
-						{{ bill.customer_name }} · made {{ formatDate(bill.posting_date) }} · due
+						{{ bill.billed_company || bill.customer_name }} · made
+						{{ formatDate(bill.posting_date) }} · due
 						{{ formatDate(bill.due_date) }}
 					</span>
 				</div>
@@ -220,7 +221,7 @@
 					@click="cancel"
 				/>
 				<Button
-					v-if="Number(bill.outstanding_amount) > 0"
+					v-if="bill.docstatus === 1 && Number(bill.outstanding_amount) > 0"
 					icon-left="lucide-eraser"
 					label="Write off"
 					@click="writingOff = true"

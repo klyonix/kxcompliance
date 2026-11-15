@@ -53,6 +53,52 @@
 			</p>
 		</section>
 
+		<section
+			v-if="summary.by_company.length > 1"
+			class="flex flex-col gap-1"
+			aria-labelledby="by-company-heading"
+		>
+			<h2 id="by-company-heading" class="pb-1 text-base font-semibold text-ink-gray-8">
+				By company
+			</h2>
+			<div
+				class="hidden grid-cols-[1fr_6.5rem_6.5rem_6.5rem_6.5rem] gap-3 border-b border-outline-gray-1 pb-2 text-xs font-medium text-ink-gray-5 sm:grid"
+				aria-hidden="true"
+			>
+				<span>Company</span>
+				<span class="text-right">Billed</span>
+				<span class="text-right">Received</span>
+				<span class="text-right">Credited</span>
+				<span class="text-right">Balance</span>
+			</div>
+			<div
+				v-for="row in summary.by_company"
+				:key="row.key || 'client'"
+				class="grid grid-cols-2 gap-x-3 gap-y-0.5 border-b border-outline-gray-1 py-2 last:border-b-0 sm:grid-cols-[1fr_6.5rem_6.5rem_6.5rem_6.5rem]"
+			>
+				<span
+					class="col-span-2 truncate text-base text-ink-gray-8 sm:col-span-1"
+					:title="row.title"
+					>{{ row.title }}</span
+				>
+				<span class="text-sm text-ink-gray-6 sm:text-right sm:text-base sm:text-ink-gray-8"
+					><span class="sm:hidden">Billed </span>{{ money(row.billed) }}</span
+				>
+				<span class="text-sm text-ink-gray-6 sm:text-right sm:text-base sm:text-ink-gray-8"
+					><span class="sm:hidden">Received </span>{{ money(row.received) }}</span
+				>
+				<span class="text-sm text-ink-gray-6 sm:text-right sm:text-base sm:text-ink-gray-8"
+					><span class="sm:hidden">Credited </span>{{ money(row.credited) }}</span
+				>
+				<span
+					class="text-sm font-medium sm:text-right sm:text-base"
+					:class="row.balance > 0 ? 'text-ink-gray-8' : 'text-ink-gray-6'"
+					><span class="font-normal sm:hidden">Balance </span
+					>{{ balanceText(row.balance) }}</span
+				>
+			</div>
+		</section>
+
 		<section class="flex flex-col gap-1" aria-labelledby="commitment-heading">
 			<h2 id="commitment-heading" class="text-base font-semibold text-ink-gray-8">
 				Expected this year
@@ -216,6 +262,10 @@ const unpricedLine = computed(() => {
 		count === 1 ? "has" : "have"
 	} no rate, so ${count === 1 ? "is" : "are"} not counted.`;
 });
+
+// A balance above zero is owed to the firm; below zero, paid ahead.
+const balanceText = (value) =>
+	Number(value) < 0 ? `${money(Math.abs(value))} ahead` : money(value);
 
 function seeAllPayments() {
 	chooseClient(props.client);

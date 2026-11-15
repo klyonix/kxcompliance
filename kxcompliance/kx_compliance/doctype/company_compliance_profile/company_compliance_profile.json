@@ -16,7 +16,13 @@
   "section_agm",
   "agm_dates",
   "section_obligations",
-  "obligations"
+  "obligations",
+  "section_billing",
+  "billing_gstin",
+  "billing_state",
+  "column_break_billing",
+  "billing_email",
+  "billing_address"
  ],
  "fields": [
   {
@@ -94,11 +100,45 @@
    "search_index": 1,
    "in_standard_filter": 1,
    "description": "For a CA/CS firm: the client that owns this company."
+  },
+  {
+   "fieldname": "section_billing",
+   "fieldtype": "Section Break",
+   "label": "Billing",
+   "collapsible": 1,
+   "description": "Who the firm's bills for this company go to. Left empty, the client's billing details are used."
+  },
+  {
+   "fieldname": "billing_gstin",
+   "fieldtype": "Data",
+   "label": "GSTIN"
+  },
+  {
+   "fieldname": "billing_state",
+   "fieldtype": "Select",
+   "label": "Billing State",
+   "options": "\nAndaman and Nicobar Islands\nAndhra Pradesh\nArunachal Pradesh\nAssam\nBihar\nChandigarh\nChhattisgarh\nDadra and Nagar Haveli and Daman and Diu\nDelhi\nGoa\nGujarat\nHaryana\nHimachal Pradesh\nJammu and Kashmir\nJharkhand\nKarnataka\nKerala\nLadakh\nLakshadweep\nMadhya Pradesh\nMaharashtra\nManipur\nMeghalaya\nMizoram\nNagaland\nOdisha\nPuducherry\nPunjab\nRajasthan\nSikkim\nTamil Nadu\nTelangana\nTripura\nUttar Pradesh\nUttarakhand\nWest Bengal",
+   "description": "Read from the GSTIN when there is one."
+  },
+  {
+   "fieldname": "column_break_billing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "billing_email",
+   "fieldtype": "Data",
+   "options": "Email",
+   "label": "Billing Email"
+  },
+  {
+   "fieldname": "billing_address",
+   "fieldtype": "Small Text",
+   "label": "Billing Address"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-15 01:08:09.744208",
+ "modified": "2026-11-16 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Company Compliance Profile",

@@ -32,6 +32,14 @@
 				/>
 			</div>
 			<FormControl
+				v-if="bill.companies.length > 1"
+				v-model="form.paid_by"
+				type="select"
+				label="Paid from"
+				:options="bill.companies.map((name) => ({ label: name, value: name }))"
+				description="Any of the client's companies may pay this bill."
+			/>
+			<FormControl
 				v-model="form.tds"
 				type="number"
 				label="TDS deducted by the client"
@@ -57,7 +65,7 @@ const props = defineProps({ bill: { type: Object, required: true } });
 const emit = defineEmits(["saved"]);
 const open = defineModel("open", { type: Boolean, default: false });
 
-const form = reactive({ amount: "", paid_on: "", mode: "", reference: "", tds: "" });
+const form = reactive({ amount: "", paid_on: "", mode: "", reference: "", tds: "", paid_by: "" });
 const error = ref("");
 const checking = ref(false);
 
@@ -73,6 +81,7 @@ watch(open, (now) => {
 		mode: props.bill.modes[0],
 		reference: "",
 		tds: "",
+		paid_by: props.bill.billed_company || "",
 	});
 	error.value = "";
 	checking.value = false;
@@ -92,6 +101,7 @@ async function save({ close }) {
 				mode: form.mode,
 				reference: form.reference.trim(),
 				tds: Number(form.tds) || 0,
+				paid_by: form.paid_by || null,
 			},
 			{ httpMethod: "POST" }
 		);

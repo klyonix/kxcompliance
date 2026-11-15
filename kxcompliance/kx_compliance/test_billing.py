@@ -61,6 +61,62 @@ from kxcompliance.kx_compliance.test_utils import (
 )
 
 SETTINGS = "KX Compliance Settings"
+SECOND = "Billing Second Company"
+
+
+def second_company() -> str:
+	if not frappe.db.exists("Company", SECOND):
+		frappe.get_doc(
+			{
+				"doctype": "Company",
+				"company_name": SECOND,
+				"abbr": "BSCO",
+				"default_currency": "INR",
+				"country": "India",
+			}
+		).insert()
+	return SECOND
+
+
+def filed_for(company: str, period_end: str) -> str:
+	"""A filed GSTR-3B of a company other than the test company."""
+	name = (
+		frappe.get_doc(
+			{
+				"doctype": "Compliance Task",
+				"obligation_template": "GSTR-3B (Monthly)",
+				"company": company,
+				"period_start": period_end[:8] + "01",
+				"period_end": period_end,
+				"period_label": period_end[:7],
+				"due_date": "2026-10-20",
+				"status": "Open",
+				"responsible": HOLDER,
+				"task_key": f"bill-test|{company}|{frappe.generate_hash(length=6)}",
+			}
+		)
+		.insert()
+		.name
+	)
+	frappe.db.set_value("Compliance Task", name, "status", "Filed")
+	return name
+
+
+def ledger_balance(client: str) -> float:
+	"""What the books say the client owes the firm: its customer's balance in the ledger."""
+	from frappe.query_builder.functions import Sum
+
+	gl = frappe.qb.DocType("GL Entry")
+	customer = frappe.db.get_value("Compliance Client", client, "customer")
+	return frappe.utils.flt(
+		frappe.qb.from_(gl)
+		.select(Sum(gl.debit - gl.credit))
+		.where((gl.party_type == "Customer") & (gl.party == customer) & (gl.is_cancelled == 0))
+		.run()[0][0],
+		2,
+	)
+
+
 ACCOUNTS = "billing-accounts@example.com"
 FIRM = "Billing Test Associates"
 DETAILS = {
@@ -679,9 +735,11 @@ class TestBills(IntegrationTestCase):
 		credit_bill(name, "Charged too much", amount=500, line=bill(name)["items"][0]["name"])  # 590
 		write_off_bill(name, "Settled")
 		shown = statement(self.client, frappe.utils.add_days(today, -3), today)
-		self.assertEqual(shown["opening"], -2000)  # paid ahead before the statement's dates
+		# The advance was used against the bill, so it sits under the bill's company, before the dates.
+		(section,) = shown["sections"]
+		self.assertEqual((section["key"], section["opening"]), (TEST_COMPANY, -2000))
 		self.assertEqual(
-			[(row["kind"], row["debit"], row["credit"], row["balance"]) for row in shown["rows"]],
+			[(row["kind"], row["debit"], row["credit"], row["balance"]) for row in section["rows"]],
 			[
 				("bill", 11800, 0, 9800),
 				("payment", 0, 5000, 4800),
@@ -690,12 +748,25 @@ class TestBills(IntegrationTestCase):
 				("write_off", 0, 3210, 0),
 			],
 		)
-		self.assertEqual(shown["rows"][1]["detail"], "Received: Bank Transfer, UTR-ST")
+		self.assertEqual(section["rows"][1]["detail"], f"Received for {name}: Bank Transfer, UTR-ST")
+		self.assertEqual(
+			shown["summary"],
+			{
+				"opening": -2000,
+				"billed": 11800,
+				"credited": 590,
+				"received": 5000,
+				"tds": 1000,
+				"written_off": 3210,
+				"closing": 0,
+			},
+		)
+		self.assertEqual(shown["open_bills"], [])
+		self.assertEqual(shown["summary"]["closing"], ledger_balance(self.client))
 		# The firm's copy says why it wrote off; the client's does not.
-		self.assertEqual(shown["rows"][-1]["detail"], "Written off: Settled")
+		self.assertEqual(section["rows"][-1]["detail"], "Written off: Settled")
 		own = statement(self.client, frappe.utils.add_days(today, -3), today, own=True)
-		self.assertEqual(own["rows"][-1]["detail"], "Balance adjusted")
-		self.assertEqual(shown["closing"], 0)
+		self.assertEqual(own["sections"][0]["rows"][-1]["detail"], "Balance adjusted")
 		with self.assertRaisesRegex(frappe.ValidationError, "after its end"):
 			statement(self.client, today, frappe.utils.add_days(today, -1))
 		# The firm and the client itself download it; another client may not.
@@ -709,6 +780,80 @@ class TestBills(IntegrationTestCase):
 			self.assertEqual(frappe.local.response.type, "pdf")
 			with self.assertRaisesRegex(frappe.PermissionError, "only your own"):
 				statement_pdf("Someone Else")
+
+	def test_a_client_with_two_companies_is_billed_per_company(self):
+		second = second_company()
+		profile(second, self.client)
+		self.addCleanup(profile, second)  # let go of it, so the next test can make the client again
+		details = frappe.get_doc("Company Compliance Profile", second)
+		details.billing_gstin = " 27aabcs9999q1z1 "
+		details.billing_address = "Hinjewadi, Pune"
+		details.save()
+		self.assertEqual(
+			frappe.db.get_value("Company Compliance Profile", second, ["billing_gstin", "billing_state"]),
+			("27AABCS9999Q1Z1", "Maharashtra"),
+		)
+		other = filed_for(second, "2026-09-30")
+		client_doc = frappe.get_doc("Compliance Client", self.client)
+		client_doc.recurring_company = frappe.db.get_single_value(SETTINGS, "billing_company")
+		with self.assertRaisesRegex(frappe.ValidationError, "not one of"):
+			client_doc.save()
+		client_doc = frappe.get_doc("Compliance Client", self.client)
+		client_doc.recurring_company = TEST_COMPANY
+		client_doc.save()
+
+		with self.assertRaisesRegex(frappe.ValidationError, "Choose which"):
+			create_bill(self.client, lines=[{"description": "Advisory", "amount": 100}])
+		with self.assertRaisesRegex(frappe.ValidationError, "not one of"):
+			bill_options(self.client, company=frappe.db.get_single_value(SETTINGS, "billing_company"))
+		options = bill_options(self.client, company=second)
+		self.assertEqual(options["companies"], sorted([TEST_COMPANY, second]))
+		self.assertEqual([row.name for row in options["filings"]], [other])
+		# Recurring charges go only on the bills of the company chosen to carry them.
+		self.assertEqual(options["recurring"], [])
+		self.assertEqual(len(bill_options(self.client, company=TEST_COMPANY)["recurring"]), 1)
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot be billed"):
+			create_bill(self.client, filings=[self.filed], company=second)
+
+		theirs = create_bill(self.client, filings=[other], company=second)["name"]
+		shown = bill(theirs)
+		# Billed to the company in Maharashtra: IGST, and its own name and GSTIN on the bill.
+		self.assertEqual(
+			(shown["billed_company"], [row["description"] for row in shown["taxes"]]),
+			(second, ["Output IGST"]),
+		)
+		printed = bill_print(frappe.get_doc("Sales Invoice", theirs))["client"]
+		self.assertEqual(
+			(printed.client_name, printed.gstin, printed.group),
+			(second, "27AABCS9999Q1Z1", "Billing Bill Client"),
+		)
+		send_bill(theirs)
+		ours = create_bill(self.client, filings=[self.filed], company=TEST_COMPANY)["name"]
+		send_bill(ours)
+
+		# One company pays the other's bill.
+		today = frappe.utils.nowdate()
+		with self.assertRaisesRegex(frappe.ValidationError, "not one of"):
+			record_payment(
+				theirs, 100, today, "Cash", paid_by=frappe.db.get_single_value(SETTINGS, "billing_company")
+			)
+		paid = record_payment(theirs, 1770, today, "UPI", paid_by=TEST_COMPANY)["payment"]
+		self.assertEqual(payment(paid)["paid_by_company"], TEST_COMPANY)
+
+		shown = statement(self.client, today, today)
+		closing = {section["key"]: section["closing"] for section in shown["sections"]}
+		self.assertEqual(closing, {TEST_COMPANY: 1770, second: 0})
+		self.assertEqual([row["name"] for row in shown["open_bills"]], [ours])
+		self.assertEqual(shown["summary"]["closing"], ledger_balance(self.client))
+		by_company = {row["key"]: row for row in client_summary(self.client)["by_company"]}
+		self.assertEqual(
+			(
+				by_company[second]["billed"],
+				by_company[second]["received"],
+				by_company[TEST_COMPANY]["balance"],
+			),
+			(1770, 1770, 1770),
+		)
 
 	def test_a_payment_has_a_page_a_receipt_and_can_be_emailed(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
@@ -775,7 +920,8 @@ class TestBills(IntegrationTestCase):
 			filters={"compliance_client": self.client, "docstatus": 0, "kx_billing_key": ("is", "set")},
 			fields=["name", "kx_billing_key"],
 		)
-		self.assertEqual([row.kx_billing_key for row in drafts], [f"{self.client}|2026-11"])
+		# One per company and month (a client's companies are billed apart).
+		self.assertEqual([row.kx_billing_key for row in drafts], [f"{self.client}|{TEST_COMPANY}|2026-11"])
 		descriptions = [row["description"] for row in bill(drafts[0].name)["items"]]
 		self.assertTrue(any(text.startswith("Fixed fee, ") for text in descriptions))
 		self.assertTrue(any(text.startswith("GSTR-3B (Monthly)") for text in descriptions))

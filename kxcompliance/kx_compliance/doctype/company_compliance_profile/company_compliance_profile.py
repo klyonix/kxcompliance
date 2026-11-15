@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_first_day, nowdate
 
+from kxcompliance.kx_compliance.billing import state_of
 from kxcompliance.kx_compliance.clients import sync_client_access
 from kxcompliance.kx_compliance.statutory import generate_tasks
 
@@ -23,6 +24,9 @@ class CompanyComplianceProfile(Document):
 				)
 			seen.add(key)
 		self.check_nobody_reviews_their_own()
+		# The company's bills charge GST by its state, which its GSTIN says when it has one.
+		self.billing_gstin = (self.billing_gstin or "").strip().upper() or None
+		self.billing_state = state_of(self.billing_gstin, self.billing_state)
 
 	def check_nobody_reviews_their_own(self):
 		"""Whoever prepares a filing cannot also be its reviewer: for the company's defaults, and

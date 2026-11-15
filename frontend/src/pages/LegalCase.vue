@@ -82,6 +82,7 @@ const exposure = computed(() => {
 // The band across the top: the next date, where the case is heard, who handles it, whose it is.
 const keyFacts = computed(() => {
 	const current = legalCase.value;
+	if (!current) return [];
 	return [
 		{
 			label: "Next date",

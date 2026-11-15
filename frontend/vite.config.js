@@ -47,6 +47,10 @@ export default defineConfig({
 					// The editor they share, for the notice and comments: online only.
 					"**/editor-*.js",
 					"**/editor-*.css",
+					// The managers' dashboard and its charts: every number comes from the server, so
+					// it has nothing to show offline. A quarter of the download, left to load online.
+					"**/Overview-*.js",
+					"**/Overview-*.css",
 				],
 				inlineWorkboxRuntime: true,
 				cleanupOutdatedCaches: true,

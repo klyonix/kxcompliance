@@ -53,12 +53,14 @@ export const ratesToSend = (rows) =>
 		sac_code: String(row.sac_code || "").trim() || null,
 	}));
 
-// "₹1,500" in the site's currency, for amounts the firm bills.
+// "₹1,500" or "₹1,305.08" in the site's currency, for amounts the firm bills: paise only when
+// there are any.
 export const money = (amount, currency = "INR") =>
 	Number(amount || 0).toLocaleString(undefined, {
 		style: "currency",
 		currency,
-		maximumFractionDigits: 0,
+		minimumFractionDigits: Number.isInteger(Number(amount || 0)) ? 0 : 2,
+		maximumFractionDigits: 2,
 	});
 
 // What is wrong with the typed lines of a bill (the server checks the same), or null.
@@ -116,6 +118,7 @@ export const linesToSend = (lines) =>
 export function billState(bill) {
 	if (bill.docstatus === 0) return { label: "Draft", theme: "gray" };
 	if (bill.docstatus === 2) return { label: "Cancelled", theme: "red" };
+	if (bill.is_return) return { label: "Credit note", theme: "purple" };
 	const due = Number(bill.outstanding_amount || 0);
 	if (due <= 0) return { label: "Paid", theme: "green" };
 	const total = Number(bill.rounded_total || bill.grand_total || 0);
@@ -137,6 +140,29 @@ export function paymentProblem({ amount, tds, paid_on: paidOn, mode }, due) {
 	}
 	if (!paidOn) return "Give the date it was received.";
 	if (!mode) return "Say how it was paid.";
+	return null;
+}
+
+// What is wrong with an advance being recorded (the server checks the same), or null.
+export function advanceProblem({ client, amount, paid_on: paidOn, mode }) {
+	if (!client) return "Choose the client who paid.";
+	if (!(Number(amount) > 0)) return "Give the amount received, above zero.";
+	if (!paidOn) return "Give the date it was received.";
+	if (!mode) return "Say how it was paid.";
+	return null;
+}
+
+// What is wrong with a credit note being made (the server checks the same), or null. `line` is
+// the bill line credited, or null for every line not yet credited.
+export function creditProblem({ line, amount, reason }) {
+	if (line) {
+		const credit = Number(amount);
+		if (!(credit > 0)) return "Give the amount to credit, above zero.";
+		if (credit > Number(line.creditable) + 0.005) {
+			return `A credit on this line is at most its ${line.creditable} before GST.`;
+		}
+	}
+	if (!reason?.trim()) return "Say why it is credited.";
 	return null;
 }
 

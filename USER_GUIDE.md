@@ -317,6 +317,49 @@ When money comes in against a bill.
 
 > **Tip.** A part payment leaves the rest due. A payment recorded by mistake can be cancelled from the bill.
 
+### A client has paid before being billed. How do I record it?
+
+*For: CA/CS firms.*
+
+When a client pays an advance or a retainer ahead of its bills.
+
+1. Open Billing, then the Payments tab, and press "Record advance".
+2. Choose the client and give the amount, the date, how it was paid and its reference.
+3. When the client's next bill is sent, the advance is used against it; what is left stays held for later bills.
+
+> **Tip.** The Payments tab shows every payment received, and how much of each advance is still held.
+
+### A bill was too much or wrong. How do I credit it?
+
+*For: CA/CS firms.*
+
+When a fee is agreed lower, a line was billed by mistake, or the whole bill was wrong.
+
+1. Open the sent bill and press "Credit note".
+2. Credit every line not yet credited, or choose one line and the amount before GST to credit on it.
+3. Give the reason, which the credit note shows, and make it. What the client owes drops by the credit and its GST.
+
+> **Tip.** Each line is credited once. A filing whose line is credited in full can go on another bill.
+
+### A client will not pay a small balance. How do I close the bill?
+
+*For: CA/CS firms.*
+
+When what is left on a bill will not be paid, such as bank charges the client deducted.
+
+1. Open the bill and press "Write off".
+2. Give the reason and confirm: the balance is booked as a loss and the bill is settled.
+
+### How do clients get reminded of overdue bills?
+
+*For: Managers, CA/CS firms.*
+
+Once, when the firm wants late bills chased by email.
+
+1. Open Billing settings, then the Reminders tab.
+2. Tick "Remind clients of overdue bills" and give the days late to remind on, such as 3, 15, 30.
+3. Each day, a client whose bill has reached a step is emailed it again, once per step, until it is paid.
+
 ## Setting up
 
 ### How do I stop selling to customers without a licence?

@@ -15,6 +15,7 @@ from datetime import date
 import frappe
 from frappe import _
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+from frappe.query_builder.functions import Sum
 from frappe.utils import add_days, add_months, flt, format_date, get_first_day, getdate, nowdate
 
 from kxcompliance.kx_compliance.onboarding import make_company
@@ -43,6 +44,8 @@ FIRM_FIELDS = (
 	"bill_prefix",
 	"default_sac",
 	"billing_logo",
+	"overdue_reminders",
+	"reminder_steps",
 )
 # A firm registered for GST charges it on its bills; one not registered, or under composition
 # (which issues a bill of supply), charges none.
@@ -127,6 +130,9 @@ def save_details(settings, details: dict):
 	for field in FIRM_FIELDS:
 		if field in details:
 			value = details[field]
+			if field == "overdue_reminders":
+				settings.overdue_reminders = 1 if value else 0
+				continue
 			if not isinstance(value, str | type(None)):
 				frappe.throw(_("{0} must be a single value.").format(_(settings.meta.get_label(field))))
 			settings.set(field, (value or "").strip() or None)
@@ -135,6 +141,7 @@ def save_details(settings, details: dict):
 		frappe.throw(
 			_("GST status is one of {0}, not {1}.").format(", ".join(GST_STATUSES), settings.gst_status)
 		)
+	settings.reminder_steps = ", ".join(str(day) for day in reminder_steps(settings.reminder_steps)) or None
 	settings.billing_gstin = (settings.billing_gstin or "").upper() or None
 	if settings.gst_status != "Not registered" and not settings.billing_gstin:
 		frappe.throw(_("A firm that is {0} has a GSTIN; give it.").format(_(settings.gst_status).lower()))
@@ -565,12 +572,13 @@ def tax_template_for(client_state: str | None) -> str | None:
 	)
 
 
-def series() -> str | None:
-	"""The firm's bill numbering, RA/26-27/0001, offered on Sales Invoice; None without a prefix."""
+def series(credit: bool = False) -> str | None:
+	"""The firm's bill numbering, RA/26-27/0001 (credit notes RA/CN/26-27/0001), offered on Sales
+	Invoice; None without a prefix."""
 	prefix = (get_settings().bill_prefix or "").strip()
 	if not prefix:
 		return None
-	name = f"{prefix}/.TFY./.####"
+	name = f"{prefix}/CN/.TFY./.####" if credit else f"{prefix}/.TFY./.####"
 	options = frappe.get_meta("Sales Invoice").get_field("naming_series").options or ""
 	if name not in options.split("\n"):
 		make_property_setter(
@@ -680,7 +688,7 @@ def make_bill(
 	for done in services or []:
 		items.append(service_line(rates, done, settings.default_sac))
 	for line in lines or []:
-		items.append(other_line(line))
+		items.append(other_line(line, settings.default_sac))
 	if not items:
 		frappe.throw(
 			_(
@@ -767,8 +775,9 @@ def service_line(rates: dict[tuple, dict], done: dict, default_sac: str | None) 
 	}
 
 
-def other_line(line: dict) -> dict:
-	"""A typed line: a description and amount; government fees go on the item without GST."""
+def other_line(line: dict, default_sac: str | None = None) -> dict:
+	"""A typed line: a description and amount; government fees go on the item without GST, and a
+	fee carries the firm's default SAC code."""
 	if not isinstance(line, dict) or set(line) - {"description", "amount", "government"}:
 		frappe.throw(_("Each other line is a description, an amount and whether it is a government fee."))
 	description = str(line.get("description") or "").strip()
@@ -780,6 +789,7 @@ def other_line(line: dict) -> dict:
 		"description": description,
 		"qty": 1,
 		"rate": amount,
+		"sac_code": None if line.get("government") else default_sac,
 	}
 
 
@@ -798,12 +808,15 @@ def send_bill(name: str) -> dict:
 	bill = bill_of(name)
 	if bill.docstatus != 0:
 		frappe.throw(_("{0} has been sent already.").format(name))
+	# Money the client paid ahead goes against the bill as it is sent (ERPNext's own allocation).
+	bill.allocate_advances_automatically = 1
 	bill.submit()
 	return {"name": bill.name, "emailed_to": email_bill(bill)}
 
 
-def email_bill(bill) -> str | None:
-	"""Email the bill's PDF to the client's billing email, else its contact; the address, or None."""
+def email_bill(bill, overdue_days: int | None = None) -> str | None:
+	"""Email the bill's PDF to the client's billing email, else its contact; the address, or None.
+	With `overdue_days`, as a reminder that it is that many days late."""
 	from kxcompliance.kx_compliance.reminders import sender_address
 
 	address = frappe.db.get_value(
@@ -816,9 +829,26 @@ def email_bill(bill) -> str | None:
 	frappe.sendmail(
 		recipients=[to],
 		sender=sender,
-		subject=_("Bill {0} from {1}").format(bill.name, bill.company),
-		message=_("Please find bill {0} for {1} attached, due on {2}.").format(
-			bill.name, frappe.format(bill.grand_total, {"fieldtype": "Currency"}), format_date(bill.due_date)
+		subject=(
+			_("Reminder: bill {0} from {1} is overdue").format(bill.name, bill.company)
+			if overdue_days
+			else _("Bill {0} from {1}").format(bill.name, bill.company)
+		),
+		message=(
+			_(
+				"Bill {0} was due on {1}, {2} days ago, and {3} of it is still to be paid. It is attached again."
+			).format(
+				bill.name,
+				format_date(bill.due_date),
+				overdue_days,
+				frappe.format(bill.outstanding_amount, {"fieldtype": "Currency"}),
+			)
+			if overdue_days
+			else _("Please find bill {0} for {1} attached, due on {2}.").format(
+				bill.name,
+				frappe.format(bill.grand_total, {"fieldtype": "Currency"}),
+				format_date(bill.due_date),
+			)
 		),
 		attachments=[
 			frappe.attach_print(
@@ -845,7 +875,11 @@ def cancel_bill(name: str):
 
 
 def mark_filings_billed(bill, method=None):
-	"""A sent bill: its filings are billed in it, each only once."""
+	"""A sent bill: its filings are billed in it, each only once. A credit note for the whole of a
+	filing's line lets that filing be billed again."""
+	if bill.get("is_return"):
+		follow_credits(bill.return_against)
+		return
 	filings = [row.compliance_task for row in bill.items if row.get("compliance_task")]
 	if not filings:
 		return
@@ -862,7 +896,11 @@ def mark_filings_billed(bill, method=None):
 
 
 def unmark_filings_billed(bill, method=None):
-	"""A cancelled bill: its filings may be billed again."""
+	"""A cancelled bill: its filings may be billed again. A cancelled credit note: what it credited
+	is billed again."""
+	if bill.get("is_return"):
+		follow_credits(bill.return_against)
+		return
 	task = frappe.qb.DocType("Compliance Task")
 	(frappe.qb.update(task).set(task.billed_in, None).where(task.billed_in == bill.name)).run()
 
@@ -919,20 +957,33 @@ BILL_FIELDS = (
 	"rounded_total",
 	"outstanding_amount",
 	"currency",
+	"is_return",
+	"return_against",
+	"remarks",
 )
 
 
 def bill_detail(name: str) -> dict:
 	"""A bill as its page shows it: lines, tax, totals, what is due."""
 	bill = bill_of(name)
+	credited = credited_lines(bill.name) if bill.docstatus == 1 and not bill.is_return else None
 	return {
 		**{field: bill.get(field) for field in BILL_FIELDS},
 		"items": [
-			{"description": row.description, "amount": row.amount, "filing": row.get("compliance_task")}
+			{
+				"name": row.name,
+				"description": row.description,
+				"amount": row.amount,
+				"filing": row.get("compliance_task"),
+				"creditable": creditable(row, credited)[1] if credited is not None else 0,
+			}
 			for row in bill.items
 		],
 		"taxes": [{"description": row.description, "amount": row.tax_amount} for row in bill.taxes],
 		"payments": payments_of(bill.name) if bill.docstatus == 1 else [],
+		"credit_notes": credit_notes_of(bill.name) if bill.docstatus == 1 else [],
+		"written_off": written_off(bill.name) if bill.docstatus == 1 else [],
+		"advance_held": advance_held(bill.customer) if bill.docstatus == 0 else 0,
 		"modes": list(PAYMENT_MODES),
 	}
 
@@ -1019,12 +1070,16 @@ def payments_of(bill: str) -> list[dict]:
 
 
 def cancel_payment(name: str):
-	"""Cancel a payment recorded against one of the firm's bills; the bill is due again."""
+	"""Cancel a payment recorded against one of the firm's bills (the bill is due again), or an
+	advance a client paid."""
 	entry = frappe.get_doc("Payment Entry", name)
 	bills = [row.reference_name for row in entry.references if row.reference_doctype == "Sales Invoice"]
-	if not bills:
-		frappe.throw(_("{0} is not a payment against one of the firm's bills.").format(name))
-	bill_of(bills[0])  # who may bill, and a bill of the firm's
+	if bills:
+		bill_of(bills[0])  # who may bill, and a bill of the firm's
+	else:
+		check_biller()
+		if entry.company != get_settings().billing_company or entry.party_type != "Customer":
+			frappe.throw(_("{0} is not a payment to the firm.").format(name), frappe.PermissionError)
 	if entry.docstatus != 1:
 		frappe.throw(_("{0} is not a recorded payment.").format(name))
 	entry.cancel()
@@ -1177,7 +1232,7 @@ def outstanding_by_client(client: str | None, today) -> list[dict]:
 
 def billing_by_month(from_date, to_date, client: str | None) -> list[dict]:
 	"""The firm's sent bills month by month: how many, before GST, GST, total, received, still due."""
-	from frappe.query_builder.functions import Count, Extract, Sum
+	from frappe.query_builder.functions import Count, Extract
 	from pypika.enums import DatePart
 
 	invoice = frappe.qb.DocType("Sales Invoice")
@@ -1284,15 +1339,27 @@ def bill_print(bill) -> dict:
 	total = flt(bill.rounded_total or bill.grand_total)
 	due = flt(bill.outstanding_amount) if bill.docstatus == 1 else total
 	title = bill.get("bill_title") or BILL_TITLES[firm.gst_status]
+	credit = bool(bill.get("is_return"))
+	against = None
+	if credit and bill.return_against:
+		against = {
+			"name": bill.return_against,
+			"date": frappe.db.get_value("Sales Invoice", bill.return_against, "posting_date"),
+		}
 	return {
-		"title": title,
+		"title": "Credit Note" if credit else title,
+		"credit": credit,
+		"against": against,
 		"composition_note": _(COMPOSITION_NOTE) if title == BILL_TITLES["Composition"] else "",
 		"firm": firm,
 		"client": client,
 		"place_of_supply": state_with_code(client.billing_state),
-		"in_words": money_in_words(total, bill.currency),
+		"in_words": money_in_words(abs(total), bill.currency),
 		"due": due,
-		"qr": upi_qr(firm.upi_id, firm.name or "", due, bill.name) if bill.docstatus != 2 else None,
+		# A credit note is not paid; nothing to scan.
+		"qr": upi_qr(firm.upi_id, firm.name or "", due, bill.name)
+		if bill.docstatus != 2 and not credit
+		else None,
 	}
 
 
@@ -1312,3 +1379,390 @@ def receipt_print(entry) -> dict:
 		"tds": tds,
 		"in_words": money_in_words(flt(entry.paid_amount), entry.paid_to_account_currency or "INR"),
 	}
+
+
+def credited_lines(bill: str) -> dict[str, frappe._dict]:
+	"""What the bill's sent credit notes have credited on each of its lines: units and amount."""
+	row = frappe.qb.DocType("Sales Invoice Item")
+	note = frappe.qb.DocType("Sales Invoice")
+	rows = (
+		frappe.qb.from_(row)
+		.join(note)
+		.on(note.name == row.parent)
+		.select(row.sales_invoice_item, Sum(row.qty).as_("qty"), Sum(row.amount).as_("amount"))
+		.where((note.return_against == bill) & (note.is_return == 1) & (note.docstatus == 1))
+		.groupby(row.sales_invoice_item)
+	).run(as_dict=True)
+	return {r.sales_invoice_item: frappe._dict(qty=-flt(r.qty), amount=-flt(r.amount)) for r in rows}
+
+
+def creditable(line, credited: dict) -> tuple[float, float]:
+	"""The units of a bill line not yet credited, and what they come to before GST."""
+	done = credited.get(line.name)
+	if not done:
+		return flt(line.qty), flt(line.amount, 2)
+	units = flt(line.qty) - done.qty
+	return units, flt(line.rate * units, 2) if units > 0 else 0.0
+
+
+def follow_credits(original: str | None):
+	"""A filing's line credited in full frees the filing to be billed again; a credit cancelled
+	bills it in the original bill again, unless it has been billed elsewhere since."""
+	if not original:
+		return
+	bill = frappe.get_doc("Sales Invoice", original)
+	if bill.docstatus != 1:
+		return
+	credited = credited_lines(original)
+	freed, kept = [], []
+	for line in bill.items:
+		if not line.get("compliance_task"):
+			continue
+		done = credited.get(line.name)
+		in_full = done and done.amount >= flt(line.amount, 2) - 0.005
+		(freed if in_full else kept).append(line.compliance_task)
+	task = frappe.qb.DocType("Compliance Task")
+	if freed:
+		(
+			frappe.qb.update(task)
+			.set(task.billed_in, None)
+			.where(task.name.isin(freed) & (task.billed_in == original))
+		).run()
+	if kept:
+		(
+			frappe.qb.update(task)
+			.set(task.billed_in, original)
+			.where(task.name.isin(kept) & task.billed_in.isnull())
+		).run()
+
+
+def credit_note(name: str, reason: str, amount: float | None = None, line: str | None = None) -> str:
+	"""A credit note against a sent bill, as ERPNext's own return invoice, lowering what is due:
+	- for every line not yet credited, in full;
+	- or for one line, in full or for an amount before GST (the GST on it is credited too).
+
+	ERPNext credits each line once at most up to its own rate, so a line credited in part is done.
+	A credit is at most what is still due: there is no refund to settle more."""
+	from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
+
+	bill = bill_of(name)
+	if bill.docstatus != 1 or bill.is_return:
+		frappe.throw(_("Only a sent bill can be credited, not {0}.").format(name))
+	reason = (reason or "").strip()
+	if not reason:
+		frappe.throw(_("Say why {0} is credited.").format(name))
+	if amount is not None and not line:
+		frappe.throw(_("Choose the line of {0} to credit {1} on.").format(name, amount))
+	credited = credited_lines(bill.name)
+	open_lines = {row.name: row for row in bill.items if creditable(row, credited)[0] > 0}
+	if not open_lines:
+		frappe.throw(_("Every line of {0} is credited already.").format(name))
+	if line and line not in open_lines:
+		frappe.throw(_("That line of {0} is credited already, or is not on it.").format(name))
+
+	note = make_sales_return(bill.name)
+	note.update_outstanding_for_self = 0  # the credit lowers what is due on the bill itself
+	note.remarks = reason
+	# make_sales_return leaves lines with nothing left to credit at zero; ERPNext refuses those.
+	rows = [row for row in note.items if row.sales_invoice_item in open_lines]
+	for row in rows:
+		units, _left = creditable(open_lines[row.sales_invoice_item], credited)
+		row.qty = -units
+	if line:
+		rows = [row for row in rows if row.sales_invoice_item == line]
+		if amount is not None:
+			amount = flt(amount, 2)
+			units, left = creditable(open_lines[line], credited)
+			if amount <= 0 or amount > left:
+				frappe.throw(
+					_("A credit on this line of {0} is above zero and at most its {1} before GST.").format(
+						name, frappe.format(left, {"fieldtype": "Currency"})
+					)
+				)
+			row = rows[0]
+			row.rate = flt(amount / units, row.precision("rate"))
+			if flt(row.rate * units, 2) != amount:
+				frappe.throw(
+					_(
+						"{0} does not divide evenly over the line's {1} units; credit the line in full."
+					).format(amount, units)
+				)
+			row.description = _("Credit against {0}: {1}").format(bill.name, reason)
+	note.items = rows
+	# ERPNext weighs the credit against what is due before it totals it again; total it first.
+	note.calculate_taxes_and_totals()
+	# Credit beyond what is due would leave the firm owing the client, with no refund to settle it.
+	credit = abs(flt(note.rounded_total) or flt(note.grand_total))
+	if credit > flt(bill.outstanding_amount) + 0.005:
+		frappe.throw(
+			_("A credit of {0} with GST is more than the {1} still due on {2}.").format(
+				frappe.format(credit, {"fieldtype": "Currency"}),
+				frappe.format(bill.outstanding_amount, {"fieldtype": "Currency"}),
+				name,
+			)
+		)
+	numbering = series(credit=True)
+	if numbering:
+		note.naming_series = numbering
+	note.insert()
+	note.submit()
+	return note.name
+
+
+def credit_notes_of(bill: str) -> list[dict]:
+	return frappe.get_all(
+		"Sales Invoice",
+		filters={"return_against": bill, "is_return": 1, "docstatus": 1},
+		fields=["name", "posting_date", "grand_total", "remarks"],
+		order_by="posting_date asc, name asc",
+	)
+
+
+def write_off(name: str, reason: str) -> str:
+	"""Write off what is still due on a sent bill (a small balance the client will not pay), as a
+	journal entry to the company's write-off account against the bill."""
+	bill = bill_of(name)
+	due = flt(bill.outstanding_amount, 2)
+	if bill.docstatus != 1 or due <= 0:
+		frappe.throw(_("{0} has nothing still due to write off.").format(name))
+	reason = (reason or "").strip()
+	if not reason:
+		frappe.throw(_("Say why what is left on {0} is written off.").format(name))
+	company = frappe.db.get_value("Company", bill.company, ["write_off_account", "cost_center"], as_dict=True)
+	if not company.write_off_account:
+		frappe.throw(_("{0} has no write-off account set.").format(bill.company))
+	entry = frappe.get_doc(
+		{
+			"doctype": "Journal Entry",
+			"voucher_type": "Write Off Entry",
+			"company": bill.company,
+			"posting_date": nowdate(),
+			"user_remark": _("Written off: {0}").format(reason),
+			"accounts": [
+				{
+					"account": bill.debit_to,
+					"party_type": "Customer",
+					"party": bill.customer,
+					"credit_in_account_currency": due,
+					"reference_type": "Sales Invoice",
+					"reference_name": bill.name,
+					"cost_center": company.cost_center,
+				},
+				{
+					"account": company.write_off_account,
+					"debit_in_account_currency": due,
+					"cost_center": company.cost_center,
+				},
+			],
+		}
+	)
+	entry.insert()
+	entry.submit()
+	return entry.name
+
+
+def written_off(bill: str) -> list[dict]:
+	account = frappe.qb.DocType("Journal Entry Account")
+	entry = frappe.qb.DocType("Journal Entry")
+	return (
+		frappe.qb.from_(account)
+		.join(entry)
+		.on(entry.name == account.parent)
+		.select(
+			entry.name,
+			entry.posting_date,
+			account.credit_in_account_currency.as_("amount"),
+			entry.user_remark,
+		)
+		.where(
+			(account.reference_type == "Sales Invoice")
+			& (account.reference_name == bill)
+			& (entry.voucher_type == "Write Off Entry")
+			& (entry.docstatus == 1)
+		)
+	).run(as_dict=True)
+
+
+def record_advance(client: str, amount: float, paid_on: str, mode: str, reference: str | None = None) -> str:
+	"""Money a client pays before it is billed, kept as an advance and used against its next bills."""
+	from erpnext.accounts.party import get_party_account
+
+	check_biller()
+	amount = flt(amount, 2)
+	if amount <= 0:
+		frappe.throw(_("An advance is an amount above zero."))
+	if getdate(paid_on) > getdate(nowdate()):
+		frappe.throw(_("A payment cannot be dated {0}, after today.").format(format_date(paid_on)))
+	if mode not in PAYMENT_MODES:
+		frappe.throw(_("Pay by one of {0}, not {1}.").format(", ".join(PAYMENT_MODES), mode))
+	company = get_settings().billing_company
+	customer = customer_for(client)
+	entry = frappe.get_doc(
+		{
+			"doctype": "Payment Entry",
+			"payment_type": "Receive",
+			"party_type": "Customer",
+			"party": customer,
+			"company": company,
+			"posting_date": getdate(paid_on),
+			"paid_from": get_party_account("Customer", customer, company),
+			"paid_to": frappe.db.get_value(
+				"Mode of Payment Account", {"parent": mode, "company": company}, "default_account"
+			),
+			"paid_amount": amount,
+			"received_amount": amount,
+			"mode_of_payment": mode,
+			"reference_no": (reference or "").strip() or mode,
+			"reference_date": getdate(paid_on),
+			"remarks": _("Advance from {0}").format(client),
+		}
+	)
+	entry.insert()
+	entry.submit()
+	return entry.name
+
+
+def advance_held(customer: str | None) -> float:
+	"""What a client has paid ahead and not yet had used against a bill."""
+	if not customer:
+		return 0
+	entry = frappe.qb.DocType("Payment Entry")
+	held = (
+		frappe.qb.from_(entry)
+		.select(Sum(entry.unallocated_amount))
+		.where(
+			(entry.party_type == "Customer")
+			& (entry.party == customer)
+			& (entry.company == get_settings().billing_company)
+			& (entry.docstatus == 1)
+		)
+	).run()[0][0]
+	return flt(held)
+
+
+def payments(client: str | None, text: str | None, start: int, limit: int) -> dict:
+	"""One page of the payments the firm has received, newest first, with each one's client, TDS
+	and the bills it settled; and how many there are and how much they came to."""
+	check_biller()
+	filters = [
+		["company", "=", get_settings().billing_company],
+		["payment_type", "=", "Receive"],
+		["party_type", "=", "Customer"],
+		["docstatus", "=", 1],
+	]
+	if client:
+		filters.append(["party", "=", frappe.db.get_value("Compliance Client", client, "customer") or ""])
+	text = (text or "").strip()
+	matching = (
+		[
+			["name", "like", f"%{text}%"],
+			["party_name", "like", f"%{text}%"],
+			["reference_no", "like", f"%{text}%"],
+		]
+		if text
+		else None
+	)
+	rows = frappe.get_list(
+		"Payment Entry",
+		filters=filters,
+		or_filters=matching,
+		fields=[
+			"name",
+			"posting_date",
+			"party",
+			"party_name",
+			"mode_of_payment",
+			"reference_no",
+			"paid_amount",
+			"unallocated_amount",
+			"total_allocated_amount",
+		],
+		order_by="posting_date desc, name desc",
+		start=start,
+		page_length=limit,
+	)
+	totals = frappe.get_list(
+		"Payment Entry",
+		filters=filters,
+		or_filters=matching,
+		fields=[{"COUNT": "*", "as": "count"}, {"SUM": "paid_amount", "as": "received"}],
+	)
+	names = [row.name for row in rows]
+	client_of = dict(
+		frappe.get_all(
+			"Compliance Client",
+			filters={"customer": ("in", [row.party for row in rows] or [""])},
+			fields=["customer", "name"],
+			as_list=True,
+		)
+	)
+	bills: dict[str, list[str]] = {}
+	for ref in frappe.get_all(
+		"Payment Entry Reference",
+		filters={"parent": ("in", names or [""]), "reference_doctype": "Sales Invoice"},
+		fields=["parent", "reference_name"],
+	):
+		bills.setdefault(ref.parent, []).append(ref.reference_name)
+	for row in rows:
+		row.client = client_of.get(row.party)
+		row.bills = bills.get(row.name, [])
+		row.tds = flt(row.total_allocated_amount - (row.paid_amount - row.unallocated_amount), 2)
+	return {
+		"rows": rows,
+		"total": totals[0]["count"] if totals else 0,
+		"received": flt(totals[0]["received"]) if totals else 0,
+		"modes": list(PAYMENT_MODES),
+	}
+
+
+def reminder_steps(text: str | None) -> list[int]:
+	"""The days late to remind on, from "3, 15, 30"; each once, in order."""
+	days = set()
+	for part in (text or "3, 15, 30").replace(";", ",").split(","):
+		part = part.strip()
+		if part.isdigit() and int(part) > 0:
+			days.add(int(part))
+	return sorted(days)
+
+
+def send_overdue_reminders(today: date | None = None):
+	"""Daily: a client whose bill is late is emailed it again, on the latest step it has reached
+	(days late), once per step; nothing once it is paid."""
+	from kxcompliance.kx_compliance.reminders import already_sent, write_log
+
+	settings = get_settings()
+	if settings.account_type != FIRM or not settings.billing_company or not settings.overdue_reminders:
+		return
+	today = getdate(today or nowdate())
+	steps = reminder_steps(settings.reminder_steps)
+	late = frappe.get_all(
+		"Sales Invoice",
+		filters={
+			"company": settings.billing_company,
+			"compliance_client": ("is", "set"),
+			"docstatus": 1,
+			"is_return": 0,
+			"outstanding_amount": (">", 0),
+			"due_date": ("<", today),
+		},
+		fields=["name", "due_date"],
+	)
+	due = []
+	for row in late:
+		reached = [day for day in steps if (today - getdate(row.due_date)).days >= day]
+		if reached:
+			due.append((row, reached[-1], f"{row.name}|overdue|{reached[-1]}"))
+	sent = already_sent([key for _row, _day, key in due])
+	for row, day, key in due:
+		if key in sent:
+			continue
+		savepoint = "overdue_reminder"
+		frappe.db.savepoint(savepoint)
+		try:
+			bill = frappe.get_doc("Sales Invoice", row.name)
+			to = email_bill(bill, overdue_days=day)
+			if to:
+				write_log("Reminder", key, [to], rule_days=day, due_date=row.due_date, sales_invoice=row.name)
+		except Exception:
+			frappe.db.rollback(save_point=savepoint)
+			frappe.log_error(title=f"Overdue reminder for {row.name} could not be sent")

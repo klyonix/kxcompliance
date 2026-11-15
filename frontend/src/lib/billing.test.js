@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+	advanceProblem,
 	billState,
 	billSubtotal,
+	creditProblem,
 	linesProblem,
 	linesToSend,
 	paymentProblem,
@@ -117,5 +119,35 @@ describe("a payment being recorded", () => {
 		expect(paymentProblem({ ...good, amount: 11000 }, due)).toMatch(/more than the 11800/);
 		expect(paymentProblem({ ...good, paid_on: "" }, due)).toMatch(/date/);
 		expect(paymentProblem({ ...good, mode: "" }, due)).toMatch(/how it was paid/);
+	});
+});
+
+describe("a credit note being made", () => {
+	it("needs a reason, and on one line an amount up to what is left on it", () => {
+		const line = { name: "row1", creditable: 1500 };
+		expect(creditProblem({ line: null, reason: "Billed twice" })).toBeNull();
+		expect(creditProblem({ line: null, reason: " " })).toMatch(/Say why/);
+		expect(creditProblem({ line, amount: 500, reason: "Discount" })).toBeNull();
+		expect(creditProblem({ line, amount: 0, reason: "Discount" })).toMatch(/above zero/);
+		expect(creditProblem({ line, amount: 1600, reason: "Discount" })).toMatch(
+			/at most its 1500/
+		);
+	});
+
+	it("shows a credit note as one, not as paid", () => {
+		expect(billState({ docstatus: 1, is_return: 1, outstanding_amount: 0 }).label).toBe(
+			"Credit note"
+		);
+	});
+});
+
+describe("an advance being recorded", () => {
+	it("is from a client, above zero, dated and paid somehow", () => {
+		const good = { client: "Sunrise", amount: 2000, paid_on: "2026-11-01", mode: "UPI" };
+		expect(advanceProblem(good)).toBeNull();
+		expect(advanceProblem({ ...good, client: "" })).toMatch(/client/);
+		expect(advanceProblem({ ...good, amount: -5 })).toMatch(/above zero/);
+		expect(advanceProblem({ ...good, paid_on: "" })).toMatch(/date/);
+		expect(advanceProblem({ ...good, mode: "" })).toMatch(/how it was paid/);
 	});
 });

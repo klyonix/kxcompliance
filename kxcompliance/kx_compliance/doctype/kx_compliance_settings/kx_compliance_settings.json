@@ -48,7 +48,9 @@
   "billing_address",
   "bank_details",
   "bill_prefix",
-  "default_sac"
+  "default_sac",
+  "overdue_reminders",
+  "reminder_steps"
  ],
  "fields": [
   {
@@ -318,13 +320,25 @@
    "fieldtype": "Data",
    "label": "Default SAC Code",
    "description": "Printed on bill lines whose rate has no SAC code of its own, such as 998221 for accounting and auditing."
+  },
+  {
+   "fieldname": "overdue_reminders",
+   "fieldtype": "Check",
+   "label": "Remind Clients of Overdue Bills",
+   "description": "Clients are emailed their bill again when it is this many days late, once for each step."
+  },
+  {
+   "fieldname": "reminder_steps",
+   "fieldtype": "Data",
+   "label": "Days Late",
+   "description": "Days after the due date to remind on, such as 3, 15, 30."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-16 16:00:00.000000",
+ "modified": "2026-11-16 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "KX Compliance Settings",

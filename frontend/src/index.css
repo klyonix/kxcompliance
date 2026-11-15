@@ -54,3 +54,87 @@
 .driver-popover.kx-tour .driver-popover-arrow-side-bottom {
 	border-bottom-color: var(--surface-elevation-2, var(--surface-base));
 }
+
+/* Accent colour (lib/appearance.js). frappe-ui draws its primary buttons, checkboxes, switches,
+   progress bars and tooltips in --surface-gray-10 (hover 9, pressed 8), so the accent replaces
+   those three. Graphite keeps frappe-ui's own. Dark mode uses lighter tones of the same hue. */
+[data-accent="blue"] {
+	--surface-gray-10: oklch(50% 0.17 255);
+	--surface-gray-9: oklch(45% 0.16 255);
+	--surface-gray-8: oklch(40% 0.15 255);
+}
+[data-accent="teal"] {
+	--surface-gray-10: oklch(48% 0.09 195);
+	--surface-gray-9: oklch(43% 0.085 195);
+	--surface-gray-8: oklch(38% 0.08 195);
+}
+[data-accent="green"] {
+	--surface-gray-10: oklch(48% 0.13 150);
+	--surface-gray-9: oklch(43% 0.12 150);
+	--surface-gray-8: oklch(38% 0.11 150);
+}
+[data-accent="violet"] {
+	--surface-gray-10: oklch(50% 0.19 295);
+	--surface-gray-9: oklch(45% 0.18 295);
+	--surface-gray-8: oklch(40% 0.17 295);
+}
+[data-accent="orange"] {
+	--surface-gray-10: oklch(52% 0.16 45);
+	--surface-gray-9: oklch(47% 0.15 45);
+	--surface-gray-8: oklch(42% 0.14 45);
+}
+[data-accent="rose"] {
+	--surface-gray-10: oklch(50% 0.18 10);
+	--surface-gray-9: oklch(45% 0.17 10);
+	--surface-gray-8: oklch(40% 0.16 10);
+}
+[data-theme="dark"][data-accent="blue"] {
+	--surface-gray-10: oklch(80% 0.11 255);
+	--surface-gray-9: oklch(74% 0.12 255);
+	--surface-gray-8: oklch(68% 0.13 255);
+}
+[data-theme="dark"][data-accent="teal"] {
+	--surface-gray-10: oklch(82% 0.09 195);
+	--surface-gray-9: oklch(76% 0.09 195);
+	--surface-gray-8: oklch(70% 0.09 195);
+}
+[data-theme="dark"][data-accent="green"] {
+	--surface-gray-10: oklch(82% 0.12 150);
+	--surface-gray-9: oklch(76% 0.12 150);
+	--surface-gray-8: oklch(70% 0.12 150);
+}
+[data-theme="dark"][data-accent="violet"] {
+	--surface-gray-10: oklch(80% 0.11 295);
+	--surface-gray-9: oklch(74% 0.12 295);
+	--surface-gray-8: oklch(68% 0.13 295);
+}
+[data-theme="dark"][data-accent="orange"] {
+	--surface-gray-10: oklch(82% 0.12 55);
+	--surface-gray-9: oklch(76% 0.13 55);
+	--surface-gray-8: oklch(70% 0.14 55);
+}
+[data-theme="dark"][data-accent="rose"] {
+	--surface-gray-10: oklch(80% 0.11 10);
+	--surface-gray-9: oklch(74% 0.12 10);
+	--surface-gray-8: oklch(68% 0.13 10);
+}
+
+/* Row density: the vertical padding of every list row (WorkRow). */
+:root {
+	--row-pad: 0.625rem;
+}
+[data-density="compact"] {
+	--row-pad: 0.375rem;
+}
+[data-density="spacious"] {
+	--row-pad: 0.875rem;
+}
+
+/* High contrast: secondary text and borders one or two steps stronger. */
+[data-contrast="high"] {
+	--ink-gray-4: var(--ink-gray-6);
+	--ink-gray-5: var(--ink-gray-7);
+	--ink-gray-6: var(--ink-gray-8);
+	--outline-gray-1: var(--outline-gray-3);
+	--outline-gray-2: var(--outline-gray-4);
+}

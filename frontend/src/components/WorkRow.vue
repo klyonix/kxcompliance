@@ -1,10 +1,11 @@
 <template>
 	<RouterLink
 		:to="row.to"
-		class="group flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-gray-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4 sm:items-center"
+		class="group flex items-start gap-3 rounded-lg px-3 py-[var(--row-pad)] hover:bg-surface-gray-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4 sm:items-center"
 	>
 		<span
-			class="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-gray-2 text-ink-gray-6"
+			class="flex size-8 shrink-0 items-center justify-center rounded-full"
+			:class="kindTint(row.kind).tile"
 		>
 			<span :class="kind.icon" class="size-4" aria-hidden="true" />
 			<span class="sr-only">{{ kind.label }}</span>
@@ -18,7 +19,15 @@
 			<span class="line-clamp-1 text-sm text-ink-gray-5">{{ row.detail }}</span>
 			<!-- On a phone the status and date have a line of their own. -->
 			<span class="flex items-center gap-2 text-sm sm:hidden">
-				<span :class="STATUS_TEXT[row.theme] || STATUS_TEXT.gray">{{ row.status }}</span>
+				<span
+					class="inline-flex items-center gap-1"
+					:class="STATUS_TEXT[row.theme] || STATUS_TEXT.gray"
+					><span
+						:class="STATUS_ICONS[row.theme] || STATUS_ICONS.gray"
+						class="size-3.5"
+						aria-hidden="true"
+					/>{{ row.status }}</span
+				>
 				<template v-if="row.due.text">
 					<span class="text-ink-gray-4" aria-hidden="true">·</span>
 					<span
@@ -35,7 +44,16 @@
 			>{{ cell || "—" }}</span
 		>
 		<span class="hidden w-36 shrink-0 sm:flex">
-			<Badge :label="row.status" :theme="row.theme" />
+			<!-- Colour and an icon, never colour alone. -->
+			<Badge :label="row.status" :theme="row.theme">
+				<template #prefix>
+					<span
+						:class="STATUS_ICONS[row.theme] || STATUS_ICONS.gray"
+						class="size-3"
+						aria-hidden="true"
+					/>
+				</template>
+			</Badge>
 		</span>
 		<span
 			class="hidden w-28 shrink-0 text-right text-sm sm:block"
@@ -52,6 +70,8 @@
 import { computed } from "vue";
 import { RouterLink } from "vue-router";
 import { Badge } from "frappe-ui";
+import { kindTint } from "@/lib/areas";
+import { STATUS_ICONS } from "@/lib/status";
 import { KINDS } from "@/pages/myWork";
 
 const props = defineProps({

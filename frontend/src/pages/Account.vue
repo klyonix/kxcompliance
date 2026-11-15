@@ -25,6 +25,48 @@
 				]"
 				@update:model-value="setColorScheme"
 			/>
+			<div class="flex flex-col gap-1.5" data-tour="appearance-accent">
+				<span class="text-sm text-ink-gray-6">Accent colour</span>
+				<div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Accent colour">
+					<button
+						v-for="accent in ACCENTS"
+						:key="accent.value"
+						type="button"
+						role="radio"
+						:aria-checked="look.accent === accent.value"
+						:aria-label="accent.label"
+						:title="accent.label"
+						class="flex size-8 items-center justify-center rounded-full ring-offset-2 ring-offset-surface-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4"
+						:class="look.accent === accent.value ? 'ring-2 ring-outline-gray-5' : ''"
+						:style="{ background: accent.swatch }"
+						@click="change('accent', accent.value)"
+					>
+						<span
+							v-if="look.accent === accent.value"
+							class="lucide-check size-4 text-white"
+							aria-hidden="true"
+						/>
+					</button>
+				</div>
+				<span class="text-xs text-ink-gray-5"
+					>For buttons, switches and highlights. Overdue stays red, due soon amber.</span
+				>
+			</div>
+			<div class="flex flex-col gap-1.5">
+				<span class="text-sm text-ink-gray-6">Rows in lists</span>
+				<TabButtons
+					:model-value="look.density"
+					:options="DENSITIES"
+					@update:model-value="change('density', $event)"
+				/>
+			</div>
+			<FormControl
+				type="checkbox"
+				label="High contrast: stronger text and borders"
+				:model-value="look.contrast === 'high'"
+				@update:model-value="change('contrast', $event ? 'high' : 'normal')"
+			/>
+			<p class="text-xs text-ink-gray-5">Kept on this device.</p>
 		</section>
 
 		<CalendarFeed v-if="!checksOnly()" />
@@ -92,18 +134,25 @@
 </template>
 
 <script setup>
-import { Avatar, Button, TabButtons, useColorScheme } from "frappe-ui";
+import { reactive } from "vue";
+import { Avatar, Button, FormControl, TabButtons, useColorScheme } from "frappe-ui";
 import { call } from "@/api";
 import { boot, checksOnly, isClientLogin, isManager, mayUseDesk } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import CalendarFeed from "@/components/CalendarFeed.vue";
 import PrivacySection from "@/components/PrivacySection.vue";
 import SyncStatus from "@/components/SyncStatus.vue";
+import { ACCENTS, DENSITIES, readAppearance, saveAppearance } from "@/lib/appearance";
 import { signOut } from "@/navigation";
 import { clearOutbox, outbox, refresh, sendWaiting } from "@/offline/outbox";
 import { discard, retry } from "@/offline/queue";
 
 const { colorScheme, setColorScheme } = useColorScheme();
+const look = reactive(readAppearance());
+function change(key, value) {
+	look[key] = value;
+	saveAppearance({ ...look });
+}
 
 // Send a change again against the record as it is now; the server still applies every rule.
 async function sendAgain(entry) {

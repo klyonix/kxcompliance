@@ -405,6 +405,16 @@ export const TOURS = [
 				title: "Documents",
 				text: "The notice, replies and orders, kept together.",
 			},
+			{
+				target: ["record-facts"],
+				title: "At a glance",
+				text: "When it is due, who looks after it and whose it is, in one band across the top.",
+			},
+			{
+				target: ["record-activity"],
+				title: "Activity",
+				text: "Every change, with who made it and when, and comments for the team. On a phone it is at the foot of the page.",
+			},
 		],
 	},
 	{
@@ -423,6 +433,16 @@ export const TOURS = [
 				target: ["section:details-heading"],
 				title: "Details",
 				text: "The application number, classes, status and who handles it.",
+			},
+			{
+				target: ["record-facts"],
+				title: "At a glance",
+				text: "When it is due, who looks after it and whose it is, in one band across the top.",
+			},
+			{
+				target: ["record-activity"],
+				title: "Activity",
+				text: "Every change, with who made it and when, and comments for the team. On a phone it is at the foot of the page.",
 			},
 		],
 	},
@@ -470,6 +490,16 @@ export const TOURS = [
 				target: ["section:year-heading"],
 				title: "The year so far",
 				text: "Filed on time, filed late and fees paid in this financial year.",
+			},
+			{
+				target: ["record-facts"],
+				title: "At a glance",
+				text: "When it is due, who looks after it and whose it is, in one band across the top.",
+			},
+			{
+				target: ["record-activity"],
+				title: "Activity",
+				text: "Every change, with who made it and when, and comments for the team. On a phone it is at the foot of the page.",
 			},
 		],
 	},

@@ -6,7 +6,11 @@
 				<slot />
 			</div>
 			<!-- The activity sits beside the record on a computer, and under it on a phone. -->
-			<aside v-if="doctype && name" class="lg:sticky lg:top-4 lg:self-start">
+			<!-- The team's comments and history are for the team: a client's login does not see them. -->
+			<aside
+				v-if="doctype && name && !isClientLogin()"
+				class="lg:sticky lg:top-4 lg:self-start"
+			>
 				<RecordActivity :key="`${doctype}:${name}`" :doctype="doctype" :name="name" />
 			</aside>
 		</div>
@@ -18,6 +22,7 @@
 // The activity (Frappe's timeline and its comment editor) is large, so it loads with the page
 // rather than with the app, and is not kept for offline use.
 import { defineAsyncComponent } from "vue";
+import { isClientLogin } from "@/boot";
 import FactsStrip from "@/components/FactsStrip.vue";
 
 const RecordActivity = defineAsyncComponent(() => import("@/components/RecordActivity.vue"));

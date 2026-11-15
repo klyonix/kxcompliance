@@ -11,6 +11,7 @@
 		:due="due"
 		:subtitle="row.detail"
 		:facts="facts"
+		:key-facts="keyFacts"
 		:notes="notes"
 		:may-act="mayAct"
 		@changed="load"
@@ -69,6 +70,22 @@ const due = computed(() => {
 	}
 	if (!current.next_date) return { text: row.value.due.text, late: false };
 	return { text: `Next ${formatDate(current.next_date)} · ${row.value.due.text.toLowerCase()}` };
+});
+
+// The band across the top: the next date, the application, who handles it, whose mark it is.
+const keyFacts = computed(() => {
+	const current = mark.value;
+	return [
+		{
+			label: "Next date",
+			icon: "lucide-calendar-clock",
+			value: current.next_date ? formatDate(current.next_date) : "Not set",
+			tone: row.value.due.late ? "red" : "plain",
+		},
+		{ label: "Application", icon: "lucide-hash", value: current.application_number },
+		{ label: "Responsible", icon: "lucide-user-round", value: nameOf(current.responsible) },
+		{ label: "Applicant", icon: "lucide-building-2", value: current.applicant },
+	];
 });
 
 const facts = computed(() => {

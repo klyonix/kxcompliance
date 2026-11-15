@@ -4,7 +4,7 @@
 		:parent="{ label: 'Signatories', route: { name: 'Signatories' } }"
 	/>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
+	<RecordFrame doctype="Signatory" :name="name" :facts="name && ready ? keyFacts : []">
 		<p
 			v-if="error"
 			role="alert"
@@ -133,14 +133,14 @@
 				<WorkRow v-for="dsc in dscs" :key="dsc.name" :row="itemRow(dsc)" />
 			</section>
 		</template>
-	</div>
+	</RecordFrame>
 
 	<div
 		v-if="ready && editable"
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
-			class="mx-auto flex w-full max-w-3xl flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			class="mx-auto flex w-full max-w-6xl flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
 		>
 			<p v-if="saveError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ saveError }}
@@ -163,6 +163,7 @@ import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { createDoc, getDoc, getList, updateDoc } from "@/api";
 import { boot, mayRecord } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RecordFrame from "@/components/RecordFrame.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { DSC_TYPE, ITEM_LIST_FIELDS, itemRow } from "@/lib/items";
 import { isMasked } from "@/lib/privacy";
@@ -174,6 +175,17 @@ const props = defineProps({ name: { type: String, default: "" } });
 const route = useRoute();
 const router = useRouter();
 const editable = mayRecord();
+// The band across the top: who the person is for the company, and their digital signatures.
+const keyFacts = computed(() => [
+	{ label: "Designation", icon: "lucide-briefcase", value: form.designation },
+	{ label: "Company", icon: "lucide-building-2", value: form.company },
+	{ label: "DIN", icon: "lucide-hash", value: form.din },
+	{
+		label: "Digital signatures",
+		icon: "lucide-key-round",
+		value: String(dscs.value.length),
+	},
+]);
 // PAN and mobile come masked to all but managers, who alone may see or change them.
 const MASKED_NOTE = "Only managers see and change it in full.";
 const loaded = reactive({ pan: "", mobile: "" });

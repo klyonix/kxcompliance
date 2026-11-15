@@ -78,6 +78,13 @@
 			:status-label="null"
 			:date-label="null"
 		/>
+		<ListPager
+			v-if="results.length || page > 1"
+			v-model:page="page"
+			v-model:size="pageSize"
+			:total="total"
+			:loading="searching"
+		/>
 	</div>
 
 	<!-- One customer's or supplier's check. -->
@@ -167,6 +174,7 @@
 				</p>
 				<RowList
 					v-else
+					paged="licences-held"
 					:rows="
 						check.licences.map((licence) =>
 							heldRow(licence, check.checked_on, { linked: !checksOnly() })
@@ -190,9 +198,11 @@ import { call } from "@/api";
 import { boot, checksOnly } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
+import ListPager from "@/components/ListPager.vue";
 import RowList from "@/components/RowList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { formatDate } from "@/lib/format";
+import { savePageSize, savedPageSize } from "@/lib/paging";
 import { coverage, heldRow, partyRow, requirementState, verdict } from "@/lib/licenceCheck";
 import { STATUS_ICONS } from "@/lib/status";
 import { notLoaded } from "@/offline/reachability";
@@ -228,6 +238,10 @@ const partyLabel = computed(() => partyType.value.toLowerCase());
 
 const search = ref("");
 const results = ref([]);
+// The search's page, page size (remembered on this device) and how many it finds in all.
+const page = ref(1);
+const pageSize = ref(savedPageSize("licence-check"));
+const total = ref(0);
 const searching = ref(false);
 const searchError = ref("");
 
@@ -272,12 +286,20 @@ async function findParties() {
 	searching.value = true;
 	searchError.value = "";
 	try {
-		const found = await call("kxcompliance.api.search_parties", {
-			party_type: partyType.value,
-			text: search.value,
-		});
+		const asked = { party_type: partyType.value, text: search.value };
+		const [found, count] = await Promise.all([
+			call("kxcompliance.api.search_parties", {
+				...asked,
+				start: (page.value - 1) * pageSize.value,
+				page_length: pageSize.value,
+			}),
+			call("kxcompliance.api.count_parties", asked),
+		]);
 		// A slower earlier search must not replace the answer to a later one.
-		if (ticket === latest) results.value = found;
+		if (ticket === latest) {
+			results.value = found;
+			total.value = count;
+		}
 	} catch (err) {
 		if (ticket === latest) searchError.value = friendly(err, "this search");
 	} finally {
@@ -299,14 +321,21 @@ async function runCheck() {
 	}
 }
 
+// A new search starts from its first page; the page watcher searches, or it is searched here.
+function fromFirstPage() {
+	if (page.value !== 1) page.value = 1;
+	else findParties();
+}
 watch(search, () => {
 	clearTimeout(typing);
-	typing = setTimeout(findParties, 250);
+	typing = setTimeout(fromFirstPage, 250);
 });
 watch(partyType, () => {
 	results.value = [];
-	findParties();
+	fromFirstPage();
 });
+watch([page, pageSize], findParties);
+watch(pageSize, (size) => savePageSize("licence-check", size));
 watch(
 	() => route.query,
 	(query) => {

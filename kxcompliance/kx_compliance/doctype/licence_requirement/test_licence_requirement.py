@@ -9,6 +9,7 @@ from frappe.tests import IntegrationTestCase
 from kxcompliance.api import (
 	can_open_app,
 	check_party,
+	count_parties,
 	has_app_access,
 	my_work,
 	search,
@@ -381,6 +382,10 @@ class TestLicenceCheckScreen(IntegrationTestCase):
 			self.assertFalse(frappe.has_permission("Customer", "read"))
 			found = search_parties("Supplier", "wholesale")
 			self.assertEqual([row.name for row in found], [WHOLESALER])
+			self.assertEqual(count_parties("Supplier", "wholesale"), 1)
+			self.assertEqual(search_parties("Supplier", "wholesale", start=1), [])
+			# A page is never more than 100, whatever is asked for.
+			self.assertLessEqual(len(search_parties("Supplier", "", page_length=100000)), 100)
 			self.assertEqual(found[0].party_group, "Licence Test Suppliers")
 			self.assertEqual(check_party("Customer", GROCER)["party_name"], GROCER)
 

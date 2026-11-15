@@ -9,6 +9,7 @@ import frappe
 from frappe import _
 from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
 from frappe.handler import ALLOWED_MIMETYPES
+from frappe.query_builder.functions import Count
 from frappe.utils import add_days, cint, get_datetime, getdate, now_datetime, nowdate
 
 from kxcompliance.install import CLIENT_ROLE
@@ -39,6 +40,7 @@ from kxcompliance.kx_compliance.party_licences import (
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, is_approver
 from kxcompliance.kx_compliance.search import CANDIDATES as SEARCH_CANDIDATES
 from kxcompliance.kx_compliance.search import MIN_LENGTH as SEARCH_MIN_LENGTH
+from kxcompliance.kx_compliance.search import counts as search_record_counts
 from kxcompliance.kx_compliance.search import like as search_like
 from kxcompliance.kx_compliance.search import search as search_records
 from kxcompliance.kx_compliance.search import words_of as search_words
@@ -48,6 +50,8 @@ APP_ROLES = frozenset({"System Manager", "Compliance Manager", "Compliance User"
 CHECK_ROLES = {"Sales User": "Customer", "Purchase User": "Supplier"}
 PARTY_NAME_FIELDS = {"Customer": "customer_name", "Supplier": "supplier_name"}
 PARTY_SEARCH_LIMIT = 20
+# The most rows one page of a list may ask for (the largest page size offered).
+MAX_PAGE_LENGTH = 100
 # What a client's login searches: the records it can open in the app.
 CLIENT_SEARCH_KINDS = ("items", "filings", "cases", "trademarks", "signatories", "requests")
 NAMES_LIMIT = 50
@@ -524,24 +528,47 @@ def add_trademark(mark: dict, classes: list) -> dict:
 	return {"name": doc.name}
 
 
-@frappe.whitelist(methods=["GET"])
-def search_parties(party_type: str, text: str = "") -> list[dict]:
-	"""Customers or suppliers whose ID or name contains `text`, for the Licence Check."""
+def party_query(party_type: str, text: str) -> dict:
+	"""Customers or suppliers whose ID or name contains `text`, not disabled."""
 	check_party_type(party_type)
+	text = (text or "").strip()
 	name_field = PARTY_NAME_FIELDS[party_type]
-	query = {
+	return {
 		"filters": {"disabled": 0},
-		"or_filters": {"name": ("like", f"%{text.strip()}%"), name_field: ("like", f"%{text.strip()}%")}
-		if text.strip()
-		else None,
-		"fields": ["name", f"{name_field} as party_name", f"{GROUP_FIELDS[party_type]} as party_group"],
-		"order_by": f"{name_field} asc",
-		"limit": PARTY_SEARCH_LIMIT,
+		"or_filters": {"name": ("like", f"%{text}%"), name_field: ("like", f"%{text}%")} if text else None,
 	}
+
+
+def read_parties(party_type: str, **query) -> list[dict]:
 	if frappe.has_permission(party_type, "read"):
 		return frappe.get_list(party_type, **query)
 	# Compliance roles do not read Customer or Supplier; the check gives them names and groups only.
 	return frappe.get_all(party_type, **query)
+
+
+@frappe.whitelist(methods=["GET"])
+def search_parties(
+	party_type: str, text: str = "", start: int = 0, page_length: int = PARTY_SEARCH_LIMIT
+) -> list[dict]:
+	"""Customers or suppliers whose ID or name contains `text`, for the Licence Check, a page at a
+	time (at most 100)."""
+	name_field = PARTY_NAME_FIELDS.get(party_type)
+	query = party_query(party_type, text)
+	return read_parties(
+		party_type,
+		**query,
+		fields=["name", f"{name_field} as party_name", f"{GROUP_FIELDS[party_type]} as party_group"],
+		order_by=f"{name_field} asc",
+		limit_start=max(0, cint(start)),
+		limit=min(max(1, cint(page_length)), MAX_PAGE_LENGTH),
+	)
+
+
+@frappe.whitelist(methods=["GET"])
+def count_parties(party_type: str, text: str = "") -> int:
+	"""How many customers or suppliers the Licence Check search finds."""
+	rows = read_parties(party_type, **party_query(party_type, text), fields=[{"COUNT": "*", "as": "count"}])
+	return rows[0]["count"] if rows else 0
 
 
 @frappe.whitelist(methods=["GET"])
@@ -618,33 +645,73 @@ def full_names(users: str) -> dict[str, str]:
 	return {row.name: row.full_name or row.name for row in rows}
 
 
-@frappe.whitelist(methods=["GET"])
-def search(text: str, kind: str | None = None) -> dict[str, list]:
-	"""Records with every word of `text` in their name, number or reference, closest first, as far
-	as the person may read them: the register, filings, cases, trademarks, clients, companies,
-	signatories, document requests, licence rules and obligations; for managers the team; and the
-	customers and suppliers Licence Check may look at. `kind` asks for one of them only."""
-	check_reader_access()
+def search_kinds(kind: str | None) -> list[str] | None:
+	"""The kinds a search may look at: one asked for, or all (None); a client's login only those
+	whose pages it opens. An empty list means nothing may be searched."""
 	if kind is not None and not isinstance(kind, str):
 		frappe.throw(_("Search one kind at a time."), frappe.ValidationError)
 	kinds = [kind] if kind else None
 	if is_client_login():
 		# A client's login opens only these pages; the others' results would lead nowhere.
 		kinds = [chosen for chosen in (kinds or CLIENT_SEARCH_KINDS) if chosen in CLIENT_SEARCH_KINDS]
-		if not kinds:
-			return {}
-	found = search_records(text, kinds)
+	return kinds
+
+
+def party_kinds(kind: str | None) -> dict[str, str]:
+	"""The customer and supplier kinds a search covers, by key, for staff who may check them."""
+	if is_client_login():
+		return {}
+	keys = {f"{party_type.lower()}s": party_type for party_type in party_types_to_check()}
+	return {key: party_type for key, party_type in keys.items() if not kind or kind == key}
+
+
+def searches_people(kind: str | None) -> bool:
+	return (not kind or kind == "people") and is_approver() and has_app_access()
+
+
+@frappe.whitelist(methods=["GET"])
+def search(
+	text: str, kind: str | None = None, start: int = 0, page_length: int | None = None
+) -> dict[str, list]:
+	"""Records with every word of `text` in their name, number or reference, closest first, as far
+	as the person may read them: the register, filings, cases, trademarks, clients, companies,
+	signatories, document requests, licence rules and obligations; for managers the team; and the
+	customers and suppliers Licence Check may look at. `kind` asks for one of them only, and
+	`start` and `page_length` (at most 100) for one page of it."""
+	check_reader_access()
+	kinds = search_kinds(kind)
+	if kinds == []:
+		return {}
+	start = max(0, cint(start))
+	limit = min(max(1, cint(page_length)), MAX_PAGE_LENGTH) if page_length else SEARCH_CANDIDATES
+	found = search_records(text, kinds, start, limit)
 	words = search_words(text)
 	if len(" ".join(words)) < SEARCH_MIN_LENGTH:
 		return found
-	if (not kind or kind == "people") and is_approver() and has_app_access():
-		found["people"] = search_people(words)
-	if not is_client_login():
-		for party_type in party_types_to_check():
-			key = f"{party_type.lower()}s"
-			if not kind or kind == key:
-				found[key] = search_party_words(party_type, words)
+	if searches_people(kind):
+		found["people"] = search_people(words)[start : start + limit]
+	for key, party_type in party_kinds(kind).items():
+		found[key] = matching_parties(party_type, words).offset(start).limit(limit).run(as_dict=True)
 	return found
+
+
+@frappe.whitelist(methods=["GET"])
+def search_counts(text: str) -> dict[str, int]:
+	"""How many records of each kind a search finds, for the counts beside its tabs."""
+	check_reader_access()
+	kinds = search_kinds(None)
+	if kinds == []:
+		return {}
+	counts = search_record_counts(text, kinds)
+	words = search_words(text)
+	if len(" ".join(words)) < SEARCH_MIN_LENGTH:
+		return counts
+	if searches_people(None):
+		counts["people"] = len(search_people(words))
+	for key, party_type in party_kinds(None).items():
+		query = matching_parties(party_type, words, count=True)
+		counts[key] = query.run(as_dict=True)[0]["count"]
+	return counts
 
 
 def search_people(words: list[str]) -> list[dict]:
@@ -653,34 +720,42 @@ def search_people(words: list[str]) -> list[dict]:
 		person
 		for person in people.team()
 		if all(word in f"{person['full_name']} {person['user']}".lower() for word in words)
-	][:SEARCH_CANDIDATES]
+	]
 
 
-def search_party_words(party_type: str, words: list[str]) -> list[dict]:
-	"""Customers or suppliers with every word in their ID or name, for Licence Check."""
+def matching_parties(party_type: str, words: list[str], count: bool = False):
+	"""The query for customers or suppliers with every word in their ID or name, for Licence
+	Check, in name order; or, with `count`, how many there are."""
 	name_field = PARTY_NAME_FIELDS[party_type]
 	table = frappe.qb.DocType(party_type)
-	fields = [
-		table.name,
-		table[name_field].as_("party_name"),
-		table[GROUP_FIELDS[party_type]].as_("party_group"),
-	]
 	if frappe.has_permission(party_type, "read"):
 		# Someone who reads customers or suppliers sees only those their permissions allow.
 		query = frappe.qb.get_query(
 			party_type,
-			fields=["name", f"{name_field} as party_name", f"{GROUP_FIELDS[party_type]} as party_group"],
+			fields=[{"COUNT": "*", "as": "count"}]
+			if count
+			else ["name", f"{name_field} as party_name", f"{GROUP_FIELDS[party_type]} as party_group"],
 			ignore_permissions=False,
 		)
 	else:
 		# Compliance roles do not read Customer or Supplier; Licence Check gives them names and
 		# groups only, as search_parties does.
-		query = frappe.qb.from_(table).select(*fields)
-	query = query.where(table.disabled == 0).orderby(table[name_field]).limit(SEARCH_CANDIDATES)
+		query = frappe.qb.from_(table).select(
+			*(
+				[Count("*").as_("count")]
+				if count
+				else [
+					table.name,
+					table[name_field].as_("party_name"),
+					table[GROUP_FIELDS[party_type]].as_("party_group"),
+				]
+			)
+		)
+	query = query.where(table.disabled == 0)
 	for word in words:
 		pattern = search_like(word)
 		query = query.where((table.name.like(pattern)) | (table[name_field].like(pattern)))
-	return query.run(as_dict=True)
+	return query if count else query.orderby(table[name_field])
 
 
 @frappe.whitelist(methods=["GET"])

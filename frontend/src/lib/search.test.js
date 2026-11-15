@@ -59,3 +59,16 @@ describe("the wider search", () => {
 		expect(countText([])).toBe("0");
 	});
 });
+
+describe("search counts from the server", () => {
+	it("are shown in full once the server has counted", () => {
+		const sections = resultSections({
+			items: Array(30).fill({ name: "X" }),
+			clients: [{ name: "A" }],
+		});
+		expect(countText(sections[0].rows, 154)).toBe("154");
+		const tabs = searchTabs(sections, { items: 154, clients: 1 });
+		expect(tabs[0].label).toBe("All 155");
+		expect(tabs.map((tab) => tab.label)).toContain("Clients 1");
+	});
+});

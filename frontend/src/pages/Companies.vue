@@ -29,6 +29,7 @@
 		</div>
 		<RowList
 			v-else
+			paged="companies"
 			:groups="groups"
 			:columns="[{ label: 'Registrations' }, { label: 'Obligations' }]"
 			name-label="Company"

@@ -86,17 +86,25 @@ export function resultSections(results, today = new Date()) {
 	})).filter((section) => section.rows.length);
 }
 
-// A section's count as the tabs show it: "30+" when the server stopped looking.
-export const countText = (rows) =>
-	rows.length >= CANDIDATES ? `${CANDIDATES}+` : `${rows.length}`;
+// A section's count as the tabs show it: the server's count when known, else what came back,
+// "30+" when the server stopped looking.
+export const countText = (rows, total) => {
+	if (Number.isInteger(total)) return `${total}`;
+	return rows.length >= CANDIDATES ? `${CANDIDATES}+` : `${rows.length}`;
+};
 
-// The tabs over the results: All, then each kind that found something, with its count.
-export function searchTabs(sections) {
-	const total = sections.reduce((sum, section) => sum + section.rows.length, 0);
+// The tabs over the results: All, then each kind that found something, with its count. `totals`
+// are the server's counts by kind (search_counts), when it has answered.
+export function searchTabs(sections, totals = {}) {
+	const counted = sections.every((section) => Number.isInteger(totals[section.key]));
+	const total = sections.reduce(
+		(sum, section) => sum + (counted ? totals[section.key] : section.rows.length),
+		0
+	);
 	return [
 		{ label: `All ${total}`, value: "all" },
 		...sections.map((section) => ({
-			label: `${section.label} ${countText(section.rows)}`,
+			label: `${section.label} ${countText(section.rows, totals[section.key])}`,
 			value: section.key,
 		})),
 	];

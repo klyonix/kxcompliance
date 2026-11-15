@@ -135,18 +135,29 @@ def rank(value: str, words: list[str]) -> int:
 	return 3
 
 
-def search_kind(kind: str, words: list[str]) -> list[dict]:
-	"""Up to CANDIDATES records of one kind with every word in some searched field, closest first."""
-	doctype, searched, shown, ranked = KINDS[kind]
+def matching(kind: str, words: list[str], fields: list):
+	"""The query for records of one kind with every word in some searched field, as far as the
+	person may read them; None when they may not read that kind at all."""
+	doctype, searched, _shown, _ranked = KINDS[kind]
 	if not frappe.has_permission(doctype, "read"):
-		return []
+		return None
 	table = frappe.qb.DocType(doctype)
-	query = frappe.qb.get_query(doctype, fields=shown, limit=CANDIDATES, ignore_permissions=False)
+	query = frappe.qb.get_query(doctype, fields=fields, ignore_permissions=False)
 	for word in words:
 		pattern = like(word)
 		query = query.where(Criterion.any([Lower(table[field]).like(pattern) for field in searched]))
+	return query
+
+
+def search_kind(kind: str, words: list[str], start: int = 0, limit: int = CANDIDATES) -> list[dict]:
+	"""One page of the records of a kind with every word in some searched field, closest first."""
+	doctype, _searched, shown, ranked = KINDS[kind]
+	query = matching(kind, words, shown)
+	if query is None:
+		return []
+	table = frappe.qb.DocType(doctype)
 	# The closest come first in the database too, so an exact name is among those returned
-	# however many newer records also match.
+	# however many newer records also match, and each page carries on from the last.
 	phrase = " ".join(words)
 	ranked_field = Lower(table[ranked])
 	closeness = (
@@ -156,15 +167,39 @@ def search_kind(kind: str, words: list[str]) -> list[dict]:
 		.when(Criterion.all([ranked_field.like(like(word)) for word in words]), 2)
 		.else_(3)
 	)
-	rows = query.orderby(closeness).orderby(table.modified, order=Order.desc).run(as_dict=True)
+	rows = (
+		query.orderby(closeness)
+		.orderby(table.modified, order=Order.desc)
+		.orderby(table.name)
+		.offset(start)
+		.limit(limit)
+		.run(as_dict=True)
+	)
 	# Python's sort keeps the newest-first order among records that rank the same.
 	return sorted(rows, key=lambda row: rank(row.get(ranked), words))
 
 
-def search(text: str, kinds: list[str] | None = None) -> dict[str, list]:
-	"""Each kind's matches for `text`; every kind is empty when it is too short to search."""
+def count_kind(kind: str, words: list[str]) -> int:
+	"""How many records of a kind the words find, as far as the person may read them."""
+	query = matching(kind, words, [{"COUNT": "*", "as": "count"}])
+	return query.run(as_dict=True)[0]["count"] if query is not None else 0
+
+
+def search(
+	text: str, kinds: list[str] | None = None, start: int = 0, limit: int = CANDIDATES
+) -> dict[str, list]:
+	"""Each kind's matches for `text`, a page of each; every kind is empty when it is too short."""
 	words = words_of(text)
 	chosen = [kind for kind in (kinds or KINDS) if kind in KINDS]
 	if len(" ".join(words)) < MIN_LENGTH:
 		return {kind: [] for kind in chosen}
-	return {kind: search_kind(kind, words) for kind in chosen}
+	return {kind: search_kind(kind, words, start, limit) for kind in chosen}
+
+
+def counts(text: str, kinds: list[str] | None = None) -> dict[str, int]:
+	"""How many each kind finds for `text`; nothing when it is too short to search."""
+	words = words_of(text)
+	chosen = [kind for kind in (kinds or KINDS) if kind in KINDS]
+	if len(" ".join(words)) < MIN_LENGTH:
+		return {kind: 0 for kind in chosen}
+	return {kind: count_kind(kind, words) for kind in chosen}

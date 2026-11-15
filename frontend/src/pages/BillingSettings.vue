@@ -16,7 +16,7 @@
 				:options="tabOptions"
 				aria-label="Show"
 			/>
-			<TabList v-else class="overflow-x-auto">
+			<TabList v-else class="overflow-x-auto" data-tour="billing-settings-tabs">
 				<TabTrigger value="firm" label="Firm" icon-left="lucide-building" />
 				<TabTrigger
 					value="rates"

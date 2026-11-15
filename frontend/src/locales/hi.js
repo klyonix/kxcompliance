@@ -40,6 +40,13 @@ export default {
 	To: "तक",
 	"Give the first and last date.": "पहली और आख़िरी तारीख़ दें।",
 	"The first date is after the last.": "पहली तारीख़ आख़िरी तारीख़ के बाद है।",
+	"How do I see what I owe my firm?": "मुझे अपनी फ़र्म को कितना देना है, यह कैसे देखूँ?",
+	"When you want your bills, or a statement for your accounts.":
+		"जब आपको अपने बिल चाहिए, या अपने हिसाब के लिए विवरण।",
+	"Your home page lists the bills your firm has sent you and what is still due; open one for its PDF.":
+		"आपके होम पेज पर आपकी फ़र्म के भेजे बिल और बकाया राशि दिखती है; PDF के लिए कोई बिल खोलें।",
+	'Press "Statement of account", choose the dates and press "Download PDF" for every bill and payment between them.':
+		'"खाते का विवरण" दबाएँ, तारीख़ें चुनें और उनके बीच के हर बिल और भुगतान के लिए "PDF डाउनलोड करें" दबाएँ।',
 	Draft: "मसौदा",
 	Unpaid: "भुगतान बाकी",
 	"Part paid": "आंशिक भुगतान",

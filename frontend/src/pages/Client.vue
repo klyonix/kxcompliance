@@ -61,7 +61,7 @@
 			</section>
 
 			<Tabs :model-value="shownTab" @update:model-value="tab = $event">
-				<TabList v-if="tabbed" class="overflow-x-auto">
+				<TabList v-if="tabbed" class="overflow-x-auto" data-tour="client-tabs">
 					<TabTrigger
 						value="overview"
 						label="Overview"

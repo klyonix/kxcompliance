@@ -44,6 +44,7 @@ Answers marked *Managers*, *CA/CS firms* or *Client logins* are for those people
 - [Register](#register)
 - [Legal](#legal)
 - [Clients](#clients)
+- [Billing](#billing)
 - [Setting up](#setting-up)
 - [Privacy](#privacy)
 - [For clients](#for-clients)
@@ -281,6 +282,8 @@ When you are working on one client.
 1. Choose the client in the box at the top of My Work, Filings or the Register.
 2. Every list then shows only that client's companies, until you choose All clients.
 
+## Billing
+
 ### How do I set up billing my clients?
 
 *For: Managers, CA/CS firms.*
@@ -349,6 +352,30 @@ When what is left on a bill will not be paid, such as bank charges the client de
 
 1. Open the bill and press "Write off".
 2. Give the reason and confirm: the balance is booked as a loss and the bill is settled.
+
+### Where does a client stand with the firm?
+
+*For: CA/CS firms.*
+
+Before a fee talk, a reminder call, or the year's review with the client.
+
+1. Open the client and choose the "Billing" tab.
+2. It shows what the client is expected to pay this financial year: its recurring charges for each period in the year, and each filing due in it at its rates.
+3. Then what has been billed, received, deducted as TDS, credited and written off; what is still due and how late; what the client has paid ahead; and what is filed but not billed yet.
+
+> **Tip.** Filings due this year with no rate are not counted in what is expected; give them a rate on the client's form or its rate card.
+
+### How do I give a client a statement of account?
+
+*For: CA/CS firms.*
+
+When a client asks what it owes, or at the year's end.
+
+1. Open the client, choose the "Billing" tab and press "Statement of account".
+2. Choose the dates, which start as the financial year, and press "Download PDF".
+3. It shows the balance at the start, then each bill, payment, TDS, credit note and write-off with the balance after it, and the balance at the end, with both logos.
+
+> **Tip.** A client with a login can download its own from its home. Its copy shows a write-off as a balance adjusted, without the firm's reason.
 
 ### How do clients get reminded of overdue bills?
 
@@ -518,6 +545,15 @@ When your firm emails you that they need something.
 3. Your firm is told. They accept it, or send it back with a note.
 
 > **Tip.** You can also reply to your firm's email with the file attached, from the address they have for you.
+
+### How do I see what I owe my firm?
+
+*For: Client logins.*
+
+When you want your bills, or a statement for your accounts.
+
+1. Your home page lists the bills your firm has sent you and what is still due; open one for its PDF.
+2. Press "Statement of account", choose the dates and press "Download PDF" for every bill and payment between them.
 
 ### How do I see what my firm is doing for me?
 

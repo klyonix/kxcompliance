@@ -32,7 +32,7 @@
 				:options="SECTIONS"
 				aria-label="Show"
 			/>
-			<TabList v-else class="overflow-x-auto">
+			<TabList v-else class="overflow-x-auto" data-tour="billing-sections">
 				<TabTrigger value="bills" label="Bills" icon-left="lucide-receipt" />
 				<TabTrigger value="payments" label="Payments" icon-left="lucide-indian-rupee" />
 			</TabList>
@@ -43,6 +43,7 @@
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<TabButtons
 						v-model="view"
+						data-tour="bill-views"
 						:options="tabs"
 						class="self-start overflow-x-auto"
 					/>
@@ -99,13 +100,13 @@
 						<span class="hidden w-28 text-sm text-ink-gray-6 sm:block">{{
 							formatDate(row.due_date)
 						}}</span>
-						<span class="w-28 text-right text-base text-ink-gray-8">{{
+						<span class="text-right text-base text-ink-gray-8 sm:w-28">{{
 							money(row.rounded_total || row.grand_total, row.currency)
 						}}</span>
 						<span class="hidden w-28 text-right text-base text-ink-gray-8 sm:block">{{
 							row.docstatus === 1 ? money(row.outstanding_amount, row.currency) : "—"
 						}}</span>
-						<span class="w-24"><Badge v-bind="billState(row)" /></span>
+						<span class="sm:w-24"><Badge v-bind="billState(row)" /></span>
 					</RouterLink>
 					<ListPager
 						v-model:page="page"

@@ -7,8 +7,8 @@
 // so one tour fits every reader: someone who cannot record anything simply meets fewer steps.
 // tours.test.js fails the build when a step points at something no page draws.
 //
-// Who is offered a tour follows the side bar: `managers` for Compliance Managers, `firm` and
-// `organisation` for the kind of site, `client` for a client's own login (`staff: false` keeps a
+// Who is offered a tour follows the side bar: `managers` for Compliance Managers, `billing` for
+// those who bill the firm's clients, `firm` and `organisation` for the kind of site, `client` for a client's own login (`staff: false` keeps a
 // tour from the firm's people). A `record` tour needs a record, so it plays on that page and is not
 // offered from the list of tours. Within a tour, a step marked `client: false` is left out for a
 // client's login, and `clientTitle` / `clientText` say the step in a client's words. The ids are
@@ -518,6 +518,11 @@ export const TOURS = [
 				text: "Filed on time, filed late and fees paid in this financial year.",
 			},
 			{
+				target: ["client-tabs"],
+				title: "The client's account",
+				text: "Billing shows what the client is expected to pay this year, what has been billed and received, what is still due and how late, its bills, payments and rates, and its statement of account.",
+			},
+			{
 				target: ["record-facts"],
 				title: "At a glance",
 				text: "Who at the firm looks after the client, its companies, open filings and documents asked for, in one band across the top.",
@@ -556,6 +561,11 @@ export const TOURS = [
 				text: "Each of your companies with its compliance score.",
 			},
 			{
+				target: ["section:billing-heading"],
+				title: "Your bills",
+				text: "The bills your firm has sent you, each as a PDF, and what is still due. Statement of account gives every bill and payment between two dates.",
+			},
+			{
 				target: ["help"],
 				title: "Help",
 				text: "The question mark replays this tour and opens short answers to common questions.",
@@ -578,6 +588,93 @@ export const TOURS = [
 				target: ["section:documents-heading"],
 				title: "Upload it",
 				text: "Upload the file here. The firm is told, accepts it, or sends it back with a note.",
+			},
+		],
+	},
+	{
+		id: "billing",
+		title: "Billing",
+		route: "Billing",
+		firm: true,
+		billing: true,
+		steps: [
+			{
+				title: "Billing your clients",
+				text: "Every bill the firm makes and every payment it receives, kept in the books as ERPNext invoices and payments.",
+			},
+			{
+				target: ["page-actions"],
+				title: "New bill and settings",
+				text: "Make a bill for any client, or open Billing settings for the firm's details, rate cards and reminders.",
+			},
+			{
+				target: ["client-filter"],
+				title: "One client",
+				text: "Choose a client to see only their bills and payments.",
+			},
+			{
+				target: ["billing-sections"],
+				title: "Bills and payments",
+				text: "Bills lists what you have billed; Payments, what has come in, with any TDS and advances still held.",
+			},
+			{
+				target: ["bill-views"],
+				title: "Drafts to paid",
+				text: "Drafts are not sent yet, Unpaid have something still due, Paid are settled. Each says how many and how much is due.",
+			},
+		],
+	},
+	{
+		id: "bill",
+		title: "A bill",
+		route: "Bill",
+		record: true,
+		firm: true,
+		billing: true,
+		steps: [
+			{
+				target: ["bill-state"],
+				title: "Where it stands",
+				text: "A draft, unpaid, part paid, paid or a credit note; who it is for, when it was made and when it is due.",
+			},
+			{
+				target: ["section:lines-heading"],
+				title: "What is billed",
+				text: "Each line with its SAC code, then GST and the total.",
+			},
+			{
+				target: ["section:payments-heading"],
+				title: "Payments",
+				text: "What the client has paid against it, with TDS. Record payment adds one; each has a receipt.",
+			},
+			{
+				target: ["section:credits-heading"],
+				title: "Credits and write-offs",
+				text: "Credit notes and amounts written off on this bill, each with its reason.",
+			},
+			{
+				target: ["bill-actions"],
+				title: "What you can do",
+				text: "Send a draft to the client, download the PDF, credit a line, write off a small balance the client will not pay, or cancel it.",
+			},
+		],
+	},
+	{
+		id: "billing-settings",
+		title: "Billing settings",
+		route: "BillingSettings",
+		managers: true,
+		firm: true,
+		steps: [
+			{
+				target: ["billing-settings-tabs"],
+				title: "Three tabs",
+				text: "Firm: the details printed on every bill. Rate cards: what the firm charges. Reminders: when late bills are emailed again.",
+			},
+			{
+				target: ["section:firm-heading"],
+				title: "The firm on its bills",
+				text: "Name, GST status, GSTIN, address, bank details, UPI ID, bill prefix and logo. A firm not registered for GST, or under composition, charges none.",
 			},
 		],
 	},

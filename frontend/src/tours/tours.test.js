@@ -45,9 +45,6 @@ const NO_TOUR = {
 	NewCase: "a form; each field is labelled",
 	NewFiling: "a form; each field is labelled",
 	NewBill: "a form; each part says what it is",
-	Billing: "its tabs and columns say what they are",
-	BillingSettings: "its tabs and sections say what they are",
-	Bill: "its sections say what they are",
 	NewTrademark: "a form; each field is labelled",
 	LicenceRuleNew: "a form; each section says what it is",
 	LicenceRule: "a form; each section says what it is",
@@ -97,6 +94,8 @@ describe("tours", () => {
 		expect(ids({ ...staff, licenceCheck: false })).not.toContain("licence-check");
 		expect(ids({ ...staff, licenceCheck: true })).toContain("licence-check");
 		expect(ids({ ...staff, firm: false })).not.toContain("clients");
+		expect(ids({ ...staff, mayBill: false })).not.toContain("billing");
+		expect(ids({ ...staff, mayBill: true })).toContain("billing");
 		const client = ids({ client: true, manager: false, firm: true, checks: false });
 		expect(client).toContain("client-home");
 		expect(client).not.toContain("bulk-filing");

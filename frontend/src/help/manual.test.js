@@ -57,7 +57,12 @@ describe("the user manual", () => {
 			"ask-the-client"
 		);
 		const client = ids({ client: true, manager: false, firm: true });
-		expect(client).toEqual(["client-upload", "client-see-work", "my-data"]);
+		expect(client).toEqual([
+			"client-upload",
+			"client-statement",
+			"client-see-work",
+			"my-data",
+		]);
 	});
 
 	it("finds answers by every word typed", () => {

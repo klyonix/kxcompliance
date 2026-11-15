@@ -8,7 +8,12 @@
 				placeholder="Search by client or reference"
 				aria-label="Search payments"
 			/>
-			<Button icon-left="lucide-plus" label="Record advance" @click="advancing = true" />
+			<Button
+				icon-left="lucide-plus"
+				label="Record advance"
+				data-tour="record-advance"
+				@click="advancing = true"
+			/>
 		</div>
 		<p v-if="total" class="text-base text-ink-gray-6">
 			{{ total === 1 ? "1 payment" : `${total} payments` }} received,

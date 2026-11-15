@@ -21,6 +21,7 @@ export function toursForReader(reader = {}) {
 		if (tour.staff === false) return false;
 		if (tour.managers && !manager) return false;
 		if (tour.firm && !firm) return false;
+		if (tour.billing && !(reader.mayBill ?? boot.mayBill)) return false;
 		if (
 			tour.id === "reminder-log" &&
 			!manager &&

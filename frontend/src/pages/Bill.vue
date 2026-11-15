@@ -12,7 +12,7 @@
 		<Skeleton v-else-if="!bill" class="h-64 w-full rounded-lg" />
 
 		<template v-else>
-			<section class="flex flex-col gap-2">
+			<section class="flex flex-col gap-2" data-tour="bill-state">
 				<div class="flex flex-wrap items-center gap-2">
 					<Badge :label="state.label" :theme="state.theme" size="md" />
 					<span class="text-base text-ink-gray-6">
@@ -205,7 +205,10 @@
 			<p v-if="actionError" role="alert" class="text-base text-ink-red-4">
 				{{ actionError }}
 			</p>
-			<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+			<div
+				class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+				data-tour="bill-actions"
+			>
 				<Button
 					v-if="bill.docstatus !== 2"
 					theme="red"

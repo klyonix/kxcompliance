@@ -67,6 +67,7 @@ export function setupAnswers(answers, companyChoice) {
 		new_company: companyChoice === "new" ? answers.new_company.trim() : "",
 		company: companyChoice === "existing" ? answers.company : "",
 		company_type: answers.company_type,
+		agm_date: answers.agm_date || "",
 		registrations: answers.registrations
 			.filter((row) => row.registration_type && row.registration_number.trim())
 			.map((row) => ({
@@ -92,3 +93,14 @@ const GST_STATE_CODES = {
 }; // prettier-ignore
 
 export const stateFromGstin = (number) => GST_STATE_CODES[(number || "").trim().slice(0, 2)] || "";
+
+// Last year's AGM, asked of a company whose type has filings due after it.
+export function agmQuestion(companyType, agmCompanyTypes, lastYearEnd) {
+	if (!agmCompanyTypes?.includes(companyType)) return null;
+	const year = new Date(`${lastYearEnd}T00:00:00`).getFullYear();
+	return {
+		label: `AGM for the year ended 31 March ${year}`,
+		description:
+			"AOC-4, MGT-7 and ADT-1 fall due from it. Leave it blank if the AGM is not held yet; add it on the company's page when it is.",
+	};
+}

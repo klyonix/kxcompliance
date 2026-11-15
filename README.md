@@ -39,4 +39,7 @@ Pre-commit is configured to use the following tools for checking and formatting 
 
 ### License
 
-mit
+Copyright (c) 2026 KlyONIX Tech Consulting Pvt Ltd.
+
+GNU Affero General Public License v3.0 (AGPL-3.0); see [license.txt](license.txt). Anyone who
+runs a changed copy for others to use over a network must share the changed source with them.

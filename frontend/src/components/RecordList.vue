@@ -12,7 +12,21 @@
 		<!-- The list's own tabs and the views pinned for everyone, and search. -->
 		<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 			<div class="flex min-w-0 items-center gap-2 overflow-x-auto">
+				<!-- On a phone, more than three tabs would run off the edge: they become a list. -->
+				<FormControl
+					v-if="isMobile && tabs.length > 3"
+					type="select"
+					class="w-full"
+					:model-value="activeSaved ? '' : view"
+					:options="
+						activeSaved ? [{ label: activeSaved.label, value: '' }, ...tabs] : tabs
+					"
+					aria-label="Show"
+					data-tour="list-tabs"
+					@update:model-value="(value) => value && chooseTab(value)"
+				/>
 				<TabButtons
+					v-else
 					:model-value="activeSaved ? '' : view"
 					:options="tabs"
 					data-tour="list-tabs"
@@ -222,7 +236,16 @@
 // Table's columns are Frappe's own list controls (ListControls).
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Button, Dropdown, Skeleton, TabButtons, TextInput, dialog, toast } from "frappe-ui";
+import {
+	Button,
+	Dropdown,
+	FormControl,
+	Skeleton,
+	TabButtons,
+	TextInput,
+	dialog,
+	toast,
+} from "frappe-ui";
 import { call, getList, updateDoc } from "@/api";
 import { boot, isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";

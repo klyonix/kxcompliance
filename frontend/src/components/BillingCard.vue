@@ -6,8 +6,14 @@
 	>
 		<div class="flex items-center justify-between gap-3">
 			<h2 id="billing-heading" class="text-base font-semibold text-ink-gray-8">
-				{{ own ? t("Bills from your firm") : t("Billing") }}
+				{{ own ? t("Bills from your firm") : "Bills" }}
 			</h2>
+			<Button
+				v-if="own && billing.year"
+				icon-left="lucide-file-down"
+				:label="t('Statement of account')"
+				@click="statement = true"
+			/>
 			<Button
 				v-if="!own && billing.bills.length"
 				variant="ghost"
@@ -17,18 +23,11 @@
 			/>
 		</div>
 		<p
+			v-if="own"
 			class="text-base"
 			:class="billing.overdue ? 'font-medium text-ink-red-4' : 'text-ink-gray-7'"
 		>
 			{{ balanceLine }}
-		</p>
-		<p v-if="!own && billing.unbilled_count" class="text-base text-ink-gray-6">
-			{{ unbilledLine }}
-			<RouterLink
-				:to="{ name: 'NewBill', query: { client } }"
-				class="font-medium text-ink-gray-8 hover:underline"
-				>Bill them</RouterLink
-			>
 		</p>
 		<p v-if="!billing.bills.length" class="text-base text-ink-gray-5">
 			{{ t("No bills yet.") }}
@@ -58,16 +57,25 @@
 				:aria-label="t('PDF')"
 			/>
 		</component>
+		<StatementDialog
+			v-if="own && billing.year"
+			v-model:open="statement"
+			:client="client"
+			:year="billing.year"
+			own
+		/>
 	</section>
 </template>
 
 <script setup>
-// A client's bills and balance: on the firm's view of the client, for those who bill, with what it
-// has not billed yet; on the client's own home, the bills sent to it, each opening as a PDF.
+// A client's bills and balance: on the client's Billing tab, for those who bill, with what it has
+// not billed yet; on the client's own home, the bills sent to it, each opening as a PDF, and its
+// statement of account.
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import { Badge, Button } from "frappe-ui";
 import { call } from "@/api";
+import StatementDialog from "@/components/StatementDialog.vue";
 import { billState, money } from "@/lib/billing";
 import { formatDate } from "@/lib/format";
 import { t } from "@/lib/i18n";
@@ -80,6 +88,7 @@ const props = defineProps({
 });
 const router = useRouter();
 const billing = ref(null);
+const statement = ref(false);
 
 const balanceLine = computed(() => {
 	const { outstanding, overdue } = billing.value;
@@ -88,13 +97,6 @@ const balanceLine = computed(() => {
 		? t("{0} due, {1} of it overdue.", money(outstanding), money(overdue))
 		: t("{0} due.", money(outstanding));
 });
-const unbilledLine = computed(() => {
-	const count = billing.value.unbilled_count;
-	return `${count} filed ${count === 1 ? "return" : "returns"} not billed yet: ${money(
-		billing.value.unbilled_total
-	)}.`;
-});
-
 const pdfLink = (name) => `/api/method/kxcompliance.api.bill_pdf?name=${encodeURIComponent(name)}`;
 
 function seeAll() {

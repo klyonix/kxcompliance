@@ -18,6 +18,7 @@ from kxcompliance.api import (
 	cancel_payment,
 	client_billing,
 	client_fees,
+	client_summary,
 	create_bill,
 	credit_bill,
 	own_bill,
@@ -27,6 +28,7 @@ from kxcompliance.api import (
 	record_payment,
 	send_bill,
 	set_up_billing,
+	statement_pdf,
 	write_off_bill,
 )
 from kxcompliance.kx_compliance.billing import (
@@ -38,6 +40,7 @@ from kxcompliance.kx_compliance.billing import (
 	make_monthly_drafts,
 	send_overdue_reminders,
 	state_of,
+	statement,
 )
 from kxcompliance.kx_compliance.companies import companies_overview
 from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import client, profile
@@ -607,6 +610,103 @@ class TestBills(IntegrationTestCase):
 		self.assertEqual([call.kwargs["overdue_days"] for call in email.call_args_list], [3, 15])
 		logged = frappe.get_all("Compliance Reminder Log", filters={"sales_invoice": name}, pluck="rule_days")
 		self.assertEqual(sorted(logged), [3, 15])
+
+	def test_a_clients_year_shows_what_it_is_expected_to_pay_and_where_it_stands(self):
+		filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20", status="Cancelled")  # not expected
+		before = client_summary(self.client)["activity"]  # bills earlier tests left on this client
+		name = create_bill(
+			self.client, filings=[self.filed], lines=[{"description": "Advisory", "amount": 1000}]
+		)["name"]
+		send_bill(name)  # 2,500 and GST: 2,950
+		record_payment(name, 2000, frappe.utils.nowdate(), "UPI", tds=250)
+		write_off_bill(name, "Settled")  # the 700 left
+		summary = client_summary(self.client)
+		year = summary["year"]
+		# The fixed fee for each month of the year (billed from April 2026), and each return due in it.
+		months = 0
+		month = max(frappe.utils.getdate("2026-04-01"), frappe.utils.getdate(year["from_date"]))
+		while month <= frappe.utils.getdate(year["to_date"]):
+			months += 1
+			month = frappe.utils.add_months(month, 1)
+		self.assertEqual(
+			summary["commitment"]["recurring"],
+			[
+				{
+					"service": "Fixed fee",
+					"unit": "Per month",
+					"periods": months,
+					"rate": 5000,
+					"amount": 5000 * months,
+				}
+			],
+		)
+		due = frappe.db.count(
+			"Compliance Task",
+			{
+				"company": TEST_COMPANY,
+				"obligation_template": "GSTR-3B (Monthly)",
+				"effective_due_date": ("between", [year["from_date"], year["to_date"]]),
+				"status": ("not in", ("Cancelled", "Not Applicable")),
+			},
+		)
+		filings = {row["return"]: row for row in summary["commitment"]["filings"]}
+		self.assertEqual(
+			(filings["GSTR-3B (Monthly)"]["count"], filings["GSTR-3B (Monthly)"]["amount"]), (due, due * 1500)
+		)
+		self.assertEqual(
+			summary["commitment"]["total"], 5000 * months + sum(row["amount"] for row in filings.values())
+		)
+		self.assertEqual(
+			{key: summary["activity"][key] - before[key] for key in before},
+			{"billed": 2950, "credited": 0, "received": 2000, "tds": 250, "written_off": 700},
+		)
+		self.assertEqual(summary["rate_card"], "Billing Standard")
+		with (
+			patch("kxcompliance.api.is_client_login", return_value=True),
+			patch("kxcompliance.api.client_of_login", return_value=self.client),
+			self.assertRaisesRegex(frappe.PermissionError, "for the firm"),
+		):
+			client_summary(self.client)
+
+	def test_a_statement_runs_the_balance_through_payments_tds_credits_and_write_offs(self):
+		today = frappe.utils.nowdate()
+		record_advance(self.client, 2000, frappe.utils.add_days(today, -5), "Bank Transfer")
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 10000}])["name"]
+		send_bill(name)  # 11,800, less the 2,000 paid ahead
+		record_payment(name, 5000, today, "Bank Transfer", reference="UTR-ST", tds=1000)
+		credit_bill(name, "Charged too much", amount=500, line=bill(name)["items"][0]["name"])  # 590
+		write_off_bill(name, "Settled")
+		shown = statement(self.client, frappe.utils.add_days(today, -3), today)
+		self.assertEqual(shown["opening"], -2000)  # paid ahead before the statement's dates
+		self.assertEqual(
+			[(row["kind"], row["debit"], row["credit"], row["balance"]) for row in shown["rows"]],
+			[
+				("bill", 11800, 0, 9800),
+				("payment", 0, 5000, 4800),
+				("tds", 0, 1000, 3800),
+				("credit", 0, 590, 3210),
+				("write_off", 0, 3210, 0),
+			],
+		)
+		self.assertEqual(shown["rows"][1]["detail"], "Received: Bank Transfer, UTR-ST")
+		# The firm's copy says why it wrote off; the client's does not.
+		self.assertEqual(shown["rows"][-1]["detail"], "Written off: Settled")
+		own = statement(self.client, frappe.utils.add_days(today, -3), today, own=True)
+		self.assertEqual(own["rows"][-1]["detail"], "Balance adjusted")
+		self.assertEqual(shown["closing"], 0)
+		with self.assertRaisesRegex(frappe.ValidationError, "after its end"):
+			statement(self.client, today, frappe.utils.add_days(today, -1))
+		# The firm and the client itself download it; another client may not.
+		statement_pdf(self.client)
+		self.assertTrue(frappe.local.response.filecontent.startswith(b"%PDF"))
+		with (
+			patch("kxcompliance.api.is_client_login", return_value=True),
+			patch("kxcompliance.api.client_of_login", return_value=self.client),
+		):
+			statement_pdf(self.client, today, today)
+			self.assertEqual(frappe.local.response.type, "pdf")
+			with self.assertRaisesRegex(frappe.PermissionError, "only your own"):
+				statement_pdf("Someone Else")
 
 	def test_a_draft_is_not_paid(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]

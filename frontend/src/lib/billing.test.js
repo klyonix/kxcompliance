@@ -1,15 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
+	accountFacts,
 	advanceProblem,
+	ageingRows,
 	billState,
 	billSubtotal,
+	commitmentLines,
 	creditProblem,
 	linesProblem,
 	linesToSend,
 	paymentProblem,
+	rateLine,
 	ratesProblem,
 	ratesToSend,
 	servicesProblem,
+	statementLink,
+	statementProblem,
 } from "./billing";
 
 describe("rates", () => {
@@ -149,5 +155,72 @@ describe("an advance being recorded", () => {
 		expect(advanceProblem({ ...good, amount: -5 })).toMatch(/above zero/);
 		expect(advanceProblem({ ...good, paid_on: "" })).toMatch(/date/);
 		expect(advanceProblem({ ...good, mode: "" })).toMatch(/how it was paid/);
+	});
+});
+
+describe("a client's year with the firm", () => {
+	const summary = {
+		commitment: {
+			total: 63000,
+			recurring: [
+				{
+					service: "Fixed fee",
+					unit: "Per month",
+					periods: 12,
+					rate: 5000,
+					amount: 60000,
+				},
+			],
+			filings: [{ return: "GSTR-3B (Monthly)", count: 1, rate: 3000, amount: 3000 }],
+		},
+		activity: { billed: 11800, received: 5000, tds: 1000, credited: 0, written_off: 0 },
+		outstanding: { outstanding: 5800, not_due: 800, late_30: 5000, late_60: 0 },
+		advance: 0,
+		unbilled_total: 1500,
+	};
+
+	it("says what was expected, billed and received, what is overdue and what is left out", () => {
+		const facts = accountFacts(summary);
+		expect(facts.map((fact) => fact.label)).toEqual([
+			"Expected this year",
+			"Billed",
+			"Received",
+			"Still due",
+			"TDS deducted",
+			"Not billed yet",
+		]);
+		const due = facts.find((fact) => fact.label === "Still due");
+		expect(due.tone).toBe("red");
+		expect(due.detail).toMatch(/overdue/);
+	});
+
+	it("breaks the commitment into its charges and filings", () => {
+		const lines = commitmentLines(summary.commitment);
+		expect(lines.map((line) => line.label)).toEqual(["Fixed fee", "GSTR-3B (Monthly)"]);
+		expect(lines[0].detail).toMatch(/^12 months at/);
+		expect(lines[1].detail).toMatch(/^1 filing at/);
+	});
+
+	it("ages what is due, leaving out empty columns", () => {
+		expect(ageingRows(summary.outstanding).map((row) => row.key)).toEqual([
+			"not_due",
+			"late_30",
+		]);
+	});
+
+	it("says how each rate is charged", () => {
+		expect(
+			rateLine({ kind: "Service", service: "Advisory", unit: "Per hour", amount: 2000 })
+				.amount
+		).toMatch(/an hour$/);
+	});
+
+	it("checks a statement's dates and builds its download address", () => {
+		expect(statementProblem({ from: "2026-04-01", to: "2027-03-31" })).toBeNull();
+		expect(statementProblem({ from: "", to: "2027-03-31" })).toMatch(/first and last/);
+		expect(statementProblem({ from: "2027-04-01", to: "2027-03-31" })).toMatch(/after/);
+		expect(statementLink("A & B", "2026-04-01", "2027-03-31")).toBe(
+			"/api/method/kxcompliance.api.statement_pdf?client=A+%26+B&from_date=2026-04-01&to_date=2027-03-31"
+		);
 	});
 });

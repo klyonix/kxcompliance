@@ -605,12 +605,10 @@ def recurring_due(rates: dict[tuple, dict], start, month: date) -> list[dict]:
 	the client's `start`; each a bill line's description, rate and SAC code."""
 	if not start:
 		return []
-	first = get_first_day(start)
-	gap = (month.year - first.year) * 12 + month.month - first.month
 	due = []
 	for line in rates.values():
 		months = RECURRING_MONTHS.get(line["unit"])
-		if months and gap >= 0 and not gap % months and line["amount"]:
+		if months and starts_period(start, months, month) and line["amount"]:
 			due.append(
 				{
 					"description": _("{0}, {1}").format(line["service"], period_name(month, months)),
@@ -619,6 +617,13 @@ def recurring_due(rates: dict[tuple, dict], start, month: date) -> list[dict]:
 				}
 			)
 	return due
+
+
+def starts_period(start, months: int, month: date) -> bool:
+	"""Whether a charge every `months` months, counted from `start`, has a period starting in this month."""
+	first = get_first_day(start)
+	gap = (month.year - first.year) * 12 + month.month - first.month
+	return gap >= 0 and not gap % months
 
 
 def on_drafts(filings: list[str]) -> set[str]:
@@ -1103,6 +1108,7 @@ LIST_FIELDS = [
 	"outstanding_amount",
 	"docstatus",
 	"status",
+	"is_return",
 	"currency",
 ]
 TOTALS = [{"COUNT": "*", "as": "count"}, {"SUM": "outstanding_amount", "as": "due"}]
@@ -1156,9 +1162,12 @@ def client_billing(client: str, own: bool) -> dict:
 	"""A client's bills and balance. `own` is the client's own login, which sees only bills sent
 	to it; the firm also sees drafts and what it has yet to bill. The caller has checked who may
 	see this; a client's login reads its bills here, as it may not read ERPNext's invoices."""
+	from kxcompliance.kx_compliance.client_reports import financial_year
+
 	company = get_settings().billing_company
 	if not company:
 		return {"bills": [], "outstanding": 0, "overdue": 0}
+	from_date, to_date = financial_year()
 	sent = {"company": company, "compliance_client": client, "docstatus": 1}
 	shown = sent if own else {**sent, "docstatus": ("in", (0, 1))}
 	bills_shown = frappe.get_all(
@@ -1174,12 +1183,324 @@ def client_billing(client: str, own: bool) -> dict:
 		"bills": bills_shown,
 		"outstanding": sum(flt(row.outstanding_amount) for row in due),
 		"overdue": sum(flt(row.outstanding_amount) for row in due if getdate(row.due_date) < today),
+		# The dates a statement of account starts as.
+		"year": {"from_date": from_date, "to_date": to_date},
 	}
 	if not own:
 		unbilled = unbilled_filings(client)
 		result["unbilled_count"] = len(unbilled)
 		result["unbilled_total"] = sum(row.fee for row in unbilled)
 	return result
+
+
+# Filings that will not be done, so are not expected to be billed.
+NOT_EXPECTED = ("Not Applicable", "Cancelled")
+
+
+def client_summary(client: str) -> dict:
+	"""Where a client stands with the firm in this financial year: what it is expected to pay, what
+	has been billed, received, credited and written off, what is due and how late, and its rates."""
+	from kxcompliance.kx_compliance.client_reports import financial_year
+
+	from_date, to_date = financial_year()
+	values = frappe.db.get_value(
+		"Compliance Client", client, ["customer", "rate_card", "billing_from"], as_dict=True
+	)
+	rates = rates_for([client])[client]
+	ageing = outstanding_by_client(client, getdate(nowdate()))
+	unbilled = unbilled_filings(client)
+	return {
+		"year": {"from_date": from_date, "to_date": to_date},
+		"commitment": commitment(client, rates, values.billing_from, from_date, to_date),
+		"activity": year_activity(client, values.customer, from_date, to_date),
+		"outstanding": ageing[0] if ageing else {"outstanding": 0} | {key: 0 for key, _low, _high in AGEING},
+		"advance": advance_held(values.customer),
+		"unbilled_count": len(unbilled),
+		"unbilled_total": sum(row.fee for row in unbilled),
+		"rate_card": values.rate_card or default_card(),
+		"rates": list(rates.values()),
+		"payments": payments(client, None, 0, 5)["rows"],
+	}
+
+
+def commitment(client: str, rates: dict[tuple, dict], start, from_date, to_date) -> dict:
+	"""What a client is expected to pay in the year: each recurring charge for every period that
+	starts in it (from the client's `start`), and the rate of each filing due in it."""
+	recurring = []
+	for line in rates.values():
+		months = RECURRING_MONTHS.get(line["unit"])
+		if not (months and start and line["amount"]):
+			continue
+		periods = 0
+		month = get_first_day(from_date)
+		while month <= getdate(to_date):
+			periods += starts_period(start, months, month)
+			month = add_months(month, 1)
+		if periods:
+			recurring.append(
+				{
+					"service": line["service"],
+					"unit": line["unit"],
+					"periods": periods,
+					"rate": flt(line["amount"]),
+					"amount": flt(line["amount"]) * periods,
+				}
+			)
+	filings = []
+	unpriced = 0
+	for row in filings_due(client, from_date, to_date):
+		rate = rates.get(("Return", row.obligation_template))
+		if not (rate and rate["amount"]):
+			unpriced += row.count
+			continue
+		filings.append(
+			{
+				"return": row.obligation_template,
+				"count": row.count,
+				"rate": flt(rate["amount"]),
+				"amount": flt(rate["amount"]) * row.count,
+			}
+		)
+	return {
+		"recurring": recurring,
+		"filings": filings,
+		"unpriced": unpriced,
+		"total": sum(row["amount"] for row in recurring) + sum(row["amount"] for row in filings),
+	}
+
+
+def filings_due(client: str, from_date, to_date) -> list[dict]:
+	"""How many of each return the client's companies have due in these dates, not counting those
+	that will not be done."""
+	from frappe.query_builder.functions import Count
+
+	task = frappe.qb.DocType("Compliance Task")
+	profile = frappe.qb.DocType("Company Compliance Profile")
+	return (
+		frappe.qb.from_(task)
+		.join(profile)
+		.on(profile.company == task.company)
+		.select(task.obligation_template, Count(task.name).as_("count"))
+		.where(
+			(profile.client == client)
+			& task.effective_due_date.between(from_date, to_date)
+			& task.status.notin(NOT_EXPECTED)
+		)
+		.groupby(task.obligation_template)
+		.orderby(task.obligation_template)
+	).run(as_dict=True)
+
+
+def year_activity(client: str, customer: str | None, from_date, to_date) -> dict:
+	"""What was billed, credited, received, deducted as TDS and written off in these dates."""
+	from frappe.query_builder import Case
+
+	company = get_settings().billing_company
+	invoice = frappe.qb.DocType("Sales Invoice")
+	total = Case().when(invoice.rounded_total != 0, invoice.rounded_total).else_(invoice.grand_total)
+	billed, credited = (
+		frappe.qb.from_(invoice)
+		.select(
+			Sum(Case().when(invoice.is_return == 0, total).else_(0)),
+			Sum(Case().when(invoice.is_return == 1, -total).else_(0)),
+		)
+		.where(
+			(invoice.company == company)
+			& (invoice.compliance_client == client)
+			& (invoice.docstatus == 1)
+			& invoice.posting_date.between(from_date, to_date)
+		)
+	).run()[0]
+	activity = {"billed": flt(billed), "credited": flt(credited), "received": 0, "tds": 0, "written_off": 0}
+	if not customer:
+		return activity
+	entry = frappe.qb.DocType("Payment Entry")
+	paid_in = (
+		(entry.company == company)
+		& (entry.party_type == "Customer")
+		& (entry.party == customer)
+		& (entry.payment_type == "Receive")
+		& (entry.docstatus == 1)
+		& entry.posting_date.between(from_date, to_date)
+	)
+	activity["received"] = flt(
+		frappe.qb.from_(entry).select(Sum(entry.paid_amount)).where(paid_in).run()[0][0]
+	)
+	deduction = frappe.qb.DocType("Payment Entry Deduction")
+	activity["tds"] = flt(
+		frappe.qb.from_(deduction)
+		.join(entry)
+		.on(entry.name == deduction.parent)
+		.select(Sum(deduction.amount))
+		.where(paid_in & (deduction.parenttype == "Payment Entry"))
+		.run()[0][0]
+	)
+	journal = frappe.qb.DocType("Journal Entry")
+	line = frappe.qb.DocType("Journal Entry Account")
+	activity["written_off"] = flt(
+		frappe.qb.from_(line)
+		.join(journal)
+		.on(journal.name == line.parent)
+		.select(Sum(line.credit_in_account_currency - line.debit_in_account_currency))
+		.where(
+			(journal.company == company)
+			& (journal.voucher_type == "Write Off Entry")
+			& (journal.docstatus == 1)
+			& journal.posting_date.between(from_date, to_date)
+			& (line.party_type == "Customer")
+			& (line.party == customer)
+		)
+		.run()[0][0]
+	)
+	return activity
+
+
+def statement(client: str, from_date, to_date, own: bool = False) -> dict:
+	"""A client's statement of account for these dates, from the firm's ledger: the balance before
+	them, then each bill, payment, TDS, credit note and write-off in date order with the balance
+	after it, and the balance at the end. A balance above zero is owed to the firm; below zero, the
+	client has paid ahead. `own` is the client's own copy, which does not give the firm's reasons for
+	writing off."""
+	from frappe.query_builder.functions import Min
+
+	from_date, to_date = getdate(from_date), getdate(to_date)
+	if from_date > to_date:
+		frappe.throw(
+			_("The statement's start, {0}, is after its end, {1}.").format(
+				format_date(from_date), format_date(to_date)
+			)
+		)
+	customer = frappe.db.get_value("Compliance Client", client, "customer")
+	result = {"from_date": from_date, "to_date": to_date, "opening": 0, "rows": [], "closing": 0}
+	if not customer:
+		return result
+	gl = frappe.qb.DocType("GL Entry")
+	party = (
+		(gl.company == get_settings().billing_company)
+		& (gl.party_type == "Customer")
+		& (gl.party == customer)
+		& (gl.is_cancelled == 0)
+	)
+	opening = flt(
+		frappe.qb.from_(gl)
+		.select(Sum(gl.debit - gl.credit))
+		.where(party & (gl.posting_date < from_date))
+		.run()[0][0]
+	)
+	vouchers = (
+		frappe.qb.from_(gl)
+		.select(
+			gl.posting_date,
+			gl.voucher_type,
+			gl.voucher_no,
+			Sum(gl.debit).as_("debit"),
+			Sum(gl.credit).as_("credit"),
+		)
+		.where(party & gl.posting_date.between(from_date, to_date))
+		.groupby(gl.posting_date, gl.voucher_type, gl.voucher_no)
+		.orderby(gl.posting_date)
+		.orderby(Min(gl.creation))
+	).run(as_dict=True)
+	balance = opening
+	rows = []
+	for row in statement_rows(vouchers, own):
+		balance = flt(balance + row["debit"] - row["credit"], 2)
+		rows.append({**row, "balance": balance})
+	result.update(opening=opening, rows=rows, closing=balance)
+	return result
+
+
+def statement_rows(vouchers: list[dict], own: bool = False) -> list[dict]:
+	"""Each ledger voucher as the statement says it; a payment with TDS becomes two lines."""
+	by_type: dict[str, list[str]] = {}
+	for row in vouchers:
+		by_type.setdefault(row.voucher_type, []).append(row.voucher_no)
+	bills = {
+		row.name: row
+		for row in frappe.get_all(
+			"Sales Invoice",
+			filters={"name": ("in", by_type.get("Sales Invoice") or [""])},
+			fields=["name", "is_return", "return_against", "remarks"],
+		)
+	}
+	entries = {
+		row.name: row
+		for row in frappe.get_all(
+			"Payment Entry",
+			filters={"name": ("in", by_type.get("Payment Entry") or [""])},
+			fields=["name", "mode_of_payment", "reference_no", "paid_amount"],
+		)
+	}
+	tds: dict[str, float] = {}
+	for row in frappe.get_all(
+		"Payment Entry Deduction",
+		filters={"parenttype": "Payment Entry", "parent": ("in", list(entries) or [""])},
+		fields=["parent", "amount"],
+	):
+		tds[row.parent] = tds.get(row.parent, 0) + flt(row.amount)
+	journals = dict(
+		frappe.get_all(
+			"Journal Entry",
+			filters={"name": ("in", by_type.get("Journal Entry") or [""])},
+			fields=["name", "user_remark"],
+			as_list=True,
+		)
+	)
+	rows = []
+	for row in vouchers:
+		line = {
+			"date": row.posting_date,
+			"voucher_type": row.voucher_type,
+			"name": row.voucher_no,
+			"debit": flt(row.debit),
+			"credit": flt(row.credit),
+		}
+		if row.voucher_type == "Sales Invoice":
+			sale = bills.get(row.voucher_no) or frappe._dict()
+			if sale.is_return:
+				line.update(kind="credit", detail=_("Credit note against {0}").format(sale.return_against))
+			else:
+				line.update(kind="bill", detail=_("Bill"))
+		elif row.voucher_type == "Payment Entry":
+			entry = entries.get(row.voucher_no) or frappe._dict()
+			deducted = flt(tds.get(row.voucher_no), 2)
+			reference = entry.reference_no if entry.reference_no != entry.mode_of_payment else None
+			how = ", ".join(filter(None, [entry.mode_of_payment, reference]))
+			received = _("Received: {0}").format(how) if how else _("Received")
+			if deducted and line["credit"] > deducted:
+				rows.append(
+					{
+						**line,
+						"kind": "payment",
+						"detail": received,
+						"credit": flt(line["credit"] - deducted, 2),
+					}
+				)
+				line.update(kind="tds", detail=_("TDS deducted"), debit=0, credit=deducted)
+			else:
+				line.update(kind="payment", detail=received)
+		elif row.voucher_type == "Journal Entry":
+			# A write-off is the firm's own decision; the client is not told why (WriteOffDialog).
+			reason = None if own else journals.get(row.voucher_no)
+			line.update(kind="write_off", detail=reason or _("Balance adjusted"))
+		else:
+			line.update(kind="other", detail=_(row.voucher_type))
+		rows.append(line)
+	return rows
+
+
+def statement_html(client: str, from_date, to_date, own: bool = False) -> str:
+	"""The statement of account as printed, with the firm's and the client's logos."""
+	return frappe.render_template(
+		"templates/statement_of_account.html",
+		{
+			"statement": statement(client, from_date, to_date, own),
+			"firm": firm_details(),
+			"client": party_details(client),
+			"currency": frappe.db.get_value("Company", get_settings().billing_company, "default_currency")
+			or "INR",
+		},
+	)
 
 
 # How late a bill is, by days past its due date: the columns of Billing Outstanding.

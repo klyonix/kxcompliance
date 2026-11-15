@@ -110,9 +110,11 @@ jobs:
           cache-dependency-path: |
             apps/kxcompliance/frontend/yarn.lock
             apps/frappe/ui/yarn.lock
+      # Frappe's own lockfile can trail its package.json on the branch, so it is not frozen here;
+      # the app's own install below is.
       - name: Install Frappe's UI package
         working-directory: apps/frappe/ui
-        run: yarn install --frozen-lockfile
+        run: yarn install
       - name: Install
         working-directory: apps/kxcompliance/frontend
         run: yarn install --frozen-lockfile

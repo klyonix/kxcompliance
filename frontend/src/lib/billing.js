@@ -89,3 +89,33 @@ export function paymentProblem({ amount, tds, paid_on: paidOn, mode }, due) {
 	if (!mode) return "Say how it was paid.";
 	return null;
 }
+
+// The Billing list's tabs (the server's billing.BILL_VIEWS), and what each says when empty.
+export const BILL_VIEWS = [
+	{
+		value: "drafts",
+		label: "Drafts",
+		empty: { title: "No drafts", detail: "Bills made but not sent yet appear here to check." },
+	},
+	{
+		value: "unpaid",
+		label: "Unpaid",
+		empty: {
+			title: "Nothing unpaid",
+			detail: "Sent bills with something still due appear here.",
+		},
+	},
+	{
+		value: "paid",
+		label: "Paid",
+		empty: { title: "Nothing paid yet", detail: "Bills paid in full appear here." },
+	},
+	{
+		value: "all",
+		label: "All",
+		empty: {
+			title: "No bills yet",
+			detail: "Make one from a client's page, or with New bill.",
+		},
+	},
+];

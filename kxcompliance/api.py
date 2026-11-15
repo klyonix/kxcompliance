@@ -585,12 +585,50 @@ def cancel_payment(name: str) -> dict:
 
 @frappe.whitelist(methods=["GET"])
 def bill_pdf(name: str):
-	"""A bill's PDF, for those who bill (who may not read ERPNext's invoices in the Desk)."""
-	check_app_access_or_accounts()
-	bill = billing.bill_of(name)
+	"""A bill's PDF: for those who bill, and for the client it was sent to."""
+	own = is_client_login()
+	bill = own_bill(name) if own else billing_bill(name)
+	# A client's login may not read ERPNext's invoices; own_bill has checked this one was sent to it,
+	# so printing it is allowed for this one request only.
+	frappe.flags.ignore_print_permissions = own
+	try:
+		pdf = frappe.get_print("Sales Invoice", bill.name, doc=bill, as_pdf=True)
+	finally:
+		frappe.flags.ignore_print_permissions = False
 	frappe.local.response.filename = f"{bill.name.replace('/', '-')}.pdf"
-	frappe.local.response.filecontent = frappe.get_print("Sales Invoice", bill.name, as_pdf=True)
+	frappe.local.response.filecontent = pdf
 	frappe.local.response.type = "pdf"
+
+
+@frappe.whitelist(methods=["GET"])
+def bills(
+	view: str, client: str | None = None, text: str | None = None, start: int = 0, page_length: int = 20
+) -> dict:
+	"""One page of the firm's bills in a tab (drafts, unpaid, paid or all)."""
+	check_app_access_or_accounts()
+	limit = min(max(1, cint(page_length)), MAX_PAGE_LENGTH)
+	return billing.bills(view, client, text, max(0, cint(start)), limit)
+
+
+@frappe.whitelist(methods=["GET"])
+def bill_counts(client: str | None = None, text: str | None = None) -> dict:
+	"""How many bills each tab holds, and what is still due in it."""
+	check_app_access_or_accounts()
+	return billing.bill_counts(client, text)
+
+
+@frappe.whitelist(methods=["GET"])
+def client_billing(client: str) -> dict:
+	"""A client's bills and balance: for those who bill, or for the client's own login."""
+	check_reader_access()
+	own = is_client_login()
+	if own:
+		if client != client_of_login():
+			frappe.throw(_("You can see only your own bills."), frappe.PermissionError)
+	else:
+		billing.check_biller()
+		check_billed_client(client)
+	return billing.client_billing(client, own)
 
 
 def check_billed_client(client: str):
@@ -599,6 +637,25 @@ def check_billed_client(client: str):
 		frappe.throw(_("Client {0} does not exist.").format(client), frappe.DoesNotExistError)
 	if has_app_access():
 		frappe.get_doc("Compliance Client", client).check_permission("read")
+
+
+def billing_bill(name: str):
+	check_app_access_or_accounts()
+	return billing.bill_of(name)
+
+
+def own_bill(name: str):
+	"""A bill sent to the client whose login this is; its login reads it here, as it may not read
+	ERPNext's invoices."""
+	bill = frappe.get_doc("Sales Invoice", name) if frappe.db.exists("Sales Invoice", name) else None
+	if (
+		not bill
+		or bill.docstatus != 1
+		or not bill.compliance_client
+		or bill.compliance_client != client_of_login()
+	):
+		frappe.throw(_("You can see only bills sent to you."), frappe.PermissionError)
+	return bill
 
 
 def check_app_access_or_accounts():

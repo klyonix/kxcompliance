@@ -17,6 +17,14 @@ const ALL_SECTIONS = [
 	{ label: "Home", route: "ClientHome", icon: "lucide-house", clientLogin: true },
 	// CA/CS firms only.
 	{ label: "Clients", route: "Clients", icon: "lucide-users", firm: true },
+	// A firm's bills, for those who may bill; on phones it opens from a client's page.
+	{
+		label: "Billing",
+		route: "Billing",
+		icon: "lucide-receipt",
+		billing: true,
+		desktopOnly: true,
+	},
 	{ label: "Filings", route: "Filings", icon: "lucide-calendar-check" },
 	// On phones it opens from My Work, as the tab bar is full.
 	{ label: "Calendar", route: "MonthCalendar", icon: "lucide-calendar-days", desktopOnly: true },
@@ -73,6 +81,7 @@ export function sectionsFor({ checks, client }) {
 		if (section.managers && !isManager()) return false;
 		if (section.firm && !firm) return false;
 		if (section.clientLogin) return false;
+		if (section.billing && !boot.mayBill) return false;
 		return !(section.licenceCheck && !licenceCheckOn());
 	});
 }

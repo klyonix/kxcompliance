@@ -40,11 +40,14 @@ export async function call(method, params = {}, { httpMethod = "GET", fetcher = 
 	let url = `/api/method/${method}`;
 	const init = { method: httpMethod, headers, credentials: "same-origin" };
 	if (httpMethod === "GET") {
+		// A value not set is left out, not sent as the text "undefined".
 		const query = new URLSearchParams(
-			Object.entries(params).map(([key, value]) => [
-				key,
-				typeof value === "string" ? value : JSON.stringify(value),
-			])
+			Object.entries(params)
+				.filter(([, value]) => value !== undefined)
+				.map(([key, value]) => [
+					key,
+					typeof value === "string" ? value : JSON.stringify(value),
+				])
 		).toString();
 		if (query) url += `?${query}`;
 	} else {

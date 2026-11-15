@@ -244,9 +244,10 @@ When you may only sell to, or buy from, parties who hold a licence, such as FSSA
 
 When a document must go ahead though the licence is missing, for instance while it is being renewed.
 
-1. Open Settings, "Customer and supplier licences", then "Blocks and warnings".
-2. Find the document under Blocked and press "Allow this once".
-3. Give the reason. That document can then be saved and submitted.
+1. A blocked sale or purchase can still be saved as a draft; it is submitting it that is stopped.
+2. Open Settings, "Customer and supplier licences", then "Blocks and warnings".
+3. Find the draft under Blocked and press "Allow this once".
+4. Give the reason. That draft can then be submitted.
 
 ### How do I add a colleague?
 

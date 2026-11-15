@@ -7,7 +7,7 @@
 		</template>
 	</AppPageHeader>
 
-	<RecordFrame doctype="Document Request" :name="name">
+	<RecordFrame doctype="Document Request" :name="name" :modified="request?.modified || ''">
 		<div class="flex flex-col gap-8">
 			<p
 				v-if="error"

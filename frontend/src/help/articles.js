@@ -249,9 +249,10 @@ export const ARTICLES = [
 		title: "A sale was blocked. How do I let it through?",
 		when: "When a document must go ahead though the licence is missing, for instance while it is being renewed.",
 		steps: [
+			"A blocked sale or purchase can still be saved as a draft; it is submitting it that is stopped.",
 			'Open Settings, "Customer and supplier licences", then "Blocks and warnings".',
-			'Find the document under Blocked and press "Allow this once".',
-			"Give the reason. That document can then be saved and submitted.",
+			'Find the draft under Blocked and press "Allow this once".',
+			"Give the reason. That draft can then be submitted.",
 		],
 		page: "LicenceBlocks",
 		managers: true,

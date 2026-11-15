@@ -48,6 +48,8 @@ APP_ROLES = frozenset({"System Manager", "Compliance Manager", "Compliance User"
 CHECK_ROLES = {"Sales User": "Customer", "Purchase User": "Supplier"}
 PARTY_NAME_FIELDS = {"Customer": "customer_name", "Supplier": "supplier_name"}
 PARTY_SEARCH_LIMIT = 20
+# What a client's login searches: the records it can open in the app.
+CLIENT_SEARCH_KINDS = ("items", "filings", "cases", "trademarks", "signatories", "requests")
 NAMES_LIMIT = 50
 WORK_HORIZON_DAYS = 30
 WORK_LIMIT = 200
@@ -487,6 +489,11 @@ def search(text: str, kind: str | None = None) -> dict[str, list]:
 	if kind is not None and not isinstance(kind, str):
 		frappe.throw(_("Search one kind at a time."), frappe.ValidationError)
 	kinds = [kind] if kind else None
+	if is_client_login():
+		# A client's login opens only these pages; the others' results would lead nowhere.
+		kinds = [chosen for chosen in (kinds or CLIENT_SEARCH_KINDS) if chosen in CLIENT_SEARCH_KINDS]
+		if not kinds:
+			return {}
 	found = search_records(text, kinds)
 	words = search_words(text)
 	if len(" ".join(words)) < SEARCH_MIN_LENGTH:

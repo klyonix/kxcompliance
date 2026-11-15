@@ -35,7 +35,9 @@
 		>
 			<template #actions="{ row }">
 				<Button
-					v-if="!row.allowed && view === 'blocked' && isManager()"
+					v-if="
+						!row.allowed && row.log.reference_name && view === 'blocked' && isManager()
+					"
 					label="Allow this once"
 					@click="allowOnce(row.log)"
 				/>

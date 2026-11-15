@@ -39,5 +39,11 @@ describe("licence rules", () => {
 		expect(row.cells).toEqual(["City Pharmacy", "Asha Rao"]);
 		expect(row.href).toBe("/desk/sales-order/SO-0007");
 		expect(checkRow(log, { allowed: true, checkedBy: "" }).status).toBe("Let through");
+		const unsaved = checkRow(
+			{ ...log, reference_name: null },
+			{ allowed: false, checkedBy: "" }
+		);
+		expect(unsaved.title).toBe("Sales Order (not saved)");
+		expect(unsaved.href).toBe("");
 	});
 });

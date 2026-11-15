@@ -1,7 +1,7 @@
 <template>
 	<SidebarItem
 		v-if="inSidebar"
-		label="Notifications"
+		:label="t('Notifications')"
 		icon="lucide-bell"
 		:suffix="feed.unreadCount ? String(feed.unreadCount) : undefined"
 		data-tour="notifications"
@@ -12,7 +12,9 @@
 			variant="ghost"
 			icon="lucide-bell"
 			:label="
-				feed.unreadCount ? `Notifications, ${feed.unreadCount} unread` : 'Notifications'
+				feed.unreadCount
+					? t('Notifications, {0} unread', feed.unreadCount)
+					: t('Notifications')
 			"
 			data-tour="notifications"
 			@click="openPanel"

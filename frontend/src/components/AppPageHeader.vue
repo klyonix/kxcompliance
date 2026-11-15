@@ -6,20 +6,20 @@
 				v-if="parent"
 				variant="ghost"
 				icon="lucide-arrow-left"
-				:label="`Back to ${parent.label}`"
+				:label="t('Back to {0}', t(parent.label))"
 				@click="back"
 			/>
 			<Button
 				v-else-if="showSearch"
 				variant="ghost"
 				icon="lucide-search"
-				label="Search"
+				:label="t('Search')"
 				:route="{ name: 'Search' }"
 			/>
 			<NotificationBell v-if="!checksOnly()" />
 			<TourMenu />
 		</template>
-		<PageHeaderMobileTitle :title="title" />
+		<PageHeaderMobileTitle :title="t(title)" />
 		<template #suffix>
 			<span v-if="$slots.actions" class="flex items-center" data-tour="page-actions">
 				<slot name="actions" />
@@ -31,14 +31,14 @@
 			<Button
 				variant="ghost"
 				icon="lucide-arrow-left"
-				:label="`Back to ${parent.label}`"
+				:label="t('Back to {0}', t(parent.label))"
 				@click="back"
 			/>
 			<Breadcrumbs
-				:items="[{ label: parent.label, route: parent.route }, { label: title }]"
+				:items="[{ label: t(parent.label), route: parent.route }, { label: t(title) }]"
 			/>
 		</div>
-		<PageHeaderTitle v-else :title="title" />
+		<PageHeaderTitle v-else :title="t(title)" />
 		<div class="flex items-center gap-2">
 			<span v-if="$slots.actions" class="flex items-center gap-2" data-tour="page-actions">
 				<slot name="actions" />

@@ -46,9 +46,9 @@
 				data-tour="list-search"
 				v-model="search"
 				type="search"
-				:placeholder="current.searchPlaceholder || searchPlaceholder"
+				:placeholder="t(current.searchPlaceholder || searchPlaceholder)"
 				class="w-full shrink-0 md:w-64"
-				:aria-label="current.searchPlaceholder || searchPlaceholder"
+				:aria-label="t(current.searchPlaceholder || searchPlaceholder)"
 			>
 				<template #prefix
 					><span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true"
@@ -65,7 +65,11 @@
 					size="sm"
 					icon-left="lucide-list-filter"
 					:variant="userFilters.length ? 'subtle' : 'outline'"
-					:label="userFilters.length ? `Filters · ${userFilters.length}` : 'Filters'"
+					:label="
+						userFilters.length
+							? `${t('Filters')} · ${userFilters.length}`
+							: t('Filters')
+					"
 					:aria-expanded="showFilters"
 					@click="showFilters = !showFilters"
 				/>
@@ -83,7 +87,7 @@
 					size="sm"
 					:variant="mine ? 'subtle' : 'ghost'"
 					icon-left="lucide-user-round"
-					label="Only mine"
+					:label="t('Only mine')"
 					:aria-pressed="mine"
 					@click="toggleMine"
 				/>
@@ -112,7 +116,7 @@
 				<Dropdown :options="viewMenu" align="end">
 					<Button
 						icon-left="lucide-bookmark"
-						:label="activeSaved ? activeSaved.label : 'Views'"
+						:label="activeSaved ? activeSaved.label : t('Views')"
 						:variant="activeSaved ? 'subtle' : 'outline'"
 						data-tour="list-views"
 					/>
@@ -124,8 +128,8 @@
 			v-if="pinned"
 			class="flex items-center justify-between gap-3 rounded-lg bg-surface-gray-2 px-3 py-2 text-base text-ink-gray-8"
 		>
-			<span>Showing {{ route.query.label || "a filtered list" }}</span>
-			<Button variant="ghost" label="Show all" @click="unpin" />
+			<span>{{ t("Showing {0}", route.query.label || t("a filtered list")) }}</span>
+			<Button variant="ghost" :label="t('Show all')" @click="unpin" />
 		</p>
 
 		<p
@@ -157,16 +161,20 @@
 				<span class="lucide-file-search size-6" aria-hidden="true" />
 			</span>
 			<p class="text-lg font-medium text-ink-gray-8">
-				{{ narrowed ? "Nothing matches the filters" : emptyState.title }}
+				{{ narrowed ? t("Nothing matches the filters") : t(emptyState.title) }}
 			</p>
 			<p class="max-w-sm text-base text-ink-gray-5">
-				{{ narrowed ? "Clear a filter, or look under another tab." : emptyState.detail }}
+				{{
+					narrowed
+						? t("Clear a filter, or look under another tab.")
+						: t(emptyState.detail)
+				}}
 			</p>
 			<Button
 				v-if="!narrowed && emptyState.action"
 				class="mt-2"
 				variant="solid"
-				:label="emptyState.action.label"
+				:label="t(emptyState.action.label)"
 				:route="emptyState.action.route"
 			/>
 		</div>
@@ -190,12 +198,12 @@
 				aria-hidden="true"
 			>
 				<span class="w-8 shrink-0" />
-				<span class="flex-1">Name</span>
+				<span class="flex-1">{{ t("Name") }}</span>
 				<span v-for="column in columns" :key="column.label" class="w-40 shrink-0">{{
-					column.label
+					t(column.label)
 				}}</span>
-				<span class="w-36 shrink-0">Status</span>
-				<span class="w-28 shrink-0 text-right">{{ dateLabel }}</span>
+				<span class="w-36 shrink-0">{{ t("Status") }}</span>
+				<span class="w-28 shrink-0 text-right">{{ t(dateLabel) }}</span>
 			</div>
 			<template v-for="group in groups" :key="group.key">
 				<h2
@@ -203,7 +211,7 @@
 					class="flex items-center gap-2 px-3 pb-1 pt-4 text-sm font-semibold"
 					:class="group.key === 'overdue' ? 'text-ink-red-4' : 'text-ink-gray-7'"
 				>
-					{{ group.label }}
+					{{ t(group.label) }}
 					<span class="font-normal text-ink-gray-5">{{ group.rows.length }}</span>
 				</h2>
 				<div class="flex flex-col [&>*+*]:border-t [&>*+*]:border-outline-gray-1">
@@ -219,7 +227,7 @@
 		<Button
 			v-if="hasMore && layout !== 'kanban'"
 			class="self-center"
-			label="Show more"
+			:label="t('Show more')"
 			:loading="loading"
 			@click="load(true)"
 		/>
@@ -260,6 +268,7 @@ import { BOARDS, moveAction } from "@/lib/boards";
 import { companyFilters } from "@/lib/clientFilter";
 import { searchFilter } from "@/lib/items";
 import { parseListFilters } from "@/lib/listFilters";
+import { t } from "@/lib/i18n";
 import { choiceFilters, groupRows } from "@/lib/listViews";
 import {
 	LAYOUTS,
@@ -365,7 +374,7 @@ const emptyState = computed(() => props.empty(view.value, Boolean(search.value.t
 
 const tabs = computed(() =>
 	props.views.map(({ label, value }) => ({
-		label: counts.value[value] === undefined ? label : `${label} ${counts.value[value]}`,
+		label: counts.value[value] === undefined ? t(label) : `${t(label)} ${counts.value[value]}`,
 		value,
 	}))
 );

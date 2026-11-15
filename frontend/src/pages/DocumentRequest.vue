@@ -1,5 +1,5 @@
 <template>
-	<AppPageHeader :title="request?.title || 'Document request'" :parent="parent">
+	<AppPageHeader :title="request?.title || t('Document request')" :parent="parent">
 		<template #actions>
 			<Dropdown v-if="request && menu.length" :options="menu" align="end">
 				<Button variant="ghost" icon="lucide-ellipsis" label="More actions" />
@@ -25,7 +25,7 @@
 		<template v-else>
 			<section class="flex flex-col gap-2">
 				<div class="flex flex-wrap items-center gap-2">
-					<Badge :label="state.label" :theme="state.theme" size="md" />
+					<Badge :label="t(state.label)" :theme="state.theme" size="md" />
 					<span
 						class="text-base"
 						:class="row.due.late ? 'font-medium text-ink-red-4' : 'text-ink-gray-6'"
@@ -37,7 +37,7 @@
 					v-if="request.status === 'Requested' && request.firm_note"
 					class="rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-4"
 				>
-					Sent back: {{ request.firm_note }}
+					{{ t("Sent back: {0}", request.firm_note) }}
 				</p>
 				<p
 					v-else-if="request.status === 'Uploaded'"
@@ -45,8 +45,8 @@
 				>
 					{{
 						clientLogin
-							? "Your firm has it and will check it."
-							: "Check the upload, then accept it or send it back with a note."
+							? t("Your firm has it and will check it.")
+							: t("Check the upload, then accept it or send it back with a note.")
 					}}
 				</p>
 			</section>
@@ -57,7 +57,7 @@
 				aria-labelledby="needed-heading"
 			>
 				<h2 id="needed-heading" class="text-base font-semibold text-ink-gray-8">
-					What is needed
+					{{ t("What is needed") }}
 				</h2>
 				<p class="whitespace-pre-line text-base text-ink-gray-8">{{ request.details }}</p>
 			</section>
@@ -65,13 +65,13 @@
 			<section class="flex flex-col gap-3" aria-labelledby="documents-heading">
 				<div class="flex items-center justify-between gap-3">
 					<h2 id="documents-heading" class="text-base font-semibold text-ink-gray-8">
-						Documents
+						{{ t("Documents") }}
 					</h2>
 					<template v-if="mayUpload">
 						<Button
 							:variant="clientLogin && !documents.length ? 'solid' : 'subtle'"
 							icon-left="lucide-upload"
-							label="Upload"
+							:label="t('Upload')"
 							:loading="uploading"
 							@click="input?.click()"
 						/>
@@ -89,7 +89,9 @@
 				</p>
 				<p v-if="!documents.length" class="text-base text-ink-gray-5">
 					{{
-						clientLogin ? "Nothing uploaded yet." : "The client has not uploaded yet."
+						clientLogin
+							? t("Nothing uploaded yet.")
+							: t("The client has not uploaded yet.")
 					}}
 				</p>
 				<ul class="flex flex-col">
@@ -116,11 +118,11 @@
 
 			<section class="flex flex-col gap-3" aria-labelledby="details-heading">
 				<h2 id="details-heading" class="text-base font-semibold text-ink-gray-8">
-					Details
+					{{ t("Details") }}
 				</h2>
 				<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
 					<div v-for="fact in facts" :key="fact.label" class="flex flex-col gap-0.5">
-						<dt class="text-sm text-ink-gray-5">{{ fact.label }}</dt>
+						<dt class="text-sm text-ink-gray-5">{{ t(fact.label) }}</dt>
 						<dd class="text-base text-ink-gray-8">
 							<RouterLink
 								v-if="fact.to"
@@ -174,6 +176,7 @@ import AppPageHeader from "@/components/AppPageHeader.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { formatDate } from "@/lib/format";
+import { t } from "@/lib/i18n";
 import { OPEN_REQUEST_STATUSES, requestRow, requestState } from "@/lib/requests";
 import { deskActions } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
@@ -215,7 +218,7 @@ const parent = computed(() => {
 });
 
 const dueLine = computed(() => {
-	const due = `Needed by ${formatDate(request.value.due_date)}`;
+	const due = t("Needed by {0}", formatDate(request.value.due_date));
 	return row.value.due.text ? `${due} · ${row.value.due.text.toLowerCase()}` : due;
 });
 

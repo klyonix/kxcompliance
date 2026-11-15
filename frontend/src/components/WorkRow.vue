@@ -26,7 +26,7 @@
 						:class="STATUS_ICONS[row.theme] || STATUS_ICONS.gray"
 						class="size-3.5"
 						aria-hidden="true"
-					/>{{ row.status }}</span
+					/>{{ t(row.status) }}</span
 				>
 				<template v-if="row.due.text">
 					<span class="text-ink-gray-4" aria-hidden="true">·</span>
@@ -45,7 +45,7 @@
 		>
 		<span class="hidden w-36 shrink-0 sm:flex">
 			<!-- Colour and an icon, never colour alone. -->
-			<Badge :label="row.status" :theme="row.theme">
+			<Badge :label="t(row.status)" :theme="row.theme">
 				<template #prefix>
 					<span
 						:class="STATUS_ICONS[row.theme] || STATUS_ICONS.gray"

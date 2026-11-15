@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n";
 // Turn the my_work answer into rows: what each thing is, when it is due, and how pressing it is.
 
 export const KINDS = {
@@ -28,13 +29,14 @@ const toDate = (value) => (value ? new Date(`${value}T00:00:00`) : null);
 export const daysBetween = (from, to) => Math.round((to - from) / DAY);
 
 export function relativeDue(date, today, { overdue = false } = {}) {
-	if (!date) return { text: "No date", late: overdue };
+	if (!date) return { text: t("No date"), late: overdue };
 	const days = daysBetween(today, toDate(date));
-	if (days < 0) return { text: days === -1 ? "1 day late" : `${-days} days late`, late: true };
-	if (overdue) return { text: "Needs attention", late: true };
-	if (days === 0) return { text: "Today", late: false };
-	if (days === 1) return { text: "Tomorrow", late: false };
-	return { text: `In ${days} days`, late: false };
+	if (days < 0)
+		return { text: days === -1 ? t("1 day late") : t("{0} days late", -days), late: true };
+	if (overdue) return { text: t("Needs attention"), late: true };
+	if (days === 0) return { text: t("Today"), late: false };
+	if (days === 1) return { text: t("Tomorrow"), late: false };
+	return { text: t("In {0} days", days), late: false };
 }
 
 export function bucketFor(row, today) {

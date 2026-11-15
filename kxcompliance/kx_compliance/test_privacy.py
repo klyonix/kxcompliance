@@ -193,3 +193,21 @@ class TestPrivacy(IntegrationTestCase):
 	def test_only_people_of_the_app_see_the_notice(self):
 		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
 			privacy_notice()
+
+
+class TestLanguage(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_users()
+
+	def test_a_person_chooses_english_or_hindi_for_themselves(self):
+		from kxcompliance.api import set_my_language
+
+		with self.set_user(HOLDER):
+			set_my_language("hi")
+			self.assertEqual(frappe.db.get_value("User", HOLDER, "language"), "hi")
+			with self.assertRaisesRegex(frappe.ValidationError, "not available"):
+				set_my_language("fr")
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			set_my_language("hi")

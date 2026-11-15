@@ -15,14 +15,14 @@
 					<!-- Collapsed to icons, the group has no room to open: the icon opens Settings. -->
 					<SidebarItem
 						v-if="collapsed"
-						:label="section.label"
+						:label="t(section.label)"
 						:icon="section.icon"
 						:route="{ name: 'Settings' }"
 						:active="settingsOpen"
 					/>
 					<template v-else>
 						<SidebarItem
-							:label="section.label"
+							:label="t(section.label)"
 							:icon="section.icon"
 							:aria-expanded="groupOpen"
 							aria-controls="settings-pages"
@@ -43,13 +43,13 @@
 							v-show="groupOpen"
 							id="settings-pages"
 							role="group"
-							:aria-label="section.label"
+							:aria-label="t(section.label)"
 							class="ml-4 flex flex-col gap-0.5 border-l border-outline-gray-2 pl-2"
 						>
 							<SidebarItem
 								v-for="page in settingsPages"
 								:key="page.route"
-								:label="page.label"
+								:label="t(page.label)"
 								:route="{ name: page.route }"
 								:active="isSettingsPageOpen(page, route.name)"
 							>
@@ -60,7 +60,7 @@
 				</template>
 				<SidebarItem
 					v-else
-					:label="section.label"
+					:label="t(section.label)"
 					:route="{ name: section.route }"
 					:suffix="
 						section.count && counts[section.count]

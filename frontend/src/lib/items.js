@@ -1,4 +1,5 @@
 // Rules for showing a Compliance Item, kept apart from the screens so they can be tested.
+import { t } from "@/lib/i18n";
 import { relativeDue } from "@/pages/myWork";
 
 export const ATTENTION_STATUSES = [
@@ -100,7 +101,7 @@ function dueFor(item, midnight, overdue) {
 // A missing certificate leads, as it is something to do whatever the dates say.
 function itemDetail(item) {
 	const details = itemFacts(item);
-	return item.certificate_missing ? `No certificate · ${details}` : details;
+	return item.certificate_missing ? `${t("No certificate")} · ${details}` : details;
 }
 
 function itemFacts(item) {

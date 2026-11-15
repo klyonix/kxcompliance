@@ -4,14 +4,17 @@
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6">
 		<div class="flex flex-col gap-2">
 			<p class="text-base text-ink-gray-6">
-				Short answers to what people ask most. "Show me" opens the page and walks you
-				through it.
+				{{
+					t(
+						'Short answers to what people ask most. "Show me" opens the page and walks you through it.'
+					)
+				}}
 			</p>
 			<TextInput
 				v-model="query"
 				type="search"
-				placeholder="What do you want to do?"
-				aria-label="Search the help"
+				:placeholder="t('What do you want to do?')"
+				:aria-label="t('Search the help')"
 				data-tour="help-search"
 			>
 				<template #prefix>
@@ -21,7 +24,11 @@
 		</div>
 
 		<p v-if="!groups.length" class="py-10 text-center text-base text-ink-gray-5">
-			Nothing matches. Try other words, or ask the question mark on the page you are on.
+			{{
+				t(
+					"Nothing matches. Try other words, or ask the question mark on the page you are on."
+				)
+			}}
 		</p>
 
 		<div class="flex flex-col gap-6" data-tour="help-articles">
@@ -29,10 +36,10 @@
 				v-for="group in groups"
 				:key="group.area"
 				class="flex flex-col gap-1"
-				:aria-label="group.area"
+				:aria-label="t(group.area)"
 			>
 				<h2 class="pb-1 text-sm font-semibold uppercase tracking-wide text-ink-gray-5">
-					{{ group.area }}
+					{{ t(group.area) }}
 				</h2>
 				<details
 					v-for="article in group.articles"
@@ -48,26 +55,26 @@
 							class="lucide-chevron-right size-4 shrink-0 text-ink-gray-5 transition-transform group-open:rotate-90"
 							aria-hidden="true"
 						/>
-						{{ article.title }}
+						{{ t(article.title) }}
 					</summary>
 					<div class="flex flex-col gap-3 px-3 pb-3 pl-9">
-						<p class="text-sm text-ink-gray-5">{{ article.when }}</p>
+						<p class="text-sm text-ink-gray-5">{{ t(article.when) }}</p>
 						<ol
 							class="flex list-decimal flex-col gap-1.5 pl-4 text-base text-ink-gray-8"
 						>
-							<li v-for="step in article.steps" :key="step">{{ step }}</li>
+							<li v-for="step in article.steps" :key="step">{{ t(step) }}</li>
 						</ol>
 						<p
 							v-if="article.tip"
 							class="rounded-lg bg-surface-gray-2 px-3 py-2 text-sm text-ink-gray-7"
 						>
-							{{ article.tip }}
+							{{ t(article.tip) }}
 						</p>
 						<Button
 							v-if="article.page && tourFor(article.page)"
 							class="self-start"
 							icon-left="lucide-play"
-							label="Show me"
+							:label="t('Show me')"
 							@click="showMe(article)"
 						/>
 					</div>

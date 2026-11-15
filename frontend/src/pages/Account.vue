@@ -14,19 +14,19 @@
 
 		<section class="flex flex-col gap-3" aria-labelledby="appearance-heading">
 			<h2 id="appearance-heading" class="text-base font-semibold text-ink-gray-8">
-				Appearance
+				{{ t("Appearance") }}
 			</h2>
 			<TabButtons
 				:model-value="colorScheme"
 				:options="[
-					{ label: 'System', value: 'system' },
-					{ label: 'Light', value: 'light' },
-					{ label: 'Dark', value: 'dark' },
+					{ label: t('System'), value: 'system' },
+					{ label: t('Light'), value: 'light' },
+					{ label: t('Dark'), value: 'dark' },
 				]"
 				@update:model-value="setColorScheme"
 			/>
 			<div class="flex flex-col gap-1.5" data-tour="appearance-accent">
-				<span class="text-sm text-ink-gray-6">Accent colour</span>
+				<span class="text-sm text-ink-gray-6">{{ t("Accent colour") }}</span>
 				<div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Accent colour">
 					<button
 						v-for="accent in ACCENTS"
@@ -48,25 +48,41 @@
 						/>
 					</button>
 				</div>
-				<span class="text-xs text-ink-gray-5"
-					>For buttons, switches and highlights. Overdue stays red, due soon amber.</span
-				>
+				<span class="text-xs text-ink-gray-5">{{
+					t("For buttons, switches and highlights. Overdue stays red, due soon amber.")
+				}}</span>
 			</div>
 			<div class="flex flex-col gap-1.5">
-				<span class="text-sm text-ink-gray-6">Rows in lists</span>
+				<span class="text-sm text-ink-gray-6">{{ t("Rows in lists") }}</span>
 				<TabButtons
 					:model-value="look.density"
-					:options="DENSITIES"
+					:options="DENSITIES.map((option) => ({ ...option, label: t(option.label) }))"
 					@update:model-value="change('density', $event)"
 				/>
 			</div>
 			<FormControl
 				type="checkbox"
-				label="High contrast: stronger text and borders"
+				:label="t('High contrast: stronger text and borders')"
 				:model-value="look.contrast === 'high'"
 				@update:model-value="change('contrast', $event ? 'high' : 'normal')"
 			/>
-			<p class="text-xs text-ink-gray-5">Kept on this device.</p>
+			<p class="text-xs text-ink-gray-5">{{ t("Kept on this device.") }}</p>
+		</section>
+
+		<!-- The language: for a client's own login, whose screens are translated. -->
+		<section
+			v-if="isClientLogin()"
+			class="flex flex-col gap-3"
+			aria-labelledby="language-heading"
+		>
+			<h2 id="language-heading" class="text-base font-semibold text-ink-gray-8">
+				{{ t("Language") }} · Language
+			</h2>
+			<TabButtons
+				:model-value="language()"
+				:options="LANGUAGES"
+				@update:model-value="chooseLanguage"
+			/>
 		</section>
 
 		<CalendarFeed v-if="!checksOnly()" />
@@ -75,7 +91,7 @@
 
 		<section class="flex flex-col gap-3" aria-labelledby="sync-heading">
 			<h2 id="sync-heading" class="text-base font-semibold text-ink-gray-8">
-				Changes on this device
+				{{ t("Changes on this device") }}
 			</h2>
 			<SyncStatus />
 			<div
@@ -88,8 +104,8 @@
 				</p>
 				<p class="text-base text-ink-red-4">{{ entry.error }}</p>
 				<div class="flex gap-2">
-					<Button label="Send again" @click="sendAgain(entry)" />
-					<Button variant="ghost" label="Discard" @click="drop(entry)" />
+					<Button :label="t('Send again')" @click="sendAgain(entry)" />
+					<Button variant="ghost" :label="t('Discard')" @click="drop(entry)" />
 				</div>
 			</div>
 		</section>
@@ -118,13 +134,13 @@
 			/>
 			<Button
 				v-if="mayUseDesk()"
-				label="Open the Desk"
+				:label="t('Open the Desk')"
 				icon-left="lucide-app-window"
 				class="justify-start"
 				@click="openDesk"
 			/>
 			<Button
-				label="Sign out"
+				:label="t('Sign out')"
 				icon-left="lucide-log-out"
 				class="justify-start"
 				@click="leave"
@@ -138,6 +154,7 @@ import { reactive } from "vue";
 import { Avatar, Button, FormControl, TabButtons, useColorScheme } from "frappe-ui";
 import { call } from "@/api";
 import { boot, checksOnly, isClientLogin, isManager, mayUseDesk } from "@/boot";
+import { LANGUAGES, language } from "@/lib/i18n";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import CalendarFeed from "@/components/CalendarFeed.vue";
 import PrivacySection from "@/components/PrivacySection.vue";
@@ -175,4 +192,10 @@ async function drop(entry) {
 const openDesk = () => (window.location.href = "/app/klyonix-compliance");
 const leave = () =>
 	signOut({ unsent: outbox.waiting + outbox.needsLook.length, clear: clearOutbox });
+
+// The language is the person's own Frappe setting; the app reloads to read everything in it.
+async function chooseLanguage(code) {
+	await call("kxcompliance.api.set_my_language", { language: code }, { httpMethod: "POST" });
+	window.location.reload();
+}
 </script>

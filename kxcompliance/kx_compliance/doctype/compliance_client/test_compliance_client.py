@@ -16,6 +16,7 @@ from kxcompliance.api import (
 	client_of_login,
 	clients_overview,
 	documents,
+	search,
 )
 from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
@@ -181,6 +182,18 @@ class TestComplianceClient(IntegrationTestCase):
 			self.assertEqual(frappe.get_list("Compliance Client", pluck="name"), ["Sunrise Group"])
 		with self.set_user(MANAGER):
 			self.assertEqual(len(frappe.get_list("Compliance Client", pluck="name")), 2)
+
+	def test_a_client_login_searches_only_what_it_can_open(self):
+		sunrise = with_login()
+		profile(TEST_COMPANY, sunrise.name)
+		task(TEST_COMPANY)
+		with self.set_user(CLIENT_LOGIN):
+			found = search("GSTR")
+			self.assertTrue(found["filings"])
+			# The client, its company profile, licence rules and obligations are pages it cannot open.
+			for kind in ("clients", "companies", "rules", "obligations", "people", "customers"):
+				self.assertNotIn(kind, found)
+			self.assertEqual(search("GSTR", kind="obligations"), {})
 
 	def test_moving_a_company_to_another_client_moves_who_sees_it(self):
 		sunrise = client("Sunrise Group")

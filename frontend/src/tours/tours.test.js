@@ -110,4 +110,22 @@ describe("tours", () => {
 		expect(steps.length).toBe(1);
 		expect(steps[0].element).toBe(section);
 	});
+
+	it("speak to a client's login in a client's words, without the firm's steps", () => {
+		const tour = {
+			steps: [
+				{
+					title: "Ask the client",
+					text: "Staff words",
+					clientTitle: "What your firm needs",
+					clientText: "Client words",
+				},
+				{ title: "The next step", text: "Send it for review", client: false },
+			],
+		};
+		expect(stepsFor(tour, document, { client: true }).map((step) => step.popover)).toEqual([
+			{ title: "What your firm needs", description: "Client words" },
+		]);
+		expect(stepsFor(tour, document, { client: false }).length).toBe(2);
+	});
 });

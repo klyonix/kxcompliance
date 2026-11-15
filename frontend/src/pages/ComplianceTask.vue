@@ -10,7 +10,12 @@
 		</template>
 	</AppPageHeader>
 
-	<RecordFrame doctype="Compliance Task" :name="name" :facts="task ? keyFacts : []">
+	<RecordFrame
+		doctype="Compliance Task"
+		:name="name"
+		:facts="task ? keyFacts : []"
+		:modified="task?.modified || ''"
+	>
 		<p
 			v-if="error"
 			role="alert"

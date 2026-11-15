@@ -144,15 +144,26 @@ class TestLicenceRequirement(IntegrationTestCase):
 	def test_a_sale_without_the_licence_is_blocked(self):
 		requirement()
 		with self.assertRaisesRegex(frappe.ValidationError, "has no Drug Licence on record"):
-			check_document(sales_order(), "validate")
+			check_document(sales_order(name="SO-LICENCE-TEST-0"), "on_submit")
+
+	def test_a_blocked_sale_can_be_saved_as_a_draft_and_is_listed_to_allow(self):
+		requirement()
+		draft = sales_order(name="SO-LICENCE-DRAFT-1")
+		check_document(draft, "validate")
+		check_document(draft, "validate")  # saved again: still listed once
+		self.assertIn("saved as a draft", str(frappe.message_log))
+		self.assertEqual(
+			frappe.get_all("Licence Check Log", filters={"reference_name": draft.name}, pluck="result"),
+			["Blocked"],
+		)
 
 	def test_an_expired_licence_blocks_and_a_valid_one_passes(self):
 		requirement()
 		licence("Customer", PHARMACY, "Drug Licence", "2026-10-31")
 		with self.assertRaisesRegex(frappe.ValidationError, "expired on"):
-			check_document(sales_order(), "validate")
+			check_document(sales_order(name="SO-LICENCE-TEST-0"), "on_submit")
 		licence("Customer", PHARMACY, "Drug Licence", "2027-10-31", number="20B-KA-0002")
-		check_document(sales_order(), "validate")
+		check_document(sales_order(name="SO-LICENCE-TEST-0"), "on_submit")
 
 	def test_grace_days_let_a_recently_expired_licence_count(self):
 		requirement(grace_days=30)
@@ -161,10 +172,10 @@ class TestLicenceRequirement(IntegrationTestCase):
 
 	def test_a_requirement_applies_only_to_its_item_and_customer_groups(self):
 		requirement(party_groups=[{"party_group": CHEMISTS}])
-		check_document(sales_order(item_group=SNACKS), "validate")
-		check_document(sales_order(customer=GROCER), "validate")
+		check_document(sales_order(item_group=SNACKS), "on_submit")
+		check_document(sales_order(customer=GROCER), "on_submit")
 		with self.assertRaises(frappe.ValidationError):
-			check_document(sales_order(), "validate")
+			check_document(sales_order(), "on_submit")
 
 	def test_a_document_type_left_unticked_is_not_checked(self):
 		requirement(check_sales_order=0)
@@ -195,9 +206,9 @@ class TestLicenceRequirement(IntegrationTestCase):
 		override.flags.ignore_validate = True
 		override.flags.ignore_links = True  # the Sales Order is never saved in this test
 		override.insert()
-		check_document(sales_order(name="SO-LICENCE-TEST-2"), "validate")
+		check_document(sales_order(name="SO-LICENCE-TEST-2"), "on_submit")
 		with self.assertRaises(frappe.ValidationError):
-			check_document(sales_order(name="SO-LICENCE-TEST-3"), "validate")
+			check_document(sales_order(name="SO-LICENCE-TEST-3"), "on_submit")
 
 	def test_an_override_needs_a_real_document_and_a_reason(self):
 		override = frappe.get_doc(
@@ -222,7 +233,7 @@ class TestLicenceRequirement(IntegrationTestCase):
 			}
 		)
 		with self.assertRaisesRegex(frappe.ValidationError, "Supplier"):
-			check_document(order, "validate")
+			check_document(order, "on_submit")
 
 	def test_the_invoice_carries_the_customer_licence_numbers(self):
 		licence("Customer", PHARMACY, "Drug Licence", "2027-10-31", number="20B-KA-0099")
@@ -427,14 +438,14 @@ class TestLicenceCheckForFirms(IntegrationTestCase):
 		self.client.licence_check = 1
 		self.client.save()
 		with self.assertRaisesRegex(frappe.ValidationError, "has no Drug Licence on record"):
-			check_document(self.order(), "validate")
+			check_document(self.order(), "on_submit")
 
 	def test_a_rule_naming_companies_checks_only_theirs(self):
 		company(OTHER_COMPANY, "CTOC")
 		self.client.licence_check = 1
 		self.client.save()
 		requirement(companies=[{"company": OTHER_COMPANY}])
-		check_document(self.order(), "validate")
+		check_document(self.order(), "on_submit")
 		requirement(companies=[{"company": TEST_COMPANY}])
 		with self.assertRaisesRegex(frappe.ValidationError, "has no Drug Licence on record"):
-			check_document(self.order(), "validate")
+			check_document(self.order(), "on_submit")

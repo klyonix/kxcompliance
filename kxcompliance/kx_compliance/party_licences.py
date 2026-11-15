@@ -3,7 +3,9 @@
 
 """Check that a customer or supplier holds the licences a sale or purchase needs.
 
-Hooked on validate of the selling and buying documents in hooks.py. It reads the
+Hooked on validate and on_submit of the selling and buying documents in hooks.py. A rule that
+blocks lets the document be saved as a draft, with a warning, and stops it being submitted until
+a valid licence is recorded or a Compliance Manager allows that document once. It reads the
 document and changes only the licence numbers field it is given for printing.
 """
 
@@ -70,12 +72,26 @@ def check_document(doc, method=None):
 		return
 
 	blocking = [(requirement, message) for requirement, message in failures if requirement.action == "Block"]
-	if blocking:
+	if blocking and method == "validate":
+		# A blocked document may still be saved as a draft; submitting it is what is blocked (RK,
+		# 15 Nov 2026), so a manager can allow that draft once by its name.
+		for requirement, message in blocking:
+			log_draft_block(doc, party_type, party, requirement, message)
+			frappe.msgprint(
+				_(
+					"{0} It can be saved as a draft, but not submitted until a valid licence is recorded or a Compliance Manager allows it once."
+				).format(message),
+				title=_("Licence Needed"),
+				indicator="red",
+			)
+	elif blocking:
 		messages = [message for _requirement, message in blocking]
 		log_block_after_rollback(doc, party_type, party, blocking)
 		frappe.throw("<br>".join(messages), title=_("Licence Needed"))
 
 	for requirement, message in failures:
+		if requirement.action == "Block":
+			continue
 		if method == "on_submit":
 			log_check(doc, party_type, party, requirement, "Warned", message)
 		else:
@@ -232,6 +248,23 @@ def write_log_entry(entry: dict):
 	# An audit log must be kept even if the document it names is later deleted or renamed.
 	log.flags.ignore_links = True
 	log.insert(ignore_permissions=True)
+
+
+def log_draft_block(doc, party_type: str, party: str, requirement, message: str):
+	"""A draft saved without the licence, logged once per rule so the Blocks list shows it by name."""
+	if not doc.name:
+		return
+	already = frappe.db.exists(
+		"Licence Check Log",
+		{
+			"reference_doctype": doc.doctype,
+			"reference_name": doc.name,
+			"licence_requirement": requirement.name,
+			"result": "Blocked",
+		},
+	)
+	if not already:
+		log_check(doc, party_type, party, requirement, "Blocked", message)
 
 
 def log_block_after_rollback(doc, party_type: str, party: str, blocking: list):

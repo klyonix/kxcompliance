@@ -2,7 +2,8 @@
 	<p v-if="!lanes" class="py-8 text-center text-base text-ink-gray-5" aria-busy="true">
 		Loading the board…
 	</p>
-	<!-- Columns side by side, scrolling sideways; on a phone each column is most of the screen. -->
+	<!-- Columns side by side, scrolling sideways; on a phone each column is most of the screen.
+	     Each is at least half the screen tall, so a card can be dropped anywhere in it. -->
 	<div
 		v-else
 		class="-mx-4 flex gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0"
@@ -11,7 +12,7 @@
 		<section
 			v-for="lane in lanes"
 			:key="lane.value"
-			class="flex w-[85vw] shrink-0 flex-col rounded-lg bg-surface-gray-1 sm:w-72"
+			class="flex min-h-[50vh] w-[85vw] shrink-0 flex-col rounded-lg bg-surface-gray-1 sm:w-72"
 			:aria-label="`${lane.label}, ${lane.cards.length}`"
 		>
 			<h2

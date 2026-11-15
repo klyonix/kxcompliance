@@ -55,19 +55,22 @@ export function latestPerDocument(logs) {
 }
 
 // One selling or buying document a rule was checked on (RowList); it opens in the Desk, where it
-// is finished once let through. `allowed` says whether a manager let it through once; `checkedBy`
+// is finished once let through. An older block of a document that was never saved has no name:
+// there is nothing to open or allow. `allowed` says whether a manager let it through once; `checkedBy`
 // and `checkedOn` are the person's name and the time, written for reading.
 export function checkRow(log, { allowed, checkedBy, checkedOn = "" }) {
 	return {
 		key: log.name,
 		kind: "licence-check",
-		title: `${log.reference_doctype} ${log.reference_name}`,
+		title: log.reference_name
+			? `${log.reference_doctype} ${log.reference_name}`
+			: `${log.reference_doctype} (not saved)`,
 		detail: [log.message, log.item_type].filter(Boolean).join(" · "),
 		status: allowed ? "Let through" : log.result,
 		theme: allowed ? "green" : log.result === "Blocked" ? "red" : "amber",
 		due: { text: checkedOn, late: false },
 		cells: [log.party, checkedBy],
-		href: deskRoute(log.reference_doctype, log.reference_name),
+		href: log.reference_name ? deskRoute(log.reference_doctype, log.reference_name) : "",
 		log,
 		allowed,
 	};

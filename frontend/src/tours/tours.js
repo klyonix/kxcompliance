@@ -10,7 +10,9 @@
 // Who is offered a tour follows the side bar: `managers` for Compliance Managers, `firm` and
 // `organisation` for the kind of site, `client` for a client's own login (`staff: false` keeps a
 // tour from the firm's people). A `record` tour needs a record, so it plays on that page and is not
-// offered from the list of tours. The ids are the server's too: kx_compliance/tours.py lists the
+// offered from the list of tours. Within a tour, a step marked `client: false` is left out for a
+// client's login, and `clientTitle` / `clientText` say the step in a client's words. The ids are
+// the server's too: kx_compliance/tours.py lists the
 // same ones, and a test holds the two equal.
 
 export const TOURS = [
@@ -192,6 +194,8 @@ export const TOURS = [
 				target: ["filing-steps"],
 				title: "Where it is",
 				text: "File, then review where the return needs a second look, then filed.",
+				clientText:
+					"Your firm prepares it, checks it where it needs a second look, then files it.",
 			},
 			{
 				target: ["section:penalty-heading"],
@@ -202,14 +206,21 @@ export const TOURS = [
 				target: ["section:filing-heading"],
 				title: "Record the filing",
 				text: "Once it is filed on the portal, record the date, the acknowledgement number and a copy of the acknowledgement.",
+				clientTitle: "The filing",
+				clientText:
+					"Once it is filed: the date, the acknowledgement number and a copy of the acknowledgement.",
 			},
 			{
 				target: ["section:requests-heading"],
 				title: "Ask the client",
 				text: "Ask the client for what you need, such as a sales register. They upload it from their own login and you are told.",
+				clientTitle: "What your firm needs",
+				clientText:
+					"Documents your firm has asked you for. Upload each one here, or reply to its email with the file attached.",
 			},
 			{
 				target: ["filing-actions"],
+				client: false,
 				title: "The next step",
 				text: "Send it for review, or mark it filed where no review is needed. A reviewer marks it filed or sends it back with a note.",
 			},
@@ -758,7 +769,7 @@ export const TOURS = [
 		steps: [
 			{
 				title: "Licence rules",
-				text: "Say which licences a customer or supplier must hold. A sale or purchase without them is blocked, or only warned about, when it is saved.",
+				text: "Say which licences a customer or supplier must hold. A sale or purchase without them can be saved as a draft but not submitted, or is only warned about.",
 			},
 			{
 				target: ["list-rows"],

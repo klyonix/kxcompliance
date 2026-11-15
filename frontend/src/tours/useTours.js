@@ -53,11 +53,16 @@ export function targetOf(step, root = document) {
 }
 
 // The steps this reader will meet: a step with no target is a message in the middle of the screen;
-// a step whose target is not drawn for this reader is left out.
-export function stepsFor(tour, root = document) {
+// a step whose target is not drawn for this reader is left out. A client's login skips the steps
+// marked `client: false` and reads a step's `clientTitle` and `clientText` where it has them.
+export function stepsFor(tour, root = document, { client = isClientLogin() } = {}) {
 	const steps = [];
 	for (const step of tour.steps) {
-		const popover = { title: step.title, description: step.text };
+		if (client && step.client === false) continue;
+		const popover = {
+			title: (client && step.clientTitle) || step.title,
+			description: (client && step.clientText) || step.text,
+		};
 		if (!step.target?.length) steps.push({ popover });
 		else {
 			const element = targetOf(step, root);

@@ -13,6 +13,7 @@ from kxcompliance.api import (
 	bill_options,
 	bill_pdf,
 	billing_setup,
+	billing_summary,
 	bills,
 	cancel_bill,
 	cancel_payment,
@@ -854,6 +855,34 @@ class TestBills(IntegrationTestCase):
 			),
 			(1770, 1770, 1770),
 		)
+
+	def test_the_billing_summary_adds_up_the_year_for_one_client_or_all(self):
+		before_one = billing_summary(client=self.client)
+		before_all = billing_summary()
+		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		send_bill(name)  # 1,180
+		frappe.db.set_value(
+			"Sales Invoice", name, "due_date", frappe.utils.add_days(frappe.utils.nowdate(), -40)
+		)
+		record_payment(name, 500, frappe.utils.nowdate(), "UPI", tds=100)
+		one = billing_summary(client=self.client)
+		every = billing_summary()
+		for after, before in ((one, before_one), (every, before_all)):
+			self.assertEqual(
+				{
+					key: after["activity"][key] - before["activity"][key]
+					for key in ("billed", "received", "tds")
+				},
+				{"billed": 1180, "received": 500, "tds": 100},
+			)
+			# 580 still due, 40 days late.
+			self.assertEqual(after["ageing"]["late_60"] - before["ageing"]["late_60"], 580)
+		self.assertIn(self.client, [line["client"] for line in one["owing_most"]])
+		# The filing set up for the client is filed and priced, not yet billed.
+		self.assertIn(self.client, [line["client"] for line in one["unbilled"]["clients"]])
+		self.assertTrue(one["by_month"])
+		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
+			billing_summary()
 
 	def test_a_payment_has_a_page_a_receipt_and_can_be_emailed(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]

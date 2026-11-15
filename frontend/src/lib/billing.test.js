@@ -3,6 +3,7 @@ import {
 	accountFacts,
 	advanceProblem,
 	ageingRows,
+	barWidth,
 	billState,
 	billSubtotal,
 	commitmentLines,
@@ -17,6 +18,7 @@ import {
 	servicesProblem,
 	statementLink,
 	statementProblem,
+	summaryFacts,
 } from "./billing";
 
 describe("rates", () => {
@@ -242,5 +244,32 @@ describe("a payment's page", () => {
 			"TDS deducted",
 			"Reference",
 		]);
+	});
+});
+
+describe("Billing's summary", () => {
+	it("says what came in and what is overdue", () => {
+		const facts = summaryFacts({
+			activity: { billed: 11800, received: 5000, tds: 1000, credited: 0, written_off: 0 },
+			ageing: { outstanding: 5800, not_due: 800 },
+		});
+		expect(facts.map((fact) => fact.label)).toEqual([
+			"Billed",
+			"Received",
+			"Still due",
+			"TDS deducted",
+			"Credit notes",
+			"Written off",
+		]);
+		expect(facts[2]).toMatchObject({ tone: "red" });
+		expect(facts[2].detail).toMatch(/overdue/);
+	});
+
+	it("draws each month against the largest", () => {
+		const months = [{ total: 2000 }, { total: 500 }];
+		expect(barWidth(2000, months)).toBe(100);
+		expect(barWidth(500, months)).toBe(25);
+		expect(barWidth(-100, months)).toBe(0);
+		expect(barWidth(10, [])).toBe(0);
 	});
 });

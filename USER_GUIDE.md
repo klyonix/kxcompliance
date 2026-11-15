@@ -365,6 +365,18 @@ Before a fee talk, a reminder call, or the year's review with the client.
 
 > **Tip.** Filings due this year with no rate are not counted in what is expected; give them a rate on the client's form or its rate card.
 
+### How is billing going this year?
+
+*For: CA/CS firms.*
+
+For a monthly review, or before chasing what is due.
+
+1. Open Billing and choose the "Summary" tab.
+2. It shows what has been billed, received, deducted as TDS, credited and written off this financial year, and what is still due by how late.
+3. Below are the months, the clients owing most (each opening its Billing tab) and filed returns not billed yet, each with a button to bill it.
+
+> **Tip.** Choose a client at the top to see only theirs.
+
 ### How do I give a client a statement of account?
 
 *For: CA/CS firms.*

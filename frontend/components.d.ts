@@ -19,6 +19,7 @@ declare module 'vue' {
     BillingCard: typeof import('./src/components/BillingCard.vue')['default']
     BillingFirm: typeof import('./src/components/BillingFirm.vue')['default']
     BillingReminders: typeof import('./src/components/BillingReminders.vue')['default']
+    BillingSummary: typeof import('./src/components/BillingSummary.vue')['default']
     CalendarFeed: typeof import('./src/components/CalendarFeed.vue')['default']
     CaseStatusDialog: typeof import('./src/components/CaseStatusDialog.vue')['default']
     ClientAccount: typeof import('./src/components/ClientAccount.vue')['default']

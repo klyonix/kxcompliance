@@ -57,6 +57,18 @@ class TestAppApi(IntegrationTestCase):
 		self.assertTrue({mine, reviewing} <= names)
 		self.assertNotIn(theirs, names)
 
+	def test_my_work_narrows_to_a_clients_companies_before_its_limit(self):
+		from unittest.mock import patch
+
+		mine = make_item("Test App Licence", days=10, responsible=HOLDER).name
+		make_item("Test App Licence", days=11, responsible=HOLDER)
+		with self.set_user(HOLDER):
+			self.assertIn(mine, {item.name for item in my_work(json.dumps([TEST_COMPANY]))["items"]})
+			self.assertEqual(my_work(json.dumps(["Another client's company"]))["items"], [])
+			self.assertFalse(my_work(json.dumps(["Another client's company"]))["limited"])
+			with patch("kxcompliance.api.WORK_LIMIT", 1):
+				self.assertTrue(my_work()["limited"])
+
 	def test_my_work_needs_a_compliance_role(self):
 		with self.set_user(OUTSIDER), self.assertRaises(frappe.PermissionError):
 			my_work()

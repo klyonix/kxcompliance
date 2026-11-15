@@ -136,6 +136,21 @@ class TestClientReports(IntegrationTestCase):
 		self.assertEqual((year["on_time"], year["late"], year["late_fee"]), (2, 1, 1000))
 		self.assertEqual(year["currency"], "INR")
 
+	def test_the_client_page_counts_every_open_filing_beyond_those_it_lists(self):
+		from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
+
+		detail = client_detail("Sunrise Group")
+		open_filings = frappe.get_all(
+			"Compliance Task",
+			filters={
+				"company": ("in", [row.company for row in detail["companies"]]),
+				"status": ("not in", CLOSED_TASK_STATUSES),
+			},
+			pluck="name",
+		)
+		self.assertEqual(detail["open"], len(open_filings))
+		self.assertEqual(detail["open"], sum(row["open"] for row in detail["companies"]))
+
 	def test_the_year_follows_erpnext_or_runs_april_to_march(self):
 		with patch("erpnext.accounts.utils.get_fiscal_year", return_value=None):
 			self.assertEqual(financial_year("2026-11-15"), ("2026-04-01", "2027-03-31"))

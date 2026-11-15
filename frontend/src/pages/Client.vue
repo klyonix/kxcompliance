@@ -197,6 +197,14 @@
 					:key="filing.name"
 					:row="taskRow(filing)"
 				/>
+				<Button
+					v-if="!clientLogin && client.open > client.filings.length"
+					class="mt-2 self-start"
+					variant="ghost"
+					icon-right="lucide-arrow-right"
+					:label="`See all ${client.open} open filings`"
+					@click="seeAllFilings"
+				/>
 			</section>
 		</template>
 	</RecordFrame>
@@ -213,6 +221,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, Dropdown, Skeleton } from "frappe-ui";
 import { RouterLink, useRouter } from "vue-router";
+import { chooseClient } from "@/stores/clientFilter";
 import { call } from "@/api";
 import { isClientLogin, isManager, mayRecord, mayUseDesk } from "@/boot";
 import AskDocument from "@/components/AskDocument.vue";
@@ -257,7 +266,7 @@ const keyFacts = computed(() => [
 	{
 		label: "Open filings",
 		icon: "lucide-calendar-check",
-		value: String(client.value.filings.length),
+		value: String(client.value.open ?? client.value.filings.length),
 	},
 	{
 		label: "Documents asked for",
@@ -268,6 +277,12 @@ const keyFacts = computed(() => [
 const error = ref("");
 const clientLogin = isClientLogin();
 const router = useRouter();
+
+// The page lists the soonest open filings; the rest are on Filings, with this client chosen.
+function seeAllFilings() {
+	chooseClient(props.name);
+	router.push({ name: "Filings" });
+}
 const asking = ref(false);
 const mayAsk = computed(
 	() =>

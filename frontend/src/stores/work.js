@@ -1,5 +1,5 @@
 // My Work, loaded once and shared, so the side bar's count and the page agree.
-import { computed, reactive } from "vue";
+import { computed, reactive, watch } from "vue";
 import { call } from "@/api";
 import { keepClientWork } from "@/lib/clientFilter";
 import { summarise, workRows } from "@/pages/myWork";
@@ -18,7 +18,9 @@ export async function loadWork() {
 	work.loading = true;
 	work.error = "";
 	try {
-		work.data = await call("kxcompliance.api.my_work");
+		// The chosen client goes to the server, so the limit counts only that client's work.
+		const companies = chosenCompanies.value;
+		work.data = await call("kxcompliance.api.my_work", companies ? { companies } : {});
 	} catch (error) {
 		// With My Work already on screen, the banner says the server is not answering.
 		if (error.isNetwork && work.data) return;
@@ -27,3 +29,8 @@ export async function loadWork() {
 		work.loading = false;
 	}
 }
+
+// Another client chosen: its work is read again, once My Work has been loaded at all.
+watch(chosenCompanies, () => {
+	if (work.data) loadWork();
+});

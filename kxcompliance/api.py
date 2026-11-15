@@ -199,20 +199,27 @@ def check_reader_access():
 
 
 @frappe.whitelist(methods=["GET"])
-def my_work() -> dict:
-	"""What the signed-in person holds or reviews and should look at now, soonest first."""
+def my_work(companies: str | None = None) -> dict:
+	"""What the signed-in person holds or reviews and should look at now, soonest first.
+
+	`companies` (the client filter, a JSON list) narrows it to one client's before the limit, so
+	a busy person still sees all of that client's work. `limited` says a list reached the limit.
+	"""
 	check_app_access()
 	user = frappe.session.user
 	mine = {"responsible": user, "reviewer": user}
 	horizon = add_days(nowdate(), WORK_HORIZON_DAYS)
-	return {
+	chosen = company_list(companies)
+	within = {"company": ("in", chosen or [""])} if chosen is not None else {}
+	work = {
 		"items": frappe.get_list(
 			"Compliance Item",
 			filters={
 				"status": (
 					"in",
 					["Due for Renewal", "Renewal Planned", "Expired", "Lapsed", "Renewal in Progress"],
-				)
+				),
+				**within,
 			},
 			or_filters=mine,
 			fields=[
@@ -230,7 +237,11 @@ def my_work() -> dict:
 		),
 		"tasks": frappe.get_list(
 			"Compliance Task",
-			filters={"status": ("not in", CLOSED_TASK_STATUSES), "effective_due_date": ("<=", horizon)},
+			filters={
+				"status": ("not in", CLOSED_TASK_STATUSES),
+				"effective_due_date": ("<=", horizon),
+				**within,
+			},
 			or_filters=mine,
 			fields=[
 				"name",
@@ -248,7 +259,7 @@ def my_work() -> dict:
 		),
 		"legal_dates": frappe.get_list(
 			"Legal Date",
-			filters={"status": "Scheduled", "date": ("<=", horizon)},
+			filters={"status": "Scheduled", "date": ("<=", horizon), **within},
 			or_filters=mine,
 			fields=[
 				"name",
@@ -263,6 +274,10 @@ def my_work() -> dict:
 			order_by="date asc",
 			limit=WORK_LIMIT,
 		),
+	}
+	return {
+		**work,
+		"limited": any(len(rows) >= WORK_LIMIT for rows in work.values()),
 		"as_of": str(now_datetime()),
 	}
 

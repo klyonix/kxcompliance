@@ -243,9 +243,9 @@ REQUEST_FIELDS = ["name", "title", "status", "is_overdue", "due_date", "company"
 
 
 def filing_counts(companies: list[str]) -> dict[str, dict[str, int]]:
-	"""Per company: open filings overdue, due in the next seven days, and waiting for review.
+	"""Per company: open filings, and of them overdue, due in the next seven days, and waiting for review.
 	Read with get_list, so each person counts only what they may see."""
-	counts = {company: {"overdue": 0, "due_this_week": 0, "in_review": 0} for company in companies}
+	counts = {company: {"open": 0, "overdue": 0, "due_this_week": 0, "in_review": 0} for company in companies}
 	if not companies:
 		return counts
 	open_filings = {"company": ("in", companies), "status": ("not in", CLOSED_TASK_STATUSES)}
@@ -256,6 +256,7 @@ def filing_counts(companies: list[str]) -> dict[str, dict[str, int]]:
 		group_by="company, status, is_overdue",
 		order_by=None,
 	):
+		counts[row.company]["open"] += row["count"]
 		if row.is_overdue:
 			counts[row.company]["overdue"] += row["count"]
 		if row.status == "Ready for Review":
@@ -275,7 +276,7 @@ def filing_counts(companies: list[str]) -> dict[str, dict[str, int]]:
 def add_up(counts: dict[str, dict[str, int]], companies: list[str]) -> dict[str, int]:
 	return {
 		key: sum(counts[company][key] for company in companies)
-		for key in ("overdue", "due_this_week", "in_review")
+		for key in ("open", "overdue", "due_this_week", "in_review")
 	}
 
 

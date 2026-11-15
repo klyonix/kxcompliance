@@ -180,7 +180,11 @@ const entries = computed(() =>
 				wide: detail.wide || control === "note",
 				options:
 					control === "person"
-						? personOptions(people.value)
+						? [
+								// An optional person (the reviewer) may be cleared.
+								...(fieldMeta.reqd ? [] : [{ label: "—", value: "" }]),
+								...personOptions(people.value),
+						  ]
 						: control === "select"
 						? selectOptions(fieldMeta)
 						: [],

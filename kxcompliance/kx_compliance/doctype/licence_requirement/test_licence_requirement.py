@@ -6,7 +6,14 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from kxcompliance.api import can_open_app, check_party, has_app_access, my_work, search_parties
+from kxcompliance.api import (
+	can_open_app,
+	check_party,
+	has_app_access,
+	my_work,
+	search,
+	search_parties,
+)
 from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import (
 	OTHER_COMPANY,
 	client,
@@ -365,6 +372,20 @@ class TestLicenceCheckScreen(IntegrationTestCase):
 			self.assertEqual([row.name for row in found], [WHOLESALER])
 			self.assertEqual(found[0].party_group, "Licence Test Suppliers")
 			self.assertEqual(check_party("Customer", GROCER)["party_name"], GROCER)
+
+	def test_the_search_keeps_to_the_customers_a_person_may_read(self):
+		limited = make_user("licence-limited@example.com", ("Compliance User", "Sales User"))
+		frappe.get_doc(
+			{"doctype": "User Permission", "user": limited, "allow": "Customer", "for_value": PHARMACY}
+		).insert(ignore_permissions=True)
+		with self.set_user(limited):
+			self.assertTrue(frappe.has_permission("Customer", "read"))
+			found = [row.name for row in search("licence test", kind="customers")["customers"]]
+		self.assertEqual(found, [PHARMACY])
+		# Staff who do not read customers find them all by name, as Licence Check lets them.
+		with self.set_user(HOLDER):
+			found = {row.name for row in search("licence test", kind="customers")["customers"]}
+		self.assertEqual(found, {PHARMACY, GROCER})
 
 
 class TestLicenceCheckForFirms(IntegrationTestCase):

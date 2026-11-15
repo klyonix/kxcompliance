@@ -8,7 +8,7 @@ that starts with them, then the most recently changed.
 """
 
 import frappe
-from frappe.query_builder import Criterion
+from frappe.query_builder import Case, Criterion, Order
 from frappe.query_builder.functions import Lower
 
 MIN_LENGTH = 2
@@ -111,10 +111,14 @@ def words_of(text: str) -> list[str]:
 	return seen[:MAX_WORDS]
 
 
+def escape_like(text: str) -> str:
+	"""Text for a LIKE pattern, with % and _ taken literally."""
+	return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def like(word: str) -> str:
-	"""A LIKE pattern that finds the word as typed, with % and _ taken literally."""
-	escaped = word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-	return f"%{escaped}%"
+	"""A LIKE pattern that finds the word anywhere, as typed."""
+	return f"%{escape_like(word)}%"
 
 
 def rank(value: str, words: list[str]) -> int:
@@ -137,17 +141,22 @@ def search_kind(kind: str, words: list[str]) -> list[dict]:
 	if not frappe.has_permission(doctype, "read"):
 		return []
 	table = frappe.qb.DocType(doctype)
-	query = frappe.qb.get_query(
-		doctype,
-		fields=shown,
-		order_by="modified desc",
-		limit=CANDIDATES,
-		ignore_permissions=False,
-	)
+	query = frappe.qb.get_query(doctype, fields=shown, limit=CANDIDATES, ignore_permissions=False)
 	for word in words:
 		pattern = like(word)
 		query = query.where(Criterion.any([Lower(table[field]).like(pattern) for field in searched]))
-	rows = query.run(as_dict=True)
+	# The closest come first in the database too, so an exact name is among those returned
+	# however many newer records also match.
+	phrase = " ".join(words)
+	ranked_field = Lower(table[ranked])
+	closeness = (
+		Case()
+		.when(ranked_field == phrase, 0)
+		.when(ranked_field.like(f"{escape_like(phrase)}%"), 1)
+		.when(Criterion.all([ranked_field.like(like(word)) for word in words]), 2)
+		.else_(3)
+	)
+	rows = query.orderby(closeness).orderby(table.modified, order=Order.desc).run(as_dict=True)
 	# Python's sort keeps the newest-first order among records that rank the same.
 	return sorted(rows, key=lambda row: rank(row.get(ranked), words))
 

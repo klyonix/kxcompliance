@@ -60,6 +60,8 @@ OBLIGATION_CHOICES = ("law", "frequency", "period_basis", "registration_type")
 # The only fields the app may change on each record; everything else stays in the Desk.
 # Who looks after a record is a manager's to change; the record's other fields are its people's.
 PEOPLE_FIELDS = ("responsible", "reviewer")
+# What a field may be set to through save_changes: never a list or dict.
+PLAIN_VALUES = (str, int, float, type(None))
 
 EDITABLE_FIELDS = {
 	# Validity dates and the holder stay with renewals and the item's own form, which check them.
@@ -283,11 +285,26 @@ def save_changes(doctype: str, name: str, values: dict, base_modified: str | Non
 			_("The app cannot change {0} on {1}.").format(", ".join(not_allowed), _(doctype)),
 			frappe.PermissionError,
 		)
-	if set(values) & set(PEOPLE_FIELDS) and not is_approver():
+	not_plain = sorted(field for field, value in values.items() if not isinstance(value, PLAIN_VALUES))
+	if not_plain:
+		frappe.throw(
+			_("{0} on {1} must be a single value, not a list or a table.").format(", ".join(not_plain), name),
+			frappe.ValidationError,
+		)
+	people_changed = {field: values[field] for field in PEOPLE_FIELDS if field in values}
+	if people_changed and not is_approver():
 		frappe.throw(
 			_("Only a Compliance Manager can change who is responsible for or reviews {0}.").format(name),
 			frappe.PermissionError,
 		)
+	team = {person.name for person in onboarding.firm_people()} if people_changed else set()
+	for field, user in people_changed.items():
+		# The reviewer may be cleared; the responsible person may not, which the doctype enforces.
+		if user and user not in team:
+			frappe.throw(
+				_("{0} cannot be made {1} of {2}: they are not on the team.").format(user, _(field), name),
+				frappe.ValidationError,
+			)
 	doc = frappe.get_doc(doctype, name)
 	doc.check_permission("write")
 	if base_modified and get_datetime(doc.modified) != get_datetime(base_modified):
@@ -497,22 +514,26 @@ def search_party_words(party_type: str, words: list[str]) -> list[dict]:
 	"""Customers or suppliers with every word in their ID or name, for Licence Check."""
 	name_field = PARTY_NAME_FIELDS[party_type]
 	table = frappe.qb.DocType(party_type)
-	query = (
-		frappe.qb.from_(table)
-		.select(
-			table.name,
-			table[name_field].as_("party_name"),
-			table[GROUP_FIELDS[party_type]].as_("party_group"),
+	fields = [
+		table.name,
+		table[name_field].as_("party_name"),
+		table[GROUP_FIELDS[party_type]].as_("party_group"),
+	]
+	if frappe.has_permission(party_type, "read"):
+		# Someone who reads customers or suppliers sees only those their permissions allow.
+		query = frappe.qb.get_query(
+			party_type,
+			fields=["name", f"{name_field} as party_name", f"{GROUP_FIELDS[party_type]} as party_group"],
+			ignore_permissions=False,
 		)
-		.where(table.disabled == 0)
-		.orderby(table[name_field])
-		.limit(SEARCH_CANDIDATES)
-	)
+	else:
+		# Compliance roles do not read Customer or Supplier; Licence Check gives them names and
+		# groups only, as search_parties does.
+		query = frappe.qb.from_(table).select(*fields)
+	query = query.where(table.disabled == 0).orderby(table[name_field]).limit(SEARCH_CANDIDATES)
 	for word in words:
 		pattern = search_like(word)
 		query = query.where((table.name.like(pattern)) | (table[name_field].like(pattern)))
-	# Compliance roles do not read Customer or Supplier; Licence Check gives them names and
-	# groups only, as search_parties does.
 	return query.run(as_dict=True)
 
 

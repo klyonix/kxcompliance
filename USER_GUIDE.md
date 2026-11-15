@@ -135,6 +135,16 @@ On filing day, after filing the same return for several companies.
 
 > **Tip.** Name each file with the company's GSTIN or the acknowledgement number and it finds its row by itself.
 
+### How do I add a filing that is not on the schedule?
+
+For a revised return, a period a company was not set up for, or a filing asked for once.
+
+1. Open Filings and press "One-off filing".
+2. Choose the return from the library, the company, what it is for and when it is due.
+3. It opens like any other filing, with that return's rules for proof, review and payment.
+
+> **Tip.** A return that is not in the library is added there first, under Settings, Obligation library.
+
 ### The government extended a due date. What do I do?
 
 *For: Managers.*

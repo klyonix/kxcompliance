@@ -8,6 +8,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import (
+	add_one_off_filing,
 	app_companies,
 	boot,
 	editable_fields,
@@ -69,6 +70,42 @@ class TestAppApi(IntegrationTestCase):
 			self.assertFalse(my_work(json.dumps(["Another client's company"]))["limited"])
 			with patch("kxcompliance.api.WORK_LIMIT", 1):
 				self.assertTrue(my_work()["limited"])
+
+	def test_staff_add_a_one_off_filing_from_the_library_held_by_them(self):
+		filing = {
+			"obligation_template": "GSTR-3B (Monthly)",
+			"company": TEST_COMPANY,
+			"period_label": "Revised return, Sep 2026",
+			"due_date": "2026-12-05",
+		}
+		with self.set_user(HOLDER):
+			name = add_one_off_filing(filing)["name"]
+			with self.assertRaisesRegex(frappe.PermissionError, "Only a Compliance Manager"):
+				add_one_off_filing({**filing, "responsible": OTHER_HOLDER})
+		saved = frappe.get_doc("Compliance Task", name)
+		self.assertEqual(
+			(saved.responsible, saved.status, saved.period_label),
+			(HOLDER, "Open", "Revised return, Sep 2026"),
+		)
+		self.assertTrue(saved.task_key.startswith("one-off|"))
+		with self.set_user(MANAGER):
+			other = add_one_off_filing({**filing, "responsible": OTHER_HOLDER, "reviewer": REVIEWER})["name"]
+		self.assertEqual(
+			frappe.db.get_value("Compliance Task", other, ["responsible", "reviewer"]),
+			(OTHER_HOLDER, REVIEWER),
+		)
+
+	def test_a_one_off_filing_needs_a_return_from_the_library_and_its_due_date(self):
+		filing = {"company": TEST_COMPANY, "period_label": "Once", "due_date": "2026-12-05"}
+		with self.set_user(HOLDER):
+			with self.assertRaisesRegex(frappe.ValidationError, "obligation library"):
+				add_one_off_filing({**filing, "obligation_template": "Not A Return"})
+			with self.assertRaisesRegex(frappe.ValidationError, "due date"):
+				add_one_off_filing({**filing, "obligation_template": "GSTR-3B (Monthly)", "due_date": ""})
+			with self.assertRaisesRegex(frappe.PermissionError, "cannot set status"):
+				add_one_off_filing({**filing, "obligation_template": "GSTR-3B (Monthly)", "status": "Filed"})
+		with self.set_user(OUTSIDER), self.assertRaises(frappe.PermissionError):
+			add_one_off_filing({**filing, "obligation_template": "GSTR-3B (Monthly)"})
 
 	def test_my_work_needs_a_compliance_role(self):
 		with self.set_user(OUTSIDER), self.assertRaises(frappe.PermissionError):

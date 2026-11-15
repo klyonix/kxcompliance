@@ -197,6 +197,11 @@ export const routes = [
 		props: true,
 	},
 	{
+		path: "/filings/new",
+		name: "NewFiling",
+		component: () => import("./pages/NewFiling.vue"),
+	},
+	{
 		path: "/filings/event",
 		name: "RecordEvent",
 		component: () => import("./pages/RecordEvent.vue"),

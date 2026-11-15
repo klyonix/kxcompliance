@@ -80,6 +80,26 @@ function dueFor(task, midnight) {
 	return relativeDue(task.effective_due_date, midnight, { overdue: Boolean(task.is_overdue) });
 }
 
+// The obligation library as a searchable choice, grouped by law (a return with none under Other).
+export function returnGroups(templates) {
+	const byLaw = new Map();
+	for (const template of templates) {
+		const law = template.law || "Other";
+		if (!byLaw.has(law)) byLaw.set(law, []);
+		byLaw.get(law).push({
+			// The form is added only where the return's name does not already say it.
+			label:
+				template.form && !template.name.toLowerCase().includes(template.form.toLowerCase())
+					? `${template.name} (${template.form})`
+					: template.name,
+			value: template.name,
+		});
+	}
+	return [...byLaw.entries()]
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([group, options]) => ({ group, options }));
+}
+
 export function taskRow(task, today = new Date()) {
 	const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 	return {

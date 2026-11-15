@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	returnGroups,
 	changedValues,
 	filingSteps,
 	formValues,
@@ -164,5 +165,27 @@ describe("the filing page's steps", () => {
 		expect(showFilingForm(review, { editable: true, opened: true })).toBe(true);
 		expect(showFilingForm({ status: "Filed" }, { editable: true, opened: true })).toBe(false);
 		expect(showFilingForm({ status: "Open" }, { editable: false, opened: true })).toBe(false);
+	});
+});
+
+describe("the library as a choice of return", () => {
+	it("groups returns by law, with their form when it differs", () => {
+		expect(
+			returnGroups([
+				{ name: "GSTR-3B (Monthly)", law: "GST", form: "GSTR-3B" },
+				{ name: "Annual Return", law: "Companies Act", form: "MGT-7" },
+				{ name: "Shop licence", law: "" },
+			])
+		).toEqual([
+			{
+				group: "Companies Act",
+				options: [{ label: "Annual Return (MGT-7)", value: "Annual Return" }],
+			},
+			{
+				group: "GST",
+				options: [{ label: "GSTR-3B (Monthly)", value: "GSTR-3B (Monthly)" }],
+			},
+			{ group: "Other", options: [{ label: "Shop licence", value: "Shop licence" }] },
+		]);
 	});
 });

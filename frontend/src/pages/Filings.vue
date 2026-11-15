@@ -31,6 +31,12 @@
 				/>
 				<Button
 					v-if="mayRecord()"
+					icon-left="lucide-file-plus"
+					label="One-off filing"
+					:route="{ name: 'NewFiling' }"
+				/>
+				<Button
+					v-if="mayRecord()"
 					data-tour="filings-bulk"
 					icon-left="lucide-list-checks"
 					label="File in bulk"
@@ -62,6 +68,11 @@ const isMobile = useIsMobile();
 const router = useRouter();
 const moreMenu = computed(() =>
 	[
+		mayRecord() && {
+			label: "One-off filing",
+			icon: "lucide-file-plus",
+			onClick: () => router.push({ name: "NewFiling" }),
+		},
 		mayRecord() && {
 			label: "File in bulk",
 			icon: "lucide-list-checks",

@@ -57,6 +57,7 @@ export function goToItems({
 			icon: "lucide-calendar-plus",
 			route: "RecordEvent",
 		},
+		records && { label: "Add a one-off filing", icon: "lucide-file-plus", route: "NewFiling" },
 		records && { label: "Add a signatory", icon: "lucide-pen-line", route: "SignatoryNew" },
 		manager && firm && { label: "Add a client", icon: "lucide-user-plus", route: "ClientNew" },
 		manager && {

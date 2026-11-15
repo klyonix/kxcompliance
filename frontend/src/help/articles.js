@@ -54,8 +54,8 @@ export const ARTICLES = [
 		title: "How do I see everything due this month?",
 		when: "Planning the month, or checking a day before you take leave.",
 		steps: [
-			"Open the Calendar.",
-			"Each day shows its filings, expiries, legal dates and documents due.",
+			"Open the Calendar, and choose Month, Week or Day.",
+			"Each day shows its filings, expiries, legal dates and documents due. Only mine, Open only and the kinds narrow what shows.",
 			"Choose a day to list what falls on it, and open any of them.",
 		],
 		tip: "You can also add your work to your phone's or Outlook's calendar from Account.",

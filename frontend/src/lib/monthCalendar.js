@@ -87,3 +87,91 @@ export function eventRow(event) {
 		to: eventRoute(event),
 	};
 }
+
+// The calendar's three views over one focus date: a month grid, a week of days, one day.
+export const VIEWS = [
+	{ label: "Month", value: "month" },
+	{ label: "Week", value: "week" },
+	{ label: "Day", value: "day" },
+];
+
+const asDate = (iso) => new Date(`${iso}T00:00:00`);
+export const shiftDate = (iso, days) => {
+	const date = asDate(iso);
+	date.setDate(date.getDate() + days);
+	return isoDate(date);
+};
+
+// A date from the address, or today: "2026-11-18" → itself; anything else → today.
+export const parseFocus = (text, today = new Date()) =>
+	/^\d{4}-\d{2}-\d{2}$/.test(String(text || "")) && !isNaN(asDate(text)) ? text : isoDate(today);
+
+// The week from Sunday to Saturday holding `focus`, as the month grid lays weeks out.
+export function weekDays(focus, today = new Date()) {
+	const start = shiftDate(focus, -asDate(focus).getDay());
+	const todayKey = isoDate(today);
+	return Array.from({ length: 7 }, (_, index) => {
+		const date = shiftDate(start, index);
+		return { date, day: asDate(date).getDate(), isToday: date === todayKey };
+	});
+}
+
+// What a view shows around its focus date, for loading.
+export function rangeFor(view, focus) {
+	if (view === "day") return { start: focus, end: focus };
+	if (view === "week") {
+		const days = weekDays(focus);
+		return { start: days[0].date, end: days[6].date };
+	}
+	const { year, month } = parseMonth(focus.slice(0, 7));
+	return gridRange(monthGrid({ year, month }));
+}
+
+// Back or on by one month, week or day. A month move lands on the 1st of that month.
+export function shiftFocus(view, focus, by) {
+	if (view === "day") return shiftDate(focus, by);
+	if (view === "week") return shiftDate(focus, by * 7);
+	const { year, month } = shiftMonth(parseMonth(focus.slice(0, 7)), by);
+	return `${monthKey({ year, month })}-01`;
+}
+
+export function viewTitle(view, focus) {
+	if (view === "month") return monthTitle(parseMonth(focus.slice(0, 7)));
+	if (view === "day") {
+		return asDate(focus).toLocaleDateString("en-GB", {
+			weekday: "long",
+			day: "numeric",
+			month: "long",
+			year: "numeric",
+		});
+	}
+	const days = weekDays(focus);
+	const first = asDate(days[0].date);
+	const last = asDate(days[6].date);
+	const sameMonth = first.getMonth() === last.getMonth();
+	const start = first.toLocaleDateString(
+		"en-GB",
+		sameMonth ? { day: "numeric" } : { day: "numeric", month: "short" }
+	);
+	const end = last.toLocaleDateString("en-GB", {
+		day: "numeric",
+		month: "short",
+		year: "numeric",
+	});
+	return `${start} – ${end}`;
+}
+
+// The events the filters keep: the kinds shown, only `user`'s ("Only mine") or one person's,
+// and only what is still to do ("Open only").
+export function filterEvents(
+	events,
+	{ shown, mine = false, open = false, person = "", user = "" }
+) {
+	return events.filter(
+		(event) =>
+			shown.includes(event.kind) &&
+			(!mine || event.responsible === user) &&
+			(!person || event.responsible === person) &&
+			(!open || !event.done)
+	);
+}

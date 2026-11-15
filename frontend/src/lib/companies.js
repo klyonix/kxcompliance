@@ -31,3 +31,21 @@ export function companyGroups(overview) {
 		{ key: "not-set-up", label: "In ERPNext, not set up yet", rows: notSetUp },
 	].filter((group) => group.rows.length);
 }
+
+// What a filter keeps of the companies overview: those of the client chosen (then only companies
+// set up, as only they have a client), whose name has the text, set up or not ("" either).
+export function filterCompanies(overview, { client = "", text = "", show = "" } = {}) {
+	const words = text.trim().toLowerCase();
+	const named = (name) => !words || name.toLowerCase().includes(words);
+	return {
+		companies:
+			show === "not-set-up"
+				? []
+				: overview.companies.filter(
+						(company) =>
+							(!client || company.client === client) && named(company.company)
+				  ),
+		not_set_up:
+			show === "set-up" || client ? [] : overview.not_set_up.filter((name) => named(name)),
+	};
+}

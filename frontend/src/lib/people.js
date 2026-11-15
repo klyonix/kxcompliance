@@ -43,3 +43,13 @@ export function personRow(person) {
 		person,
 	};
 }
+
+// The people a filter keeps: those whose name or email has the text, in the role chosen ("" any).
+export function filterPeople(people, { text = "", role = "" } = {}) {
+	const words = text.trim().toLowerCase();
+	return people.filter(
+		(person) =>
+			(!role || person.role === role) &&
+			(!words || `${person.full_name} ${person.user}`.toLowerCase().includes(words))
+	);
+}

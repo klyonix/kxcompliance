@@ -62,7 +62,7 @@ describe("saved views", () => {
 			board: "",
 			snapshot: { filters: [] },
 		});
-		storage.setItem("kxcompliance:list:filings", "{oops");
+		storage.setItem("kxcompliance:list2:filings", "{oops");
 		expect(readLast("filings", storage)).toBeNull();
 	});
 });

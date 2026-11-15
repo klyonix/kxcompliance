@@ -23,11 +23,37 @@
 		>
 			{{ error }}
 		</p>
-		<div v-else-if="!people" class="flex flex-col gap-3" aria-busy="true">
+		<div v-if="people" class="flex flex-wrap items-center gap-2" data-tour="people-filter">
+			<TextInput
+				v-model="search"
+				type="search"
+				placeholder="Search by name or email"
+				aria-label="Search people"
+				class="min-w-0 flex-1 sm:w-64 sm:flex-none"
+			>
+				<template #prefix
+					><span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true"
+				/></template>
+			</TextInput>
+			<TabButtons
+				v-model="role"
+				:options="[
+					{ label: 'All', value: '' },
+					...ROLES.map((one) => ({ label: one.label, value: one.label })),
+				]"
+			/>
+		</div>
+		<div v-if="!error && !people" class="flex flex-col gap-3" aria-busy="true">
 			<Skeleton v-for="index in 4" :key="index" class="h-12 w-full rounded-lg" />
 		</div>
+		<p
+			v-else-if="people && !groups[0].rows.length && (search.trim() || role)"
+			class="py-8 text-center text-base text-ink-gray-5"
+		>
+			No one matches. Try other words or another role.
+		</p>
 		<RowList
-			v-else
+			v-else-if="people"
 			paged="people"
 			data-tour="people-list"
 			:groups="groups"
@@ -131,20 +157,37 @@
 // The team: who works in the app and in which role. Managers invite people, change a role, and
 // take someone off the team; an administrator's access stays in the Desk.
 import { computed, onMounted, reactive, ref } from "vue";
-import { Button, Dialog, Dropdown, FormControl, Skeleton, dialog, toast } from "frappe-ui";
+import {
+	Button,
+	Dialog,
+	Dropdown,
+	FormControl,
+	Skeleton,
+	TabButtons,
+	TextInput,
+	dialog,
+	toast,
+} from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RowList from "@/components/RowList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
-import { ROLES, personRow } from "@/lib/people";
+import { ROLES, filterPeople, personRow } from "@/lib/people";
 import { notLoaded } from "@/offline/reachability";
 
 const isMobile = useIsMobile();
 const people = ref(null);
 // The team, then anyone taken off it who still holds open work, to hand it over.
 const former = ref([]);
+const search = ref("");
+const role = ref("");
+// The words searched and the role chosen narrow the team; anyone holding work stays below.
 const groups = computed(() => [
-	{ key: "team", label: "", rows: people.value.map(personRow) },
+	{
+		key: "team",
+		label: "",
+		rows: filterPeople(people.value, { text: search.value, role: role.value }).map(personRow),
+	},
 	...(former.value.length
 		? [
 				{

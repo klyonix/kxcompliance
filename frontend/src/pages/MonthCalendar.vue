@@ -26,47 +26,34 @@
 			<TabButtons v-model="view" :options="VIEWS" data-tour="calendar-views" />
 		</div>
 
-		<!-- What to show: the kinds, and whose and which. -->
-		<div class="flex flex-wrap items-center gap-x-4 gap-y-2" data-tour="calendar-filters">
-			<fieldset class="flex flex-wrap gap-x-4 gap-y-1" data-tour="calendar-kinds">
-				<legend class="sr-only">Show</legend>
-				<label
-					v-for="kind in KINDS"
-					:key="kind.key"
-					class="flex cursor-pointer items-center gap-1.5 text-sm text-ink-gray-7"
-				>
-					<input
-						v-model="shown"
-						type="checkbox"
-						:value="kind.key"
-						class="rounded border-outline-gray-3"
-					/>
-					<span :class="kind.dot" class="size-2 rounded-full" aria-hidden="true" />
-					{{ kind.label }}
-				</label>
-			</fieldset>
-			<div class="flex flex-wrap items-center gap-2">
+		<!-- What to show, in one line: the kinds, and whose and which. -->
+		<div class="flex flex-wrap items-center gap-2" data-tour="calendar-filters">
+			<Dropdown :options="kindOptions">
 				<Button
-					size="sm"
-					:variant="mine ? 'subtle' : 'ghost'"
-					icon-left="lucide-user-round"
-					label="Only mine"
-					:aria-pressed="mine"
-					@click="toggleMine"
+					icon-left="lucide-layers"
+					icon-right="lucide-chevron-down"
+					:label="kindsLabel"
+					data-tour="calendar-kinds"
 				/>
-				<Button
-					size="sm"
-					:variant="openOnly ? 'subtle' : 'ghost'"
-					icon-left="lucide-circle-dashed"
-					label="Open only"
-					:aria-pressed="openOnly"
-					@click="openOnly = !openOnly"
-				/>
+			</Dropdown>
+			<Button
+				:variant="mine ? 'subtle' : 'ghost'"
+				icon-left="lucide-user-round"
+				label="Only mine"
+				:aria-pressed="mine"
+				@click="toggleMine"
+			/>
+			<Button
+				:variant="openOnly ? 'subtle' : 'ghost'"
+				icon-left="lucide-circle-dashed"
+				label="Open only"
+				:aria-pressed="openOnly"
+				@click="openOnly = !openOnly"
+			/>
+			<div v-if="isManager() && people.length" class="w-44">
 				<FormControl
-					v-if="isManager() && people.length"
 					v-model="person"
 					type="select"
-					class="w-48"
 					:options="[{ label: 'Everyone', value: '' }, ...people]"
 					aria-label="Whose"
 					@update:model-value="(value) => value && (mine = false)"
@@ -262,7 +249,7 @@
 // opens its record. The view and the date are kept in the address.
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
-import { Badge, Button, FormControl, TabButtons } from "frappe-ui";
+import { Badge, Button, Dropdown, FormControl, TabButtons } from "frappe-ui";
 import { call } from "@/api";
 import { boot, isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
@@ -318,6 +305,24 @@ const events = ref([]);
 const loading = ref(false);
 const error = ref("");
 const shown = ref(KINDS.map((kind) => kind.key));
+// The kinds as a menu, each ticked while shown; the button says how many are.
+const kindOptions = computed(() =>
+	KINDS.map((kind) => ({
+		label: kind.label,
+		icon: shown.value.includes(kind.key) ? "lucide-square-check" : "lucide-square",
+		onClick: () =>
+			(shown.value = shown.value.includes(kind.key)
+				? shown.value.filter((key) => key !== kind.key)
+				: [...shown.value, kind.key]),
+	}))
+);
+const kindsLabel = computed(() =>
+	shown.value.length === KINDS.length
+		? "Everything"
+		: shown.value.length === 1
+		? KINDS.find((kind) => kind.key === shown.value[0]).label
+		: `${shown.value.length} of ${KINDS.length} kinds`
+);
 const mine = ref(route.query.mine === "1");
 const openOnly = ref(false);
 const person = ref("");

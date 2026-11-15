@@ -118,7 +118,7 @@ export const TOURS = [
 			{
 				target: ["calendar-filters"],
 				title: "Show what you need",
-				text: "Switch each kind on or off, show only yours or someone else's, or only what is still open.",
+				text: "Choose which kinds to show from the first button, then show only yours or someone else's, or only what is still open.",
 			},
 			{
 				target: ["page-actions"],
@@ -169,7 +169,7 @@ export const TOURS = [
 			{
 				target: ["list-filter"],
 				title: "Filter and sort",
-				text: "Narrow the list to one company, one type, or only what you are responsible for, and sort it by date or name. Your choice stays in the address, so Back returns to it.",
+				text: "Filter narrows the list to one company, type or anything else; the arrows sort it. The sliders add quick filters to this line if you want them always at hand. Your choice stays in the address, so Back returns to it.",
 			},
 			{
 				target: ["list-layout"],
@@ -317,7 +317,7 @@ export const TOURS = [
 			{
 				target: ["list-filter"],
 				title: "Filter and sort",
-				text: "Narrow the list to one company, one type, or only what you are responsible for, and sort it by date or name. Your choice stays in the address, so Back returns to it.",
+				text: "Filter narrows the list to one company, type or anything else; the arrows sort it. The sliders add quick filters to this line if you want them always at hand. Your choice stays in the address, so Back returns to it.",
 			},
 			{
 				target: ["list-layout"],

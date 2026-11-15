@@ -13,9 +13,10 @@
 		</p>
 		<ClientPicker v-if="byClient" />
 
-		<!-- The list's own tabs and the views pinned for everyone, and search. -->
-		<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-			<div class="flex min-w-0 items-center gap-2 overflow-x-auto">
+		<!-- One line: the list's tabs and pinned views, then search, filter, sort, whose, how it
+		is shown and the saved views. The tabs scroll sideways rather than push the rest down. -->
+		<div class="flex flex-col gap-2 md:flex-row md:items-center">
+			<div class="flex min-w-0 items-center gap-2 overflow-x-auto md:flex-1">
 				<!-- On a phone, more than three tabs would run off the edge: they become a list. -->
 				<FormControl
 					v-if="isMobile && tabs.length > 3"
@@ -46,29 +47,26 @@
 					@click="openView(saved)"
 				/>
 			</div>
-			<TextInput
-				data-tour="list-search"
-				v-model="search"
-				type="search"
-				:placeholder="t(current.searchPlaceholder || searchPlaceholder)"
-				class="w-full shrink-0 md:w-64"
-				:aria-label="t(current.searchPlaceholder || searchPlaceholder)"
+			<div
+				class="flex flex-wrap items-center gap-2 md:max-w-[75%] md:shrink-0 md:justify-end"
 			>
-				<template #prefix
-					><span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true"
-				/></template>
-			</TextInput>
-		</div>
-
-		<!-- Filters on the left; how the list is shown and the saved views on the right. -->
-		<div class="flex flex-wrap items-start justify-between gap-2">
-			<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-				<!-- On a phone the filters fold behind one button, so the rows show first. -->
+				<TextInput
+					data-tour="list-search"
+					v-model="search"
+					type="search"
+					:placeholder="t(current.searchPlaceholder || searchPlaceholder)"
+					class="min-w-0 flex-1 md:w-56 md:flex-none"
+					:aria-label="t(current.searchPlaceholder || searchPlaceholder)"
+				>
+					<template #prefix
+						><span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true"
+					/></template>
+				</TextInput>
+				<!-- On a phone the filter, sort and columns fold behind one button. -->
 				<Button
 					v-if="isMobile"
-					size="sm"
-					icon-left="lucide-list-filter"
-					:variant="userFilters.length ? 'subtle' : 'outline'"
+					icon="lucide-list-filter"
+					:variant="userFilters.length || showFilters ? 'subtle' : 'outline'"
 					:label="
 						userFilters.length
 							? `${t('Filters')} · ${userFilters.length}`
@@ -77,39 +75,35 @@
 					:aria-expanded="showFilters"
 					@click="showFilters = !showFilters"
 				/>
-				<div v-show="!isMobile || showFilters" class="w-full sm:w-auto">
-					<ListControls
-						:key="`${listKey}:${controlsKey}`"
-						:doctype="currentDoctype"
-						:state="controlsState"
-						:table="layout === 'table'"
-						@change="controlsChanged"
-					/>
-				</div>
+				<!-- One set of controls: in the line on a computer; on a phone, a row of its own
+				below, shown with Filters. -->
+				<ListControls
+					v-show="!isMobile || showFilters"
+					class="order-last basis-full md:order-none md:basis-auto"
+					:key="`${listKey}:${controlsKey}`"
+					:doctype="currentDoctype"
+					:state="controlsState"
+					:table="layout === 'table'"
+					@change="controlsChanged"
+				/>
 				<Button
 					v-if="filterBy.mine"
-					size="sm"
 					:variant="mine ? 'subtle' : 'ghost'"
-					icon-left="lucide-user-round"
+					icon="lucide-user-round"
 					:label="t('Only mine')"
+					:title="t('Only mine')"
 					:aria-pressed="mine"
 					@click="toggleMine"
 				/>
-				<Button
-					v-if="changed"
-					size="sm"
-					variant="solid"
-					icon-left="lucide-save"
-					:label="activeSaved && mayChange(activeSaved) ? 'Save view' : 'Save as a view'"
-					data-tour="list-save-view"
-					@click="activeSaved && mayChange(activeSaved) ? updateActive() : askSave()"
-				/>
-			</div>
-			<div class="flex items-center gap-2">
 				<Dropdown :options="layoutOptions" align="end">
 					<Button
-						:icon-left="layoutOf(layout).icon"
+						:icon="layoutOf(layout).icon"
 						:label="
+							layout === 'kanban'
+								? boardOf(board)?.label || 'Kanban'
+								: layoutOf(layout).label
+						"
+						:title="
 							layout === 'kanban'
 								? boardOf(board)?.label || 'Kanban'
 								: layoutOf(layout).label
@@ -119,13 +113,27 @@
 				</Dropdown>
 				<Dropdown :options="viewMenu" align="end">
 					<Button
-						icon-left="lucide-bookmark"
-						:label="activeSaved ? activeSaved.label : t('Views')"
-						:variant="activeSaved ? 'subtle' : 'outline'"
+						v-bind="
+							activeSaved
+								? { iconLeft: 'lucide-bookmark', label: activeSaved.label }
+								: { icon: 'lucide-bookmark', label: t('Views') }
+						"
+						:title="activeSaved ? activeSaved.label : t('Views')"
+						:variant="activeSaved ? 'subtle' : 'ghost'"
 						data-tour="list-views"
 					/>
 				</Dropdown>
 			</div>
+		</div>
+		<div v-if="changed" class="flex justify-end">
+			<Button
+				size="sm"
+				variant="solid"
+				icon-left="lucide-save"
+				:label="activeSaved && mayChange(activeSaved) ? 'Save view' : 'Save as a view'"
+				data-tour="list-save-view"
+				@click="activeSaved && mayChange(activeSaved) ? updateActive() : askSave()"
+			/>
 		</div>
 
 		<p

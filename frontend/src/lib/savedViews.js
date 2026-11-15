@@ -91,7 +91,9 @@ export const saveView = (record, name) =>
 export const removeView = (name) => deleteDoc(DOCTYPE, name);
 
 // The last state of a list on this device.
-const lastKey = (listKey) => `kxcompliance:list:${listKey}`;
+// "list2": lists moved to one line of filters (Nov 2026), so what a device remembered from the
+// old layout, with every quick filter shown, is left behind.
+const lastKey = (listKey) => `kxcompliance:list2:${listKey}`;
 
 export function readLast(listKey, storage = localStorage) {
 	const saved = parse(storage.getItem(lastKey(listKey)), null);

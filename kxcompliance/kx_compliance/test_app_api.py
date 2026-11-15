@@ -276,6 +276,23 @@ class TestAppApi(IntegrationTestCase):
 			# % and _ are looked for as typed, not as wildcards.
 			self.assertEqual(search("fire %")["items"], [])
 
+	def test_save_changes_takes_plain_values_and_people_on_the_team(self):
+		item = make_item("Test App Licence", responsible=HOLDER)
+		with self.set_user(MANAGER):
+			with self.assertRaisesRegex(frappe.ValidationError, "single value"):
+				save_changes("Compliance Item", item.name, {"title": ["!=", ""]})
+			with self.assertRaisesRegex(frappe.ValidationError, "not on the team"):
+				save_changes("Compliance Item", item.name, {"reviewer": "Guest"})
+			# The reviewer may be cleared.
+			save_changes("Compliance Item", item.name, {"reviewer": None})
+
+	def test_search_puts_an_exact_name_first_however_many_newer_match(self):
+		exact = make_item("Test App Licence", title="Fire NOC").name
+		for index in range(35):
+			make_item("Test App Licence", title=f"Fire NOC renewal {index}")
+		with self.set_user(MANAGER):
+			self.assertEqual(search("fire noc", kind="items")["items"][0].name, exact)
+
 	def test_search_one_kind_and_the_team_for_managers_only(self):
 		with self.set_user(MANAGER):
 			only_items = search("Test", kind="items")

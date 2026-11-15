@@ -2,10 +2,19 @@
 	<RecordList title="Legal" list-key="legal" :views="LEGAL_VIEWS" :empty="empty">
 		<template #actions>
 			<template v-if="mayRecord()">
-				<Dropdown :options="startOptions" align="end">
-					<Button icon-right="lucide-chevron-down" label="Start" />
-				</Dropdown>
+				<!-- A phone has room for one button beside the title: everything is under New. -->
+				<div class="sm:hidden">
+					<Dropdown :options="phoneOptions" align="end">
+						<Button variant="solid" icon-left="lucide-plus" label="New" />
+					</Dropdown>
+				</div>
+				<div class="hidden sm:block">
+					<Dropdown :options="startOptions" align="end">
+						<Button icon-right="lucide-chevron-down" label="Start" />
+					</Dropdown>
+				</div>
 				<Button
+					class="hidden sm:inline-flex"
 					variant="solid"
 					icon-left="lucide-plus"
 					label="Log notice"
@@ -35,6 +44,14 @@ const startOptions = [
 		icon: "lucide-stamp",
 		onClick: () => router.push({ name: "NewTrademark" }),
 	},
+];
+const phoneOptions = [
+	{
+		label: "Log a notice",
+		icon: "lucide-scale",
+		onClick: () => router.push({ name: "NewNotice" }),
+	},
+	...startOptions,
 ];
 
 const EMPTY = {

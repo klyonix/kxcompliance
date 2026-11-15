@@ -13,12 +13,14 @@ export const FILING_VIEWS = [
 		value: "open",
 		filters: [["status", "in", ["Open", "In Progress"]]],
 		orderBy: "effective_due_date asc",
+		group: true,
 	},
 	{
 		label: "For review",
 		value: "review",
 		filters: [["status", "=", "Ready for Review"]],
 		orderBy: "effective_due_date asc",
+		group: true,
 	},
 	{
 		label: "Done",
@@ -37,7 +39,23 @@ export const TASK_LIST_FIELDS = [
 	"is_overdue",
 	"effective_due_date",
 	"filed_on",
+	"responsible",
 ];
+
+// The filings list's columns, sorts and filters (RecordList).
+export const FILING_LIST = {
+	columns: [
+		{ label: "Company", field: "company" },
+		{ label: "Responsible", field: "responsible", person: true },
+	],
+	dateLabel: "Due",
+	sorts: [
+		{ label: "Due date", value: "due", orderBy: "effective_due_date asc" },
+		{ label: "Return or form", value: "name", orderBy: "obligation_template asc" },
+		{ label: "Recently changed", value: "recent", orderBy: "modified desc" },
+	],
+	filterBy: { company: true, mine: "responsible" },
+};
 
 // The filing details the app can change, in the order the form shows them.
 export const FILING_FIELDS = [
@@ -76,6 +94,7 @@ export function taskRow(task, today = new Date()) {
 		status: task.status,
 		theme: taskTheme(task.status, Boolean(task.is_overdue)),
 		due: dueFor(task, midnight),
+		date: task.effective_due_date,
 		to: { name: "ComplianceTask", params: { name: task.name } },
 	};
 }

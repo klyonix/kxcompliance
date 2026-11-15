@@ -5,6 +5,7 @@
 		:fields="ITEM_LIST_FIELDS"
 		:views="REGISTER_VIEWS"
 		:to-row="itemRow"
+		v-bind="REGISTER_LIST"
 		search-placeholder="Search the register"
 		:empty="empty"
 	>
@@ -38,7 +39,7 @@ import { Button } from "frappe-ui";
 import { mayRecord } from "@/boot";
 import RecordList from "@/components/RecordList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
-import { ITEM_LIST_FIELDS, REGISTER_VIEWS, itemRow } from "@/lib/items";
+import { ITEM_LIST_FIELDS, REGISTER_LIST, REGISTER_VIEWS, itemRow } from "@/lib/items";
 
 // The phone's header has room for short labels beside the title.
 const isMobile = useIsMobile();

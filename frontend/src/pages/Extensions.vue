@@ -10,6 +10,7 @@
 		:empty="empty"
 		:parent="{ label: 'Filings', route: { name: 'Filings' } }"
 		:by-client="false"
+		date-label="New due date"
 	>
 		<template #actions>
 			<Button

@@ -139,6 +139,11 @@ export const TOURS = [
 				title: "Open a filing",
 				text: "Each row shows the period, the company and when it is due. Open it to record the filing.",
 			},
+			{
+				target: ["list-filter"],
+				title: "Filter and sort",
+				text: "Narrow the list to one company, one type, or only what you are responsible for, and sort it by date or name. Your choice stays in the address, so Back returns to it.",
+			},
 		],
 	},
 	{
@@ -247,6 +252,11 @@ export const TOURS = [
 				target: ["list-rows"],
 				title: "Open an item",
 				text: "See its validity and certificate, and start a renewal when it is due.",
+			},
+			{
+				target: ["list-filter"],
+				title: "Filter and sort",
+				text: "Narrow the list to one company, one type, or only what you are responsible for, and sort it by date or name. Your choice stays in the address, so Back returns to it.",
 			},
 		],
 	},

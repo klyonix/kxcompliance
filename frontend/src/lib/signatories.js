@@ -24,6 +24,20 @@ export const SIGNATORY_FIELDS = [
 	"is_active",
 ];
 
+// The signatories list's columns, sorts and filters (RecordList).
+export const SIGNATORY_LIST = {
+	columns: [
+		{ label: "Company", field: "company" },
+		{ label: "Designation", field: "designation" },
+	],
+	dateLabel: "",
+	sorts: [
+		{ label: "Name", value: "name", orderBy: "full_name asc" },
+		{ label: "Recently changed", value: "recent", orderBy: "modified desc" },
+	],
+	filterBy: { company: true },
+};
+
 export const SIGNATORY_VIEWS = [
 	{
 		label: "Active",

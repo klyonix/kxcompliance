@@ -68,7 +68,21 @@
 						: `No ${partyLabel}s yet`
 				}}
 			</p>
-			<p class="max-w-sm text-base text-ink-gray-5">Try part of the name or the ID.</p>
+			<p v-if="search.trim()" class="max-w-sm text-base text-ink-gray-5">
+				Try part of the name or the ID.
+			</p>
+			<template v-else>
+				<p class="max-w-sm text-base text-ink-gray-5">
+					Licence Check works from the {{ partyLabel }}s kept in ERPNext. If you bill from
+					another system, import them once from a spreadsheet of their names; their
+					licences are then recorded and checked here.
+				</p>
+				<Button
+					:link="deskPath(`data-import/new?reference_doctype=${partyType}`)"
+					icon-left="lucide-upload"
+					:label="`Import ${partyLabel}s`"
+				/>
+			</template>
 		</div>
 		<RowList
 			v-else
@@ -201,6 +215,7 @@ import RecordFrame from "@/components/RecordFrame.vue";
 import ListPager from "@/components/ListPager.vue";
 import RowList from "@/components/RowList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
+import { deskPath } from "@/navigation";
 import { formatDate } from "@/lib/format";
 import { savePageSize, savedPageSize } from "@/lib/paging";
 import { coverage, heldRow, partyRow, requirementState, verdict } from "@/lib/licenceCheck";

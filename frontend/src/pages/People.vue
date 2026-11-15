@@ -130,27 +130,7 @@
 		</form>
 	</Dialog>
 
-	<Dialog
-		v-model:open="linkOpen"
-		title="Send them this link"
-		:actions="[{ label: 'Copy link', variant: 'solid', onClick: copyLink }]"
-	>
-		<div class="flex flex-col gap-3">
-			<p class="text-base text-ink-gray-7">
-				This site cannot send email yet, so pass this link on to {{ link.name }} yourself,
-				by WhatsApp or email. It lets them set a password and sign in, and works once.
-			</p>
-			<p
-				class="break-all rounded-lg bg-surface-gray-2 px-3 py-2 font-mono text-sm text-ink-gray-8"
-			>
-				{{ link.url }}
-			</p>
-			<p class="text-sm text-ink-gray-5">
-				Once an email account is set up in Settings, new people get their invitation by
-				email.
-			</p>
-		</div>
-	</Dialog>
+	<SignInLinkDialog v-model:open="linkOpen" :links="link.url ? [link] : []" />
 </template>
 
 <script setup>
@@ -171,6 +151,7 @@ import {
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RowList from "@/components/RowList.vue";
+import SignInLinkDialog from "@/components/SignInLinkDialog.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { ROLES, filterPeople, personRow } from "@/lib/people";
 import { notLoaded } from "@/offline/reachability";
@@ -214,10 +195,6 @@ function showLink(name, url) {
 	linkOpen.value = true;
 }
 
-async function copyLink() {
-	await navigator.clipboard.writeText(link.url);
-	toast.success("Link copied");
-}
 
 async function load() {
 	try {

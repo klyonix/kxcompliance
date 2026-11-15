@@ -19,6 +19,7 @@ import {
 	statementLink,
 	statementProblem,
 	summaryFacts,
+	modeForReference,
 	recurringWithoutStartLine,
 } from "./billing";
 
@@ -280,5 +281,16 @@ describe("Billing's summary", () => {
 			'Monthly retainer is on the client\'s rates but not billed: the client has no "Recurring charges from" date.'
 		);
 		expect(recurringWithoutStartLine(["Retainer", "Audit fee"])).toMatch(/^Retainer, Audit fee are /);
+	});
+
+	it("moves a payment off cash once a reference is typed", () => {
+		const modes = ["Cash", "Bank Transfer", "Cheque", "UPI"];
+		expect(modeForReference("", modes, "Cash")).toBe("Cash");
+		expect(modeForReference("HDFCR52026111512345678", modes, "Cash")).toBe("Bank Transfer");
+		expect(modeForReference("431298765432", modes, "Cash")).toBe("UPI");
+		expect(modeForReference("asha@okhdfc", modes, "Cash")).toBe("UPI");
+		expect(modeForReference("004512", modes, "Cash")).toBe("Cheque");
+		// A mode chosen on purpose stays.
+		expect(modeForReference("004512", modes, "UPI")).toBe("UPI");
 	});
 });

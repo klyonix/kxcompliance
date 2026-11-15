@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiError, call } from "./api";
+import { ApiError, call, upload } from "./api";
 import { noteResponse, server } from "./offline/reachability";
 
 const answer = (status, body) => async () => ({
@@ -62,6 +62,23 @@ describe("the API client", () => {
 		const error = await call("x.y", {}, { fetcher: answer(500, body) }).catch((err) => err);
 		expect(error.message).not.toContain("pypdf");
 		expect(error.message).toContain("could not complete");
+	});
+
+	it("says a file the server fails on could not be read, by name", async () => {
+		const body = { exc_type: "PdfReadError", exception: "pypdf.errors.PdfReadError" };
+		const file = new File(["not a pdf"], "gst-return.pdf");
+		const error = await upload(file, {
+			doctype: "Compliance Task",
+			docname: "CT-1",
+			fetcher: answer(500, body),
+		}).catch((err) => err);
+		expect(error.message).toContain("could not read gst-return.pdf");
+		const large = await upload(file, {
+			doctype: "Compliance Task",
+			docname: "CT-1",
+			fetcher: answer(413, {}),
+		}).catch((err) => err);
+		expect(large.message).toBe("gst-return.pdf is too large to upload.");
 	});
 
 	it("treats a gateway error as no answer, and a saved copy as the server not answering", async () => {

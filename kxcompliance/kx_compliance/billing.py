@@ -1174,6 +1174,12 @@ BILL_FIELDS = (
 )
 
 
+def line_text(description: str | None, filing: str | None) -> str:
+	"""A bill line's text without the filing number it ends with."""
+	text = description or ""
+	return text.removesuffix(f" ({filing})") if filing else text
+
+
 def bill_detail(name: str) -> dict:
 	"""A bill as its page shows it: lines, tax, totals, what is due."""
 	bill = bill_of(name)
@@ -1183,7 +1189,8 @@ def bill_detail(name: str) -> dict:
 		"items": [
 			{
 				"name": row.name,
-				"description": row.description,
+				# The page links the filing by its number, so the number is not repeated in the text.
+				"description": line_text(row.description, row.get("compliance_task")),
 				"amount": row.amount,
 				"filing": row.get("compliance_task"),
 				"creditable": creditable(row, credited)[1] if credited is not None else 0,

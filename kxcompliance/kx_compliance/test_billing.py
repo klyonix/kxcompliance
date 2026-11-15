@@ -405,6 +405,10 @@ class TestBills(IntegrationTestCase):
 		self.assertTrue(name.startswith("TBA/"))
 		self.assertEqual(shown["docstatus"], 0)
 		self.assertEqual(shown["net_total"], 8000)
+		# The filing's line names it once; the page links its number beside it.
+		filed_line = next(row for row in shown["items"] if row["filing"] == self.filed)
+		self.assertNotIn(self.filed, filed_line["description"])
+		self.assertTrue(filed_line["description"].startswith("GSTR-3B (Monthly), "))
 		# GST within Karnataka on the 7,500 of fees; the government fee carries none.
 		self.assertEqual(sorted(row["description"] for row in shown["taxes"]), ["Output CGST", "Output SGST"])
 		self.assertEqual(shown["total_taxes_and_charges"], 1350)

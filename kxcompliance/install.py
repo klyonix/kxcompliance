@@ -30,6 +30,8 @@ STANDARD_ITEM_TYPES = (
 	("Annual Maintenance Contract", "Contract", 12, 0, 1, (60, 30)),
 )
 
+APP_LOGO = "/assets/kxcompliance/frontend/icon-192.png"
+
 SETTINGS_DEFAULTS = {
 	"due_soon_days": 30,
 	"escalate_after_days": 7,
@@ -56,6 +58,7 @@ def setup():
 	create_roles()
 	create_standard_item_types()
 	set_settings_defaults()
+	set_branding()
 
 
 def create_roles():
@@ -94,3 +97,12 @@ def set_settings_defaults():
 	for fieldname, value in SETTINGS_DEFAULTS.items():
 		if stored.get(fieldname) in (None, ""):
 			frappe.db.set_single_value("KX Compliance Settings", fieldname, value)
+
+
+def set_branding():
+	"""People land in the app after sign-in and after ERPNext's setup, and the sign-in page shows its
+	logo. Each is set only where the site has not chosen its own."""
+	if not frappe.db.get_single_value("System Settings", "default_app"):
+		frappe.db.set_single_value("System Settings", "default_app", "kxcompliance")
+	if not frappe.db.get_single_value("Navbar Settings", "app_logo"):
+		frappe.db.set_single_value("Navbar Settings", "app_logo", APP_LOGO)

@@ -22,7 +22,7 @@
 				<FormControl
 					v-model="form.mode"
 					type="select"
-					label="Paid by"
+					label="Payment mode"
 					:options="bill.modes.map((mode) => ({ label: mode, value: mode }))"
 				/>
 				<FormControl
@@ -57,7 +57,7 @@
 import { computed, reactive, ref, watch } from "vue";
 import { Dialog, FormControl, toast } from "frappe-ui";
 import { call } from "@/api";
-import { money, paymentProblem } from "@/lib/billing";
+import { modeForReference, money, paymentProblem } from "@/lib/billing";
 import { pickerFormat } from "@/lib/format";
 import { isoDate } from "@/lib/obligations";
 
@@ -127,4 +127,11 @@ async function record({ close }) {
 		error.value = err.message;
 	}
 }
+// A reference typed against Cash means it was not cash.
+watch(
+	() => form.reference,
+	(reference) => {
+		form.mode = modeForReference(reference, props.bill.modes || [], form.mode);
+	}
+);
 </script>

@@ -190,6 +190,20 @@ class TestPrivacy(IntegrationTestCase):
 				save_settings({"reminder_log_days": 30})
 			self.assertEqual(save_settings({"reminder_log_days": 730})["reminder_log_days"], 730)
 
+	def test_a_clients_login_reads_the_notice_written_for_clients(self):
+		from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import (
+			CLIENT_LOGIN,
+			with_login,
+		)
+
+		with_login("Privacy Test Group")
+		with self.set_user(CLIENT_LOGIN):
+			text = privacy_notice()["text"]
+		self.assertIn("its work for", text)
+		self.assertNotIn("ask your manager", text)
+		with self.set_user(MANAGER):
+			self.assertIn("statutory filings", privacy_notice()["text"])
+
 	def test_only_people_of_the_app_see_the_notice(self):
 		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
 			privacy_notice()

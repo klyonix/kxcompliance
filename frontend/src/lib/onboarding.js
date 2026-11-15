@@ -52,7 +52,10 @@ export function registrationProblem(rows, stateRegistrations) {
 // already, and for an organisation it is the one meant; for a firm it is the firm's own, never its
 // client's, so a firm starts on a new company.
 export function companyDefault(accountType, openCompanies, canCreate) {
-	if (accountType === "CA/CS Firm" && canCreate) return { choice: "new", company: "" };
+	if (accountType === "CA/CS Firm" && canCreate) {
+		// The one company there is the firm's own, named in ERPNext's setup: its name, not asked again.
+		return { choice: "new", company: "", firmName: openCompanies.length === 1 ? openCompanies[0] : "" };
+	}
 	if (openCompanies.length || !canCreate) {
 		return { choice: "existing", company: openCompanies.length === 1 ? openCompanies[0] : "" };
 	}

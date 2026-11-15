@@ -20,6 +20,8 @@ from frappe import _
 from frappe.query_builder import Order
 from frappe.utils import add_days, cint, get_datetime, now_datetime
 
+from kxcompliance.install import CLIENT_ROLE, ROLES
+
 SETTINGS = "KX Compliance Settings"
 CONSENT = "Privacy Consent"
 REQUEST = "Privacy Request"
@@ -57,6 +59,24 @@ longer use the app. A request is answered within {days} days. If you are not sat
 may complain to the Data Protection Board of India.</p>
 <p><strong>Grievance officer.</strong> {officer} ({email}).</p>"""
 
+# The same for a firm's client's login, who sees the firm's work for their companies.
+CLIENT_NOTICE = """<p><strong>{fiduciary}</strong> uses this app to share with you its work for
+your companies: their filings, the documents it needs from you, and its bills. To do that it keeps
+some personal data about you, and this notice says what, why, and what you can ask for.</p>
+<p><strong>What we keep.</strong> Your name and email address, when you sign in, and the
+documents you upload. The emails the app sends you, with when they were sent.</p>
+<p><strong>Why.</strong> To let you sign in, to tell you what {fiduciary} needs from you and when,
+and to keep the records the law requires. It is not used for marketing and is not sold.</p>
+<p><strong>Who sees it.</strong> The people at {fiduciary} who work for your companies, each as
+their role allows. The data stays on {fiduciary}'s server and its backups.</p>
+<p><strong>How long.</strong> As long as you use the app, and afterwards as long as the law
+requires the records to be kept.</p>
+<p><strong>Your rights.</strong> From Account in the app you can ask to see your data, have it
+corrected or erased, raise a grievance, or withdraw this consent. Withdrawing means you can no
+longer sign in. A request is answered within {days} days. If you are not satisfied, you may
+complain to the Data Protection Board of India.</p>
+<p><strong>Grievance officer.</strong> {officer} ({email}).</p>"""
+
 
 def settings():
 	return frappe.get_cached_doc(SETTINGS)
@@ -71,13 +91,28 @@ def current_version() -> int:
 	return cint(settings().notice_version) or 1
 
 
-def standard_notice() -> str:
-	"""The app's own notice, with the organisation and its grievance officer filled in."""
+def is_client_reader(user: str | None = None) -> bool:
+	"""Someone at a firm's client, not one of the firm's people."""
+	roles = set(frappe.get_roles(user))
+	return CLIENT_ROLE in roles and not roles & (set(ROLES) | {"System Manager"})
+
+
+def standard_notice(for_client: bool = False) -> str:
+	"""The app's own notice, with the organisation and its grievance officer filled in; a client's
+	login reads the one written for clients."""
 	doc = settings()
-	return DEFAULT_NOTICE.format(
-		fiduciary=frappe.utils.escape_html(fiduciary()),
+	name = fiduciary()
+	return (CLIENT_NOTICE if for_client else DEFAULT_NOTICE).format(
+		fiduciary=frappe.utils.escape_html(name),
 		officer=frappe.utils.escape_html(doc.grievance_officer or _("The grievance officer")),
-		email=frappe.utils.escape_html(doc.grievance_email or _("ask your manager for the address")),
+		email=frappe.utils.escape_html(
+			doc.grievance_email
+			or (
+				_("ask {0} for the address").format(name)
+				if for_client
+				else _("ask your manager for the address")
+			)
+		),
 		days=RESPONSE_DAYS,
 	)
 
@@ -86,7 +121,10 @@ def notice() -> dict:
 	"""The privacy notice as the person reads it, and whether they have accepted this version."""
 	doc = settings()
 	return {
-		"text": doc.privacy_notice or standard_notice(),
+		# A firm's own notice is written for its people; its clients read the one for clients.
+		"text": standard_notice(for_client=True)
+		if is_client_reader()
+		else doc.privacy_notice or standard_notice(),
 		"version": current_version(),
 		"fiduciary": fiduciary(),
 		"grievance_officer": doc.grievance_officer or "",

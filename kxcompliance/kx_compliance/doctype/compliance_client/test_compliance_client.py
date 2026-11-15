@@ -13,6 +13,7 @@ from kxcompliance.api import (
 	app_companies,
 	client_choices,
 	client_detail,
+	client_login_link,
 	client_of_login,
 	clients_overview,
 	documents,
@@ -290,6 +291,20 @@ class TestComplianceClient(IntegrationTestCase):
 		sunrise.save()
 		self.assertEqual(frappe.db.get_value("User", CLIENT_LOGIN, "enabled"), 0)
 		self.assertEqual(company_permissions(CLIENT_LOGIN), set())
+
+	def test_a_new_login_gets_a_link_to_pass_on_until_it_signs_in(self):
+		sunrise = with_login()
+		with self.set_user(MANAGER):
+			link = client_login_link(sunrise.name, CLIENT_LOGIN)["link"]
+			self.assertIn("/update-password?key=", link)
+			with self.assertRaisesRegex(frappe.ValidationError, "not a saved login"):
+				client_login_link(sunrise.name, HOLDER)
+		# Only those who may edit the client, never the login itself.
+		with self.set_user(CLIENT_LOGIN), self.assertRaises(frappe.PermissionError):
+			client_login_link(sunrise.name, CLIENT_LOGIN)
+		frappe.db.set_value("User", CLIENT_LOGIN, "last_login", "2026-11-15 10:00:00")
+		with self.set_user(MANAGER), self.assertRaisesRegex(frappe.ValidationError, "signed in before"):
+			client_login_link(sunrise.name, CLIENT_LOGIN)
 
 	def test_a_firm_user_cannot_be_a_client_login(self):
 		with self.assertRaises(frappe.ValidationError):

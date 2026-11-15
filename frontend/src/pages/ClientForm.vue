@@ -153,8 +153,12 @@
 							</h2>
 							<p class="text-sm text-ink-gray-5">
 								People at the client who may sign in to see their companies and
-								upload documents. Each is emailed a link to set a password when
-								saved.
+								upload documents.
+								{{
+									canEmail
+										? "Each is emailed a link to set a password when saved."
+										: "This site cannot send email yet: when saved, you get a link to pass on to each new login."
+								}}
 							</p>
 						</div>
 						<div
@@ -179,6 +183,13 @@
 									v-model="login.enabled"
 									type="checkbox"
 									label="Login on"
+								/>
+								<Button
+									v-if="!canEmail && login.user && login.enabled"
+									variant="ghost"
+									icon="lucide-link"
+									label="Sign-in link"
+									@click="showLinks([login])"
 								/>
 								<Button
 									variant="ghost"
@@ -354,6 +365,8 @@
 			/>
 		</div>
 	</div>
+
+	<SignInLinkDialog v-model:open="linksOpen" :links="links" @update:open="linksClosed" />
 </template>
 
 <script setup>
@@ -374,6 +387,7 @@ import { call, createDoc, getDoc, getList, updateDoc } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import LogoField from "@/components/LogoField.vue";
 import RateLines from "@/components/RateLines.vue";
+import SignInLinkDialog from "@/components/SignInLinkDialog.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { useTabQuery } from "@/composables/useTabQuery";
@@ -416,6 +430,11 @@ const unbilledLine = computed(() => {
 	)}.`;
 });
 const saving = ref(false);
+// Where the site cannot email, new client logins get a link to pass on.
+const canEmail = ref(true);
+const links = ref([]);
+const linksOpen = ref(false);
+let afterLinks = null;
 const checking = ref(false);
 const form = reactive({
 	client_name: "",
@@ -501,7 +520,13 @@ async function save() {
 					...values(),
 			  });
 		toast.success(props.name ? "Client saved" : "Client added");
-		router.replace({ name: "Client", params: { name: saved.name } });
+		const toClient = () => router.replace({ name: "Client", params: { name: saved.name } });
+		const added = canEmail.value
+			? []
+			: form.logins.filter((login) => !login.user && login.enabled && login.email.trim());
+		if (!added.length) return toClient();
+		afterLinks = toClient;
+		await showLinks(added, saved.name);
 	} catch (err) {
 		saveError.value = err.isNetwork
 			? "The client did not reach the server. Try again when you are back online."
@@ -511,10 +536,38 @@ async function save() {
 	}
 }
 
+async function showLinks(logins, client = props.name) {
+	try {
+		links.value = await Promise.all(
+			logins.map(async (login) => {
+				const email = (login.user || login.email).trim().toLowerCase();
+				const result = await call(
+					"kxcompliance.api.client_login_link",
+					{ client, email },
+					{ httpMethod: "POST" }
+				);
+				return { name: login.full_name || email, url: result.link };
+			})
+		);
+		linksOpen.value = true;
+	} catch (err) {
+		toast.error(err.message);
+		afterLinks?.();
+	}
+}
+
+function linksClosed(open) {
+	if (open || !afterLinks) return;
+	const next = afterLinks;
+	afterLinks = null;
+	next();
+}
+
 onMounted(async () => {
 	try {
-		const [found, billing, cards] = await Promise.all([
+		const [found, emails, billing, cards] = await Promise.all([
 			call("kxcompliance.api.people_options"),
+			call("kxcompliance.api.can_send_email").catch(() => true),
 			// The states to bill in; a firm's managers open this form, as they set billing up.
 			call("kxcompliance.api.billing_setup").catch(() => ({ states: [] })),
 			getList("Rate Card", {
@@ -524,6 +577,7 @@ onMounted(async () => {
 			}).catch(() => ({ rows: [] })),
 		]);
 		people.value = found;
+		canEmail.value = Boolean(emails);
 		states.value = billing.states;
 		rateCards.value = cards.rows;
 		if (props.name) {

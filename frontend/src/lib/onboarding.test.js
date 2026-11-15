@@ -20,7 +20,11 @@ describe("onboarding", () => {
 
 	it("starts a firm's first client on a new company, never the firm's own", () => {
 		const made = ["Rao Desai and Co"];
-		expect(companyDefault("CA/CS Firm", made, true)).toEqual({ choice: "new", company: "" });
+		expect(companyDefault("CA/CS Firm", made, true)).toEqual({
+			choice: "new",
+			company: "",
+			firmName: "Rao Desai and Co",
+		});
 		expect(companyDefault("Organisation", made, true)).toEqual({
 			choice: "existing",
 			company: "Rao Desai and Co",

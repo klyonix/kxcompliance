@@ -10,16 +10,16 @@ app_license = "agpl-3.0"
 
 required_apps = ["erpnext"]
 
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "kxcompliance",
-# 		"logo": "/assets/kxcompliance/logo.png",
-# 		"title": "KlyONIX Compliance",
-# 		"route": "/kxcompliance",
-# 		"has_permission": "kxcompliance.api.permission.has_app_permission"
-# 	}
-# ]
+# The app on the apps page; the site's default app (install.set_branding), so sign-in lands here.
+add_to_apps_screen = [
+	{
+		"name": "kxcompliance",
+		"logo": "/assets/kxcompliance/frontend/icon-192.png",
+		"title": "KlyONIX Compliance",
+		"route": "/compliance",
+		"has_permission": "kxcompliance.api.can_open_app",
+	}
+]
 
 # Includes in <head>
 # ------------------

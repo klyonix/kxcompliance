@@ -73,7 +73,25 @@ export async function upload(
 		credentials: "same-origin",
 		body: form,
 	};
-	return (await send("/api/method/upload_file", init, fetcher)).message;
+	return (await sendFile("/api/method/upload_file", init, fetcher, file)).message;
+}
+
+// A file the server fails on with no word of why is almost always one it cannot read.
+async function sendFile(url, init, fetcher, file) {
+	try {
+		return await send(url, init, fetcher);
+	} catch (err) {
+		if (err.status === 413) {
+			throw new ApiError(`${file.name || "This file"} is too large to upload.`, err);
+		}
+		if (err.status >= 500 && err.message === SERVER_FAILED) {
+			throw new ApiError(
+				`The server could not read ${file.name || "this file"}. Check that it opens on your device and is a PDF, image, spreadsheet or document, then upload it again.`,
+				err
+			);
+		}
+		throw err;
+	}
 }
 
 // Upload a file to one of the app's own upload methods, with the record it is for.
@@ -87,7 +105,7 @@ async function uploadTo(method, fields, file, fetcher) {
 		credentials: "same-origin",
 		body: form,
 	};
-	return (await send(`/api/method/${method}`, init, fetcher)).message;
+	return (await sendFile(`/api/method/${method}`, init, fetcher, file)).message;
 }
 
 // A client's login adds a document to one of its filings (it cannot change the filing itself).
@@ -97,6 +115,8 @@ export const uploadClientDocument = (file, task, { fetcher = fetch } = {}) =>
 // What a document request asks for, from the client (or from the firm, received another way).
 export const uploadRequestDocument = (file, request, { fetcher = fetch } = {}) =>
 	uploadTo("kxcompliance.api.add_request_document", { request }, file, fetcher);
+
+const SERVER_FAILED = "The server could not complete this. Try again, or tell your administrator.";
 
 async function send(url, init, fetcher) {
 	let response;
@@ -128,7 +148,7 @@ async function send(url, init, fetcher) {
 			plain(v2Error.message || "") ||
 			// Frappe's raw exception text is for the Error Log, not for people.
 			(response.status >= 500
-				? "The server could not complete this. Try again, or tell your administrator."
+				? SERVER_FAILED
 				: "This could not be saved. Check the details and try again.");
 		throw new ApiError(message, {
 			status: response.status,

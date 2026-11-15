@@ -129,6 +129,7 @@
 					v-if="agm"
 					v-model="answers.agm_date"
 					type="date"
+					:format="pickerFormat()"
 					:label="agm.label"
 					:description="agm.description"
 				/>
@@ -264,6 +265,7 @@ import {
 	setupAnswers,
 	stateFromGstin,
 } from "@/lib/onboarding";
+import { pickerFormat } from "@/lib/format";
 import { deskPath } from "@/navigation";
 
 const isMobile = useIsMobile();
@@ -383,6 +385,7 @@ function startCompanyStep() {
 	);
 	companyChoice.value = start.choice;
 	answers.company = start.company;
+	if (start.firmName && !answers.firm_name) answers.firm_name = start.firmName;
 }
 watch(() => answers.account_type, startCompanyStep);
 

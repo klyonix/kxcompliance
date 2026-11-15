@@ -23,8 +23,13 @@ export function formatDateTime(value) {
 	});
 }
 
-// The same order for what a date picker shows, in its own (dayjs) tokens.
-export const pickerFormat = () => (dayFirst() ? "D MMM YYYY" : "MMM D, YYYY");
+// What a date field shows and reads when typed: the site's own date format (dd-mm-yyyy and the
+// like) in dayjs tokens. The picker reads typed text only in the shape it shows, so a format
+// with month names would refuse 10-12-2026.
+export function pickerFormat() {
+	const own = (boot.dateFormat || "").trim();
+	return /^[dmy]+([-/.])[dmy]+\1[dmy]+$/i.test(own) ? own.toUpperCase() : "DD-MM-YYYY";
+}
 
 // An amount of money, whole units; the app's penalties and fees are in rupees unless told otherwise.
 export function formatMoney(amount, currency = "INR") {

@@ -486,9 +486,9 @@ export const TOURS = [
 		managers: true,
 		steps: [
 			{
-				target: ["settings-setup"],
+				target: ["settings-setup", "settings-nav"],
 				title: "Setting up",
-				text: "People, companies, the obligation library, due-date extensions and register item types.",
+				text: "People, companies, the obligation library, due-date extensions and register item types each have a page under Settings.",
 			},
 			{
 				target: ["section:reminders-heading"],

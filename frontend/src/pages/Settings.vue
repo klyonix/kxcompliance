@@ -15,38 +15,19 @@
 		</div>
 
 		<template v-else>
-			<nav class="flex flex-wrap gap-2" aria-label="Set up" data-tour="settings-setup">
-				<Button icon-left="lucide-users" label="People" :route="{ name: 'People' }" />
+			<!-- On a computer these pages are under Settings in the side bar; phones have none. -->
+			<nav
+				v-if="isMobile"
+				class="flex flex-wrap gap-2"
+				aria-label="Set up"
+				data-tour="settings-setup"
+			>
 				<Button
-					icon-left="lucide-building-2"
-					label="Companies"
-					:route="{ name: 'Companies' }"
-				/>
-				<Button
-					icon-left="lucide-file-badge"
-					label="Register item types"
-					:route="{ name: 'ItemTypes' }"
-				/>
-				<Button
-					v-if="!isFirm"
-					icon-left="lucide-shield-check"
-					label="Customer and supplier licences"
-					:route="{ name: 'LicenceRules' }"
-				/>
-				<Button
-					icon-left="lucide-bell"
-					label="Reminder log"
-					:route="{ name: 'ReminderLog' }"
-				/>
-				<Button
-					icon-left="lucide-library"
-					label="Obligation library"
-					:route="{ name: 'ObligationLibrary' }"
-				/>
-				<Button
-					icon-left="lucide-calendar-clock"
-					label="Due-date extensions"
-					:route="{ name: 'Extensions' }"
+					v-for="page in setupPages"
+					:key="page.route"
+					:icon-left="page.icon"
+					:label="page.label"
+					:route="{ name: page.route }"
 				/>
 			</nav>
 
@@ -202,10 +183,15 @@ import { Button, FormControl, Skeleton, TabButtons, toast } from "frappe-ui";
 import { call, upload } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import { useIsMobile } from "@/composables/useIsMobile";
+import { settingsPagesFor } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
 
-// Licence rules are for an organisation's own sales and purchases, not a firm's.
-const isFirm = boot.accountType === "CA/CS Firm";
+const isMobile = useIsMobile();
+// Every settings page but this one, which the reader is on.
+const setupPages = settingsPagesFor({ firm: boot.accountType === "CA/CS Firm" }).filter(
+	(page) => page.route !== "Settings"
+);
 const options = ref(null);
 const saved = ref({});
 const form = reactive({});

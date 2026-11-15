@@ -17,12 +17,12 @@ from frappe.utils import (
 	date_diff,
 	escape_html,
 	formatdate,
-	get_url_to_form,
 	getdate,
 	now_datetime,
 	nowdate,
 )
 
+from kxcompliance.kx_compliance.app_links import app_url
 from kxcompliance.kx_compliance.register import (
 	CLOSED_TASK_STATUSES,
 	compute_status,
@@ -260,7 +260,7 @@ def send_digests(today):
 
 def digest_row(doctype: str, name: str, title: str, status: str, date) -> str:
 	return "<tr><td><a href='{url}'>{title}</a></td><td>{status}</td><td>{date}</td></tr>".format(
-		url=get_url_to_form(doctype, name),
+		url=app_url(doctype, name),
 		title=escape_html(title),
 		status=escape_html(_(status)),
 		date=formatdate(date),

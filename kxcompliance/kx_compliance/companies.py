@@ -80,6 +80,10 @@ def form_options() -> dict:
 	}
 
 
+# Who a company's bills go to, where it differs from its client (billing.billing_party).
+COMPANY_BILLING = ("billing_gstin", "billing_state", "billing_address", "billing_email")
+
+
 def company_detail(company: str) -> dict:
 	"""A company's compliance profile, with each obligation's law and how often it falls due."""
 	check_manager()
@@ -99,6 +103,7 @@ def company_detail(company: str) -> dict:
 		"client": profile.client,
 		"default_responsible": profile.default_responsible,
 		"default_reviewer": profile.default_reviewer,
+		"billing": {field: profile.get(field) for field in COMPANY_BILLING},
 		"registrations": [
 			{
 				"registration_type": row.registration_type,
@@ -181,6 +186,10 @@ def save_company(company: str, values: dict, new_company: bool = False) -> dict:
 	profile.default_responsible = responsible
 	profile.default_reviewer = values.get("default_reviewer") or None
 	profile.set("registrations", registrations)
+	if isinstance(values.get("billing"), dict):
+		# Only these fields; the GSTIN sets the state, in the profile's own checks.
+		for field in COMPANY_BILLING:
+			profile.set(field, (values["billing"].get(field) or "").strip() or None)
 	if "agm_dates" in values:
 		profile.set("agm_dates", clean_agm_dates(company, values.get("agm_dates")))
 	update_obligations(profile, values.get("obligations") or [])

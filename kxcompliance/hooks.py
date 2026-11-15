@@ -352,6 +352,8 @@ fixtures = [
 					"Sales Invoice Item-compliance_task",
 					"Sales Invoice Item-sac_code",
 					"Sales Invoice-bill_title",
+					"Sales Invoice-billed_company",
+					"Payment Entry-paid_by_company",
 				],
 			]
 		],

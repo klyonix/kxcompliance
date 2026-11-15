@@ -495,9 +495,10 @@ def unbilled_for(clients: list[str]) -> list[dict]:
 
 
 def client_fees(client: str) -> dict:
-	"""What a client would be billed for its filings now, and the rates it pays."""
+	"""What a client would be billed for its filings now, the rates it pays, and its companies."""
 	unbilled = unbilled_filings(client)
 	return {
+		"companies": client_companies(client),
 		"rates": list(rates_for([client])[client].values()),
 		"unbilled": unbilled,
 		"unbilled_total": sum(row.fee for row in unbilled),
@@ -561,6 +562,78 @@ def follow_client(client):
 		frappe.db.set_value(
 			"Customer", client.customer, {"customer_name": client.client_name, "tax_id": client.gstin}
 		)
+
+
+def client_companies(client: str) -> list[str]:
+	"""The client's companies, by name (a profile is named after its company)."""
+	return frappe.get_all(
+		"Company Compliance Profile", filters={"client": client}, pluck="name", order_by="name asc"
+	)
+
+
+def bill_company(client: str, company: str | None) -> str | None:
+	"""The company a bill is for: the one asked, which must be the client's; else the client's only
+	company. A client without companies is billed as a whole."""
+	companies = client_companies(client)
+	if company:
+		if company not in companies:
+			frappe.throw(_("{0} is not one of {1}'s companies.").format(company, client))
+		return company
+	if len(companies) > 1:
+		frappe.throw(_("Choose which of {0}'s companies the bill is for.").format(client))
+	return companies[0] if companies else None
+
+
+def recurring_company_of(client: str, companies: list[str]) -> str | None:
+	"""The company whose bills carry the client's recurring charges: the one chosen, else its first."""
+	chosen = frappe.db.get_value("Compliance Client", client, "recurring_company")
+	if chosen in companies:
+		return chosen
+	return companies[0] if companies else None
+
+
+def billing_party(client: str | None, company: str | None = None) -> frappe._dict:
+	"""Who a bill is to: the company, with its own billing details where it has them, else the
+	client's. `client_name` is the name printed on the bill."""
+	base = (
+		frappe.db.get_value(
+			"Compliance Client",
+			client,
+			[
+				"client_name",
+				"gstin",
+				"billing_state",
+				"billing_address",
+				"billing_email",
+				"contact_email",
+				"logo",
+			],
+			as_dict=True,
+		)
+		if client
+		else None
+	) or frappe._dict()
+	own = (
+		frappe.db.get_value(
+			"Company Compliance Profile",
+			company,
+			["billing_gstin", "billing_state", "billing_address", "billing_email"],
+			as_dict=True,
+		)
+		if company
+		else None
+	) or frappe._dict()
+	return frappe._dict(
+		client=client,
+		company=company,
+		client_name=company or base.client_name,
+		group=base.client_name if company else None,
+		gstin=own.billing_gstin or base.gstin,
+		billing_state=own.billing_state or base.billing_state,
+		billing_address=own.billing_address or base.billing_address,
+		email=own.billing_email or base.billing_email or base.contact_email,
+		logo=base.logo,
+	)
 
 
 def tax_template_for(client_state: str | None) -> str | None:
@@ -650,12 +723,17 @@ def make_bill(
 	lines: list[dict] | None = None,
 	key: str | None = None,
 	services: list[dict] | None = None,
+	company: str | None = None,
 ) -> str:
-	"""A draft bill for a client: the filings chosen (from its unbilled ones), the recurring charges
-	whose period starts in `month`, services done ({service, qty}, at the client's rates), and any
-	other lines ({description, amount, government})."""
+	"""A draft bill for one of a client's companies: the filings chosen (from that company's
+	unbilled ones), the recurring charges whose period starts in `month` when this company carries
+	them, services done ({service, qty}, at the client's rates), and any other lines ({description,
+	amount, government})."""
 	settings = get_settings()
-	unbilled = {row.name: row for row in unbilled_filings(client)}
+	company = bill_company(client, company)
+	unbilled = {
+		row.name: row for row in unbilled_filings(client) if company is None or row.company == company
+	}
 	asked = filings or []
 	not_offered = [name for name in asked if name not in unbilled]
 	if not_offered:
@@ -678,9 +756,10 @@ def make_bill(
 		}
 		for name in asked
 	]
-	plan = frappe.db.get_value("Compliance Client", client, ["billing_from", "billing_state"], as_dict=True)
+	start = frappe.db.get_value("Compliance Client", client, "billing_from")
 	rates = rates_for([client])[client]
-	for charge in recurring_due(rates, plan.billing_from, month) if month else []:
+	carries_recurring = company == recurring_company_of(client, client_companies(client))
+	for charge in recurring_due(rates, start, month) if month and carries_recurring else []:
 		items.append(
 			{
 				"item_code": FEES_ITEM,
@@ -702,13 +781,15 @@ def make_bill(
 		)
 	today = getdate(nowdate())
 	# Only a firm registered for GST charges it.
-	template = tax_template_for(plan.billing_state) if settings.gst_status == REGISTERED else None
+	party = billing_party(client, company)
+	template = tax_template_for(party.billing_state) if settings.gst_status == REGISTERED else None
 	bill = frappe.get_doc(
 		{
 			"doctype": "Sales Invoice",
 			"company": settings.billing_company,
 			"customer": customer_for(client),
 			"compliance_client": client,
+			"billed_company": company,
 			"kx_billing_key": key,
 			# Kept on the bill, so a later change of GST status does not retitle bills already made.
 			"bill_title": BILL_TITLES[settings.gst_status or REGISTERED],
@@ -820,14 +901,12 @@ def send_bill(name: str) -> dict:
 
 
 def email_bill(bill, overdue_days: int | None = None) -> str | None:
-	"""Email the bill's PDF to the client's billing email, else its contact; the address, or None.
-	With `overdue_days`, as a reminder that it is that many days late."""
+	"""Email the bill's PDF to its company's billing email, else the client's, else the client's
+	contact; the address, or None. With `overdue_days`, as a reminder that it is that many days
+	late."""
 	from kxcompliance.kx_compliance.reminders import sender_address
 
-	address = frappe.db.get_value(
-		"Compliance Client", bill.compliance_client, ["billing_email", "contact_email"], as_dict=True
-	)
-	to = address.billing_email or address.contact_email
+	to = billing_party(bill.compliance_client, bill.get("billed_company")).email
 	sender = sender_address()
 	if not to or not sender:
 		return None
@@ -918,32 +997,53 @@ def make_monthly_drafts(today: date | None = None):
 		return
 	month = get_first_day(today or nowdate())
 	for client in frappe.get_all("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name"):
-		key = f"{client}|{month.isoformat()[:7]}"
-		if frappe.db.exists("Sales Invoice", {"kx_billing_key": key, "docstatus": ("!=", 2)}):
-			continue
-		try:
-			filings = [row.name for row in unbilled_filings(client)]
-			start = frappe.db.get_value("Compliance Client", client, "billing_from")
-			if filings or recurring_due(rates_for([client])[client], start, month):
-				make_bill(client, filings=filings, month=month, key=key)
-			# A job may commit as it goes, so a later client's problem loses nothing made before it.
-			frappe.db.commit()
-		except Exception:
-			# A scheduled job: undo this client's half-made bill, keep the others, and say why.
-			frappe.db.rollback()
-			frappe.log_error(title=f"Monthly bill for {client} could not be made")
+		companies = client_companies(client)
+		for company in companies or [None]:
+			make_monthly_draft(client, company, companies, month)
 
 
-def bill_options(client: str) -> dict:
-	"""What a new bill for a client may hold: its unbilled filings, the recurring charges due this
-	month, and the services it may be billed for by the hour or item."""
+def make_monthly_draft(client: str, company: str | None, companies: list[str], month: date):
+	"""The month's draft for one company of a client, if it has filings to bill or carries the
+	client's recurring charges and some are due. Made once per company and month."""
+	key = f"{client}|{company or ''}|{month.isoformat()[:7]}"
+	if frappe.db.exists("Sales Invoice", {"kx_billing_key": key, "docstatus": ("!=", 2)}):
+		return
+	try:
+		filings = [row.name for row in unbilled_filings(client) if company is None or row.company == company]
+		recurring = company == recurring_company_of(client, companies) and recurring_due(
+			rates_for([client])[client],
+			frappe.db.get_value("Compliance Client", client, "billing_from"),
+			month,
+		)
+		if filings or recurring:
+			make_bill(client, filings=filings, month=month, key=key, company=company)
+		# A job may commit as it goes, so a later company's problem loses nothing made before it.
+		frappe.db.commit()
+	except Exception:
+		# A scheduled job: undo this company's half-made bill, keep the others, and say why.
+		frappe.db.rollback()
+		frappe.log_error(title=f"Monthly bill for {company or client} could not be made")
+
+
+def bill_options(client: str, company: str | None = None) -> dict:
+	"""What a new bill for one of a client's companies may hold: the client's companies to choose
+	from, that company's unbilled filings, the recurring charges due this month if it carries them,
+	and the services it may be billed for by the hour or item."""
 	check_biller()
+	companies = client_companies(client)
+	company = company or (companies[0] if companies else None)
+	if company and company not in companies:
+		frappe.throw(_("{0} is not one of {1}'s companies.").format(company, client))
 	month = get_first_day(nowdate())
 	rates = rates_for([client])[client]
 	start = frappe.db.get_value("Compliance Client", client, "billing_from")
+	recurring_to = recurring_company_of(client, companies)
 	return {
-		"filings": unbilled_filings(client),
-		"recurring": recurring_due(rates, start, month),
+		"companies": companies,
+		"company": company,
+		"recurring_company": recurring_to,
+		"filings": [row for row in unbilled_filings(client) if company is None or row.company == company],
+		"recurring": recurring_due(rates, start, month) if company == recurring_to else [],
 		"services": [line for line in rates.values() if line["unit"] in AS_DONE],
 	}
 
@@ -951,6 +1051,7 @@ def bill_options(client: str) -> dict:
 BILL_FIELDS = (
 	"name",
 	"compliance_client",
+	"billed_company",
 	"customer_name",
 	"status",
 	"docstatus",
@@ -990,15 +1091,32 @@ def bill_detail(name: str) -> dict:
 		"written_off": written_off(bill.name) if bill.docstatus == 1 else [],
 		"advance_held": advance_held(bill.customer) if bill.docstatus == 0 else 0,
 		"modes": list(PAYMENT_MODES),
+		# Any of the client's companies may pay this bill.
+		"companies": client_companies(bill.compliance_client) if bill.compliance_client else [],
 	}
 
 
+def payer(client: str, paid_by: str | None) -> str | None:
+	"""Which of the client's companies the money came from, when the firm notes it."""
+	if paid_by and paid_by not in client_companies(client):
+		frappe.throw(_("Paid by: {0} is not one of {1}'s companies.").format(paid_by, client))
+	return paid_by or None
+
+
 def record_payment(
-	name: str, amount: float, paid_on: str, mode: str, reference: str | None = None, tds: float = 0
+	name: str,
+	amount: float,
+	paid_on: str,
+	mode: str,
+	reference: str | None = None,
+	tds: float = 0,
+	paid_by: str | None = None,
 ) -> str:
 	"""A payment against a sent bill, in full or in part, as ERPNext's own Payment Entry from the
-	bill. TDS the client deducted is recorded beside it, so the bill is settled by both."""
+	bill. TDS the client deducted is recorded beside it, so the bill is settled by both. Any of the
+	client's companies may pay the bill of another; `paid_by` notes which did."""
 	bill = bill_of(name)
+	paid_by = payer(bill.compliance_client, paid_by)
 	if bill.docstatus != 1:
 		frappe.throw(_("Send {0} before recording a payment against it.").format(name))
 	amount, tds = flt(amount, 2), flt(tds, 2)
@@ -1026,6 +1144,7 @@ def record_payment(
 	entry.paid_amount = entry.received_amount = amount
 	entry.reference_no = (reference or "").strip() or mode
 	entry.reference_date = getdate(paid_on)
+	entry.paid_by_company = paid_by
 	for row in entry.references:
 		row.allocated_amount = amount + tds
 	if tds:
@@ -1120,6 +1239,7 @@ def payment_detail(name: str) -> dict:
 		"docstatus": entry.docstatus,
 		"client": client,
 		"party_name": entry.party_name,
+		"paid_by_company": entry.paid_by_company,
 		"posting_date": entry.posting_date,
 		"mode_of_payment": entry.mode_of_payment,
 		"reference_no": entry.reference_no if entry.reference_no != entry.mode_of_payment else None,
@@ -1212,6 +1332,7 @@ BILL_VIEWS = {
 LIST_FIELDS = [
 	"name",
 	"compliance_client",
+	"billed_company",
 	"customer_name",
 	"posting_date",
 	"due_date",
@@ -1332,6 +1453,17 @@ def client_summary(client: str) -> dict:
 		"rate_card": values.rate_card or default_card(),
 		"rates": list(rates.values()),
 		"payments": payments(client, None, 0, 5)["rows"],
+		"by_company": [
+			{
+				"key": section["key"],
+				"title": section["title"],
+				"billed": section["billed"],
+				"received": flt(section["received"] + section["tds"], 2),
+				"credited": flt(section["credited"] + section["written_off"], 2),
+				"balance": section["closing"],
+			}
+			for section in statement(client, from_date, to_date)["sections"]
+		],
 	}
 
 
@@ -1467,14 +1599,248 @@ def year_activity(client: str, customer: str | None, from_date, to_date) -> dict
 	return activity
 
 
-def statement(client: str, from_date, to_date, own: bool = False) -> dict:
-	"""A client's statement of account for these dates, from the firm's ledger: the balance before
-	them, then each bill, payment, TDS, credit note and write-off in date order with the balance
-	after it, and the balance at the end. A balance above zero is owed to the firm; below zero, the
-	client has paid ahead. `own` is the client's own copy, which does not give the firm's reasons for
-	writing off."""
-	from frappe.query_builder.functions import Min
+# Where an entry on a client's account sits on its statement: under the company its bill was for,
+# under the client as a whole for bills made before bills named a company, or as money held ahead.
+AHEAD = "ahead"
+# Within one entry (a payment), what it paid comes before the TDS deducted with it.
+ENTRY_ORDER = {"bill": 0, "credit": 0, "payment": 0, "tds": 1, "write_off": 0}
 
+
+def account_entries(customer: str, to_date, own: bool = False) -> list[dict]:
+	"""Every entry on a client's account up to `to_date`, in date order: each bill, credit note,
+	payment (split by the bills it settled, with its TDS), write-off, and money held ahead. Each
+	says the company it belongs to and the bill it is against. `own` is the client's copy, which
+	does not give the firm's reasons for writing off."""
+	company = get_settings().billing_company
+	to_date = getdate(to_date)
+	bills = {
+		row.name: row
+		for row in frappe.get_all(
+			"Sales Invoice",
+			filters={"company": company, "customer": customer, "docstatus": 1},
+			fields=[
+				"name",
+				"posting_date",
+				"due_date",
+				"is_return",
+				"return_against",
+				"remarks",
+				"billed_company",
+				"grand_total",
+				"rounded_total",
+				"creation",
+			],
+		)
+	}
+	entries = []
+	for bill in bills.values():
+		if getdate(bill.posting_date) > to_date:
+			continue
+		total = flt(bill.rounded_total or bill.grand_total)
+		if bill.is_return:
+			original = bills.get(bill.return_against) or frappe._dict()
+			entries.append(
+				entry(
+					bill.posting_date,
+					"credit",
+					bill.name,
+					_("Credit note against {0}").format(bill.return_against),
+					bill.billed_company or original.billed_company,
+					bill.return_against,
+					credit=-total,
+					made=bill.creation,
+				)
+			)
+		else:
+			entries.append(
+				entry(
+					bill.posting_date,
+					"bill",
+					bill.name,
+					_("Bill, due {0}").format(format_date(bill.due_date)),
+					bill.billed_company,
+					bill.name,
+					debit=total,
+					made=bill.creation,
+				)
+			)
+	entries += payment_entries(customer, company, to_date, bills)
+	entries += write_off_entries(customer, company, to_date, bills, own)
+	# By date, then in the order they were made.
+	return sorted(entries, key=lambda row: (row["date"], row.pop("made"), ENTRY_ORDER[row["kind"]]))
+
+
+def entry(
+	date, kind: str, name: str, detail: str, company, bill, debit: float = 0, credit: float = 0, made=None
+) -> dict:
+	return {
+		"made": str(made or ""),
+		"date": getdate(date),
+		"kind": kind,
+		"name": name,
+		"detail": detail,
+		"company": company,
+		"bill": bill,
+		"debit": flt(debit, 2),
+		"credit": flt(credit, 2),
+	}
+
+
+def payment_entries(customer: str, company: str, to_date, bills: dict) -> list[dict]:
+	"""Each payment as the statement shows it: what it paid on each bill, under that bill's
+	company, its TDS shared across those bills as they were settled, and what is still held ahead."""
+	payment = frappe.qb.DocType("Payment Entry")
+	reference = frappe.qb.DocType("Payment Entry Reference")
+	rows = (
+		frappe.qb.from_(payment)
+		.left_join(reference)
+		.on((reference.parent == payment.name) & (reference.reference_doctype == "Sales Invoice"))
+		.select(
+			payment.name,
+			payment.posting_date,
+			payment.creation,
+			payment.mode_of_payment,
+			payment.reference_no,
+			payment.unallocated_amount,
+			reference.reference_name,
+			reference.allocated_amount,
+		)
+		.where(
+			(payment.company == company)
+			& (payment.party_type == "Customer")
+			& (payment.party == customer)
+			& (payment.payment_type == "Receive")
+			& (payment.docstatus == 1)
+			& (payment.posting_date <= to_date)
+		)
+		.orderby(payment.posting_date)
+		.orderby(payment.name)
+	).run(as_dict=True)
+	payments: dict[str, list] = {}
+	for row in rows:
+		payments.setdefault(row.name, []).append(row)
+	deducted: dict[str, float] = {}
+	for row in frappe.get_all(
+		"Payment Entry Deduction",
+		filters={"parenttype": "Payment Entry", "parent": ("in", list(payments) or [""])},
+		fields=["parent", "amount"],
+	):
+		deducted[row.parent] = deducted.get(row.parent, 0) + flt(row.amount)
+	entries = []
+	for name, refs in payments.items():
+		first = refs[0]
+		reference = first.reference_no if first.reference_no != first.mode_of_payment else None
+		how = ", ".join(filter(None, [first.mode_of_payment, reference]))
+		settled = [row for row in refs if row.reference_name]
+		allocated = sum(flt(row.allocated_amount) for row in settled)
+		tds_left = flt(deducted.get(name), 2)
+		for index, row in enumerate(settled):
+			# TDS goes with each bill by its share of the payment; the last takes what is left.
+			share = (
+				tds_left
+				if index == len(settled) - 1
+				else flt(deducted.get(name, 0) * flt(row.allocated_amount) / allocated, 2)
+			)
+			tds_left = flt(tds_left - share, 2)
+			bill = bills.get(row.reference_name) or frappe._dict()
+			entries.append(
+				entry(
+					first.posting_date,
+					"payment",
+					name,
+					_("Received for {0}: {1}").format(row.reference_name, how)
+					if how
+					else _("Received for {0}").format(row.reference_name),
+					bill.billed_company,
+					row.reference_name,
+					credit=flt(row.allocated_amount) - share,
+					made=first.creation,
+				)
+			)
+			if share:
+				entries.append(
+					entry(
+						first.posting_date,
+						"tds",
+						name,
+						_("TDS deducted on {0}").format(row.reference_name),
+						bill.billed_company,
+						row.reference_name,
+						credit=share,
+						made=first.creation,
+					)
+				)
+		if flt(first.unallocated_amount) > 0:
+			entries.append(
+				entry(
+					first.posting_date,
+					"payment",
+					name,
+					_("Received ahead: {0}").format(how) if how else _("Received ahead"),
+					AHEAD,
+					None,
+					credit=first.unallocated_amount,
+					made=first.creation,
+				)
+			)
+	return entries
+
+
+def write_off_entries(customer: str, company: str, to_date, bills: dict, own: bool) -> list[dict]:
+	journal = frappe.qb.DocType("Journal Entry")
+	line = frappe.qb.DocType("Journal Entry Account")
+	rows = (
+		frappe.qb.from_(line)
+		.join(journal)
+		.on(journal.name == line.parent)
+		.select(
+			journal.name,
+			journal.posting_date,
+			journal.creation,
+			journal.user_remark,
+			line.reference_name,
+			(line.credit_in_account_currency - line.debit_in_account_currency).as_("amount"),
+		)
+		.where(
+			(journal.company == company)
+			& (journal.voucher_type == "Write Off Entry")
+			& (journal.docstatus == 1)
+			& (journal.posting_date <= to_date)
+			& (line.party_type == "Customer")
+			& (line.party == customer)
+			& (line.reference_type == "Sales Invoice")
+		)
+	).run(as_dict=True)
+	return [
+		entry(
+			row.posting_date,
+			"write_off",
+			row.name,
+			# A write-off is the firm's own decision; the client is not told why (WriteOffDialog).
+			_("Balance adjusted") if own or not row.user_remark else row.user_remark,
+			(bills.get(row.reference_name) or frappe._dict()).billed_company,
+			row.reference_name,
+			credit=row.amount,
+			made=row.creation,
+		)
+		for row in rows
+	]
+
+
+SUMMED = {
+	"bill": "billed",
+	"credit": "credited",
+	"payment": "received",
+	"tds": "tds",
+	"write_off": "written_off",
+}
+
+
+def statement(client: str, from_date, to_date, own: bool = False) -> dict:
+	"""A client's statement of account for these dates: a summary, then a section per company
+	(its balance before the dates, each entry with the balance after it, and its balance at the
+	end), money held ahead, and the bills still open at the end with how late they are. A balance
+	above zero is owed to the firm; below zero, the client has paid ahead."""
 	from_date, to_date = getdate(from_date), getdate(to_date)
 	if from_date > to_date:
 		frappe.throw(
@@ -1483,122 +1849,93 @@ def statement(client: str, from_date, to_date, own: bool = False) -> dict:
 			)
 		)
 	customer = frappe.db.get_value("Compliance Client", client, "customer")
-	result = {"from_date": from_date, "to_date": to_date, "opening": 0, "rows": [], "closing": 0}
-	if not customer:
-		return result
-	gl = frappe.qb.DocType("GL Entry")
-	party = (
-		(gl.company == get_settings().billing_company)
-		& (gl.party_type == "Customer")
-		& (gl.party == customer)
-		& (gl.is_cancelled == 0)
-	)
-	opening = flt(
-		frappe.qb.from_(gl)
-		.select(Sum(gl.debit - gl.credit))
-		.where(party & (gl.posting_date < from_date))
-		.run()[0][0]
-	)
-	vouchers = (
-		frappe.qb.from_(gl)
-		.select(
-			gl.posting_date,
-			gl.voucher_type,
-			gl.voucher_no,
-			Sum(gl.debit).as_("debit"),
-			Sum(gl.credit).as_("credit"),
+	entries = account_entries(customer, to_date, own) if customer else []
+	sections: dict = {}
+	for row in entries:
+		section = sections.setdefault(
+			row["company"],
+			{"opening": 0, "rows": []} | dict.fromkeys(SUMMED.values(), 0),
 		)
-		.where(party & gl.posting_date.between(from_date, to_date))
-		.groupby(gl.posting_date, gl.voucher_type, gl.voucher_no)
-		.orderby(gl.posting_date)
-		.orderby(Min(gl.creation))
-	).run(as_dict=True)
-	balance = opening
-	rows = []
-	for row in statement_rows(vouchers, own):
-		balance = flt(balance + row["debit"] - row["credit"], 2)
-		rows.append({**row, "balance": balance})
-	result.update(opening=opening, rows=rows, closing=balance)
-	return result
+		if row["date"] < from_date:
+			section["opening"] = flt(section["opening"] + row["debit"] - row["credit"], 2)
+			continue
+		section["rows"].append(row)
+		section[SUMMED[row["kind"]]] = flt(section[SUMMED[row["kind"]]] + row["debit"] + row["credit"], 2)
+	shown = []
+	for key in sorted(sections, key=lambda key: (key is None, key == AHEAD, key or "")):
+		section = sections[key]
+		if not section["rows"] and not section["opening"]:
+			continue
+		balance = section["opening"]
+		for row in section["rows"]:
+			balance = flt(balance + row["debit"] - row["credit"], 2)
+			row["balance"] = balance
+		section.update(key=key, closing=balance, **section_heading(client, key))
+		shown.append(section)
+	today = min(to_date, getdate(nowdate()))
+	open_bills = still_open(entries, today)
+	return {
+		"from_date": from_date,
+		"to_date": to_date,
+		"summary": {
+			"opening": flt(sum(section["opening"] for section in shown), 2),
+			**{field: flt(sum(section[field] for section in shown), 2) for field in SUMMED.values()},
+			"closing": flt(sum(section["closing"] for section in shown), 2),
+		},
+		"sections": shown,
+		"open_bills": open_bills,
+		"ageing": {
+			key: flt(sum(bill["due"] for bill in open_bills if bill["bucket"] == key), 2)
+			for key, _low, _high in AGEING
+		},
+	}
 
 
-def statement_rows(vouchers: list[dict], own: bool = False) -> list[dict]:
-	"""Each ledger voucher as the statement says it; a payment with TDS becomes two lines."""
-	by_type: dict[str, list[str]] = {}
-	for row in vouchers:
-		by_type.setdefault(row.voucher_type, []).append(row.voucher_no)
-	bills = {
-		row.name: row
-		for row in frappe.get_all(
-			"Sales Invoice",
-			filters={"name": ("in", by_type.get("Sales Invoice") or [""])},
-			fields=["name", "is_return", "return_against", "remarks"],
-		)
-	}
-	entries = {
-		row.name: row
-		for row in frappe.get_all(
-			"Payment Entry",
-			filters={"name": ("in", by_type.get("Payment Entry") or [""])},
-			fields=["name", "mode_of_payment", "reference_no", "paid_amount"],
-		)
-	}
-	tds: dict[str, float] = {}
-	for row in frappe.get_all(
-		"Payment Entry Deduction",
-		filters={"parenttype": "Payment Entry", "parent": ("in", list(entries) or [""])},
-		fields=["parent", "amount"],
-	):
-		tds[row.parent] = tds.get(row.parent, 0) + flt(row.amount)
-	journals = dict(
+def section_heading(client: str, key) -> dict:
+	if key == AHEAD:
+		return {"title": _("Paid ahead, not yet used"), "gstin": None}
+	if key is None:
+		return {"title": _("Billed to the client as a whole"), "gstin": None}
+	return {"title": key, "gstin": billing_party(client, key).gstin}
+
+
+def still_open(entries: list[dict], today) -> list[dict]:
+	"""The bills with something still due after these entries, with how late each is on `today`."""
+	bills: dict[str, dict] = {}
+	for row in entries:
+		if row["kind"] == "bill":
+			bills[row["name"]] = {
+				"name": row["name"],
+				"company": row["company"],
+				"date": row["date"],
+				"total": row["debit"],
+				"due": row["debit"],
+			}
+	for row in entries:
+		if row["kind"] != "bill" and row["bill"] in bills:
+			bills[row["bill"]]["due"] = flt(bills[row["bill"]]["due"] - row["credit"] + row["debit"], 2)
+	due_dates = dict(
 		frappe.get_all(
-			"Journal Entry",
-			filters={"name": ("in", by_type.get("Journal Entry") or [""])},
-			fields=["name", "user_remark"],
+			"Sales Invoice",
+			filters={"name": ("in", list(bills) or [""])},
+			fields=["name", "due_date"],
 			as_list=True,
 		)
 	)
-	rows = []
-	for row in vouchers:
-		line = {
-			"date": row.posting_date,
-			"voucher_type": row.voucher_type,
-			"name": row.voucher_no,
-			"debit": flt(row.debit),
-			"credit": flt(row.credit),
-		}
-		if row.voucher_type == "Sales Invoice":
-			sale = bills.get(row.voucher_no) or frappe._dict()
-			if sale.is_return:
-				line.update(kind="credit", detail=_("Credit note against {0}").format(sale.return_against))
-			else:
-				line.update(kind="bill", detail=_("Bill"))
-		elif row.voucher_type == "Payment Entry":
-			entry = entries.get(row.voucher_no) or frappe._dict()
-			deducted = flt(tds.get(row.voucher_no), 2)
-			reference = entry.reference_no if entry.reference_no != entry.mode_of_payment else None
-			how = ", ".join(filter(None, [entry.mode_of_payment, reference]))
-			received = _("Received: {0}").format(how) if how else _("Received")
-			if deducted and line["credit"] > deducted:
-				rows.append(
-					{
-						**line,
-						"kind": "payment",
-						"detail": received,
-						"credit": flt(line["credit"] - deducted, 2),
-					}
-				)
-				line.update(kind="tds", detail=_("TDS deducted"), debit=0, credit=deducted)
-			else:
-				line.update(kind="payment", detail=received)
-		elif row.voucher_type == "Journal Entry":
-			# A write-off is the firm's own decision; the client is not told why (WriteOffDialog).
-			reason = None if own else journals.get(row.voucher_no)
-			line.update(kind="write_off", detail=reason or _("Balance adjusted"))
-		else:
-			line.update(kind="other", detail=_(row.voucher_type))
-		rows.append(line)
-	return rows
+	found = []
+	for bill in bills.values():
+		if bill["due"] <= 0.005:
+			continue
+		due_date = getdate(due_dates.get(bill["name"]) or bill["date"])
+		found.append(
+			{
+				**bill,
+				"due_date": due_date,
+				"days_late": max((getdate(today) - due_date).days, 0),
+				"bucket": ageing_bucket(due_date, today),
+			}
+		)
+	return sorted(found, key=lambda bill: (bill["due_date"], bill["name"]))
 
 
 def statement_html(client: str, from_date, to_date, own: bool = False) -> str:
@@ -1608,7 +1945,9 @@ def statement_html(client: str, from_date, to_date, own: bool = False) -> str:
 		{
 			"statement": statement(client, from_date, to_date, own),
 			"firm": firm_details(),
-			"client": party_details(client),
+			"client": billing_party(client),
+			"ageing_labels": AGEING_LABELS,
+			"own": own,
 			"currency": frappe.db.get_value("Company", get_settings().billing_company, "default_currency")
 			or "INR",
 		},
@@ -1623,6 +1962,16 @@ AGEING = (
 	("late_90", 61, 90),
 	("late_more", 91, None),
 )
+
+
+# What each column is called; translated where it is shown.
+AGEING_LABELS = {
+	"not_due": "Not due yet",
+	"late_30": "1 to 30 days late",
+	"late_60": "31 to 60 days late",
+	"late_90": "61 to 90 days late",
+	"late_more": "Over 90 days late",
+}
 
 
 def ageing_bucket(due_date, today) -> str:
@@ -1735,20 +2084,6 @@ def upi_qr(upi_id: str | None, payee: str, amount: float, note: str) -> str | No
 	return "data:image/svg+xml;base64," + base64.b64encode(svg.getvalue()).decode()
 
 
-def party_details(client: str | None) -> dict:
-	values = (
-		frappe.db.get_value(
-			"Compliance Client",
-			client,
-			["client_name", "gstin", "billing_state", "billing_address", "logo"],
-			as_dict=True,
-		)
-		if client
-		else None
-	)
-	return values or frappe._dict()
-
-
 def firm_details() -> dict:
 	settings = get_settings()
 	return frappe._dict(
@@ -1768,7 +2103,7 @@ def bill_print(bill) -> dict:
 	from frappe.utils import money_in_words
 
 	firm = firm_details()
-	client = party_details(bill.get("compliance_client"))
+	client = billing_party(bill.get("compliance_client"), bill.get("billed_company"))
 	total = flt(bill.rounded_total or bill.grand_total)
 	due = flt(bill.outstanding_amount) if bill.docstatus == 1 else total
 	title = bill.get("bill_title") or BILL_TITLES[firm.gst_status]
@@ -1805,7 +2140,7 @@ def receipt_print(entry) -> dict:
 	tds = flt(sum(flt(row.amount) for row in entry.deductions))
 	return {
 		"firm": firm_details(),
-		"client": party_details(client),
+		"client": billing_party(client),
 		"bills": [{"name": row.reference_name, "amount": row.allocated_amount} for row in bills],
 		"tds": tds,
 		"in_words": money_in_words(flt(entry.paid_amount), entry.paid_to_account_currency or "INR"),
@@ -1892,6 +2227,7 @@ def credit_note(name: str, reason: str, amount: float | None = None, line: str |
 		frappe.throw(_("That line of {0} is credited already, or is not on it.").format(name))
 
 	note = make_sales_return(bill.name)
+	note.billed_company = bill.billed_company  # credited to the company the bill was for
 	note.update_outstanding_for_self = 0  # the credit lowers what is due on the bill itself
 	note.remarks = reason
 	# make_sales_return leaves lines with nothing left to credit at zero; ERPNext refuses those.
@@ -2014,11 +2350,20 @@ def written_off(bill: str) -> list[dict]:
 	).run(as_dict=True)
 
 
-def record_advance(client: str, amount: float, paid_on: str, mode: str, reference: str | None = None) -> str:
-	"""Money a client pays before it is billed, kept as an advance and used against its next bills."""
+def record_advance(
+	client: str,
+	amount: float,
+	paid_on: str,
+	mode: str,
+	reference: str | None = None,
+	paid_by: str | None = None,
+) -> str:
+	"""Money a client pays before it is billed, kept as an advance and used against its next bills,
+	whichever of its companies they are for."""
 	from erpnext.accounts.party import get_party_account
 
 	check_biller()
+	paid_by = payer(client, paid_by)
 	amount = flt(amount, 2)
 	if amount <= 0:
 		frappe.throw(_("An advance is an amount above zero."))
@@ -2045,7 +2390,8 @@ def record_advance(client: str, amount: float, paid_on: str, mode: str, referenc
 			"mode_of_payment": mode,
 			"reference_no": (reference or "").strip() or mode,
 			"reference_date": getdate(paid_on),
-			"remarks": _("Advance from {0}").format(client),
+			"remarks": _("Advance from {0}").format(paid_by or client),
+			"paid_by_company": paid_by,
 		}
 	)
 	entry.insert()
@@ -2102,6 +2448,7 @@ def payments(client: str | None, text: str | None, start: int, limit: int) -> di
 			"posting_date",
 			"party",
 			"party_name",
+			"paid_by_company",
 			"mode_of_payment",
 			"reference_no",
 			"paid_amount",

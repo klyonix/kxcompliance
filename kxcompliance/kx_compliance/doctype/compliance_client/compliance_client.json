@@ -9,7 +9,7 @@
    "link_fieldname": "client"
   }
  ],
- "modified": "2026-11-16 16:00:00.000000",
+ "modified": "2026-11-16 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "owner": "Administrator",
@@ -43,6 +43,7 @@
   "fees_section",
   "rate_card",
   "billing_from",
+  "recurring_company",
   "own_rates"
  ],
  "fields": [
@@ -199,6 +200,13 @@
    "fieldtype": "Date",
    "label": "Recurring Charges From",
    "description": "Monthly, quarterly and yearly charges are billed for each period from this date."
+  },
+  {
+   "fieldname": "recurring_company",
+   "fieldtype": "Link",
+   "options": "Company",
+   "label": "Bill Recurring Charges To",
+   "description": "The company whose bills carry the client's monthly, quarterly and yearly charges; its first company when left empty."
   },
   {
    "fieldname": "own_rates",

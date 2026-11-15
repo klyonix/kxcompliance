@@ -515,11 +515,11 @@ def client_fees(client: str) -> dict:
 
 
 @frappe.whitelist(methods=["GET"])
-def bill_options(client: str) -> dict:
-	"""What a new bill for a client may hold."""
+def bill_options(client: str, company: str | None = None) -> dict:
+	"""What a new bill for one of a client's companies may hold."""
 	check_app_access_or_accounts()
 	check_billed_client(client)
-	return billing.bill_options(client)
+	return billing.bill_options(client, company)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -529,16 +529,22 @@ def create_bill(
 	recurring: bool = False,
 	lines: list | None = None,
 	services: list | None = None,
+	company: str | None = None,
 ) -> dict:
-	"""A draft bill for a client, from filings it has not been billed for, the recurring charges due
-	this month, services done and other lines; checked and sent from its page."""
+	"""A draft bill for one of a client's companies, from filings it has not been billed for, the
+	recurring charges due this month, services done and other lines; checked and sent from its
+	page."""
 	check_app_access_or_accounts()
 	billing.check_biller()
 	check_billed_client(client)
 	if not all(isinstance(name, str) for name in filings or []):
 		frappe.throw(_("Filings are given by their names."))
 	month = getdate(nowdate()).replace(day=1) if recurring else None
-	return {"name": billing.make_bill(client, filings=filings, month=month, lines=lines, services=services)}
+	return {
+		"name": billing.make_bill(
+			client, filings=filings, month=month, lines=lines, services=services, company=company
+		)
+	}
 
 
 @frappe.whitelist(methods=["GET"])
@@ -565,11 +571,18 @@ def cancel_bill(name: str) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def record_payment(
-	name: str, amount: float, paid_on: str, mode: str, reference: str | None = None, tds: float = 0
+	name: str,
+	amount: float,
+	paid_on: str,
+	mode: str,
+	reference: str | None = None,
+	tds: float = 0,
+	paid_by: str | None = None,
 ) -> dict:
-	"""A payment received against a sent bill, in full or part, with any TDS the client deducted."""
+	"""A payment received against a sent bill, in full or part, with any TDS the client deducted
+	and, when noted, which of the client's companies paid."""
 	check_app_access_or_accounts()
-	return {"payment": billing.record_payment(name, amount, paid_on, mode, reference, tds)}
+	return {"payment": billing.record_payment(name, amount, paid_on, mode, reference, tds, paid_by)}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -587,12 +600,19 @@ def write_off_bill(name: str, reason: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
-def record_advance(client: str, amount: float, paid_on: str, mode: str, reference: str | None = None) -> dict:
+def record_advance(
+	client: str,
+	amount: float,
+	paid_on: str,
+	mode: str,
+	reference: str | None = None,
+	paid_by: str | None = None,
+) -> dict:
 	"""Money a client pays before it is billed."""
 	check_app_access_or_accounts()
 	billing.check_biller()
 	check_billed_client(client)
-	return {"payment": billing.record_advance(client, amount, paid_on, mode, reference)}
+	return {"payment": billing.record_advance(client, amount, paid_on, mode, reference, paid_by)}
 
 
 @frappe.whitelist(methods=["GET"])

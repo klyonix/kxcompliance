@@ -26,6 +26,18 @@ class ComplianceClient(Document):
 		self.gstin = (self.gstin or "").strip().upper() or None
 		self.billing_state = state_of(self.gstin, self.billing_state)
 		check_client_rates(self)
+		self.check_recurring_company()
+
+	def check_recurring_company(self):
+		"""Recurring charges go on the bills of one of the client's own companies."""
+		if self.recurring_company and not frappe.db.exists(
+			"Company Compliance Profile", {"company": self.recurring_company, "client": self.name}
+		):
+			frappe.throw(
+				_("Bill recurring charges to: {0} is not one of {1}'s companies.").format(
+					self.recurring_company, self.name
+				)
+			)
 
 	def on_update(self):
 		# Logins first, so their users exist when the access is given.

@@ -77,6 +77,12 @@
 							data-tour="tab-agm"
 						/>
 						<TabTrigger
+							v-if="billable"
+							value="billing"
+							label="Billing"
+							icon-left="lucide-receipt"
+						/>
+						<TabTrigger
 							v-if="company"
 							value="obligations"
 							label="Obligations"
@@ -278,6 +284,65 @@
 						</section>
 					</TabPanel>
 					<TabPanel
+						v-if="billable"
+						value="billing"
+						class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+					>
+						<section
+							class="flex flex-col gap-4"
+							aria-labelledby="company-billing-heading"
+						>
+							<div class="flex flex-col gap-0.5">
+								<h2
+									id="company-billing-heading"
+									class="text-base font-semibold text-ink-gray-8"
+								>
+									Billing
+								</h2>
+								<p class="text-sm text-ink-gray-5">
+									Who the firm's bills for this company go to, and GST by its
+									state. Left empty, the client's billing details are used.
+								</p>
+							</div>
+							<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+								<FormControl
+									v-model="form.billing.billing_gstin"
+									label="GSTIN"
+									:description="
+										form.billing.billing_gstin.trim()
+											? 'Its state is read from it.'
+											: ''
+									"
+								/>
+								<FormControl
+									v-model="form.billing.billing_state"
+									type="select"
+									label="State"
+									:disabled="Boolean(form.billing.billing_gstin.trim())"
+									:options="[
+										{ label: 'As the client\'s', value: '' },
+										...billingStates.map((state) => ({
+											label: state,
+											value: state,
+										})),
+									]"
+								/>
+								<FormControl
+									v-model="form.billing.billing_email"
+									type="email"
+									label="Billing email"
+									description="Bills are emailed here; else to the client's."
+								/>
+							</div>
+							<FormControl
+								v-model="form.billing.billing_address"
+								type="textarea"
+								:rows="3"
+								label="Billing address"
+							/>
+						</section>
+					</TabPanel>
+					<TabPanel
 						value="obligations"
 						class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
 					>
@@ -403,7 +468,7 @@ import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({ company: { type: String, default: "" } });
 // The company's details in tabs; the open one is kept in the address.
-const tab = useTabQuery(["company", "registrations", "agm", "obligations"]);
+const tab = useTabQuery(["company", "registrations", "agm", "billing", "obligations"]);
 const isMobile = useIsMobile();
 // The tabs a phone offers in its list: AGM dates and obligations once the company is set up.
 const tabOptions = computed(() =>
@@ -411,6 +476,7 @@ const tabOptions = computed(() =>
 		{ label: "Company", value: "company" },
 		{ label: "Registrations", value: "registrations" },
 		hasAgm.value && { label: "AGM dates", value: "agm" },
+		billable.value && { label: "Billing", value: "billing" },
 		props.company && { label: "Obligations", value: "obligations" },
 	].filter(Boolean)
 );
@@ -434,7 +500,10 @@ const form = reactive({
 	registrations: [],
 	obligations: [],
 	agm_dates: [],
+	billing: { billing_gstin: "", billing_state: "", billing_address: "", billing_email: "" },
 });
+// A firm bills its clients' companies: each may have its own billing details, once set up.
+const billingStates = ref([]);
 const agmFilings = ref([]);
 // AGM dates apply once the company is set up and has filings that fall due after its AGM.
 const hasAgm = computed(
@@ -454,6 +523,7 @@ function addAgm() {
 }
 
 const isFirm = boot.accountType === "CA/CS Firm";
+const billable = computed(() => isFirm && Boolean(props.company));
 const people = computed(() => personOptions(options.value?.people || []));
 const notSetUp = computed(() => notSetUpList.value.map((name) => ({ label: name, value: name })));
 const choices = (values, empty) => [
@@ -483,6 +553,7 @@ async function save() {
 					default_reviewer: form.default_reviewer || null,
 					registrations: form.registrations,
 					...(props.company ? { agm_dates: form.agm_dates } : {}),
+					...(billable.value ? { billing: form.billing } : {}),
 					obligations: form.obligations.map((row) => ({
 						name: row.name,
 						is_active: row.is_active ? 1 : 0,
@@ -512,6 +583,12 @@ async function load() {
 	error.value = "";
 	try {
 		options.value = await call("kxcompliance.api.company_form_options");
+		if (billable.value) {
+			// The states to bill in, as set up for billing; none if billing is not set up.
+			billingStates.value = (
+				await call("kxcompliance.api.billing_setup").catch(() => ({ states: [] }))
+			).states;
+		}
 		notSetUpList.value = options.value.not_set_up;
 		if (props.company) {
 			const detail = await call("kxcompliance.api.company_detail", {
@@ -529,6 +606,12 @@ async function load() {
 					state: row.state || "",
 				})),
 				agm_dates: (detail.agm_dates || []).map((row) => ({ ...row })),
+				billing: {
+					billing_gstin: detail.billing?.billing_gstin || "",
+					billing_state: detail.billing?.billing_state || "",
+					billing_address: detail.billing?.billing_address || "",
+					billing_email: detail.billing?.billing_email || "",
+				},
 				obligations: detail.obligations.map((row) => ({
 					...row,
 					is_active: Boolean(row.is_active),

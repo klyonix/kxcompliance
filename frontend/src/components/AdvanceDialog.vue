@@ -18,6 +18,14 @@
 					aria-label="Client"
 				/>
 			</div>
+			<FormControl
+				v-if="companies.length > 1"
+				v-model="form.paid_by"
+				type="select"
+				label="Paid from"
+				:options="companies.map((name) => ({ label: name, value: name }))"
+				description="It is used against the next bills of any of the client's companies."
+			/>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<FormControl v-model="form.amount" type="number" label="Amount received" />
 				<FormControl
@@ -60,12 +68,27 @@ const props = defineProps({ modes: { type: Array, required: true } });
 const emit = defineEmits(["saved"]);
 const open = defineModel("open", { type: Boolean, default: false });
 
-const form = reactive({ client: "", amount: "", paid_on: "", mode: "", reference: "" });
+const form = reactive({
+	client: "",
+	amount: "",
+	paid_on: "",
+	mode: "",
+	reference: "",
+	paid_by: "",
+});
 const error = ref("");
 const checking = ref(false);
 
 const clientOptions = computed(() =>
 	clientFilter.clients.map((row) => ({ label: row.name, value: row.name }))
+);
+// The chosen client's companies, any of which may have paid.
+const companies = computed(
+	() => clientFilter.clients.find((row) => row.name === form.client)?.companies || []
+);
+watch(
+	() => form.client,
+	() => (form.paid_by = companies.value[0] || "")
 );
 const problem = computed(() => (checking.value ? advanceProblem(form) : null));
 
@@ -78,6 +101,7 @@ watch(open, (now) => {
 		mode: props.modes[0] || "",
 		reference: "",
 	});
+	form.paid_by = companies.value[0] || "";
 	error.value = "";
 	checking.value = false;
 });
@@ -95,6 +119,7 @@ async function save({ close }) {
 				paid_on: form.paid_on,
 				mode: form.mode,
 				reference: form.reference.trim(),
+				paid_by: form.paid_by || null,
 			},
 			{ httpMethod: "POST" }
 		);

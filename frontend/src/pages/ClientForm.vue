@@ -212,8 +212,9 @@
 								Billing
 							</h2>
 							<p class="text-sm text-ink-gray-5">
-								Who the firm's bills go to. GST follows the client's state against
-								the firm's.
+								Used for each company of the client that has no billing details of
+								its own (on the company's Billing tab). GST follows the state
+								against the firm's.
 							</p>
 						</div>
 						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -289,6 +290,20 @@
 								:format="pickerFormat()"
 								label="Recurring charges from"
 								description="Monthly, quarterly and yearly charges are billed from here."
+							/>
+							<FormControl
+								v-if="fees?.companies?.length > 1"
+								v-model="form.recurring_company"
+								type="select"
+								label="Bill recurring charges to"
+								:options="[
+									{ label: `${fees.companies[0]} (the first)`, value: '' },
+									...fees.companies.map((name) => ({
+										label: name,
+										value: name,
+									})),
+								]"
+								description="The company whose bills carry the recurring charges."
 							/>
 						</div>
 						<div class="flex flex-col gap-1.5">
@@ -417,6 +432,7 @@ const form = reactive({
 	billing_address: "",
 	rate_card: "",
 	billing_from: "",
+	recurring_company: "",
 	own_rates: [],
 	team: [],
 	logins: [],
@@ -447,6 +463,7 @@ function values() {
 		billing_address: form.billing_address.trim() || null,
 		rate_card: form.rate_card || null,
 		billing_from: form.billing_from || null,
+		recurring_company: form.recurring_company || null,
 		own_rates: ratesToSend(form.own_rates),
 		team: form.team.map((user) => ({ user })),
 		logins: form.logins.map((login) => ({
@@ -531,6 +548,7 @@ onMounted(async () => {
 				billing_address: client.billing_address || "",
 				rate_card: client.rate_card || "",
 				billing_from: client.billing_from || "",
+				recurring_company: client.recurring_company || "",
 				own_rates: (client.own_rates || []).map((row) => ({
 					kind: row.kind,
 					obligation_template: row.obligation_template || "",

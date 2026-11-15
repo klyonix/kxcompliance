@@ -302,11 +302,11 @@ Once, before the firm's first bill.
 
 When returns are filed, services are done, or the month's recurring charges are due.
 
-1. Open the client and press "New bill".
+1. Open the client and press "New bill". For a client with several companies, choose the company billed: its filings, its GSTIN and its state's GST go on the bill.
 2. Untick any filed return to leave for later, keep the recurring charges if they are due, add services done (hours or items) and any other lines; government fees carry no GST.
 3. Press "Make the draft", check it, then "Send to client". It goes into the books and is emailed with its PDF.
 
-> **Tip.** On the 1st of each month a draft is made for each client with something to bill; find them under Billing, Drafts.
+> **Tip.** On the 1st of each month a draft is made for each company with something to bill; find them under Billing, Drafts. A company's own GSTIN and address go on its company's Billing tab; the client's recurring charges go on the bills of the company chosen on the client's form.
 
 ### A client has paid. How do I record it?
 
@@ -373,7 +373,7 @@ When a client asks what it owes, or at the year's end.
 
 1. Open the client, choose the "Billing" tab and press "Statement of account".
 2. Choose the dates, which start as the financial year, and press "Download PDF".
-3. It shows the balance at the start, then each bill, payment, TDS, credit note and write-off with the balance after it, and the balance at the end, with both logos.
+3. It opens with a summary and what is still due by how late, then a section for each company with every bill, payment, TDS, credit note and write-off and the balance after each, then the bills still open, with both logos.
 
 > **Tip.** A client with a login can download its own from its home. Its copy shows a write-off as a balance adjusted, without the firm's reason.
 

@@ -91,7 +91,7 @@
 								row.name
 							}}</span>
 							<span class="truncate text-sm text-ink-gray-5">{{
-								row.compliance_client
+								row.billed_company || row.compliance_client
 							}}</span>
 						</span>
 						<span class="hidden w-28 text-sm text-ink-gray-6 sm:block">{{

@@ -1,28 +1,39 @@
 {%- macro money(v) -%}{{ frappe.utils.fmt_money(v, currency=currency) }}{%- endmacro -%}
 {%- macro date(v) -%}{{ frappe.utils.format_date(v) }}{%- endmacro -%}
 {%- macro balance(v) -%}{{ money(v | abs) }}{% if v < 0 %} {{ _("ahead") }}{% endif %}{%- endmacro -%}
+{%- set summary = statement.summary -%}
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-	body { font-family: Inter, -apple-system, sans-serif; font-size: 12px; color: #1f2328; }
+	body { font-family: Inter, -apple-system, sans-serif; font-size: 11.5px; color: #1f2328; }
 	table { width: 100%; border-collapse: collapse; }
 	.head td { vertical-align: top; }
-	.logo { max-height: 64px; max-width: 160px; }
+	.logo { max-height: 60px; max-width: 160px; }
 	.client-logo { max-height: 40px; max-width: 120px; float: right; }
-	.title { font-size: 20px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; text-align: right; }
+	.title { font-size: 19px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; text-align: right; }
 	.muted { color: #6b7280; }
-	.small { font-size: 11px; }
+	.small { font-size: 10.5px; }
 	.box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; }
-	.lines th { background: #f3f4f6; text-align: left; font-weight: 600; padding: 7px 8px; border-bottom: 1px solid #e5e7eb; }
-	.lines th.num { text-align: right; }
-	.lines td { padding: 7px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-	.lines tr.edge td { font-weight: 700; background: #fafafa; }
-	.num { text-align: right; white-space: nowrap; }
-	.ref { white-space: nowrap; font-size: 11px; }
 	.gap { height: 14px; }
 	.pre { white-space: pre-line; }
+	.num { text-align: right; white-space: nowrap; }
+	.ref { white-space: nowrap; font-size: 10.5px; }
+	h2 { font-size: 12.5px; margin: 0 0 6px 0; }
+	.figures td { border: 1px solid #e5e7eb; padding: 7px 8px; vertical-align: top; width: 14.28%; }
+	.figures .label { font-size: 10px; color: #6b7280; }
+	.figures .value { font-size: 12.5px; font-weight: 700; margin-top: 2px; white-space: nowrap; }
+	.figures .closing { background: #f3f4f6; }
+	.ageing td { border: 1px solid #e5e7eb; padding: 6px 8px; width: 20%; }
+	.ageing .late .value { color: #b91c1c; }
+	.lines th { background: #f3f4f6; text-align: left; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
+	.lines th.num { text-align: right; }
+	.lines td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+	.lines tr.edge td { font-weight: 700; background: #fafafa; }
+	.section { margin-bottom: 16px; }
+	h2 { break-after: avoid; page-break-after: avoid; }
+	.late { color: #b91c1c; }
 </style>
 </head>
 <body>
@@ -30,15 +41,14 @@
 	<tr>
 		<td style="width: 55%">
 			{% if firm.logo %}<img class="logo" src="{{ firm.logo }}"><br>{% endif %}
-			<div style="font-size: 15px; font-weight: 700; margin-top: 6px">{{ firm.name }}</div>
+			<div style="font-size: 14px; font-weight: 700; margin-top: 6px">{{ firm.name }}</div>
 			{% if firm.address %}<div class="pre muted small">{{ firm.address }}</div>{% endif %}
 			{% if firm.gstin %}<div class="small">GSTIN: <b>{{ firm.gstin }}</b></div>{% endif %}
 		</td>
 		<td style="width: 45%">
 			<div class="title">{{ _("Statement of Account") }}</div>
 			<table class="small" style="margin-top: 8px">
-				<tr><td class="muted">{{ _("From") }}</td><td class="num">{{ date(statement.from_date) }}</td></tr>
-				<tr><td class="muted">{{ _("To") }}</td><td class="num">{{ date(statement.to_date) }}</td></tr>
+				<tr><td class="muted">{{ _("Period") }}</td><td class="num">{{ date(statement.from_date) }} {{ _("to") }} {{ date(statement.to_date) }}</td></tr>
 				<tr><td class="muted">{{ _("Made on") }}</td><td class="num">{{ date(frappe.utils.nowdate()) }}</td></tr>
 			</table>
 		</td>
@@ -53,39 +63,101 @@
 	{% if client.gstin %}<div class="small">GSTIN: <b>{{ client.gstin }}</b></div>{% endif %}
 </div>
 <div class="gap"></div>
-<table class="lines">
+
+<h2>{{ _("Summary") }}</h2>
+<table class="figures">
 	<tr>
-		<th style="width: 13%">{{ _("Date") }}</th>
-		<th>{{ _("Details") }}</th>
-		<th style="width: 19%">{{ _("Number") }}</th>
-		<th class="num" style="width: 13%">{{ _("Charged") }}</th>
-		<th class="num" style="width: 13%">{{ _("Paid or credited") }}</th>
-		<th class="num" style="width: 15%">{{ _("Balance") }}</th>
-	</tr>
-	<tr class="edge">
-		<td>{{ date(statement.from_date) }}</td>
-		<td colspan="4">{{ _("Opening balance") }}</td>
-		<td class="num">{{ balance(statement.opening) }}</td>
-	</tr>
-	{% for row in statement.rows %}
-	<tr>
-		<td>{{ date(row.date) }}</td>
-		<td>{{ row.detail }}</td>
-		<td class="ref">{{ row.name }}</td>
-		<td class="num">{% if row.debit %}{{ money(row.debit) }}{% endif %}</td>
-		<td class="num">{% if row.credit %}{{ money(row.credit) }}{% endif %}</td>
-		<td class="num">{{ balance(row.balance) }}</td>
-	</tr>
-	{% endfor %}
-	{% if not statement.rows %}
-	<tr><td colspan="6" class="muted">{{ _("Nothing billed or paid in these dates.") }}</td></tr>
-	{% endif %}
-	<tr class="edge">
-		<td>{{ date(statement.to_date) }}</td>
-		<td colspan="4">{% if statement.closing < 0 %}{{ _("Closing balance, paid ahead") }}{% elif statement.closing > 0 %}{{ _("Closing balance, due to the firm") }}{% else %}{{ _("Closing balance") }}{% endif %}</td>
-		<td class="num">{{ balance(statement.closing) }}</td>
+		<td><div class="label">{{ _("Opening balance") }}</div><div class="value">{{ balance(summary.opening) }}</div></td>
+		<td><div class="label">{{ _("Billed") }}</div><div class="value">{{ money(summary.billed) }}</div></td>
+		<td><div class="label">{{ _("Credit notes") }}</div><div class="value">{{ money(summary.credited) }}</div></td>
+		<td><div class="label">{{ _("Received") }}</div><div class="value">{{ money(summary.received) }}</div></td>
+		<td><div class="label">{{ _("TDS deducted") }}</div><div class="value">{{ money(summary.tds) }}</div></td>
+		<td><div class="label">{{ _("Adjusted") if own else _("Written off") }}</div><div class="value">{{ money(summary.written_off) }}</div></td>
+		<td class="closing"><div class="label">{% if summary.closing < 0 %}{{ _("Paid ahead") }}{% else %}{{ _("Closing balance") }}{% endif %}</div><div class="value">{{ money(summary.closing | abs) }}</div></td>
 	</tr>
 </table>
+{% if statement.open_bills %}
+<div class="gap"></div>
+<h2>{{ _("Still due, by how late") }}</h2>
+<table class="ageing figures">
+	<tr>
+		{% for key, label in ageing_labels.items() %}
+		<td class="{{ 'late' if key != 'not_due' and statement.ageing[key] else '' }}"><div class="label">{{ _(label) }}</div><div class="value">{{ money(statement.ageing[key]) }}</div></td>
+		{% endfor %}
+	</tr>
+</table>
+{% endif %}
+<div class="gap"></div>
+
+{% for section in statement.sections %}
+<div class="section">
+	<h2>{{ section.title }}{% if section.gstin %} <span class="muted small" style="font-weight: 400">· GSTIN {{ section.gstin }}</span>{% endif %}</h2>
+	<table class="lines">
+		<tr>
+			<th style="width: 12%">{{ _("Date") }}</th>
+			<th>{{ _("Details") }}</th>
+			<th style="width: 19%">{{ _("Number") }}</th>
+			<th class="num" style="width: 13%">{{ _("Charged") }}</th>
+			<th class="num" style="width: 13%">{{ _("Paid or credited") }}</th>
+			<th class="num" style="width: 15%">{{ _("Balance") }}</th>
+		</tr>
+		<tr class="edge">
+			<td>{{ date(statement.from_date) }}</td>
+			<td colspan="4">{{ _("Opening balance") }}</td>
+			<td class="num">{{ balance(section.opening) }}</td>
+		</tr>
+		{% for row in section.rows %}
+		<tr>
+			<td>{{ date(row.date) }}</td>
+			<td>{{ row.detail }}</td>
+			<td class="ref">{{ row.name }}</td>
+			<td class="num">{% if row.debit %}{{ money(row.debit) }}{% endif %}</td>
+			<td class="num">{% if row.credit %}{{ money(row.credit) }}{% endif %}</td>
+			<td class="num">{{ balance(row.balance) }}</td>
+		</tr>
+		{% endfor %}
+		{% if not section.rows %}
+		<tr><td colspan="6" class="muted">{{ _("Nothing in these dates.") }}</td></tr>
+		{% endif %}
+		<tr class="edge">
+			<td>{{ date(statement.to_date) }}</td>
+			<td colspan="4">{{ _("Closing balance") }}</td>
+			<td class="num">{{ balance(section.closing) }}</td>
+		</tr>
+	</table>
+</div>
+{% endfor %}
+{% if not statement.sections %}
+<p class="muted">{{ _("Nothing billed or paid up to these dates.") }}</p>
+{% endif %}
+
+{% if statement.open_bills %}
+<div style="break-inside: avoid; page-break-inside: avoid">
+<h2>{{ _("Bills still open") }}</h2>
+<table class="lines">
+	<tr>
+		<th>{{ _("Bill") }}</th>
+		<th>{{ _("Company") }}</th>
+		<th style="width: 11%">{{ _("Date") }}</th>
+		<th style="width: 11%">{{ _("Due") }}</th>
+		<th class="num" style="width: 12%">{{ _("Total") }}</th>
+		<th class="num" style="width: 12%">{{ _("Still due") }}</th>
+		<th class="num" style="width: 10%">{{ _("Days late") }}</th>
+	</tr>
+	{% for bill in statement.open_bills %}
+	<tr>
+		<td class="ref">{{ bill.name }}</td>
+		<td>{{ bill.company or client.client_name }}</td>
+		<td>{{ date(bill.date) }}</td>
+		<td>{{ date(bill.due_date) }}</td>
+		<td class="num">{{ money(bill.total) }}</td>
+		<td class="num">{{ money(bill.due) }}</td>
+		<td class="num {{ 'late' if bill.days_late else '' }}">{{ bill.days_late or "—" }}</td>
+	</tr>
+	{% endfor %}
+</table>
+</div>
+{% endif %}
 <div class="small muted" style="margin-top: 14px; text-align: center">{{ _("This is a computer-generated document and needs no signature.") }}</div>
 </body>
 </html>

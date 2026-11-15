@@ -221,8 +221,10 @@ When a suit, appeal or petition is under way, or a mark has been applied for.
 After a hearing or reply date.
 
 1. Open the case from Legal.
-2. Under its dates, press Record outcome: what happened and the next date.
+2. Under its dates, press Record outcome: what happened and the next date. A missed hearing takes its next date too.
 3. Attach the order if there is one.
+
+> **Tip.** A date fixed outside the app goes in with "Add a date". A date the court moves before it happens is changed with Move; one that is no longer happening, with Cancel.
 
 ### A case is decided, settled or withdrawn. How do I close it?
 

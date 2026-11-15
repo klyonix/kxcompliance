@@ -111,6 +111,36 @@ export function classesError(rows) {
 	return null;
 }
 
+// The kinds of date added by hand: a case's and a trademark's own, and Other for anything else.
+export const DATE_KINDS = {
+	"Legal Case": ["Hearing", "Reply Due", "Filing Due", "Order Pronouncement", "Other"],
+	Trademark: [
+		"Hearing",
+		"Examination Report Reply",
+		"Counter-Statement",
+		"Opposition Window",
+		"Other",
+	],
+};
+
+// A date added by hand, with only what was filled in.
+export function newDateValues(doctype, name, { kind, date, time, purpose }) {
+	const values = { reference_doctype: doctype, reference_name: name, kind, date };
+	if (time) values.time = time;
+	if (purpose?.trim()) values.purpose = purpose.trim();
+	return values;
+}
+
+// Moving a scheduled date: what changed of its day, time and purpose; null when nothing did.
+export function moveValues(legalDate, { date, time, purpose }) {
+	const values = {};
+	if (date && date !== legalDate.date) values.date = date;
+	if ((time || "") !== (legalDate.time || "").slice(0, 5)) values.time = time || null;
+	if ((purpose || "").trim() !== (legalDate.purpose || ""))
+		values.purpose = (purpose || "").trim();
+	return Object.keys(values).length ? values : null;
+}
+
 // The hearings and deadlines still ahead of a case or trademark, soonest first.
 export async function scheduledDates(doctype, name) {
 	return (
@@ -351,7 +381,7 @@ export function outcomeValues({ status, attended_by, proceedings, next_date }) {
 	const values = { status };
 	if (attended_by?.trim()) values.attended_by = attended_by.trim();
 	if (proceedings?.trim()) values.proceedings = proceedings.trim();
-	if (next_date && status !== "Missed") values.next_date = next_date;
+	if (next_date) values.next_date = next_date;
 	return values;
 }
 

@@ -9,6 +9,9 @@ from frappe.utils import getdate, nowdate
 from kxcompliance.kx_compliance.legal import REFERENCE_COMPANIES, REFERENCE_TITLES, refresh_next_date
 
 OUTCOME_STATUSES = ("Done", "Adjourned")
+# A missed hearing or deadline still has a next date (the court lists it again, a late reply is
+# filed), so its next date is made as for the others.
+NEXT_DATE_STATUSES = (*OUTCOME_STATUSES, "Missed")
 
 
 class LegalDate(Document):
@@ -50,10 +53,26 @@ class LegalDate(Document):
 					frappe.format(self.next_date, "Date"), frappe.format(self.date, "Date")
 				)
 			)
+		self.check_moved()
 		self.is_overdue = int(self.status == "Scheduled" and getdate(self.date) < getdate(nowdate()))
 
+	def check_moved(self):
+		"""Only a date still ahead is moved; one that has an outcome stays as it happened."""
+		before = self.get_doc_before_save()
+		if not before or before.status == "Scheduled":
+			return
+		if getdate(before.date) != getdate(self.date):
+			frappe.throw(
+				_("{0} on {1} is {2}, so it cannot be moved to {3}; add a new date instead.").format(
+					_(self.kind),
+					frappe.format(before.date, "Date"),
+					_(before.status),
+					frappe.format(self.date, "Date"),
+				)
+			)
+
 	def on_update(self):
-		if self.status in OUTCOME_STATUSES and self.next_date and not self.next_legal_date:
+		if self.status in NEXT_DATE_STATUSES and self.next_date and not self.next_legal_date:
 			self.make_next_date()
 		refresh_next_date(self.reference_doctype, self.reference_name)
 

@@ -1,6 +1,15 @@
 <template>
 	<section class="flex flex-col gap-3" aria-labelledby="dates-heading">
-		<h2 id="dates-heading" class="text-base font-semibold text-ink-gray-8">Dates</h2>
+		<div class="flex items-center justify-between gap-3">
+			<h2 id="dates-heading" class="text-base font-semibold text-ink-gray-8">Dates</h2>
+			<Button
+				v-if="mayAct"
+				size="sm"
+				icon-left="lucide-calendar-plus"
+				label="Add a date"
+				@click="addDate"
+			/>
+		</div>
 		<p v-if="error" class="text-base text-ink-red-4">{{ error }}</p>
 		<p v-else-if="!dates.length" class="text-base text-ink-gray-5">
 			{{ loaded ? "No hearings or deadlines recorded yet." : "Loading…" }}
@@ -63,6 +72,21 @@
 				</div>
 			</li>
 		</ol>
+		<OutcomeDialog
+			v-if="outcomeFor"
+			v-model:open="outcomeOpen"
+			:legal-date="outcomeFor"
+			:send="send"
+			@saved="toast.success('Outcome recorded')"
+		/>
+		<LegalDateDialog
+			v-model:open="dateDialogOpen"
+			:doctype="doctype"
+			:name="name"
+			:legal-date="movingDate"
+			:send="send"
+			@saved="dateSaved"
+		/>
 		<input
 			ref="fileInput"
 			type="file"
@@ -78,18 +102,13 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { Badge, Button, dialog, toast } from "frappe-ui";
 import { getList } from "@/api";
-import {
-	OUTCOME_STATUSES,
-	dateStatus,
-	dateTheme,
-	nextDateError,
-	outcomeValues,
-	proceedingsError,
-} from "@/lib/legal";
+import LegalDateDialog from "@/components/LegalDateDialog.vue";
+import OutcomeDialog from "@/components/OutcomeDialog.vue";
+import { dateStatus, dateTheme } from "@/lib/legal";
 import { SAVED_ON_DEVICE, isWaiting, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
 import { notLoaded } from "@/offline/reachability";
-import { formatDate, pickerFormat } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 
 const props = defineProps({
 	doctype: { type: String, required: true },
@@ -125,11 +144,11 @@ function actionsFor(legalDate) {
 	}
 	if (!props.mayAct || isWaiting("Legal Date", legalDate.name)) return actions;
 	if (legalDate.status === "Scheduled") {
-		actions.push({
-			label: "Record outcome",
-			variant: "solid",
-			onClick: () => recordOutcome(legalDate),
-		});
+		actions.push(
+			{ label: "Record outcome", variant: "solid", onClick: () => recordOutcome(legalDate) },
+			{ label: "Move", onClick: () => moveDate(legalDate) },
+			{ label: "Cancel", onClick: () => cancelDate(legalDate) }
+		);
 	} else if (["Done", "Adjourned"].includes(legalDate.status)) {
 		actions.push({
 			label: legalDate.order ? "Replace order" : "Attach order",
@@ -190,39 +209,59 @@ async function send(legalDate, values, files = []) {
 	return result;
 }
 
+// What happened at a date, in its own dialog.
+const outcomeFor = ref(null);
+const outcomeOpen = ref(false);
+
 function recordOutcome(legalDate) {
+	outcomeFor.value = legalDate;
+	outcomeOpen.value = true;
+}
+
+// Adding a date, or moving a scheduled one, in its own dialog.
+const dateDialogOpen = ref(false);
+const movingDate = ref(null);
+
+function addDate() {
+	movingDate.value = null;
+	dateDialogOpen.value = true;
+}
+
+function moveDate(legalDate) {
+	movingDate.value = legalDate;
+	dateDialogOpen.value = true;
+}
+
+// A move went through `send`, which reads the dates again; a new date is read here.
+async function dateSaved(message) {
+	if (!movingDate.value) {
+		await load();
+		emit("changed");
+	}
+	toast.success(message);
+}
+
+// No longer happening: the notice was withdrawn, the date was a mistake.
+function cancelDate(legalDate) {
 	dialog.prompt({
-		title: `${legalDate.kind}, ${when(legalDate)}`,
-		confirmLabel: "Save outcome",
+		title: `Cancel ${legalDate.kind.toLowerCase()}, ${when(legalDate)}?`,
+		message: "No reminders go out for it. To record what happened at it, use Record outcome.",
+		confirmLabel: "Cancel the date",
+		cancelLabel: "Keep it",
+		theme: "red",
 		fields: [
 			{
-				name: "status",
-				label: "What happened",
-				type: "select",
-				defaultValue: "Done",
-				options: OUTCOME_STATUSES.map((status) => ({ label: status, value: status })),
-			},
-			{ name: "attended_by", label: "Attended by", placeholder: "Advocate or staff" },
-			{
 				name: "proceedings",
-				label: "Proceedings",
-				type: "textarea",
-				placeholder: "What was argued, filed or directed",
-				validate: (value, values) =>
-					proceedingsError(legalDate.kind, values.status, value),
-			},
-			{
-				name: "next_date",
-				label: "Next date",
-				type: "date",
-				format: pickerFormat(),
-				description: "A new hearing or deadline is added on this date.",
-				validate: (value) => nextDateError(legalDate.date, value),
+				label: "Why",
+				placeholder: "Notice withdrawn by the department",
 			},
 		],
 		onConfirm: async ({ values }) => {
-			await send(legalDate, outcomeValues(values));
-			toast.success("Outcome recorded");
+			await send(legalDate, {
+				status: "Cancelled",
+				...(values.proceedings?.trim() ? { proceedings: values.proceedings.trim() } : {}),
+			});
+			toast.success("Date cancelled");
 		},
 	});
 }

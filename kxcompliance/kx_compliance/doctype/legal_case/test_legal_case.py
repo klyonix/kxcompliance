@@ -161,6 +161,26 @@ class TestLegalCase(IntegrationTestCase):
 		self.assertEqual([str(day) for day in following], ["2026-12-05"])
 		self.assertEqual(str(frappe.db.get_value("Legal Case", case.name, "next_date")), "2026-12-05")
 
+	def test_a_missed_hearing_keeps_its_next_date(self):
+		case = make_case()
+		hearing = make_date(case.name, "2026-11-01", kind="Hearing")
+		hearing.update({"status": "Missed", "next_date": "2026-12-10"})
+		hearing.save()
+		self.assertTrue(hearing.next_legal_date)
+		self.assertEqual(str(frappe.db.get_value("Legal Case", case.name, "next_date")), "2026-12-10")
+
+	def test_a_date_is_moved_only_while_it_is_ahead(self):
+		case = make_case()
+		hearing = make_date(case.name, "2027-01-10", kind="Hearing")
+		hearing.date = "2027-01-17"
+		hearing.save()
+		self.assertEqual(str(frappe.db.get_value("Legal Case", case.name, "next_date")), "2027-01-17")
+		hearing.update({"status": "Done", "proceedings": "Heard"})
+		hearing.save()
+		hearing.date = "2027-01-24"
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot be moved"):
+			hearing.save()
+
 	def test_a_hearing_outcome_needs_what_happened_and_a_later_next_date(self):
 		hearing = make_date(make_case().name, "2026-11-01")
 		hearing.status = "Done"

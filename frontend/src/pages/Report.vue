@@ -199,11 +199,12 @@ import {
 	initialFilters,
 	linkRoute,
 	missingRequired,
+	rememberOpened,
 	reportBySlug,
 	rowsOf,
 	sortRows,
-	toCsv,
 	splitTotal,
+	toCsv,
 } from "@/lib/reports";
 import { notLoaded } from "@/offline/reachability";
 
@@ -373,6 +374,7 @@ watch(values, () => {
 
 onMounted(() => {
 	if (!report.value) return;
+	rememberOpened(report.value.slug);
 	loadSources();
 	run();
 });

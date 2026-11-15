@@ -225,9 +225,10 @@ export const ARTICLES = [
 		when: "After a hearing or reply date.",
 		steps: [
 			"Open the case from Legal.",
-			"Under its dates, press Record outcome: what happened and the next date.",
+			"Under its dates, press Record outcome: what happened and the next date. A missed hearing takes its next date too.",
 			"Attach the order if there is one.",
 		],
+		tip: 'A date fixed outside the app goes in with "Add a date". A date the court moves before it happens is changed with Move; one that is no longer happening, with Cancel.',
 		page: "Legal",
 	},
 	{

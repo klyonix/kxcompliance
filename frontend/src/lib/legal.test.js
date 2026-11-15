@@ -6,6 +6,8 @@ import {
 	dateRow,
 	markRow,
 	markStatusDetails,
+	moveValues,
+	newDateValues,
 	nextCaseStatuses,
 	nextDateError,
 	outcomeValues,
@@ -109,8 +111,10 @@ describe("legal in the app", () => {
 			proceedings: "Adjourned at the respondent's request",
 			next_date: "2026-12-02",
 		});
+		// A missed date keeps its next date: the matter is listed again.
 		expect(outcomeValues({ status: "Missed", next_date: "2026-12-02" })).toEqual({
 			status: "Missed",
+			next_date: "2026-12-02",
 		});
 	});
 
@@ -162,5 +166,39 @@ describe("a new trademark's classes", () => {
 			"Class 9 is listed twice."
 		);
 		expect(classesError([{ class_number: "9" }, { class_number: "42" }])).toBeNull();
+	});
+});
+
+describe("dates added and moved by hand", () => {
+	it("adds only what was filled in", () => {
+		expect(
+			newDateValues("Legal Case", "CASE-1", {
+				kind: "Hearing",
+				date: "2027-01-10",
+				time: "",
+				purpose: " Final arguments ",
+			})
+		).toEqual({
+			reference_doctype: "Legal Case",
+			reference_name: "CASE-1",
+			kind: "Hearing",
+			date: "2027-01-10",
+			purpose: "Final arguments",
+		});
+	});
+	it("sends what moved, or nothing", () => {
+		const hearing = { date: "2027-01-10", time: "10:30:00", purpose: "Arguments" };
+		expect(
+			moveValues(hearing, { date: "2027-01-10", time: "10:30", purpose: "Arguments" })
+		).toBeNull();
+		expect(
+			moveValues(hearing, { date: "2027-01-17", time: "10:30", purpose: "Arguments" })
+		).toEqual({
+			date: "2027-01-17",
+		});
+		expect(moveValues(hearing, { date: "2027-01-10", time: "", purpose: "" })).toEqual({
+			time: null,
+			purpose: "",
+		});
 	});
 });

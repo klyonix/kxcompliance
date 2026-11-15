@@ -11,7 +11,7 @@
 		</template>
 	</AppPageHeader>
 
-	<div class="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-6 sm:px-6">
+	<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-6 sm:px-6">
 		<p
 			v-if="error"
 			role="alert"
@@ -28,6 +28,12 @@
 		</div>
 
 		<template v-else>
+			<div class="flex flex-col gap-1">
+				<h1 class="text-xl font-semibold text-ink-gray-9">{{ greeting }}</h1>
+				<p class="text-base text-ink-gray-6">{{ today }}</p>
+			</div>
+			<UrgencyTiles :tiles="data.dashboard.urgency" />
+
 			<section class="flex flex-col gap-3" aria-labelledby="needs-heading">
 				<h2 id="needs-heading" class="text-base font-semibold text-ink-gray-8">
 					Needs you now
@@ -68,6 +74,30 @@
 					</li>
 				</ul>
 			</section>
+
+			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2" data-tour="overview-charts">
+				<div class="h-72 rounded-xl border border-outline-gray-1 p-4">
+					<BarChart
+						title="Falling due"
+						subtitle="The next six months"
+						:data="data.dashboard.due_by_month"
+						x="month"
+						:y="DUE_SERIES"
+						stacked
+					/>
+				</div>
+				<div class="h-72 rounded-xl border border-outline-gray-1 p-4">
+					<BarChart
+						title="Filings by month"
+						subtitle="Filed on time, filed late, and not filed yet"
+						:data="data.dashboard.filed_by_month"
+						x="month"
+						:y="FILED_SERIES"
+						:series-config="FILED_COLOURS"
+						stacked
+					/>
+				</div>
+			</div>
 
 			<section
 				class="flex flex-col gap-3 rounded-lg border border-outline-gray-1 px-4 py-4"
@@ -125,51 +155,54 @@
 				</template>
 			</section>
 
-			<section
-				v-if="data.scores.length"
-				class="flex flex-col gap-1"
-				aria-labelledby="scores-heading"
-			>
-				<div class="flex flex-col gap-0.5 pb-2">
-					<h2 id="scores-heading" class="text-base font-semibold text-ink-gray-8">
-						Compliance score
-					</h2>
-					<p class="text-sm text-ink-gray-5">
-						Each company starts at 100 and loses points for what needs fixing; the
-						lowest first.
-					</p>
-				</div>
-				<RouterLink
-					v-for="row in data.scores.slice(0, showAllScores ? undefined : 8)"
-					:key="row.company"
-					:to="{ name: 'Company', params: { company: row.company } }"
-					class="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-gray-2"
+			<div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+				<section
+					v-if="data.scores.length"
+					class="flex flex-col gap-1 lg:col-span-2"
+					aria-labelledby="scores-heading"
 				>
-					<ScoreBadge :score="row.score" />
-					<span class="flex min-w-0 flex-1 flex-col">
-						<span class="truncate text-base font-medium text-ink-gray-8">{{
-							row.company
-						}}</span>
-						<span class="truncate text-sm text-ink-gray-5">{{
-							row.reasons.length
-								? row.reasons.map((reason) => reason.label).join(" · ")
-								: "Nothing to fix"
-						}}</span>
-					</span>
-					<span
-						v-if="row.late_fees_so_far"
-						class="shrink-0 text-sm font-medium text-ink-red-4"
-						>{{ formatMoney(row.late_fees_so_far) }} in late fees</span
+					<div class="flex flex-col gap-0.5 pb-2">
+						<h2 id="scores-heading" class="text-base font-semibold text-ink-gray-8">
+							Compliance score
+						</h2>
+						<p class="text-sm text-ink-gray-5">
+							Each company starts at 100 and loses points for what needs fixing; the
+							lowest first.
+						</p>
+					</div>
+					<RouterLink
+						v-for="row in data.scores.slice(0, showAllScores ? undefined : 8)"
+						:key="row.company"
+						:to="{ name: 'Company', params: { company: row.company } }"
+						class="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-gray-2"
 					>
-				</RouterLink>
-				<Button
-					v-if="data.scores.length > 8 && !showAllScores"
-					class="self-start"
-					variant="ghost"
-					:label="`Show all ${data.scores.length}`"
-					@click="showAllScores = true"
-				/>
-			</section>
+						<ScoreBadge :score="row.score" />
+						<span class="flex min-w-0 flex-1 flex-col">
+							<span class="truncate text-base font-medium text-ink-gray-8">{{
+								row.company
+							}}</span>
+							<span class="truncate text-sm text-ink-gray-5">{{
+								row.reasons.length
+									? row.reasons.map((reason) => reason.label).join(" · ")
+									: "Nothing to fix"
+							}}</span>
+						</span>
+						<span
+							v-if="row.late_fees_so_far"
+							class="shrink-0 text-sm font-medium text-ink-red-4"
+							>{{ formatMoney(row.late_fees_so_far) }} in late fees</span
+						>
+					</RouterLink>
+					<Button
+						v-if="data.scores.length > 8 && !showAllScores"
+						class="self-start"
+						variant="ghost"
+						:label="`Show all ${data.scores.length}`"
+						@click="showAllScores = true"
+					/>
+				</section>
+				<RecentActivity :entries="data.dashboard.recent" />
+			</div>
 
 			<section
 				v-for="section in busy"
@@ -208,9 +241,13 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { Button, Skeleton } from "frappe-ui";
+import { BarChart } from "frappe-ui/charts";
+import { boot } from "@/boot";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RecentActivity from "@/components/RecentActivity.vue";
 import ScoreBadge from "@/components/ScoreBadge.vue";
+import UrgencyTiles from "@/components/UrgencyTiles.vue";
 import { formatMoney } from "@/lib/format";
 import { listRoute } from "@/lib/listFilters";
 import {
@@ -222,6 +259,27 @@ import {
 	valueClass,
 } from "@/lib/overview";
 import { notLoaded } from "@/offline/reachability";
+
+// The series of the two charts, as the server names them.
+const DUE_SERIES = ["Filings", "Renewals", "Legal dates"];
+const FILED_SERIES = ["On time", "Late", "Not filed"];
+const FILED_COLOURS = {
+	"On time": { color: "var(--ink-green-4)" },
+	Late: { color: "var(--ink-amber-4)" },
+	"Not filed": { color: "var(--ink-red-4)" },
+};
+
+const firstName = (boot.userFullname || "").split(" ")[0];
+const hour = new Date().getHours();
+const greeting = `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"}${
+	firstName ? `, ${firstName}` : ""
+}`;
+const today = new Date().toLocaleDateString(undefined, {
+	weekday: "long",
+	day: "numeric",
+	month: "long",
+	year: "numeric",
+});
 
 const data = ref(null);
 const showAllScores = ref(false);

@@ -67,6 +67,16 @@ export const TOURS = [
 		managers: true,
 		steps: [
 			{
+				target: ["overview-tiles"],
+				title: "What is late and what is close",
+				text: "Overdue, due this week and due in the month, across filings, licences and legal dates, with what each is made of. Each part opens the list of exactly those.",
+			},
+			{
+				target: ["overview-charts"],
+				title: "Month by month",
+				text: "What falls due in the next six months, and how filings were filed in the last six: on time, late, or not yet.",
+			},
+			{
 				target: ["section:needs-heading"],
 				title: "Needs you now",
 				text: "Everything someone has to act on, the most urgent first. Each number opens its list.",

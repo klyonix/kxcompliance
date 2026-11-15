@@ -99,6 +99,10 @@ EDITABLE_FIELDS = {
 		"advocate_contact",
 		"summary",
 		"outcome",
+		# Managers' only (permission level 1); offered and accepted only for those who may write them.
+		"risk",
+		"amount_involved",
+		"provision",
 		*PEOPLE_FIELDS,
 	),
 	"Trademark": (
@@ -324,6 +328,14 @@ def save_changes(doctype: str, name: str, values: dict, base_modified: str | Non
 			)
 	doc = frappe.get_doc(doctype, name)
 	doc.check_permission("write")
+	# Frappe would quietly keep the old value of a field the person may not write; say so instead.
+	locked = sorted(
+		field for field in values if not doc.has_permlevel_access_to(field, permission_type="write")
+	)
+	if locked:
+		frappe.throw(
+			_("You cannot change {0} on {1}.").format(", ".join(locked), name), frappe.PermissionError
+		)
 	if base_modified and get_datetime(doc.modified) != get_datetime(base_modified):
 		frappe.throw(
 			_("{0} {1} was changed by someone else after this change was made.").format(_(doctype), name),
@@ -346,9 +358,12 @@ def editable_fields(doctype: str) -> dict:
 	if not allowed:
 		frappe.throw(_("The app cannot change {0}.").format(_(doctype)), frappe.PermissionError)
 	meta = frappe.get_meta(doctype)
+	writable_levels = meta.get_permlevel_access("write")
 	fields = {}
 	for fieldname in allowed:
 		field = meta.get_field(fieldname)
+		if field.permlevel not in writable_levels:
+			continue
 		fields[fieldname] = {
 			"label": _(field.label),
 			"fieldtype": field.fieldtype,
@@ -993,7 +1008,11 @@ def bulk_ask_plan(obligation_template: str, period_end: str, companies: str | No
 	"""How many clients asking for a document on a return and period would reach, and why not the rest."""
 	check_app_access()
 	plan = document_requests.bulk_plan(bulk_filings_of(obligation_template, period_end, companies))
-	return {"to_ask": len(plan["to_ask"]), "asked_already": plan["asked_already"], "no_client": plan["no_client"]}
+	return {
+		"to_ask": len(plan["to_ask"]),
+		"asked_already": plan["asked_already"],
+		"no_client": plan["no_client"],
+	}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -1012,7 +1031,9 @@ def ask_clients_in_bulk(
 		frappe.throw(_("Say what you are asking for."))
 	plan = document_requests.bulk_plan(bulk_filings_of(obligation_template, period_end, companies))
 	if not plan["to_ask"]:
-		frappe.throw(_("Every client with this return already has a request open, or none is linked to a client."))
+		frappe.throw(
+			_("Every client with this return already has a request open, or none is linked to a client.")
+		)
 	frappe.enqueue(
 		"kxcompliance.kx_compliance.document_requests.run_ask_in_bulk",
 		queue="long",

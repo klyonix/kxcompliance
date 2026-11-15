@@ -214,6 +214,16 @@ After a hearing or reply date.
 2. Under its dates, press Record outcome: what happened and the next date.
 3. Attach the order if there is one.
 
+### A case is decided, settled or withdrawn. How do I close it?
+
+When the final order comes, or the matter is settled or withdrawn.
+
+1. Open the case from Legal.
+2. Press "Change status" and choose how it ended.
+3. Give the date and the outcome. Any hearings or deadlines still scheduled are listed, and are cancelled when you close it.
+
+> **Tip.** Use the same button to mark a case stayed or reserved for order, or to open it again if it is appealed or restored.
+
 ## Clients
 
 ### How do I add a client?

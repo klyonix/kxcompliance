@@ -3,6 +3,25 @@
 import { relativeDue } from "@/pages/myWork";
 
 export const OPEN_CASE_STATUSES = ["Open", "Stayed", "Reserved for Order"];
+export const CLOSED_CASE_STATUSES = [
+	"Disposed - In Our Favour",
+	"Disposed - Against Us",
+	"Settled",
+	"Withdrawn",
+];
+
+// The statuses a case can move to from where it is: closing it, or moving it while open.
+export function nextCaseStatuses(current) {
+	return [...OPEN_CASE_STATUSES, ...CLOSED_CASE_STATUSES].filter((status) => status !== current);
+}
+
+// What closing a case does to the dates still ahead of it.
+export function cancelLine(count) {
+	if (!count) return "";
+	return count === 1
+		? "Its 1 scheduled date will be cancelled, so no reminder goes out for it:"
+		: `Its ${count} scheduled dates will be cancelled, so no reminders go out for them:`;
+}
 export const ENDED_MARK_STATUSES = ["Refused", "Abandoned", "Withdrawn", "Removed"];
 export const OUTCOME_STATUSES = ["Done", "Adjourned", "Missed"];
 export const CASE_TYPES = [

@@ -18,9 +18,12 @@ export function noteText(html) {
 
 export const PEOPLE_FIELDS = ["responsible", "reviewer"];
 
-// The control for a field's kind: text, date, select, person or note.
+const NUMBER_TYPES = ["Currency", "Float", "Int"];
+
+// The control for a field's kind: text, number, date, select, person or note.
 export function controlFor(meta) {
 	if (!meta) return null;
+	if (NUMBER_TYPES.includes(meta.fieldtype)) return "number";
 	if (meta.fieldtype === "Date") return "date";
 	if (meta.fieldtype === "Select") return "select";
 	if (meta.fieldtype === "Link") return "person";
@@ -35,6 +38,7 @@ export function readValue(meta, value, nameOf = (user) => user) {
 	if (control === "date") return formatDate(value);
 	if (control === "person") return nameOf(value);
 	if (control === "note") return noteText(value);
+	if (control === "number") return Number(value).toLocaleString();
 	return String(value);
 }
 
@@ -45,6 +49,10 @@ export const editValue = (meta, value) =>
 // What goes back to the server for what was typed or chosen; null when nothing changed.
 export function changeFor(meta, before, typed) {
 	const control = controlFor(meta);
+	if (control === "number") {
+		const number = String(typed ?? "").trim() === "" ? 0 : Number(typed);
+		return number === Number(before || 0) ? null : number;
+	}
 	const value =
 		control === "text" || control === "note" ? String(typed || "").trim() : typed || "";
 	if (control === "note") {

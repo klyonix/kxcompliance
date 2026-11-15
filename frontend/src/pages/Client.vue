@@ -60,19 +60,36 @@
 				</div>
 			</section>
 
-			<Tabs :model-value="shownTab" @update:model-value="tab = $event">
-				<TabList v-if="tabbed" class="overflow-x-auto" data-tour="client-tabs">
+			<Tabs :model-value="tab" @update:model-value="tab = $event">
+				<TabList class="overflow-x-auto" data-tour="client-tabs">
 					<TabTrigger
 						value="overview"
-						label="Overview"
+						:label="t('Overview')"
 						icon-left="lucide-layout-dashboard"
 					/>
-					<TabTrigger value="billing" label="Billing" icon-left="lucide-receipt" />
+					<TabTrigger
+						value="companies"
+						:label="companiesLabel"
+						icon-left="lucide-building-2"
+					/>
+					<TabTrigger
+						v-if="mayBill"
+						value="billing"
+						label="Billing"
+						icon-left="lucide-receipt"
+					/>
 				</TabList>
-				<TabPanel v-if="tabbed" value="billing" class="flex flex-col gap-8 pt-6">
+				<TabPanel
+					v-if="mayBill"
+					value="billing"
+					class="data-[state=inactive]:hidden flex flex-col gap-8 pt-6"
+				>
 					<ClientAccount :client="name" />
 				</TabPanel>
-				<TabPanel value="overview" class="flex flex-col gap-8" :class="{ 'pt-6': tabbed }">
+				<TabPanel
+					value="overview"
+					class="data-[state=inactive]:hidden flex flex-col gap-8 pt-6"
+				>
 					<section class="flex flex-col gap-3" aria-labelledby="year-heading">
 						<div class="flex flex-col gap-0.5">
 							<h2 id="year-heading" class="text-base font-semibold text-ink-gray-8">
@@ -138,6 +155,32 @@
 						/>
 					</section>
 
+					<section class="flex flex-col gap-1" aria-labelledby="open-heading">
+						<h2 id="open-heading" class="pb-2 text-base font-semibold text-ink-gray-8">
+							{{ t("Open filings") }}
+						</h2>
+						<p v-if="!client.filings.length" class="text-base text-ink-gray-5">
+							{{ t("Nothing open.") }}
+						</p>
+						<WorkRow
+							v-for="filing in client.filings"
+							:key="filing.name"
+							:row="taskRow(filing)"
+						/>
+						<Button
+							v-if="!clientLogin && client.open > client.filings.length"
+							class="mt-2 self-start"
+							variant="ghost"
+							icon-right="lucide-arrow-right"
+							:label="`See all ${client.open} open filings`"
+							@click="seeAllFilings"
+						/>
+					</section>
+				</TabPanel>
+				<TabPanel
+					value="companies"
+					class="data-[state=inactive]:hidden flex flex-col gap-8 pt-6"
+				>
 					<section class="flex flex-col gap-3" aria-labelledby="companies-heading">
 						<div class="flex items-center justify-between gap-3">
 							<h2
@@ -185,10 +228,18 @@
 											...company.score.reasons.map((reason) => reason.label),
 										].join(" · ")
 									}}</span>
+									<!-- On a phone it goes under the name, which then keeps its room. -->
+									<span
+										class="text-sm sm:hidden"
+										:class="TONE[clientTheme(company)]"
+										>{{ clientAttention(company) }}</span
+									>
 								</span>
-								<span class="text-sm" :class="TONE[clientTheme(company)]">{{
-									clientAttention(company)
-								}}</span>
+								<span
+									class="hidden text-sm sm:inline"
+									:class="TONE[clientTheme(company)]"
+									>{{ clientAttention(company) }}</span
+								>
 							</li>
 						</ul>
 					</section>
@@ -238,28 +289,6 @@
 							:row="signatoryRow(signatory)"
 						/>
 					</section>
-
-					<section class="flex flex-col gap-1" aria-labelledby="open-heading">
-						<h2 id="open-heading" class="pb-2 text-base font-semibold text-ink-gray-8">
-							{{ t("Open filings") }}
-						</h2>
-						<p v-if="!client.filings.length" class="text-base text-ink-gray-5">
-							{{ t("Nothing open.") }}
-						</p>
-						<WorkRow
-							v-for="filing in client.filings"
-							:key="filing.name"
-							:row="taskRow(filing)"
-						/>
-						<Button
-							v-if="!clientLogin && client.open > client.filings.length"
-							class="mt-2 self-start"
-							variant="ghost"
-							icon-right="lucide-arrow-right"
-							:label="`See all ${client.open} open filings`"
-							@click="seeAllFilings"
-						/>
-					</section>
 				</TabPanel>
 			</Tabs>
 		</template>
@@ -292,6 +321,7 @@ import { learnNames, nameOf } from "@/composables/usePeople";
 import { useTabQuery } from "@/composables/useTabQuery";
 import { clientAttention, clientTheme, yearFacts } from "@/lib/clients";
 import { formatDate } from "@/lib/format";
+import { t } from "@/lib/i18n";
 import { taskRow } from "@/lib/filings";
 import { DSC_TYPE, itemRow } from "@/lib/items";
 import { requestRow } from "@/lib/requests";
@@ -337,10 +367,15 @@ const keyFacts = computed(() => [
 const error = ref("");
 const clientLogin = isClientLogin();
 const isMobile = useIsMobile();
-// Those who bill see the client's account on a tab of its own; everyone else sees the overview.
-const tabbed = !clientLogin && boot.mayBill;
-const tab = useTabQuery(["overview", "billing"]);
-const shownTab = computed(() => (tabbed ? tab.value : "overview"));
+// The client in tabs: its year and open work, its companies with their people and signatures,
+// and, for those who bill, its account.
+const mayBill = !clientLogin && boot.mayBill;
+const tab = useTabQuery(["overview", "companies", ...(mayBill ? ["billing"] : [])]);
+const companiesLabel = computed(() =>
+	client.value?.companies.length
+		? t("Companies ({0})", client.value.companies.length)
+		: t("Companies")
+);
 const router = useRouter();
 
 // The page lists the soonest open filings; the rest are on Filings, with this client chosen.

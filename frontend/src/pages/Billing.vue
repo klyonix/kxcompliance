@@ -36,10 +36,10 @@
 				<TabTrigger value="bills" label="Bills" icon-left="lucide-receipt" />
 				<TabTrigger value="payments" label="Payments" icon-left="lucide-indian-rupee" />
 			</TabList>
-			<TabPanel value="payments" class="pt-4">
+			<TabPanel value="payments" class="data-[state=inactive]:hidden pt-4">
 				<PaymentsList />
 			</TabPanel>
-			<TabPanel value="bills" class="flex flex-col gap-4 pt-4">
+			<TabPanel value="bills" class="data-[state=inactive]:hidden flex flex-col gap-4 pt-4">
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<TabButtons
 						v-model="view"

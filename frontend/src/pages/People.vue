@@ -199,7 +199,6 @@ function showLink(name, url) {
 	linkOpen.value = true;
 }
 
-
 async function load() {
 	try {
 		[people.value, former.value] = await Promise.all([

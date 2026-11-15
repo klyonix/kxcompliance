@@ -69,7 +69,9 @@ const askLabel = computed(() =>
 );
 
 const friendly = (err, what) =>
-	err.isNetwork ? `${what} did not reach the server. Try again when you are back online.` : err.message;
+	err.isNetwork
+		? `${what} did not reach the server. Try again when you are back online.`
+		: err.message;
 
 watch(open, async (now) => {
 	if (!now) return;
@@ -96,7 +98,9 @@ async function send(close) {
 		);
 		close();
 		toast.success(
-			`Sending ${asking === 1 ? "1 request" : `${asking} requests`}. You will be told when it is done.`
+			`Sending ${
+				asking === 1 ? "1 request" : `${asking} requests`
+			}. You will be told when it is done.`
 		);
 	} catch (err) {
 		error.value = friendly(err, "The request");

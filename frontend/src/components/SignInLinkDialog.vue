@@ -2,7 +2,11 @@
 	<Dialog
 		:open="open"
 		:title="links.length > 1 ? 'Send them these links' : 'Send them this link'"
-		:actions="links.length === 1 ? [{ label: 'Copy link', variant: 'solid', onClick: () => copy(links[0].url) }] : []"
+		:actions="
+			links.length === 1
+				? [{ label: 'Copy link', variant: 'solid', onClick: () => copy(links[0].url) }]
+				: []
+		"
 		@update:open="emit('update:open', $event)"
 	>
 		<div class="flex flex-col gap-3">

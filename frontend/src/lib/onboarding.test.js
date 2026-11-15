@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { agmQuestion, companyDefault, onboardingSteps, registrationProblem, setupAnswers, stateFromGstin } from "./onboarding";
+import {
+	agmQuestion,
+	companyDefault,
+	onboardingSteps,
+	registrationProblem,
+	setupAnswers,
+	stateFromGstin,
+} from "./onboarding";
 
 const STATES = ["GST", "GST Composition", "LWF", "PT"];
 const row = (registration_type, registration_number = "", state = "") => ({

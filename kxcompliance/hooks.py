@@ -180,7 +180,8 @@ scheduler_events = {
 # Testing
 # -------
 
-# before_tests = "kxcompliance.install.before_tests"
+# A new test site (CI) goes through ERPNext's setup first.
+before_tests = "kxcompliance.kx_compliance.test_utils.before_tests"
 
 # Overriding Methods
 # ------------------------------

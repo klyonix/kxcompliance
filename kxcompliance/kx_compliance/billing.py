@@ -118,7 +118,9 @@ def firms_own_companies() -> list[str]:
 	clients = set(
 		frappe.get_all("Company Compliance Profile", filters={"client": ("is", "set")}, pluck="company")
 	)
-	return [name for name in frappe.get_all("Company", pluck="name", order_by="creation") if name not in clients]
+	return [
+		name for name in frappe.get_all("Company", pluck="name", order_by="creation") if name not in clients
+	]
 
 
 def firm_company(name: str) -> str:
@@ -1906,7 +1908,7 @@ def payment_entries(customer: str, company: str, to_date, bills: dict) -> list[d
 	for name, refs in payments.items():
 		first = refs[0]
 		reference = first.reference_no if first.reference_no != first.mode_of_payment else None
-		how = ", ".join(filter(None, [first.mode_of_payment, reference]))
+		how = ", ".join(part for part in (first.mode_of_payment, reference) if part)
 		settled = [row for row in refs if row.reference_name]
 		allocated = sum(flt(row.allocated_amount) for row in settled)
 		tds_left = flt(deducted.get(name), 2)
@@ -2116,7 +2118,8 @@ def still_open(entries: list[dict], today) -> list[dict]:
 
 def statement_html(client: str, from_date, to_date, own: bool = False) -> str:
 	"""The statement of account as printed, with the firm's and the client's logos."""
-	return frappe.render_template(
+	# The app's own template file, never one a user wrote.
+	return frappe.render_template(  # nosemgrep
 		"templates/statement_of_account.html",
 		{
 			"statement": statement(client, from_date, to_date, own),

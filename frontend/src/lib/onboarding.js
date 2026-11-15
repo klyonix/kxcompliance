@@ -58,7 +58,11 @@ export function registrationProblem(rows, stateRegistrations) {
 export function companyDefault(accountType, openCompanies, canCreate) {
 	if (accountType === "CA/CS Firm" && canCreate) {
 		// The one company there is the firm's own, named in ERPNext's setup: its name, not asked again.
-		return { choice: "new", company: "", firmName: openCompanies.length === 1 ? openCompanies[0] : "" };
+		return {
+			choice: "new",
+			company: "",
+			firmName: openCompanies.length === 1 ? openCompanies[0] : "",
+		};
 	}
 	if (openCompanies.length || !canCreate) {
 		return { choice: "existing", company: openCompanies.length === 1 ? openCompanies[0] : "" };

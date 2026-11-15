@@ -243,7 +243,14 @@ import { call } from "@/api";
 import { isManager } from "@/boot";
 import BillingCard from "@/components/BillingCard.vue";
 import StatementDialog from "@/components/StatementDialog.vue";
-import { accountFacts, ageingRows, commitmentLines, money, rateLine, recurringWithoutStartLine } from "@/lib/billing";
+import {
+	accountFacts,
+	ageingRows,
+	commitmentLines,
+	money,
+	rateLine,
+	recurringWithoutStartLine,
+} from "@/lib/billing";
 import { formatDate } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
 import { chooseClient } from "@/stores/clientFilter";

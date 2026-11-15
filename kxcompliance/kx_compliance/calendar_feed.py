@@ -93,7 +93,9 @@ def stop_feed():
 		frappe.delete_doc(FEED, record.name, ignore_permissions=True)  # the person's own feed
 
 
-@frappe.whitelist(allow_guest=True, methods=["GET"])
+# A calendar app cannot sign in: the secret link's token is the credential, checked below and
+# rate-limited; the feed is then built with the token owner's own permissions.
+@frappe.whitelist(allow_guest=True, methods=["GET"])  # nosemgrep
 @rate_limit(limit=120, seconds=60 * 60)
 def feed(token: str):
 	"""The calendar itself, for a calendar app holding the secret link."""
@@ -105,14 +107,14 @@ def feed(token: str):
 	previous = frappe.session.user
 	try:
 		# Build it as the person, so their own permissions decide what it shows.
-		frappe.set_user(record.user)
+		frappe.set_user(record.user)  # nosemgrep
 		if not can_open_app(record.user):
 			raise frappe.PermissionError
 		events = events_for(record.user, record.scope)
 		name = get_settings().app_name or "KlyONIX Compliance"
 		text = calendar(name, events, frappe.utils.get_system_timezone())
 	finally:
-		frappe.set_user(previous)
+		frappe.set_user(previous)  # nosemgrep
 	frappe.response.filename = "compliance.ics"
 	frappe.response.filecontent = text
 	# Served as a calendar, shown rather than saved, which is what calendar apps expect.

@@ -390,7 +390,8 @@ def bulk_plan(filings: list[dict]) -> dict:
 
 def run_ask_in_bulk(filings: list[dict], title: str, details: str | None, by: str):
 	"""Background job: ask for the document on each filing, then tell whoever asked how it went."""
-	frappe.set_user(by)
+	# The job acts as the manager who started it, so their permissions apply to what it changes.
+	frappe.set_user(by)  # nosemgrep
 	asked, failed = 0, []
 	for index, row in enumerate(filings, start=1):
 		frappe.db.savepoint(ASK_SAVEPOINT)
@@ -413,9 +414,9 @@ def run_ask_in_bulk(filings: list[dict], title: str, details: str | None, by: st
 			failed.append(row["company"])
 		if index % ASK_BATCH == 0:
 			# A job may commit as it goes, so a failure later loses nothing asked before it.
-			frappe.db.commit()
+			frappe.db.commit()  # nosemgrep
 	# Asked; the notice below goes out whatever happens to it.
-	frappe.db.commit()
+	frappe.db.commit()  # nosemgrep
 	subject = (
 		_("1 client asked for {0}").format(title)
 		if asked == 1

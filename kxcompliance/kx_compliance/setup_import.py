@@ -219,7 +219,8 @@ def check_rows(rows: list[dict], account_type: str) -> list[dict]:
 	known_clients = set(
 		frappe.get_all("Compliance Client", filters={"name": ("in", list(clients) or [""])}, pluck="name")
 	)
-	may_create = bool(frappe.has_permission("Company", "create")) and bool(frappe.is_setup_complete())
+	can_create = frappe.has_permission("Company", "create")
+	may_create = bool(can_create) and bool(frappe.is_setup_complete())
 	firm = account_type == "CA/CS Firm"
 	seen = {}
 	checked = []

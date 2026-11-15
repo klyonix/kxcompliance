@@ -35,13 +35,13 @@ from kxcompliance.api import (
 	write_off_bill,
 )
 from kxcompliance.kx_compliance.billing import (
-	billing_party,
-	firms_own_companies,
 	BILL_FORMAT,
 	OUTSIDE_STATE,
 	WITHIN_STATE,
 	ageing_bucket,
 	bill_print,
+	billing_party,
+	firms_own_companies,
 	make_monthly_drafts,
 	send_overdue_reminders,
 	state_of,
@@ -304,6 +304,9 @@ class TestRates(IntegrationTestCase):
 	def test_old_prices_and_fixed_fees_move_onto_rate_cards(self):
 		from kxcompliance.patches.v1_0.move_prices_to_rate_cards import execute as move_prices
 
+		# Only a site from before rate cards has the old fee columns to move; a new one has nothing.
+		if not frappe.db.has_column("Compliance Client", "fixed_fee"):
+			self.skipTest("This site never had the fields before rate cards.")
 		frappe.db.delete("Rate Card")
 		moved = client("Billing Moved Client").name
 		fee = frappe.qb.DocType("Return Fee")
@@ -1061,9 +1064,7 @@ class TestBills(IntegrationTestCase):
 		company.save()
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
 		shown = bill(name)
-		self.assertEqual(
-			[row["description"] for row in shown["taxes"]], ["Output CGST", "Output SGST"]
-		)
+		self.assertEqual([row["description"] for row in shown["taxes"]], ["Output CGST", "Output SGST"])
 		self.assertEqual(billing_party(self.client, TEST_COMPANY).gstin, "29AABCK1234Q1Z3")
 
 	def test_each_month_brings_one_draft_per_client_with_something_to_bill(self):

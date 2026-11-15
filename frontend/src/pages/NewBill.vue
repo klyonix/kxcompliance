@@ -70,7 +70,7 @@
 				</label>
 			</section>
 
-<p
+			<p
 				v-if="options.recurring_without_start?.length"
 				class="rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-4"
 			>
@@ -222,7 +222,14 @@ import { useRoute, useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
-import { billSubtotal, linesProblem, linesToSend, money, servicesProblem, recurringWithoutStartLine } from "@/lib/billing";
+import {
+	billSubtotal,
+	linesProblem,
+	linesToSend,
+	money,
+	servicesProblem,
+	recurringWithoutStartLine,
+} from "@/lib/billing";
 
 const route = useRoute();
 const router = useRouter();

@@ -78,6 +78,52 @@ export function sectionsFor({ checks, client }) {
 
 export const sections = sectionsFor({ checks: checksOnly(), client: isClientLogin() });
 
+// The pages under Settings: a group in the side bar, and buttons on the Settings page on phones.
+// `also` lists the routes opened from a page, so its row stays marked while one is open.
+const SETTINGS_PAGES = [
+	{ label: "General", route: "Settings", icon: "lucide-sliders-horizontal" },
+	{ label: "People", route: "People", icon: "lucide-users" },
+	{
+		label: "Companies",
+		route: "Companies",
+		icon: "lucide-building-2",
+		also: ["Company", "CompanyNew"],
+	},
+	{
+		label: "Register item types",
+		route: "ItemTypes",
+		icon: "lucide-file-badge",
+		also: ["ItemTypeNew", "ItemType"],
+	},
+	{
+		label: "Customer and supplier licences",
+		route: "LicenceRules",
+		icon: "lucide-shield-check",
+		also: ["LicenceRuleNew", "LicenceRule", "LicenceBlocks"],
+		organisation: true,
+	},
+	{ label: "Reminder log", route: "ReminderLog", icon: "lucide-bell" },
+	{
+		label: "Obligation library",
+		route: "ObligationLibrary",
+		icon: "lucide-library",
+		also: ["ObligationNew", "Obligation"],
+	},
+	{
+		label: "Due-date extensions",
+		route: "Extensions",
+		icon: "lucide-calendar-clock",
+		also: ["ExtensionNew", "Extension"],
+	},
+];
+
+export const settingsPagesFor = ({ firm }) =>
+	SETTINGS_PAGES.filter((page) => !(page.organisation && firm));
+
+// Whether a settings page's row is the one open, counting the pages opened from it.
+export const isSettingsPageOpen = (page, routeName) =>
+	page.route === routeName || (page.also || []).includes(routeName);
+
 // Back to where the person came from in the app, with that list's tab and search as they left
 // them; to the record's list when the page was opened directly (a link, a reload).
 export function goBack(router, fallback) {

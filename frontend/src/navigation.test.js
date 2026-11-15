@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { CLIENT_ROUTES, sectionsFor } from "./navigation";
+import { CLIENT_ROUTES, isSettingsPageOpen, sectionsFor, settingsPagesFor } from "./navigation";
 
 const routes = (options) => sectionsFor(options).map((section) => section.route);
 
@@ -29,5 +31,36 @@ describe("sectionsFor", () => {
 
 	it("keeps sales and purchase users to the Licence Check", () => {
 		expect(routes({ checks: true, client: false })).toEqual(["LicenceCheck"]);
+	});
+});
+
+describe("settings pages", () => {
+	const routerSource = readFileSync(path.join(import.meta.dirname, "router.js"), "utf8");
+	const routeNames = new Set(
+		[...routerSource.matchAll(/name: "([A-Za-z]+)"/g)].map((m) => m[1])
+	);
+
+	it("open real screens, with the pages opened from them", () => {
+		for (const page of settingsPagesFor({ firm: false })) {
+			expect(routeNames).toContain(page.route);
+			for (const name of page.also || []) expect(routeNames).toContain(name);
+		}
+	});
+
+	it("leave licence rules out for a firm", () => {
+		const firm = settingsPagesFor({ firm: true }).map((page) => page.route);
+		expect(firm).not.toContain("LicenceRules");
+		expect(settingsPagesFor({ firm: false }).map((page) => page.route)).toContain(
+			"LicenceRules"
+		);
+	});
+
+	it("keep a page's row marked while a record opened from it is open", () => {
+		const [rules] = settingsPagesFor({ firm: false }).filter(
+			(page) => page.route === "LicenceRules"
+		);
+		expect(isSettingsPageOpen(rules, "LicenceRule")).toBe(true);
+		expect(isSettingsPageOpen(rules, "LicenceRules")).toBe(true);
+		expect(isSettingsPageOpen(rules, "People")).toBe(false);
 	});
 });

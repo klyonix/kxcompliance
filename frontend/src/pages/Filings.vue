@@ -5,6 +5,7 @@
 		:fields="TASK_LIST_FIELDS"
 		:views="FILING_VIEWS"
 		:to-row="taskRow"
+		v-bind="FILING_LIST"
 		search-field="obligation_template"
 		search-placeholder="Search by return or form"
 		:empty="empty"
@@ -53,7 +54,7 @@ import { Button, Dropdown } from "frappe-ui";
 import { isManager, mayRecord } from "@/boot";
 import RecordList from "@/components/RecordList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
-import { FILING_VIEWS, TASK_LIST_FIELDS, taskRow } from "@/lib/filings";
+import { FILING_LIST, FILING_VIEWS, TASK_LIST_FIELDS, taskRow } from "@/lib/filings";
 
 // The phone's header has room for a short label beside the title.
 const isMobile = useIsMobile();

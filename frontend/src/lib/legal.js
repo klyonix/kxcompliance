@@ -82,6 +82,8 @@ export const DATE_LIST_FIELDS = [
 	"status",
 	"is_overdue",
 	"purpose",
+	"company",
+	"responsible",
 ];
 export const CASE_LIST_FIELDS = [
 	"name",
@@ -92,8 +94,21 @@ export const CASE_LIST_FIELDS = [
 	"case_number",
 	"status",
 	"next_date",
+	"company",
+	"responsible",
 ];
-export const MARK_LIST_FIELDS = ["name", "mark", "application_number", "status", "next_date"];
+export const MARK_LIST_FIELDS = [
+	"name",
+	"mark",
+	"application_number",
+	"status",
+	"next_date",
+	"applicant",
+	"responsible",
+];
+
+const RESPONSIBLE = { label: "Responsible", field: "responsible", person: true };
+const BY_RECENT = { label: "Recently changed", value: "recent", orderBy: "modified desc" };
 
 export function dateRow(legalDate, today = new Date()) {
 	return {
@@ -106,6 +121,7 @@ export function dateRow(legalDate, today = new Date()) {
 		due: relativeDue(legalDate.date, midnightOf(today), {
 			overdue: Boolean(legalDate.is_overdue),
 		}),
+		date: legalDate.date,
 		to: referenceRoute(legalDate.reference_doctype, legalDate.reference_name),
 	};
 }
@@ -125,6 +141,7 @@ export function caseRow(legalCase, today = new Date()) {
 		status: legalCase.status,
 		theme: caseTheme(legalCase.status),
 		due: nextDue(legalCase.next_date, today, !OPEN_CASE_STATUSES.includes(legalCase.status)),
+		date: legalCase.next_date,
 		to: referenceRoute("Legal Case", legalCase.name),
 	};
 }
@@ -140,6 +157,7 @@ export function markRow(mark, today = new Date()) {
 		status: mark.status,
 		theme: markTheme(mark.status),
 		due: nextDue(mark.next_date, today, ENDED_MARK_STATUSES.includes(mark.status)),
+		date: mark.next_date,
 		to: referenceRoute("Trademark", mark.name),
 	};
 }
@@ -155,6 +173,14 @@ export const LEGAL_VIEWS = [
 		toRow: dateRow,
 		searchField: "reference_title",
 		searchPlaceholder: "Search by case or mark",
+		group: true,
+		columns: [{ label: "Company", field: "company" }, RESPONSIBLE],
+		dateLabel: "Date",
+		sorts: [
+			{ label: "Date", value: "date", orderBy: "date asc" },
+			{ label: "Case or mark", value: "name", orderBy: "reference_title asc" },
+		],
+		filterBy: { company: true, mine: "responsible" },
 	},
 	{
 		label: "Cases",
@@ -166,6 +192,15 @@ export const LEGAL_VIEWS = [
 		toRow: caseRow,
 		searchField: "title",
 		searchPlaceholder: "Search cases",
+		group: true,
+		columns: [{ label: "Forum", field: "forum_name" }, RESPONSIBLE],
+		dateLabel: "Next date",
+		sorts: [
+			{ label: "Next date", value: "next", orderBy: "next_date asc" },
+			{ label: "Title", value: "name", orderBy: "title asc" },
+			BY_RECENT,
+		],
+		filterBy: { company: true, mine: "responsible" },
 	},
 	{
 		label: "Trademarks",
@@ -178,6 +213,15 @@ export const LEGAL_VIEWS = [
 		companyField: "applicant",
 		searchField: "mark",
 		searchPlaceholder: "Search trademarks",
+		group: true,
+		columns: [{ label: "Applicant", field: "applicant" }, RESPONSIBLE],
+		dateLabel: "Next date",
+		sorts: [
+			{ label: "Next date", value: "next", orderBy: "next_date asc" },
+			{ label: "Mark", value: "name", orderBy: "mark asc" },
+			BY_RECENT,
+		],
+		filterBy: { company: true, mine: "responsible" },
 	},
 ];
 

@@ -5,6 +5,7 @@
 		:fields="SIGNATORY_FIELDS"
 		:views="SIGNATORY_VIEWS"
 		:to-row="signatoryRow"
+		v-bind="SIGNATORY_LIST"
 		search-field="full_name"
 		search-placeholder="Search by name"
 		:empty="empty"
@@ -26,7 +27,12 @@
 import { Button } from "frappe-ui";
 import { mayRecord } from "@/boot";
 import RecordList from "@/components/RecordList.vue";
-import { SIGNATORY_FIELDS, SIGNATORY_VIEWS, signatoryRow } from "@/lib/signatories";
+import {
+	SIGNATORY_FIELDS,
+	SIGNATORY_LIST,
+	SIGNATORY_VIEWS,
+	signatoryRow,
+} from "@/lib/signatories";
 
 function empty(view, searching) {
 	if (searching) return { title: "No matches", detail: "Try another name." };

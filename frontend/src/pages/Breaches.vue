@@ -9,6 +9,7 @@
 		:empty="empty"
 		:parent="{ label: 'Settings', route: { name: 'Settings' } }"
 		:by-client="false"
+		date-label="Board deadline"
 	>
 		<template #actions>
 			<Button

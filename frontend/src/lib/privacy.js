@@ -35,12 +35,14 @@ export const REQUEST_VIEWS = [
 		value: "open",
 		filters: [["status", "in", ["Open", "In Progress"]]],
 		orderBy: "due_by asc",
+		dateLabel: "Answer by",
 	},
 	{
 		label: "Answered",
 		value: "closed",
 		filters: [["status", "in", ["Done", "Declined"]]],
 		orderBy: "closed_on desc",
+		dateLabel: "Answered",
 	},
 ];
 

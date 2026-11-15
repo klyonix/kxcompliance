@@ -48,7 +48,7 @@
 				/>
 			</div>
 			<div
-				class="flex flex-wrap items-center gap-2 md:max-w-[75%] md:shrink-0 md:justify-end"
+				class="flex flex-wrap items-center gap-2 md:shrink-0 md:flex-nowrap md:justify-end"
 			>
 				<TextInput
 					data-tour="list-search"
@@ -84,6 +84,7 @@
 					:doctype="currentDoctype"
 					:state="controlsState"
 					:table="layout === 'table'"
+					:quick-target="isMobile ? null : '#list-quick-filters'"
 					@change="controlsChanged"
 				/>
 				<Button
@@ -125,6 +126,12 @@
 				</Dropdown>
 			</div>
 		</div>
+		<!-- The quick filters someone chose, on their own row; hidden while there are none. -->
+		<div
+			v-if="!isMobile"
+			id="list-quick-filters"
+			class="flex flex-wrap items-center gap-2 [&:not(:has(*))]:hidden"
+		/>
 		<div v-if="changed" class="flex justify-end">
 			<Button
 				size="sm"

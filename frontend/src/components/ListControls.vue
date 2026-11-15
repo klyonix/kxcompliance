@@ -1,12 +1,17 @@
 <template>
 	<div class="flex flex-wrap items-center gap-2" data-tour="list-filter">
-		<!-- Quick filters only once someone picks them (the sliders); the line stays short. -->
-		<QuickFilter
-			v-model:filters="view.filters.conditions.value"
-			v-model:fields="view.quickFilter.fields.value"
-			v-model:customizing="view.quickFilter.customizing.value"
-			:doctype="doctype"
-		/>
+		<!-- Quick filters only once someone picks them (the sliders). On a computer they go on a
+		row of their own below the list's line (`quickTarget`), so that line keeps its shape
+		however many there are. -->
+		<Teleport :to="quickTarget || 'body'" defer :disabled="!quickTarget">
+			<QuickFilter
+				v-if="view.quickFilter.fields.value.length || view.quickFilter.customizing.value"
+				v-model:filters="view.filters.conditions.value"
+				v-model:fields="view.quickFilter.fields.value"
+				v-model:customizing="view.quickFilter.customizing.value"
+				:doctype="doctype"
+			/>
+		</Teleport>
 		<template v-if="!view.quickFilter.customizing.value">
 			<Filter v-model="view.filters.conditions.value" :doctype="doctype" />
 			<SortBy v-model="view.sort.by.value" :doctype="doctype" hide-label />
@@ -47,6 +52,8 @@ const props = defineProps({
 	state: { type: Object, default: null },
 	// Whether the table is shown, which alone has columns to choose.
 	table: { type: Boolean, default: false },
+	// Where the quick filters go (a selector), or null to keep them beside the other controls.
+	quickTarget: { type: String, default: null },
 });
 const emit = defineEmits(["change"]);
 

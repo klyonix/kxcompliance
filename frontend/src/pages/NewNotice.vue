@@ -8,7 +8,7 @@
 	>
 		<p class="text-base text-ink-gray-6">
 			Record a notice as soon as it arrives, with the date the reply is due. You hold it
-			until someone reassigns it; the rest can be filled in later in the Desk.
+			until someone reassigns it; the rest can be filled in later on the case's page.
 		</p>
 
 		<p

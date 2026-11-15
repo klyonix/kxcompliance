@@ -21,12 +21,17 @@
     "@xstate/graph": "3.0.4",
     "autoprefixer": "^10.4.14",
     "fake-indexeddb": "^6.0.0",
-    "happy-dom": "^20.9.0",
+    "happy-dom": "^21.0.4",
     "postcss": "^8.4.5",
     "tailwindcss": "^3.4.15",
     "vite": "^8.2.0",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^4.1.10",
     "xstate": "5.33.4"
+  },
+  "resolutions": {
+    "**/glob": "^14.0.6",
+    "**/editorconfig/minimatch": "^11.0.5",
+    "**/@tailwindcss/typography/postcss-selector-parser": "^6.1.5"
   }
 }

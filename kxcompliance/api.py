@@ -898,6 +898,9 @@ def boot() -> dict:
 		"default_company": frappe.defaults.get_user_default("Company") or "",
 		"date_format": frappe.db.get_default("date_format") or "dd-mm-yyyy",
 		"account_type": settings.account_type or "",
+		# A firm checks its clients' sales and purchases only for the clients it switches on.
+		"licence_check_on": settings.account_type != "CA/CS Firm"
+		or bool(frappe.db.exists("Compliance Client", {"licence_check": 1})),
 		# Managers are taken through onboarding until the site is set up.
 		"setup_needed": not settings.setup_complete and is_approver(),
 		# Where the browser reaches Frappe's realtime server in development; behind a proxy in

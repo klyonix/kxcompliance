@@ -101,7 +101,7 @@ const COLLAPSED_KEY = "kxcompliance:sidebar-collapsed";
 const GROUP_KEY = "kxcompliance:settings-group-open";
 
 const route = useRoute();
-const settingsPages = settingsPagesFor({ firm: boot.accountType === "CA/CS Firm" });
+const settingsPages = settingsPagesFor();
 const settingsOpen = computed(() =>
 	settingsPages.some((page) => isSettingsPageOpen(page, route.name))
 );

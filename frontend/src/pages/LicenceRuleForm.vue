@@ -81,10 +81,36 @@
 						Only for
 					</h2>
 					<p class="text-sm text-ink-gray-5">
-						Leave a list empty for every item, or every
+						Leave a list empty for every company, every item, or every
 						{{ form.party_type === "Supplier" ? "supplier" : "customer" }}.
 					</p>
 				</div>
+				<details
+					v-if="boot.companies.length > 1"
+					class="rounded-lg border border-outline-gray-1 px-3 py-2"
+				>
+					<summary class="cursor-pointer text-base text-ink-gray-8">
+						Companies
+						<span class="text-ink-gray-5"
+							>·
+							{{
+								summary(
+									form.companies,
+									isFirm ? "every client switched on" : "every company"
+								)
+							}}</span
+						>
+					</summary>
+					<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+						<FormControl
+							v-for="company in boot.companies"
+							:key="company"
+							v-model="form.companies[company]"
+							type="checkbox"
+							:label="company"
+						/>
+					</div>
+				</details>
 				<details class="rounded-lg border border-outline-gray-1 px-3 py-2">
 					<summary class="cursor-pointer text-base text-ink-gray-8">
 						Item groups
@@ -150,11 +176,13 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call, createDoc, getDoc, updateDoc } from "@/api";
+import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { CHECK_FIELDS } from "@/lib/licenceRules";
 import { notLoaded } from "@/offline/reachability";
 
 const DOCTYPE = "Licence Requirement";
+const isFirm = boot.accountType === "CA/CS Firm";
 const GROUP_TYPES = { Customer: "Customer Group", Supplier: "Supplier Group" };
 const props = defineProps({ name: { type: String, default: "" } });
 
@@ -172,6 +200,7 @@ const form = reactive({
 	...Object.fromEntries(CHECK_FIELDS.map((field) => [field, false])),
 	item_groups: {},
 	party_groups: {},
+	companies: {},
 });
 
 const choices = (values) => values.map((value) => ({ label: value, value }));
@@ -215,6 +244,7 @@ async function save() {
 		is_active: form.is_active ? 1 : 0,
 		...Object.fromEntries(CHECK_FIELDS.map((field) => [field, form[field] ? 1 : 0])),
 		item_groups: ticked(form.item_groups).map((item_group) => ({ item_group })),
+		companies: ticked(form.companies).map((company) => ({ company })),
 		party_groups: ticked(form.party_groups).map((party_group) => ({
 			group_type: GROUP_TYPES[form.party_type],
 			party_group,
@@ -254,6 +284,7 @@ onMounted(async () => {
 				...Object.fromEntries(CHECK_FIELDS.map((field) => [field, Boolean(rule[field])])),
 				item_groups: flags((rule.item_groups || []).map((row) => row.item_group)),
 				party_groups: flags((rule.party_groups || []).map((row) => row.party_group)),
+				companies: flags((rule.companies || []).map((row) => row.company)),
 			});
 		}
 		options.value = loaded;

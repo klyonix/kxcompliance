@@ -7,6 +7,12 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import can_open_app, check_party, has_app_access, my_work, search_parties
+from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import (
+	OTHER_COMPANY,
+	client,
+	company,
+	profile,
+)
 from kxcompliance.kx_compliance.move_old_trackers import (
 	CUSTOMER_LICENCE_TABLES,
 	move_customer_licence_row,
@@ -23,7 +29,14 @@ from kxcompliance.kx_compliance.test_utils import (
 )
 
 # These tests build their own records; skip ERPNext's generated ones.
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Compliance Item Type", "Item Group", "Customer Group", "Supplier Group"]
+IGNORE_TEST_RECORD_DEPENDENCIES = [
+	"Compliance Item Type",
+	"Item Group",
+	"Customer Group",
+	"Supplier Group",
+	# A rule may name companies; these tests make their own.
+	"Company",
+]
 
 PHARMACY = "Licence Test Pharmacy"
 GROCER = "Licence Test Grocer"
@@ -348,3 +361,55 @@ class TestLicenceCheckScreen(IntegrationTestCase):
 			self.assertEqual([row.name for row in found], [WHOLESALER])
 			self.assertEqual(found[0].party_group, "Licence Test Suppliers")
 			self.assertEqual(check_party("Customer", GROCER)["party_name"], GROCER)
+
+
+class TestLicenceCheckForFirms(IntegrationTestCase):
+	"""On a CA/CS firm's site, a client's sales are checked only once the firm switches it on."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_parties()
+
+	def setUp(self):
+		frappe.db.delete("Licence Requirement")
+		frappe.db.delete("Licence Check Log")
+		frappe.db.delete("Compliance Item", {"holder_type": ("in", ["Customer", "Supplier"])})
+		self.account_type = frappe.db.get_single_value("KX Compliance Settings", "account_type")
+		frappe.db.set_single_value("KX Compliance Settings", "account_type", "CA/CS Firm")
+		frappe.clear_document_cache("KX Compliance Settings", "KX Compliance Settings")
+		# The company leaves the last test's client before that client is made again.
+		if frappe.db.exists("Company Compliance Profile", TEST_COMPANY):
+			frappe.delete_doc("Company Compliance Profile", TEST_COMPANY, force=True)
+		self.client = client("Licence Check Client")
+		profile(TEST_COMPANY, self.client.name)
+
+	def tearDown(self):
+		frappe.db.set_single_value("KX Compliance Settings", "account_type", self.account_type)
+		frappe.clear_document_cache("KX Compliance Settings", "KX Compliance Settings")
+
+	def order(self):
+		doc = sales_order()
+		doc.company = TEST_COMPANY
+		return doc
+
+	def test_a_client_not_switched_on_is_never_blocked(self):
+		requirement()
+		check_document(self.order(), "validate")
+
+	def test_a_client_switched_on_is_checked(self):
+		requirement()
+		self.client.licence_check = 1
+		self.client.save()
+		with self.assertRaisesRegex(frappe.ValidationError, "has no Drug Licence on record"):
+			check_document(self.order(), "validate")
+
+	def test_a_rule_naming_companies_checks_only_theirs(self):
+		company(OTHER_COMPANY, "CTOC")
+		self.client.licence_check = 1
+		self.client.save()
+		requirement(companies=[{"company": OTHER_COMPANY}])
+		check_document(self.order(), "validate")
+		requirement(companies=[{"company": TEST_COMPANY}])
+		with self.assertRaisesRegex(frappe.ValidationError, "has no Drug Licence on record"):
+			check_document(self.order(), "validate")

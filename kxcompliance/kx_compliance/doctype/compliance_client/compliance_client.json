@@ -9,7 +9,7 @@
    "link_fieldname": "client"
   }
  ],
- "modified": "2026-11-15 01:08:09.744208",
+ "modified": "2026-11-15 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "owner": "Administrator",
@@ -25,6 +25,7 @@
   "relationship_manager",
   "contact_email",
   "contact_phone",
+  "licence_check",
   "section_team",
   "team",
   "section_logins",
@@ -81,6 +82,13 @@
    "fieldtype": "Data",
    "label": "Contact Phone",
    "options": "Phone"
+  },
+  {
+   "fieldname": "licence_check",
+   "fieldtype": "Check",
+   "label": "Check Customer and Supplier Licences",
+   "default": "0",
+   "description": "Sales and purchases of this client's companies are checked against the licence rules."
   },
   {
    "fieldname": "section_team",

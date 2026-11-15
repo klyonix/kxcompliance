@@ -1,4 +1,4 @@
-import { boot, checksOnly, isClientLogin, isManager, mayUseDesk } from "./boot";
+import { boot, checksOnly, isClientLogin, isManager, licenceCheckOn, mayUseDesk } from "./boot";
 
 // The app's sections, in the order they appear in the side bar and the phone's tab bar.
 const ALL_SECTIONS = [
@@ -28,8 +28,8 @@ const ALL_SECTIONS = [
 		tabLabel: "Licences",
 		route: "LicenceCheck",
 		icon: "lucide-shield-check",
-		// A firm checks licences on its clients' sales only if it turns this on (not built yet).
-		organisation: true,
+		// On a firm's site, once a client is switched on for it.
+		licenceCheck: true,
 	},
 	// Managers only; on phones it opens from Account, as the tab bar is full.
 	{
@@ -73,7 +73,7 @@ export function sectionsFor({ checks, client }) {
 		if (section.managers && !isManager()) return false;
 		if (section.firm && !firm) return false;
 		if (section.clientLogin) return false;
-		return !(section.organisation && firm);
+		return !(section.licenceCheck && !licenceCheckOn());
 	});
 }
 
@@ -101,7 +101,7 @@ const SETTINGS_PAGES = [
 		route: "LicenceRules",
 		icon: "lucide-shield-check",
 		also: ["LicenceRuleNew", "LicenceRule", "LicenceBlocks"],
-		organisation: true,
+		licenceCheck: true,
 	},
 	{ label: "Reminder log", route: "ReminderLog", icon: "lucide-bell" },
 	{
@@ -130,8 +130,8 @@ const SETTINGS_PAGES = [
 	},
 ];
 
-export const settingsPagesFor = ({ firm }) =>
-	SETTINGS_PAGES.filter((page) => !(page.organisation && firm));
+export const settingsPagesFor = ({ licenceCheck = licenceCheckOn() } = {}) =>
+	SETTINGS_PAGES.filter((page) => !(page.licenceCheck && !licenceCheck));
 
 // Whether a settings page's row is the one open, counting the pages opened from it.
 export const isSettingsPageOpen = (page, routeName) =>

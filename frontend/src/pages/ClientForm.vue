@@ -52,6 +52,12 @@
 					/>
 					<FormControl v-model="form.contact_phone" label="Contact phone" />
 				</div>
+				<FormControl
+					v-model="form.licence_check"
+					type="checkbox"
+					label="Check their customers' and suppliers' licences"
+					description="Sales and purchases of this client's companies are checked against your licence rules before they are saved."
+				/>
 			</section>
 
 			<section class="flex flex-col gap-3" aria-labelledby="team-heading">
@@ -194,6 +200,7 @@ const form = reactive({
 	relationship_manager: "",
 	contact_email: "",
 	contact_phone: "",
+	licence_check: false,
 	team: [],
 	logins: [],
 	notes: "",
@@ -215,6 +222,7 @@ function values() {
 		relationship_manager: form.relationship_manager || null,
 		contact_email: form.contact_email.trim() || null,
 		contact_phone: form.contact_phone.trim() || null,
+		licence_check: form.licence_check ? 1 : 0,
 		team: form.team.map((user) => ({ user })),
 		logins: form.logins.map((login) => ({
 			full_name: login.full_name.trim(),
@@ -263,6 +271,7 @@ onMounted(async () => {
 				relationship_manager: client.relationship_manager || "",
 				contact_email: client.contact_email || "",
 				contact_phone: client.contact_phone || "",
+				licence_check: Boolean(client.licence_check),
 				team: client.team.map((row) => row.user),
 				logins: client.logins.map((row) => ({
 					full_name: row.full_name,

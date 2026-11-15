@@ -22,13 +22,31 @@ DOCUMENTS = {
 	"Purchase Invoice": ("Supplier", "check_purchase_invoice", "supplier", "posting_date"),
 }
 GROUP_FIELDS = {"Customer": "customer_group", "Supplier": "supplier_group"}
+SETTINGS = "KX Compliance Settings"
+FIRM = "CA/CS Firm"
 CHECK_FIELDS = tuple(check_field for _party_type, check_field, _field, _date in DOCUMENTS.values())
 LICENCE_NUMBERS_FIELD = "customer_licence_numbers"
+
+
+def checked_for_company(company: str | None) -> bool:
+	"""Whether a company's sales and purchases are checked at all.
+
+	On an organisation's site, always. On a CA/CS firm's site, only for the companies of a client
+	the firm has switched the Licence Check on for (RK, 15 Nov 2026).
+	"""
+	if frappe.get_cached_value(SETTINGS, SETTINGS, "account_type") != FIRM:
+		return True
+	if not company:
+		return False
+	client = frappe.db.get_value("Company Compliance Profile", {"company": company}, "client")
+	return bool(client and frappe.db.get_value("Compliance Client", client, "licence_check"))
 
 
 def check_document(doc, method=None):
 	party_type, check_field, party_field, date_field = DOCUMENTS[doc.doctype]
 	if doc.doctype == "Quotation" and doc.get("quotation_to") != "Customer":
+		return
+	if not checked_for_company(doc.get("company")):
 		return
 	party = doc.get(party_field)
 	if not party:
@@ -66,10 +84,12 @@ def check_document(doc, method=None):
 
 def applicable_requirements(doc, party_type: str, check_field: str, party: str) -> list:
 	document_groups = {row.get("item_group") for row in doc.get("items", [])} - {None, ""}
+	company = doc.get("company")
 	return [
 		requirement
 		for requirement in requirements_for_party(party_type, party, check_field)
-		if not requirement.item_groups or set(requirement.item_groups) & document_groups
+		if (not requirement.item_groups or set(requirement.item_groups) & document_groups)
+		and (not requirement.companies or company in requirement.companies)
 	]
 
 
@@ -88,6 +108,7 @@ def requirements_for_party(party_type: str, party: str, check_field: str | None 
 		return []
 	names = [requirement.name for requirement in requirements]
 	item_groups = rows_by_parent("Licence Requirement Item Group", names, "item_group")
+	companies = rows_by_parent("Licence Requirement Company", names, "company")
 	party_groups = rows_by_parent("Licence Requirement Party Group", names, "party_group")
 	party_group = frappe.get_cached_value(party_type, party, GROUP_FIELDS[party_type])
 
@@ -97,6 +118,7 @@ def requirements_for_party(party_type: str, party: str, check_field: str | None 
 		if wanted_parties and party_group not in wanted_parties:
 			continue
 		requirement.item_groups = sorted(item_groups.get(requirement.name, ()))
+		requirement.companies = sorted(companies.get(requirement.name, ()))
 		applicable.append(requirement)
 	return applicable
 

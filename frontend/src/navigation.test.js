@@ -41,22 +41,22 @@ describe("settings pages", () => {
 	);
 
 	it("open real screens, with the pages opened from them", () => {
-		for (const page of settingsPagesFor({ firm: false })) {
+		for (const page of settingsPagesFor({ licenceCheck: true })) {
 			expect(routeNames).toContain(page.route);
 			for (const name of page.also || []) expect(routeNames).toContain(name);
 		}
 	});
 
-	it("leave licence rules out for a firm", () => {
-		const firm = settingsPagesFor({ firm: true }).map((page) => page.route);
+	it("leave licence rules out where licences are not checked", () => {
+		const firm = settingsPagesFor({ licenceCheck: false }).map((page) => page.route);
 		expect(firm).not.toContain("LicenceRules");
-		expect(settingsPagesFor({ firm: false }).map((page) => page.route)).toContain(
+		expect(settingsPagesFor({ licenceCheck: true }).map((page) => page.route)).toContain(
 			"LicenceRules"
 		);
 	});
 
 	it("keep a page's row marked while a record opened from it is open", () => {
-		const [rules] = settingsPagesFor({ firm: false }).filter(
+		const [rules] = settingsPagesFor({ licenceCheck: true }).filter(
 			(page) => page.route === "LicenceRules"
 		);
 		expect(isSettingsPageOpen(rules, "LicenceRule")).toBe(true);

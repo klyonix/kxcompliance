@@ -11,6 +11,9 @@ export const boot = {
 	dateFormat: window.date_format || "",
 	// "Organisation" or "CA/CS Firm", chosen in onboarding.
 	accountType: window.account_type || "",
+	// Whether sales and purchases are checked against licence rules here: always for an
+	// organisation, and for a firm once a client of theirs is switched on.
+	licenceCheckOn: Boolean(window.licence_check_on),
 	// True for a manager on a site that has not been set up yet.
 	setupNeeded: Boolean(window.setup_needed),
 	// True until this person accepts the current privacy notice; the app shows it before anything.
@@ -48,3 +51,6 @@ export const mayRecord = () =>
 	["Compliance Manager", "Compliance User", "System Manager"].some((role) =>
 		boot.roles.includes(role)
 	);
+
+// The Licence Check, its rules and its log are offered where licences are checked.
+export const licenceCheckOn = () => boot.licenceCheckOn;

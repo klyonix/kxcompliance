@@ -702,7 +702,7 @@ export const TOURS = [
 		id: "licence-check",
 		title: "Licence check",
 		route: "LicenceCheck",
-		organisation: true,
+		licenceCheck: true,
 		steps: [
 			{
 				title: "Licence check",
@@ -725,7 +725,7 @@ export const TOURS = [
 		title: "Customer and supplier licences",
 		route: "LicenceRules",
 		managers: true,
-		organisation: true,
+		licenceCheck: true,
 		steps: [
 			{
 				title: "Licence rules",
@@ -748,7 +748,7 @@ export const TOURS = [
 		title: "Blocks and warnings",
 		route: "LicenceBlocks",
 		managers: true,
-		organisation: true,
+		licenceCheck: true,
 		steps: [
 			{
 				target: ["licence-blocks-tabs"],

@@ -1759,6 +1759,8 @@ def boot() -> dict:
 		"may_bill": settings.account_type == "CA/CS Firm"
 		and bool(settings.billing_company)
 		and bool(frappe.has_permission("Sales Invoice", "create")),
+		# Until it is, a firm's managers find Billing in the menu, opening its setup.
+		"billing_set_up": bool(settings.billing_company),
 		"lang": frappe.local.lang or "en",
 		# A firm checks its clients' sales and purchases only for the clients it switches on.
 		"licence_check_on": settings.account_type != "CA/CS Firm"

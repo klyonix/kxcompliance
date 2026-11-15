@@ -71,7 +71,8 @@ export function yearFacts(year, { client = false } = {}) {
 			tone: year.open_cases ? "amber" : "gray",
 		},
 		{
-			label: client ? t("Documents your firm needs") : t("Documents awaited"),
+			// The section below is "Documents your firm needs"; the tile does not repeat it.
+			label: client ? t("Documents to send") : t("Documents awaited"),
 			value: String(year.waiting_on_client),
 			detail: client ? t("Waiting for you") : t("From the client"),
 			tone: year.waiting_on_client ? "amber" : "gray",

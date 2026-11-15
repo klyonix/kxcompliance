@@ -75,6 +75,8 @@ const ROUTES = {
 	company: { name: "Companies" },
 	client: { name: "ClientNew" },
 	colleague: { name: "People" },
+	billing: { name: "BillingSettings" },
+	privacy: { name: "Settings", query: { tab: "privacy" } },
 	reminders: { name: "Settings" },
 };
 

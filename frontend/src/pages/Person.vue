@@ -245,12 +245,15 @@ import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import { Button, Dialog, FormControl, Skeleton, dialog, toast } from "frappe-ui";
 import { call } from "@/api";
+import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import { formatDate } from "@/lib/format";
 import { listRoute } from "@/lib/listFilters";
-import { ROLES, personOptions, personRow } from "@/lib/people";
+import { roleChoices, personOptions, personRow } from "@/lib/people";
 import { notLoaded } from "@/offline/reachability";
+
+const ROLES = roleChoices(boot.accountType === "CA/CS Firm");
 
 const props = defineProps({ user: { type: String, required: true } });
 const router = useRouter();

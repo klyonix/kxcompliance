@@ -104,7 +104,7 @@
 				v-model="form.email"
 				type="email"
 				label="Email"
-				placeholder="neha@yourfirm.in"
+				:placeholder="inviteEmailHint(firm)"
 			/>
 			<fieldset class="flex flex-col gap-2">
 				<legend class="mb-1 text-xs text-ink-gray-5">Role</legend>
@@ -149,12 +149,16 @@ import {
 	toast,
 } from "frappe-ui";
 import { call } from "@/api";
+import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RowList from "@/components/RowList.vue";
 import SignInLinkDialog from "@/components/SignInLinkDialog.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
-import { ROLES, filterPeople, personRow } from "@/lib/people";
+import { inviteEmailHint, roleChoices, filterPeople, personRow } from "@/lib/people";
 import { notLoaded } from "@/offline/reachability";
+
+const firm = boot.accountType === "CA/CS Firm";
+const ROLES = roleChoices(firm);
 
 const isMobile = useIsMobile();
 const people = ref(null);

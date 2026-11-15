@@ -60,7 +60,7 @@ describe("yearFacts", () => {
 	});
 
 	it("speaks to the client in its own login", () => {
-		expect(yearFacts(year, { client: true })[4].label).toBe("Documents your firm needs");
+		expect(yearFacts(year, { client: true })[4].label).toBe("Documents to send");
 	});
 
 	it("says so when nothing has fallen due yet", () => {

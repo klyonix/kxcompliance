@@ -19,6 +19,7 @@ import {
 	statementLink,
 	statementProblem,
 	summaryFacts,
+	billNumberExample,
 	modeForReference,
 	recurringWithoutStartLine,
 } from "./billing";
@@ -292,5 +293,10 @@ describe("Billing's summary", () => {
 		expect(modeForReference("004512", modes, "Cash")).toBe("Cheque");
 		// A mode chosen on purpose stays.
 		expect(modeForReference("004512", modes, "UPI")).toBe("UPI");
+	});
+
+	it("shows the bill number with the firm's own prefix and year", () => {
+		expect(billNumberExample("RDC", new Date(2026, 10, 15))).toBe("RDC/26-27/0001");
+		expect(billNumberExample("", new Date(2027, 1, 1))).toBe("RA/26-27/0001");
 	});
 });

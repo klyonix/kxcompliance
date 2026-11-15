@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { boot } from "./boot";
 import {
 	CLIENT_ROUTES,
 	firstRunRoute,
@@ -33,6 +34,25 @@ describe("sectionsFor", () => {
 
 	it("never shows firm staff the client's home", () => {
 		expect(routes({ checks: false, client: false })).not.toContain("ClientHome");
+	});
+
+	it("shows a firm's manager Billing before it is set up, opening its setup", () => {
+		const saved = { ...boot };
+		Object.assign(boot, {
+			accountType: "CA/CS Firm",
+			roles: ["Compliance Manager"],
+			mayBill: false,
+			billingSetUp: false,
+		});
+		try {
+			expect(routes({ checks: false, client: false })).toContain("BillingSettings");
+			boot.roles = ["Compliance User"];
+			expect(routes({ checks: false, client: false })).not.toContain("BillingSettings");
+			Object.assign(boot, { roles: ["Compliance Manager"], billingSetUp: true });
+			expect(routes({ checks: false, client: false })).not.toContain("BillingSettings");
+		} finally {
+			Object.assign(boot, saved);
+		}
 	});
 
 	it("keeps sales and purchase users to the Licence Check", () => {

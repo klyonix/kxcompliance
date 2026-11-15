@@ -27,6 +27,8 @@ export const boot = {
 	client: window.client || "",
 	// A firm set up to bill, and someone ERPNext lets make invoices (an Accounts User).
 	mayBill: Boolean(window.may_bill),
+	// Whether the firm has set billing up; until then its managers open the setup from Billing.
+	billingSetUp: Boolean(window.billing_set_up),
 };
 
 const COMPLIANCE_ROLES = [

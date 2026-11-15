@@ -103,7 +103,7 @@
 				v-model="form.bill_prefix"
 				label="Bill number prefix"
 				placeholder="RA"
-				description="Bills are numbered RA/26-27/0001 and on."
+				:description="`Bills are numbered ${billNumberExample(form.bill_prefix)} and on.`"
 			/>
 			<FormControl
 				v-model="form.default_sac"
@@ -132,6 +132,7 @@
 import { computed, reactive, ref, watch } from "vue";
 import { Button, FormControl, TabButtons, toast } from "frappe-ui";
 import { call } from "@/api";
+import { billNumberExample } from "@/lib/billing";
 import LogoField from "@/components/LogoField.vue";
 
 const props = defineProps({ setup: { type: Object, required: true } });

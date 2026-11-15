@@ -19,6 +19,8 @@ export const KINDS = {
 	"licence-rule": { label: "Licence rules", icon: "lucide-shield-check" },
 	obligation: { label: "Obligations", icon: "lucide-book-open-check" },
 	"licence-check": { label: "Licence checks", icon: "lucide-shield-x" },
+	customer: { label: "Customers", icon: "lucide-store" },
+	supplier: { label: "Suppliers", icon: "lucide-truck" },
 };
 
 const LEGAL_PAGES = { "Legal Case": "LegalCase", Trademark: "Trademark" };

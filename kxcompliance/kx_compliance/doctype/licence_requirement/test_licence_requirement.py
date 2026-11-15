@@ -336,6 +336,10 @@ class TestLicenceCheckScreen(IntegrationTestCase):
 			self.assertEqual(self.requirement_for(result, "FSSAI Licence")["result"], "ok")
 			self.assertEqual(len(result["licences"]), 2)
 			self.assertFalse(any(row["valid"] for row in result["licences"]))
+			# Each names its register item, which the app opens for those who may read it.
+			self.assertTrue(
+				all(frappe.db.exists("Compliance Item", row["name"]) for row in result["licences"])
+			)
 
 			# A requirement limited to chemists does not apply to a grocer.
 			grocer = check_party("Customer", GROCER)

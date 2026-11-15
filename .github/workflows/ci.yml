@@ -90,16 +90,32 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     name: Front end
-    defaults:
-      run:
-        working-directory: frontend
 
     steps:
+      # The front end uses Frappe's shared UI package (@framework/ui), linked from ../../frappe/ui
+      # as on a bench, so both are checked out side by side.
       - uses: actions/checkout@v6
+        with:
+          path: apps/kxcompliance
+      - uses: actions/checkout@v6
+        with:
+          repository: frappe/frappe
+          ref: version-16
+          path: apps/frappe
+          sparse-checkout: ui
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: yarn
-          cache-dependency-path: frontend/yarn.lock
-      - run: yarn install --frozen-lockfile
-      - run: yarn test
+          cache-dependency-path: |
+            apps/kxcompliance/frontend/yarn.lock
+            apps/frappe/ui/yarn.lock
+      - name: Install Frappe's UI package
+        working-directory: apps/frappe/ui
+        run: yarn install --frozen-lockfile
+      - name: Install
+        working-directory: apps/kxcompliance/frontend
+        run: yarn install --frozen-lockfile
+      - name: Test
+        working-directory: apps/kxcompliance/frontend
+        run: yarn test

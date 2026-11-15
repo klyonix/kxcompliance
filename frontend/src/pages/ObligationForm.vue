@@ -4,362 +4,389 @@
 		:parent="{ label: 'Obligation library', route: { name: 'ObligationLibrary' } }"
 	/>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
-		<p
-			v-if="error"
-			role="alert"
-			class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
-		>
-			{{ error }}
-		</p>
-		<div v-else-if="!ready" class="flex flex-col gap-3" aria-busy="true">
-			<Skeleton class="h-6 w-1/3 rounded" />
-			<Skeleton class="h-48 w-full rounded-lg" />
-		</div>
+	<RecordFrame :doctype="DOCTYPE" :name="name">
+		<div class="flex flex-col gap-8">
+			<p
+				v-if="error"
+				role="alert"
+				class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
+			>
+				{{ error }}
+			</p>
+			<div v-else-if="!ready" class="flex flex-col gap-3" aria-busy="true">
+				<Skeleton class="h-6 w-1/3 rounded" />
+				<Skeleton class="h-48 w-full rounded-lg" />
+			</div>
 
-		<template v-else>
-			<!-- A standard obligation: its rules come from the app, read-only here. -->
-			<section v-if="standard" class="flex flex-col gap-4" aria-labelledby="rules-heading">
-				<div class="flex flex-col gap-0.5">
-					<h2 id="rules-heading" class="text-base font-semibold text-ink-gray-8">
-						Rules
-					</h2>
-					<p class="text-sm text-ink-gray-5">
-						A standard obligation: each update keeps these rules in line with the law.
-						When a date is extended, add a due-date extension; for a different rule,
-						add your own obligation.
-					</p>
-				</div>
-				<dl class="grid grid-cols-1 gap-x-6 gap-y-3 text-base sm:grid-cols-[10rem_1fr]">
-					<template v-for="fact in facts" :key="fact.label">
-						<dt class="text-ink-gray-5">{{ fact.label }}</dt>
-						<dd class="text-ink-gray-8">{{ fact.value }}</dd>
-					</template>
-				</dl>
-			</section>
-
-			<!-- A firm's own obligation: every rule is theirs to set. -->
 			<template v-else>
-				<section class="flex flex-col gap-4" aria-labelledby="what-heading">
-					<h2 id="what-heading" class="text-base font-semibold text-ink-gray-8">
-						What it is
-					</h2>
-					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<FormControl
-							v-if="!name"
-							v-model="form.template_name"
-							class="sm:col-span-2"
-							label="Name"
-							placeholder="Trade Licence Return (BBMP)"
-						/>
-						<FormControl
-							v-model="form.law"
-							type="select"
-							label="Law"
-							:options="choices(options.law)"
-						/>
-						<FormControl v-model="form.form" label="Form" placeholder="Form 5" />
-						<FormControl
-							v-model="form.authority"
-							label="Authority"
-							placeholder="Labour Department"
-						/>
-						<FormControl
-							v-model="form.source"
-							label="Source"
-							placeholder="Section or notification"
-						/>
-					</div>
-				</section>
-
-				<section class="flex flex-col gap-4" aria-labelledby="when-heading">
-					<h2 id="when-heading" class="text-base font-semibold text-ink-gray-8">
-						When it is due
-					</h2>
-					<FormControl
-						v-model="form.due_after_event"
-						type="checkbox"
-						label="Due a number of days after the AGM or a company event"
-					/>
-					<div v-if="form.due_after_event" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<FormControl
-							v-model="form.event_type"
-							type="select"
-							label="After"
-							:options="[
-								{ label: 'The AGM', value: '' },
-								...choices(options.event_types),
-							]"
-						/>
-						<FormControl
-							v-model="form.days_after_event"
-							type="number"
-							label="Days after"
-						/>
-					</div>
-					<template v-else>
-						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-							<FormControl
-								v-model="form.frequency"
-								type="select"
-								label="How often"
-								:options="
-									choices(
-										options.frequency.filter((value) => value !== 'Per Event')
-									)
-								"
-							/>
-							<FormControl
-								v-model="form.period_basis"
-								type="select"
-								label="Periods follow"
-								:options="choices(options.period_basis)"
-							/>
-							<FormControl
-								v-model="form.months_after_period"
-								type="number"
-								label="Months after the period"
-								description="0 is the period's last month, 1 the month after it."
-							/>
-							<FormControl
-								v-model="form.due_day"
-								type="number"
-								label="Due day"
-								description="31 means the month's last day."
-							/>
-						</div>
-						<p class="text-sm text-ink-gray-6">
-							Due {{ dueText(form.months_after_period, form.due_day) }}.
-						</p>
-
-						<div class="flex flex-col gap-2">
-							<div class="flex items-center justify-between gap-3">
-								<h3 class="text-base font-medium text-ink-gray-8">Exceptions</h3>
-								<Button
-									icon-left="lucide-plus"
-									label="Add an exception"
-									@click="addException"
-								/>
-							</div>
-							<p class="text-sm text-ink-gray-5">
-								A different date for periods ending in a given month, such as
-								March.
-							</p>
-							<div
-								v-for="(row, index) in form.overrides"
-								:key="index"
-								class="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2"
-							>
-								<FormControl
-									v-model="row.period_end_month"
-									type="select"
-									label="Ending in"
-									:options="MONTHS"
-								/>
-								<FormControl
-									v-model="row.months_after_period"
-									type="number"
-									label="Months after"
-								/>
-								<FormControl v-model="row.due_day" type="number" label="Due day" />
-								<Button
-									icon="lucide-trash-2"
-									variant="ghost"
-									:aria-label="`Remove exception ${index + 1}`"
-									@click="form.overrides.splice(index, 1)"
-								/>
-							</div>
-						</div>
-					</template>
-				</section>
-
-				<section class="flex flex-col gap-4" aria-labelledby="who-heading">
+				<!-- A standard obligation: its rules come from the app, read-only here. -->
+				<section
+					v-if="standard"
+					class="flex flex-col gap-4"
+					aria-labelledby="rules-heading"
+				>
 					<div class="flex flex-col gap-0.5">
-						<h2 id="who-heading" class="text-base font-semibold text-ink-gray-8">
-							Who it applies to
+						<h2 id="rules-heading" class="text-base font-semibold text-ink-gray-8">
+							Rules
 						</h2>
 						<p class="text-sm text-ink-gray-5">
-							Leave a list empty for every kind of company or every state.
+							A standard obligation: each update keeps these rules in line with the
+							law. When a date is extended, add a due-date extension; for a different
+							rule, add your own obligation.
 						</p>
 					</div>
-					<fieldset class="flex flex-col gap-2">
-						<legend class="mb-2 text-sm text-ink-gray-6">Kinds of company</legend>
-						<div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-							<FormControl
-								v-for="type in options.company_types"
-								:key="type"
-								v-model="form.company_types[type]"
-								type="checkbox"
-								:label="type"
-							/>
-						</div>
-					</fieldset>
-					<FormControl
-						v-model="form.registration_type"
-						type="select"
-						label="Only for companies registered for"
-						:options="[
-							{ label: 'Any company', value: '' },
-							...choices(options.registration_type),
-						]"
-					/>
-					<details class="rounded-lg border border-outline-gray-1 px-3 py-2">
-						<summary class="cursor-pointer text-base text-ink-gray-8">
-							States
-							<span class="text-ink-gray-5">· {{ statesSummary }}</span>
-						</summary>
-						<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-							<FormControl
-								v-for="state in options.states"
-								:key="state"
-								v-model="form.states[state]"
-								type="checkbox"
-								:label="state"
-							/>
-						</div>
-					</details>
+					<dl
+						class="grid grid-cols-1 gap-x-6 gap-y-3 text-base sm:grid-cols-[10rem_1fr]"
+					>
+						<template v-for="fact in facts" :key="fact.label">
+							<dt class="text-ink-gray-5">{{ fact.label }}</dt>
+							<dd class="text-ink-gray-8">{{ fact.value }}</dd>
+						</template>
+					</dl>
 				</section>
 
-				<section class="flex flex-col gap-4" aria-labelledby="how-heading">
-					<h2 id="how-heading" class="text-base font-semibold text-ink-gray-8">
-						How it is filed
-					</h2>
-					<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<!-- A firm's own obligation: every rule is theirs to set. -->
+				<template v-else>
+					<section class="flex flex-col gap-4" aria-labelledby="what-heading">
+						<h2 id="what-heading" class="text-base font-semibold text-ink-gray-8">
+							What it is
+						</h2>
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<FormControl
+								v-if="!name"
+								v-model="form.template_name"
+								class="sm:col-span-2"
+								label="Name"
+								placeholder="Trade Licence Return (BBMP)"
+							/>
+							<FormControl
+								v-model="form.law"
+								type="select"
+								label="Law"
+								:options="choices(options.law)"
+							/>
+							<FormControl v-model="form.form" label="Form" placeholder="Form 5" />
+							<FormControl
+								v-model="form.authority"
+								label="Authority"
+								placeholder="Labour Department"
+							/>
+							<FormControl
+								v-model="form.source"
+								label="Source"
+								placeholder="Section or notification"
+							/>
+						</div>
+					</section>
+
+					<section class="flex flex-col gap-4" aria-labelledby="when-heading">
+						<h2 id="when-heading" class="text-base font-semibold text-ink-gray-8">
+							When it is due
+						</h2>
 						<FormControl
-							v-model="form.requires_proof"
+							v-model="form.due_after_event"
 							type="checkbox"
-							label="Proof of filing needed"
+							label="Due a number of days after the AGM or a company event"
+						/>
+						<div
+							v-if="form.due_after_event"
+							class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+						>
+							<FormControl
+								v-model="form.event_type"
+								type="select"
+								label="After"
+								:options="[
+									{ label: 'The AGM', value: '' },
+									...choices(options.event_types),
+								]"
+							/>
+							<FormControl
+								v-model="form.days_after_event"
+								type="number"
+								label="Days after"
+							/>
+						</div>
+						<template v-else>
+							<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+								<FormControl
+									v-model="form.frequency"
+									type="select"
+									label="How often"
+									:options="
+										choices(
+											options.frequency.filter(
+												(value) => value !== 'Per Event'
+											)
+										)
+									"
+								/>
+								<FormControl
+									v-model="form.period_basis"
+									type="select"
+									label="Periods follow"
+									:options="choices(options.period_basis)"
+								/>
+								<FormControl
+									v-model="form.months_after_period"
+									type="number"
+									label="Months after the period"
+									description="0 is the period's last month, 1 the month after it."
+								/>
+								<FormControl
+									v-model="form.due_day"
+									type="number"
+									label="Due day"
+									description="31 means the month's last day."
+								/>
+							</div>
+							<p class="text-sm text-ink-gray-6">
+								Due {{ dueText(form.months_after_period, form.due_day) }}.
+							</p>
+
+							<div class="flex flex-col gap-2">
+								<div class="flex items-center justify-between gap-3">
+									<h3 class="text-base font-medium text-ink-gray-8">
+										Exceptions
+									</h3>
+									<Button
+										icon-left="lucide-plus"
+										label="Add an exception"
+										@click="addException"
+									/>
+								</div>
+								<p class="text-sm text-ink-gray-5">
+									A different date for periods ending in a given month, such as
+									March.
+								</p>
+								<div
+									v-for="(row, index) in form.overrides"
+									:key="index"
+									class="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2"
+								>
+									<FormControl
+										v-model="row.period_end_month"
+										type="select"
+										label="Ending in"
+										:options="MONTHS"
+									/>
+									<FormControl
+										v-model="row.months_after_period"
+										type="number"
+										label="Months after"
+									/>
+									<FormControl
+										v-model="row.due_day"
+										type="number"
+										label="Due day"
+									/>
+									<Button
+										icon="lucide-trash-2"
+										variant="ghost"
+										:aria-label="`Remove exception ${index + 1}`"
+										@click="form.overrides.splice(index, 1)"
+									/>
+								</div>
+							</div>
+						</template>
+					</section>
+
+					<section class="flex flex-col gap-4" aria-labelledby="who-heading">
+						<div class="flex flex-col gap-0.5">
+							<h2 id="who-heading" class="text-base font-semibold text-ink-gray-8">
+								Who it applies to
+							</h2>
+							<p class="text-sm text-ink-gray-5">
+								Leave a list empty for every kind of company or every state.
+							</p>
+						</div>
+						<fieldset class="flex flex-col gap-2">
+							<legend class="mb-2 text-sm text-ink-gray-6">Kinds of company</legend>
+							<div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+								<FormControl
+									v-for="type in options.company_types"
+									:key="type"
+									v-model="form.company_types[type]"
+									type="checkbox"
+									:label="type"
+								/>
+							</div>
+						</fieldset>
+						<FormControl
+							v-model="form.registration_type"
+							type="select"
+							label="Only for companies registered for"
+							:options="[
+								{ label: 'Any company', value: '' },
+								...choices(options.registration_type),
+							]"
+						/>
+						<details class="rounded-lg border border-outline-gray-1 px-3 py-2">
+							<summary class="cursor-pointer text-base text-ink-gray-8">
+								States
+								<span class="text-ink-gray-5">· {{ statesSummary }}</span>
+							</summary>
+							<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+								<FormControl
+									v-for="state in options.states"
+									:key="state"
+									v-model="form.states[state]"
+									type="checkbox"
+									:label="state"
+								/>
+							</div>
+						</details>
+					</section>
+
+					<section class="flex flex-col gap-4" aria-labelledby="how-heading">
+						<h2 id="how-heading" class="text-base font-semibold text-ink-gray-8">
+							How it is filed
+						</h2>
+						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+							<FormControl
+								v-model="form.requires_proof"
+								type="checkbox"
+								label="Proof of filing needed"
+							/>
+							<FormControl
+								v-model="form.requires_review"
+								type="checkbox"
+								label="A second person reviews it"
+							/>
+							<FormControl
+								v-model="form.requires_payment"
+								type="checkbox"
+								label="Involves a payment"
+							/>
+							<FormControl
+								v-model="form.add_by_default"
+								type="checkbox"
+								label="Ticked for matching companies at setup"
+							/>
+						</div>
+						<FormControl
+							v-model="form.reminder_days"
+							label="Remind (days before the due date)"
+							placeholder="7, 2, 0"
 						/>
 						<FormControl
-							v-model="form.requires_review"
-							type="checkbox"
-							label="A second person reviews it"
+							v-model="form.description"
+							type="textarea"
+							label="Notes"
+							:rows="3"
+						/>
+					</section>
+				</template>
+
+				<FormControl
+					v-model="form.is_active"
+					type="checkbox"
+					label="In use: the calendar makes filings for it"
+				/>
+
+				<section class="flex flex-col gap-4" aria-labelledby="late-heading">
+					<div class="flex flex-col gap-0.5">
+						<h2 id="late-heading" class="text-base font-semibold text-ink-gray-8">
+							Filing late
+						</h2>
+						<p class="text-sm text-ink-gray-5">{{ figuresNote }}</p>
+					</div>
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+						<FormControl
+							v-model="form.late_fee_per_day"
+							type="number"
+							label="Late fee a day (₹)"
 						/>
 						<FormControl
-							v-model="form.requires_payment"
-							type="checkbox"
-							label="Involves a payment"
+							v-model="form.late_fee_flat"
+							type="number"
+							label="One-off late fee (₹)"
 						/>
 						<FormControl
-							v-model="form.add_by_default"
-							type="checkbox"
-							label="Ticked for matching companies at setup"
+							v-model="form.late_fee_cap"
+							type="number"
+							label="At most (₹; 0 for no cap)"
+						/>
+						<FormControl
+							v-model="form.interest_percent"
+							type="number"
+							label="Interest (% a year)"
 						/>
 					</div>
 					<FormControl
-						v-model="form.reminder_days"
-						label="Remind (days before the due date)"
-						placeholder="7, 2, 0"
+						v-model="form.cap_at_tax"
+						type="checkbox"
+						label="The late fee cannot exceed the tax"
 					/>
 					<FormControl
-						v-model="form.description"
+						v-model="form.penalty_rule"
 						type="textarea"
-						label="Notes"
+						label="The rule in words"
 						:rows="3"
 					/>
+					<div v-if="standard && doc.penalty_set_by_firm">
+						<Button
+							label="Use the library's figures"
+							:loading="restoring"
+							@click="useLibraryFigures"
+						/>
+					</div>
+				</section>
+
+				<section
+					v-if="name"
+					class="flex flex-col gap-3"
+					aria-labelledby="extensions-heading"
+				>
+					<div class="flex items-center justify-between gap-3">
+						<h2
+							id="extensions-heading"
+							class="text-base font-semibold text-ink-gray-8"
+						>
+							Due-date extensions
+						</h2>
+						<Button
+							icon-left="lucide-calendar-clock"
+							label="Extend a due date"
+							:route="{ name: 'ExtensionNew', query: { template: name } }"
+						/>
+					</div>
+					<p v-if="!extensions.length" class="text-sm text-ink-gray-5">None yet.</p>
+					<ul v-else class="flex flex-col">
+						<li v-for="extension in extensions" :key="extension.name">
+							<RouterLink
+								:to="{ name: 'Extension', params: { name: extension.name } }"
+								class="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-gray-2"
+							>
+								<span class="flex min-w-0 flex-1 flex-col">
+									<span class="truncate text-base text-ink-gray-8">{{
+										periodsText(
+											extension.periods_ending_from,
+											extension.periods_ending_to
+										)
+									}}</span>
+									<span class="truncate text-sm text-ink-gray-5">{{
+										extension.notification_reference
+									}}</span>
+								</span>
+								<span class="text-sm text-ink-gray-6">{{
+									formatDate(extension.new_due_date)
+								}}</span>
+							</RouterLink>
+						</li>
+					</ul>
 				</section>
 			</template>
-
-			<FormControl
-				v-model="form.is_active"
-				type="checkbox"
-				label="In use: the calendar makes filings for it"
-			/>
-
-			<section class="flex flex-col gap-4" aria-labelledby="late-heading">
-				<div class="flex flex-col gap-0.5">
-					<h2 id="late-heading" class="text-base font-semibold text-ink-gray-8">
-						Filing late
-					</h2>
-					<p class="text-sm text-ink-gray-5">{{ figuresNote }}</p>
-				</div>
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-					<FormControl
-						v-model="form.late_fee_per_day"
-						type="number"
-						label="Late fee a day (₹)"
-					/>
-					<FormControl
-						v-model="form.late_fee_flat"
-						type="number"
-						label="One-off late fee (₹)"
-					/>
-					<FormControl
-						v-model="form.late_fee_cap"
-						type="number"
-						label="At most (₹; 0 for no cap)"
-					/>
-					<FormControl
-						v-model="form.interest_percent"
-						type="number"
-						label="Interest (% a year)"
-					/>
-				</div>
-				<FormControl
-					v-model="form.cap_at_tax"
-					type="checkbox"
-					label="The late fee cannot exceed the tax"
-				/>
-				<FormControl
-					v-model="form.penalty_rule"
-					type="textarea"
-					label="The rule in words"
-					:rows="3"
-				/>
-				<div v-if="standard && doc.penalty_set_by_firm">
-					<Button
-						label="Use the library's figures"
-						:loading="restoring"
-						@click="useLibraryFigures"
-					/>
-				</div>
-			</section>
-
-			<section v-if="name" class="flex flex-col gap-3" aria-labelledby="extensions-heading">
-				<div class="flex items-center justify-between gap-3">
-					<h2 id="extensions-heading" class="text-base font-semibold text-ink-gray-8">
-						Due-date extensions
-					</h2>
-					<Button
-						icon-left="lucide-calendar-clock"
-						label="Extend a due date"
-						:route="{ name: 'ExtensionNew', query: { template: name } }"
-					/>
-				</div>
-				<p v-if="!extensions.length" class="text-sm text-ink-gray-5">None yet.</p>
-				<ul v-else class="flex flex-col">
-					<li v-for="extension in extensions" :key="extension.name">
-						<RouterLink
-							:to="{ name: 'Extension', params: { name: extension.name } }"
-							class="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-gray-2"
-						>
-							<span class="flex min-w-0 flex-1 flex-col">
-								<span class="truncate text-base text-ink-gray-8">{{
-									periodsText(
-										extension.periods_ending_from,
-										extension.periods_ending_to
-									)
-								}}</span>
-								<span class="truncate text-sm text-ink-gray-5">{{
-									extension.notification_reference
-								}}</span>
-							</span>
-							<span class="text-sm text-ink-gray-6">{{
-								formatDate(extension.new_due_date)
-							}}</span>
-						</RouterLink>
-					</li>
-				</ul>
-			</section>
-		</template>
-	</div>
+		</div>
+	</RecordFrame>
 
 	<div
 		v-if="ready"
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
-			class="mx-auto flex w-full max-w-3xl flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			class="mx-auto flex w-full flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			:class="recordWidth(name)"
 		>
 			<p v-if="saveError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ saveError }}
@@ -382,9 +409,11 @@ import { RouterLink, useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call, createDoc, getDoc, getList, runMethod, updateDoc } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RecordFrame from "@/components/RecordFrame.vue";
 import { formatDate } from "@/lib/format";
 import { daysText, parseDays } from "@/lib/itemTypes";
 import { EXTENSION_FIELDS, dueText, periodsText, ruleSummary, stateList } from "@/lib/obligations";
+import { recordWidth } from "@/lib/records";
 import { notLoaded } from "@/offline/reachability";
 
 const DOCTYPE = "Compliance Obligation Template";

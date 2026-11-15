@@ -4,265 +4,278 @@
 		:parent="{ label: 'Companies', route: { name: 'Companies' } }"
 	/>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
-		<p
-			v-if="error"
-			role="alert"
-			class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
-		>
-			{{ error }}
-		</p>
-		<div v-else-if="!options" class="flex flex-col gap-3" aria-busy="true">
-			<Skeleton class="h-6 w-1/3 rounded" />
-			<Skeleton class="h-40 w-full rounded-lg" />
-		</div>
-
-		<template v-else>
-			<section
-				v-if="score"
-				class="flex items-start gap-4 rounded-lg border border-outline-gray-1 px-4 py-4"
-				aria-labelledby="score-heading"
+	<RecordFrame doctype="Company Compliance Profile" :name="company">
+		<div class="flex flex-col gap-8">
+			<p
+				v-if="error"
+				role="alert"
+				class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
 			>
-				<ScoreBadge :score="score.score" />
-				<div class="flex min-w-0 flex-1 flex-col gap-1">
-					<h2 id="score-heading" class="text-base font-semibold text-ink-gray-8">
-						Compliance score {{ score.score }} of 100
-					</h2>
-					<p v-if="!score.reasons.length" class="text-base text-ink-gray-6">
-						Nothing to fix.
-					</p>
-					<ul v-else class="flex flex-col gap-0.5 text-base text-ink-gray-7">
-						<li v-for="reason in score.reasons" :key="reason.key">
-							{{ reason.label }} ({{ reason.points }})
-						</li>
-					</ul>
-					<p v-if="score.late_fees_so_far" class="text-base font-medium text-ink-red-4">
-						Late fees building up on overdue filings:
-						{{ formatMoney(score.late_fees_so_far) }}
-					</p>
-				</div>
-			</section>
+				{{ error }}
+			</p>
+			<div v-else-if="!options" class="flex flex-col gap-3" aria-busy="true">
+				<Skeleton class="h-6 w-1/3 rounded" />
+				<Skeleton class="h-40 w-full rounded-lg" />
+			</div>
 
-			<section class="flex flex-col gap-4" aria-labelledby="company-heading">
-				<h2 id="company-heading" class="text-base font-semibold text-ink-gray-8">
-					Company
-				</h2>
-				<template v-if="!company">
-					<TabButtons
-						v-if="options.can_create_company"
-						v-model="form.mode"
-						:options="[
-							{ label: 'Already in ERPNext', value: 'existing' },
-							{ label: 'New company', value: 'new' },
-						]"
-					/>
-					<FormControl
-						v-if="form.mode === 'existing'"
-						v-model="form.existing"
-						type="select"
-						label="Company"
-						:options="[{ label: 'Choose a company', value: '' }, ...notSetUp]"
-					/>
-					<FormControl
-						v-else
-						v-model="form.new_name"
-						label="Name of the new company"
-						placeholder="Sunrise Foods Private Limited"
-					/>
-				</template>
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					<FormControl
-						v-model="form.company_type"
-						type="select"
-						label="Kind"
-						:options="choices(options.company_types, 'Choose the kind')"
-					/>
-					<FormControl
-						v-if="isFirm"
-						v-model="form.client"
-						type="select"
-						label="Client"
-						:options="choices(options.clients, 'No client')"
-					/>
-					<FormControl
-						v-model="form.default_responsible"
-						type="select"
-						label="Responsible for filings"
-						:options="[{ label: 'Choose someone', value: '' }, ...people]"
-					/>
-					<FormControl
-						v-model="form.default_reviewer"
-						type="select"
-						label="Reviewer"
-						:options="[{ label: 'No reviewer', value: '' }, ...people]"
-					/>
-				</div>
-			</section>
-
-			<section class="flex flex-col gap-3" aria-labelledby="registrations-heading">
-				<div class="flex flex-col gap-0.5">
-					<h2 id="registrations-heading" class="text-base font-semibold text-ink-gray-8">
-						Registrations
-					</h2>
-					<p class="text-sm text-ink-gray-5">
-						Each registration brings the filings it needs, from the obligation library.
-					</p>
-				</div>
-				<div
-					v-for="(row, index) in form.registrations"
-					:key="index"
-					class="flex flex-col gap-2 rounded-lg bg-surface-gray-1 p-3 sm:flex-row sm:items-end"
+			<template v-else>
+				<section
+					v-if="score"
+					class="flex items-start gap-4 rounded-lg border border-outline-gray-1 px-4 py-4"
+					aria-labelledby="score-heading"
 				>
-					<FormControl
-						v-model="row.registration_type"
-						type="select"
-						label="Type"
-						:options="choices(options.registration_types)"
-						class="sm:w-44"
-					/>
-					<FormControl
-						v-model="row.registration_number"
-						label="Number"
-						class="sm:flex-1"
-					/>
-					<FormControl
-						v-if="needsState(row)"
-						v-model="row.state"
-						type="select"
-						label="State"
-						:options="choices(options.states, 'Choose the state')"
-						class="sm:w-48"
-					/>
-					<Button
-						variant="ghost"
-						icon="lucide-trash-2"
-						label="Remove registration"
-						@click="form.registrations.splice(index, 1)"
-					/>
-				</div>
-				<div>
-					<Button
-						icon-left="lucide-plus"
-						label="Add a registration"
-						@click="
-							form.registrations.push({
-								registration_type: 'GST',
-								registration_number: '',
-								state: '',
-							})
-						"
-					/>
-				</div>
-			</section>
-
-			<section
-				v-if="company && (agmFilings.length || form.agm_dates.length)"
-				class="flex flex-col gap-3"
-				aria-labelledby="agm-heading"
-			>
-				<div class="flex items-start justify-between gap-3">
-					<div class="flex flex-col gap-0.5">
-						<h2 id="agm-heading" class="text-base font-semibold text-ink-gray-8">
-							AGM dates
+					<ScoreBadge :score="score.score" />
+					<div class="flex min-w-0 flex-1 flex-col gap-1">
+						<h2 id="score-heading" class="text-base font-semibold text-ink-gray-8">
+							Compliance score {{ score.score }} of 100
 						</h2>
-						<p class="text-sm text-ink-gray-5">
-							When each year's AGM was held. These filings fall due a set number of
-							days after it: {{ agmFilings.join(", ") || "none now" }}.
+						<p v-if="!score.reasons.length" class="text-base text-ink-gray-6">
+							Nothing to fix.
+						</p>
+						<ul v-else class="flex flex-col gap-0.5 text-base text-ink-gray-7">
+							<li v-for="reason in score.reasons" :key="reason.key">
+								{{ reason.label }} ({{ reason.points }})
+							</li>
+						</ul>
+						<p
+							v-if="score.late_fees_so_far"
+							class="text-base font-medium text-ink-red-4"
+						>
+							Late fees building up on overdue filings:
+							{{ formatMoney(score.late_fees_so_far) }}
 						</p>
 					</div>
-					<Button icon-left="lucide-plus" label="Add an AGM" @click="addAgm" />
-				</div>
-				<p v-if="!form.agm_dates.length" class="text-base text-ink-gray-5">
-					No AGM recorded yet, so those filings have no due date.
-				</p>
-				<div
-					v-for="(row, index) in form.agm_dates"
-					:key="index"
-					class="grid grid-cols-[1fr_1fr_auto] items-end gap-2"
-				>
-					<FormControl
-						v-model="row.financial_year_end"
-						type="date"
-						:format="pickerFormat()"
-						label="Year ended"
-					/>
-					<FormControl
-						v-model="row.agm_date"
-						type="date"
-						:format="pickerFormat()"
-						label="AGM held on"
-					/>
-					<Button
-						variant="ghost"
-						icon="lucide-trash-2"
-						:label="`Remove the AGM for the year ended ${
-							row.financial_year_end || ''
-						}`"
-						@click="form.agm_dates.splice(index, 1)"
-					/>
-				</div>
-			</section>
+				</section>
 
-			<section
-				v-if="company"
-				class="flex flex-col gap-3"
-				aria-labelledby="obligations-heading"
-			>
-				<div class="flex flex-col gap-0.5">
-					<h2 id="obligations-heading" class="text-base font-semibold text-ink-gray-8">
-						Obligations
+				<section class="flex flex-col gap-4" aria-labelledby="company-heading">
+					<h2 id="company-heading" class="text-base font-semibold text-ink-gray-8">
+						Company
 					</h2>
-					<p class="text-sm text-ink-gray-5">
-						The filings the company makes. Untick one that does not apply; set who
-						handles each.
-					</p>
-				</div>
-				<div
-					v-for="row in form.obligations"
-					:key="row.name"
-					class="flex flex-col gap-2 border-b border-outline-gray-1 py-2.5 last:border-b-0 sm:flex-row sm:items-center"
-				>
-					<div class="flex min-w-0 flex-1 items-start gap-3">
-						<FormControl
-							v-model="row.is_active"
-							type="checkbox"
-							:aria-label="`${row.obligation_template} applies`"
+					<template v-if="!company">
+						<TabButtons
+							v-if="options.can_create_company"
+							v-model="form.mode"
+							:options="[
+								{ label: 'Already in ERPNext', value: 'existing' },
+								{ label: 'New company', value: 'new' },
+							]"
 						/>
-						<span class="flex min-w-0 flex-col">
-							<span
-								class="truncate text-base"
-								:class="
-									row.is_active
-										? 'text-ink-gray-8'
-										: 'text-ink-gray-5 line-through'
-								"
-								>{{ row.obligation_template }}</span
-							>
-							<span class="truncate text-sm text-ink-gray-5">{{
-								[row.law, row.frequency, row.registration_number || row.state]
-									.filter(Boolean)
-									.join(" · ")
-							}}</span>
-						</span>
+						<FormControl
+							v-if="form.mode === 'existing'"
+							v-model="form.existing"
+							type="select"
+							label="Company"
+							:options="[{ label: 'Choose a company', value: '' }, ...notSetUp]"
+						/>
+						<FormControl
+							v-else
+							v-model="form.new_name"
+							label="Name of the new company"
+							placeholder="Sunrise Foods Private Limited"
+						/>
+					</template>
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<FormControl
+							v-model="form.company_type"
+							type="select"
+							label="Kind"
+							:options="choices(options.company_types, 'Choose the kind')"
+						/>
+						<FormControl
+							v-if="isFirm"
+							v-model="form.client"
+							type="select"
+							label="Client"
+							:options="choices(options.clients, 'No client')"
+						/>
+						<FormControl
+							v-model="form.default_responsible"
+							type="select"
+							label="Responsible for filings"
+							:options="[{ label: 'Choose someone', value: '' }, ...people]"
+						/>
+						<FormControl
+							v-model="form.default_reviewer"
+							type="select"
+							label="Reviewer"
+							:options="[{ label: 'No reviewer', value: '' }, ...people]"
+						/>
 					</div>
-					<FormControl
-						v-model="row.responsible"
-						type="select"
-						:options="[{ label: 'Company default', value: '' }, ...people]"
-						:aria-label="`Responsible for ${row.obligation_template}`"
-						class="sm:w-56"
-					/>
-				</div>
-			</section>
-		</template>
-	</div>
+				</section>
+
+				<section class="flex flex-col gap-3" aria-labelledby="registrations-heading">
+					<div class="flex flex-col gap-0.5">
+						<h2
+							id="registrations-heading"
+							class="text-base font-semibold text-ink-gray-8"
+						>
+							Registrations
+						</h2>
+						<p class="text-sm text-ink-gray-5">
+							Each registration brings the filings it needs, from the obligation
+							library.
+						</p>
+					</div>
+					<div
+						v-for="(row, index) in form.registrations"
+						:key="index"
+						class="flex flex-col gap-2 rounded-lg bg-surface-gray-1 p-3 sm:flex-row sm:items-end"
+					>
+						<FormControl
+							v-model="row.registration_type"
+							type="select"
+							label="Type"
+							:options="choices(options.registration_types)"
+							class="sm:w-44"
+						/>
+						<FormControl
+							v-model="row.registration_number"
+							label="Number"
+							class="sm:flex-1"
+						/>
+						<FormControl
+							v-if="needsState(row)"
+							v-model="row.state"
+							type="select"
+							label="State"
+							:options="choices(options.states, 'Choose the state')"
+							class="sm:w-48"
+						/>
+						<Button
+							variant="ghost"
+							icon="lucide-trash-2"
+							label="Remove registration"
+							@click="form.registrations.splice(index, 1)"
+						/>
+					</div>
+					<div>
+						<Button
+							icon-left="lucide-plus"
+							label="Add a registration"
+							@click="
+								form.registrations.push({
+									registration_type: 'GST',
+									registration_number: '',
+									state: '',
+								})
+							"
+						/>
+					</div>
+				</section>
+
+				<section
+					v-if="company && (agmFilings.length || form.agm_dates.length)"
+					class="flex flex-col gap-3"
+					aria-labelledby="agm-heading"
+				>
+					<div class="flex items-start justify-between gap-3">
+						<div class="flex flex-col gap-0.5">
+							<h2 id="agm-heading" class="text-base font-semibold text-ink-gray-8">
+								AGM dates
+							</h2>
+							<p class="text-sm text-ink-gray-5">
+								When each year's AGM was held. These filings fall due a set number
+								of days after it: {{ agmFilings.join(", ") || "none now" }}.
+							</p>
+						</div>
+						<Button icon-left="lucide-plus" label="Add an AGM" @click="addAgm" />
+					</div>
+					<p v-if="!form.agm_dates.length" class="text-base text-ink-gray-5">
+						No AGM recorded yet, so those filings have no due date.
+					</p>
+					<div
+						v-for="(row, index) in form.agm_dates"
+						:key="index"
+						class="grid grid-cols-[1fr_1fr_auto] items-end gap-2"
+					>
+						<FormControl
+							v-model="row.financial_year_end"
+							type="date"
+							:format="pickerFormat()"
+							label="Year ended"
+						/>
+						<FormControl
+							v-model="row.agm_date"
+							type="date"
+							:format="pickerFormat()"
+							label="AGM held on"
+						/>
+						<Button
+							variant="ghost"
+							icon="lucide-trash-2"
+							:label="`Remove the AGM for the year ended ${
+								row.financial_year_end || ''
+							}`"
+							@click="form.agm_dates.splice(index, 1)"
+						/>
+					</div>
+				</section>
+
+				<section
+					v-if="company"
+					class="flex flex-col gap-3"
+					aria-labelledby="obligations-heading"
+				>
+					<div class="flex flex-col gap-0.5">
+						<h2
+							id="obligations-heading"
+							class="text-base font-semibold text-ink-gray-8"
+						>
+							Obligations
+						</h2>
+						<p class="text-sm text-ink-gray-5">
+							The filings the company makes. Untick one that does not apply; set who
+							handles each.
+						</p>
+					</div>
+					<div
+						v-for="row in form.obligations"
+						:key="row.name"
+						class="flex flex-col gap-2 border-b border-outline-gray-1 py-2.5 last:border-b-0 sm:flex-row sm:items-center"
+					>
+						<div class="flex min-w-0 flex-1 items-start gap-3">
+							<FormControl
+								v-model="row.is_active"
+								type="checkbox"
+								:aria-label="`${row.obligation_template} applies`"
+							/>
+							<span class="flex min-w-0 flex-col">
+								<span
+									class="truncate text-base"
+									:class="
+										row.is_active
+											? 'text-ink-gray-8'
+											: 'text-ink-gray-5 line-through'
+									"
+									>{{ row.obligation_template }}</span
+								>
+								<span class="truncate text-sm text-ink-gray-5">{{
+									[row.law, row.frequency, row.registration_number || row.state]
+										.filter(Boolean)
+										.join(" · ")
+								}}</span>
+							</span>
+						</div>
+						<FormControl
+							v-model="row.responsible"
+							type="select"
+							:options="[{ label: 'Company default', value: '' }, ...people]"
+							:aria-label="`Responsible for ${row.obligation_template}`"
+							class="sm:w-56"
+						/>
+					</div>
+				</section>
+			</template>
+		</div>
+	</RecordFrame>
 
 	<div
 		v-if="options"
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
-			class="mx-auto flex w-full max-w-3xl flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			class="mx-auto flex w-full flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			:class="recordWidth(company)"
 		>
 			<p v-if="saveError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ saveError }}
@@ -286,9 +299,11 @@ import { Button, FormControl, Skeleton, TabButtons, toast } from "frappe-ui";
 import { call } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RecordFrame from "@/components/RecordFrame.vue";
 import ScoreBadge from "@/components/ScoreBadge.vue";
 import { formatMoney, pickerFormat } from "@/lib/format";
 import { personOptions } from "@/lib/people";
+import { recordWidth } from "@/lib/records";
 import { notLoaded } from "@/offline/reachability";
 
 const props = defineProps({ company: { type: String, default: "" } });

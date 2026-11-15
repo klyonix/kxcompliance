@@ -7,143 +7,152 @@
 		</template>
 	</AppPageHeader>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
-		<p
-			v-if="error"
-			role="alert"
-			class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
-		>
-			{{ error }}
-		</p>
-
-		<div v-else-if="!request" class="flex flex-col gap-3" aria-busy="true">
-			<Skeleton class="h-6 w-1/2 rounded" />
-			<Skeleton class="h-4 w-1/3 rounded" />
-			<Skeleton class="mt-4 h-32 w-full rounded-lg" />
-		</div>
-
-		<template v-else>
-			<section class="flex flex-col gap-2">
-				<div class="flex flex-wrap items-center gap-2">
-					<Badge :label="t(state.label)" :theme="state.theme" size="md" />
-					<span
-						class="text-base"
-						:class="row.due.late ? 'font-medium text-ink-red-4' : 'text-ink-gray-6'"
-						>{{ dueLine }}</span
-					>
-				</div>
-				<p class="text-base text-ink-gray-6">{{ request.company }}</p>
-				<p
-					v-if="request.status === 'Requested' && request.firm_note"
-					class="rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-4"
-				>
-					{{ t("Sent back: {0}", request.firm_note) }}
-				</p>
-				<p
-					v-else-if="request.status === 'Uploaded'"
-					class="rounded-lg bg-surface-gray-2 px-3 py-2 text-base text-ink-gray-7"
-				>
-					{{
-						clientLogin
-							? t("Your firm has it and will check it.")
-							: t("Check the upload, then accept it or send it back with a note.")
-					}}
-				</p>
-			</section>
-
-			<section
-				v-if="request.details"
-				class="flex flex-col gap-2"
-				aria-labelledby="needed-heading"
+	<RecordFrame doctype="Document Request" :name="name">
+		<div class="flex flex-col gap-8">
+			<p
+				v-if="error"
+				role="alert"
+				class="rounded-lg bg-surface-red-1 px-3 py-2 text-base text-ink-red-4"
 			>
-				<h2 id="needed-heading" class="text-base font-semibold text-ink-gray-8">
-					{{ t("What is needed") }}
-				</h2>
-				<p class="whitespace-pre-line text-base text-ink-gray-8">{{ request.details }}</p>
-			</section>
+				{{ error }}
+			</p>
 
-			<section class="flex flex-col gap-3" aria-labelledby="documents-heading">
-				<div class="flex items-center justify-between gap-3">
-					<h2 id="documents-heading" class="text-base font-semibold text-ink-gray-8">
-						{{ t("Documents") }}
-					</h2>
-					<template v-if="mayUpload">
-						<Button
-							:variant="clientLogin && !documents.length ? 'solid' : 'subtle'"
-							icon-left="lucide-upload"
-							:label="t('Upload')"
-							:loading="uploading"
-							@click="input?.click()"
-						/>
-						<input
-							ref="input"
-							type="file"
-							:accept="DOCUMENT_TYPES"
-							class="hidden"
-							@change="sendDocument"
-						/>
-					</template>
-				</div>
-				<p v-if="uploadError" role="alert" class="text-base text-ink-red-4">
-					{{ uploadError }}
-				</p>
-				<p v-if="!documents.length" class="text-base text-ink-gray-5">
-					{{
-						clientLogin
-							? t("Nothing uploaded yet.")
-							: t("The client has not uploaded yet.")
-					}}
-				</p>
-				<ul class="flex flex-col">
-					<li v-for="document in documents" :key="document.name">
-						<a
-							:href="document.file_url"
-							target="_blank"
-							class="flex items-center gap-3 rounded-lg px-1 py-1.5 hover:bg-surface-gray-2"
+			<div v-else-if="!request" class="flex flex-col gap-3" aria-busy="true">
+				<Skeleton class="h-6 w-1/2 rounded" />
+				<Skeleton class="h-4 w-1/3 rounded" />
+				<Skeleton class="mt-4 h-32 w-full rounded-lg" />
+			</div>
+
+			<template v-else>
+				<section class="flex flex-col gap-2">
+					<div class="flex flex-wrap items-center gap-2">
+						<Badge :label="t(state.label)" :theme="state.theme" size="md" />
+						<span
+							class="text-base"
+							:class="
+								row.due.late ? 'font-medium text-ink-red-4' : 'text-ink-gray-6'
+							"
+							>{{ dueLine }}</span
 						>
-							<span
-								class="lucide-file-text size-4 shrink-0 text-ink-gray-5"
-								aria-hidden="true"
-							/>
-							<span class="min-w-0 flex-1 truncate text-base text-ink-gray-8">{{
-								document.file_name
-							}}</span>
-							<span class="shrink-0 text-sm text-ink-gray-5">{{
-								formatDate(document.creation)
-							}}</span>
-						</a>
-					</li>
-				</ul>
-			</section>
-
-			<section class="flex flex-col gap-3" aria-labelledby="details-heading">
-				<h2 id="details-heading" class="text-base font-semibold text-ink-gray-8">
-					{{ t("Details") }}
-				</h2>
-				<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-					<div v-for="fact in facts" :key="fact.label" class="flex flex-col gap-0.5">
-						<dt class="text-sm text-ink-gray-5">{{ t(fact.label) }}</dt>
-						<dd class="text-base text-ink-gray-8">
-							<RouterLink
-								v-if="fact.to"
-								:to="fact.to"
-								class="underline decoration-outline-gray-3 underline-offset-2"
-								>{{ fact.value }}</RouterLink
-							>
-							<template v-else>{{ fact.value }}</template>
-						</dd>
 					</div>
-				</dl>
-			</section>
-		</template>
-	</div>
+					<p class="text-base text-ink-gray-6">{{ request.company }}</p>
+					<p
+						v-if="request.status === 'Requested' && request.firm_note"
+						class="rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-4"
+					>
+						{{ t("Sent back: {0}", request.firm_note) }}
+					</p>
+					<p
+						v-else-if="request.status === 'Uploaded'"
+						class="rounded-lg bg-surface-gray-2 px-3 py-2 text-base text-ink-gray-7"
+					>
+						{{
+							clientLogin
+								? t("Your firm has it and will check it.")
+								: t(
+										"Check the upload, then accept it or send it back with a note."
+								  )
+						}}
+					</p>
+				</section>
+
+				<section
+					v-if="request.details"
+					class="flex flex-col gap-2"
+					aria-labelledby="needed-heading"
+				>
+					<h2 id="needed-heading" class="text-base font-semibold text-ink-gray-8">
+						{{ t("What is needed") }}
+					</h2>
+					<p class="whitespace-pre-line text-base text-ink-gray-8">
+						{{ request.details }}
+					</p>
+				</section>
+
+				<section class="flex flex-col gap-3" aria-labelledby="documents-heading">
+					<div class="flex items-center justify-between gap-3">
+						<h2 id="documents-heading" class="text-base font-semibold text-ink-gray-8">
+							{{ t("Documents") }}
+						</h2>
+						<template v-if="mayUpload">
+							<Button
+								:variant="clientLogin && !documents.length ? 'solid' : 'subtle'"
+								icon-left="lucide-upload"
+								:label="t('Upload')"
+								:loading="uploading"
+								@click="input?.click()"
+							/>
+							<input
+								ref="input"
+								type="file"
+								:accept="DOCUMENT_TYPES"
+								class="hidden"
+								@change="sendDocument"
+							/>
+						</template>
+					</div>
+					<p v-if="uploadError" role="alert" class="text-base text-ink-red-4">
+						{{ uploadError }}
+					</p>
+					<p v-if="!documents.length" class="text-base text-ink-gray-5">
+						{{
+							clientLogin
+								? t("Nothing uploaded yet.")
+								: t("The client has not uploaded yet.")
+						}}
+					</p>
+					<ul class="flex flex-col">
+						<li v-for="document in documents" :key="document.name">
+							<a
+								:href="document.file_url"
+								target="_blank"
+								class="flex items-center gap-3 rounded-lg px-1 py-1.5 hover:bg-surface-gray-2"
+							>
+								<span
+									class="lucide-file-text size-4 shrink-0 text-ink-gray-5"
+									aria-hidden="true"
+								/>
+								<span class="min-w-0 flex-1 truncate text-base text-ink-gray-8">{{
+									document.file_name
+								}}</span>
+								<span class="shrink-0 text-sm text-ink-gray-5">{{
+									formatDate(document.creation)
+								}}</span>
+							</a>
+						</li>
+					</ul>
+				</section>
+
+				<section class="flex flex-col gap-3" aria-labelledby="details-heading">
+					<h2 id="details-heading" class="text-base font-semibold text-ink-gray-8">
+						{{ t("Details") }}
+					</h2>
+					<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+						<div v-for="fact in facts" :key="fact.label" class="flex flex-col gap-0.5">
+							<dt class="text-sm text-ink-gray-5">{{ t(fact.label) }}</dt>
+							<dd class="text-base text-ink-gray-8">
+								<RouterLink
+									v-if="fact.to"
+									:to="fact.to"
+									class="underline decoration-outline-gray-3 underline-offset-2"
+									>{{ fact.value }}</RouterLink
+								>
+								<template v-else>{{ fact.value }}</template>
+							</dd>
+						</div>
+					</dl>
+				</section>
+			</template>
+		</div>
+	</RecordFrame>
 
 	<div
 		v-if="request && mayCheck"
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
-			class="mx-auto flex w-full max-w-3xl flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			class="mx-auto flex w-full flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			:class="recordWidth(name)"
 		>
 			<p v-if="actionError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ actionError }}
@@ -173,11 +182,13 @@ import { Badge, Button, Dropdown, Skeleton, dialog, toast } from "frappe-ui";
 import { call, getDoc, runMethod, uploadRequestDocument } from "@/api";
 import { isClientLogin, mayRecord } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RecordFrame from "@/components/RecordFrame.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { formatDate } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import { OPEN_REQUEST_STATUSES, requestRow, requestState } from "@/lib/requests";
+import { recordWidth } from "@/lib/records";
 import { deskActions } from "@/navigation";
 import { notLoaded } from "@/offline/reachability";
 

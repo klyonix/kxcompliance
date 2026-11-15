@@ -80,6 +80,37 @@ export function markStatusDetails(status, values) {
 	return { details, missing: missing.map((field) => field.label) };
 }
 
+export const OUR_ROLES = [
+	"Petitioner",
+	"Respondent",
+	"Appellant",
+	"Complainant",
+	"Accused",
+	"Noticee",
+];
+export const MARK_TYPES = [
+	"Word",
+	"Device",
+	"Combined",
+	"Shape",
+	"Sound",
+	"Collective",
+	"Certification",
+];
+
+// A trademark's classes as typed: what is wrong with them (the server checks the same), or null.
+export function classesError(rows) {
+	const numbers = rows.map((row) => Number(row.class_number));
+	if (!numbers.length) return "Add at least one class.";
+	const outside = numbers.find(
+		(number) => !Number.isInteger(number) || number < 1 || number > 45
+	);
+	if (outside !== undefined) return "A class is a number from 1 to 45.";
+	const twice = numbers.find((number, index) => numbers.indexOf(number) !== index);
+	if (twice !== undefined) return `Class ${twice} is listed twice.`;
+	return null;
+}
+
 // The hearings and deadlines still ahead of a case or trademark, soonest first.
 export async function scheduledDates(doctype, name) {
 	return (

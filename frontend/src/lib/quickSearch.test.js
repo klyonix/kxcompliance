@@ -31,6 +31,8 @@ describe("quick search", () => {
 			"Filings",
 			"New register item",
 			"Log a notice",
+			"Start a case",
+			"Add a trademark",
 			"Record an event",
 			"Add a signatory",
 		]);

@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
 from frappe.handler import ALLOWED_MIMETYPES
-from frappe.utils import add_days, get_datetime, getdate, now_datetime, nowdate
+from frappe.utils import add_days, cint, get_datetime, getdate, now_datetime, nowdate
 
 from kxcompliance.install import CLIENT_ROLE
 from kxcompliance.kx_compliance import (
@@ -413,6 +413,99 @@ def log_notice(
 		}
 	).insert()
 	return {"name": case.name}
+
+
+# What starting a case or trademark in the app may fill in; the rest is set later on its page.
+NEW_CASE_FIELDS = (
+	"title",
+	"case_type",
+	"forum",
+	"forum_name",
+	"case_number",
+	"filing_date",
+	"company",
+	"our_role",
+	"opposing_party",
+	"appeal_of",
+)
+NEW_MARK_FIELDS = (
+	"mark",
+	"mark_type",
+	"application_number",
+	"filing_date",
+	"applicant",
+	"user_claim",
+	"used_since",
+)
+
+
+def chosen_values(values: dict, allowed: tuple, doctype: str) -> dict:
+	"""Only the fields a form may fill in, each a single value."""
+	not_allowed = sorted(set(values) - set(allowed))
+	if not_allowed:
+		frappe.throw(
+			_("A new {0} cannot set {1}.").format(_(doctype), ", ".join(not_allowed)), frappe.PermissionError
+		)
+	if any(not isinstance(value, PLAIN_VALUES) for value in values.values()):
+		frappe.throw(_("Each field of a new {0} is a single value.").format(_(doctype)))
+	return {field: value for field, value in values.items() if value not in (None, "")}
+
+
+@frappe.whitelist(methods=["POST"])
+def open_case(case: dict, next_hearing: str | None = None) -> dict:
+	"""Start a case already under way (a suit, appeal or petition), held by whoever starts it, with
+	its next hearing if there is one."""
+	check_app_access()
+	frappe.has_permission("Legal Case", "create", throw=True)
+	doc = frappe.get_doc(
+		{
+			"doctype": "Legal Case",
+			**chosen_values(case, NEW_CASE_FIELDS, "Legal Case"),
+			"status": "Open",
+			"responsible": frappe.session.user,
+		}
+	).insert()
+	if next_hearing:
+		frappe.get_doc(
+			{
+				"doctype": "Legal Date",
+				"reference_doctype": "Legal Case",
+				"reference_name": doc.name,
+				"kind": "Hearing",
+				"date": next_hearing,
+			}
+		).insert()
+	return {"name": doc.name}
+
+
+@frappe.whitelist(methods=["POST"])
+def add_trademark(mark: dict, classes: list) -> dict:
+	"""Record a trademark applied for or already held, held by whoever adds it."""
+	check_app_access()
+	frappe.has_permission("Trademark", "create", throw=True)
+	rows = []
+	for entry in classes:
+		if (
+			not isinstance(entry, dict)
+			or set(entry) - {"class_number", "goods_or_services"}
+			or not isinstance(entry.get("goods_or_services"), str | type(None))
+		):
+			frappe.throw(_("Each class is a number with what it covers."))
+		rows.append(
+			{
+				"class_number": cint(entry.get("class_number")),
+				"goods_or_services": entry.get("goods_or_services"),
+			}
+		)
+	doc = frappe.get_doc(
+		{
+			"doctype": "Trademark",
+			**chosen_values(mark, NEW_MARK_FIELDS, "Trademark"),
+			"classes": rows,
+			"responsible": frappe.session.user,
+		}
+	).insert()
+	return {"name": doc.name}
 
 
 @frappe.whitelist(methods=["GET"])

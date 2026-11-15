@@ -206,6 +206,16 @@ The day a notice, order or summons comes in.
 2. Give its title, kind, forum, company and the date to reply by, and attach the notice.
 3. It shows in Coming up and on the Calendar until it is dealt with.
 
+### How do I add a case that is already in court, or a trademark?
+
+When a suit, appeal or petition is under way, or a mark has been applied for.
+
+1. Open Legal, press "Start" and choose "Start a case" or "Add a trademark".
+2. For a case: its forum, number, the date it was filed and the next hearing. For a trademark: the mark, application number, filing date and classes.
+3. Its page opens; fill in the rest there as it comes.
+
+> **Tip.** A notice that has just arrived is quicker with Log notice.
+
 ### How do I record what happened at a hearing?
 
 After a hearing or reply date.

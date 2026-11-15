@@ -206,6 +206,19 @@ export const ARTICLES = [
 		page: "Legal",
 	},
 	{
+		id: "start-a-case",
+		area: "Legal",
+		title: "How do I add a case that is already in court, or a trademark?",
+		when: "When a suit, appeal or petition is under way, or a mark has been applied for.",
+		steps: [
+			'Open Legal, press "Start" and choose "Start a case" or "Add a trademark".',
+			"For a case: its forum, number, the date it was filed and the next hearing. For a trademark: the mark, application number, filing date and classes.",
+			"Its page opens; fill in the rest there as it comes.",
+		],
+		tip: "A notice that has just arrived is quicker with Log notice.",
+		page: "Legal",
+	},
+	{
 		id: "after-a-hearing",
 		area: "Legal",
 		title: "How do I record what happened at a hearing?",

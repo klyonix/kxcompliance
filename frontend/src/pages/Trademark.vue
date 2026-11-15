@@ -77,6 +77,7 @@ const due = computed(() => {
 // The band across the top: the next date, the application, who handles it, whose mark it is.
 const keyFacts = computed(() => {
 	const current = mark.value;
+	if (!current) return [];
 	return [
 		{
 			label: "Next date",

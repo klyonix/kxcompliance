@@ -4,7 +4,7 @@
 			<Button
 				variant="solid"
 				icon-left="lucide-plus"
-				label="Set up a company"
+				:label="isMobile ? 'Set up' : 'Set up a company'"
 				:route="{ name: 'CompanyNew' }"
 			/>
 		</template>
@@ -44,9 +44,12 @@ import { Button, Skeleton } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RowList from "@/components/RowList.vue";
+import { useIsMobile } from "@/composables/useIsMobile";
 import { companyGroups } from "@/lib/companies";
 import { notLoaded } from "@/offline/reachability";
 
+// A phone's header has room for a short label beside the title.
+const isMobile = useIsMobile();
 const data = ref(null);
 const error = ref("");
 const groups = computed(() => companyGroups(data.value));

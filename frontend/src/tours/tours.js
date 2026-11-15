@@ -508,19 +508,14 @@ export const TOURS = [
 				text: "What you have asked the client for, and whether it has come.",
 			},
 			{
-				target: ["section:companies-heading"],
-				title: "Companies",
-				text: "Each company of the client and its compliance score.",
-			},
-			{
 				target: ["section:year-heading"],
 				title: "The year so far",
 				text: "Filed on time, filed late and fees paid in this financial year.",
 			},
 			{
 				target: ["client-tabs"],
-				title: "The client's account",
-				text: "Billing shows what the client is expected to pay this year, what has been billed and received, what is still due and how late, its bills, payments and rates, and its statement of account.",
+				title: "Three tabs",
+				text: "Overview: the year, documents asked for and open filings. Companies: each company with its signatories and digital signatures. Billing: what the client is expected to pay, what is billed, received and still due, and its statement of account.",
 			},
 			{
 				target: ["record-facts"],
@@ -556,9 +551,9 @@ export const TOURS = [
 				text: "Your filings and items coming up, and those overdue.",
 			},
 			{
-				target: ["section:companies-heading"],
+				target: ["client-tabs"],
 				title: "Your companies",
-				text: "Each of your companies with its compliance score.",
+				text: "The Companies tab lists each of your companies with its compliance score, signatories and digital signatures.",
 			},
 			{
 				target: ["section:billing-heading"],

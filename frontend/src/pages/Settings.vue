@@ -66,7 +66,10 @@
 						data-tour="tab-account"
 					/>
 				</TabList>
-				<TabPanel value="reminders" class="flex flex-col gap-8 pt-2 sm:pt-6">
+				<TabPanel
+					value="reminders"
+					class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+				>
 					<section class="flex flex-col gap-4" aria-labelledby="reminders-heading">
 						<div class="flex flex-col gap-0.5">
 							<h2
@@ -129,7 +132,10 @@
 						/>
 					</section>
 				</TabPanel>
-				<TabPanel value="branding" class="flex flex-col gap-8 pt-2 sm:pt-6">
+				<TabPanel
+					value="branding"
+					class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+				>
 					<section class="flex flex-col gap-4" aria-labelledby="branding-heading">
 						<div class="flex flex-col gap-0.5">
 							<h2
@@ -187,7 +193,10 @@
 						</div>
 					</section>
 				</TabPanel>
-				<TabPanel value="privacy" class="flex flex-col gap-8 pt-2 sm:pt-6">
+				<TabPanel
+					value="privacy"
+					class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+				>
 					<section
 						class="flex flex-col gap-4"
 						aria-labelledby="privacy-heading"
@@ -250,7 +259,10 @@
 						/>
 					</section>
 				</TabPanel>
-				<TabPanel value="account" class="flex flex-col gap-8 pt-2 sm:pt-6">
+				<TabPanel
+					value="account"
+					class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+				>
 					<section class="flex flex-col gap-4" aria-labelledby="account-heading">
 						<div class="flex flex-col gap-0.5">
 							<h2

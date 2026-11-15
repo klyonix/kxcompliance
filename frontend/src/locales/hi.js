@@ -169,6 +169,8 @@ export default {
 	"Nothing needed right now.": "अभी कुछ नहीं चाहिए।",
 	"Nothing asked for.": "कुछ नहीं माँगा गया।",
 	Companies: "कंपनियाँ",
+	"Companies ({0})": "कंपनियाँ ({0})",
+	Overview: "सारांश",
 	"Your firm has not linked your companies yet.":
 		"आपकी फ़र्म ने अभी आपकी कंपनियाँ नहीं जोड़ी हैं।",
 	"No directors, partners or signatories recorded yet.":

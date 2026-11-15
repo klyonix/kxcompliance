@@ -84,7 +84,10 @@
 							data-tour="tab-obligations"
 						/>
 					</TabList>
-					<TabPanel value="company" class="flex flex-col gap-8 pt-2 sm:pt-6">
+					<TabPanel
+						value="company"
+						class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+					>
 						<section class="flex flex-col gap-4" aria-labelledby="company-heading">
 							<h2
 								id="company-heading"
@@ -147,7 +150,10 @@
 							</div>
 						</section>
 					</TabPanel>
-					<TabPanel value="registrations" class="flex flex-col gap-8 pt-2 sm:pt-6">
+					<TabPanel
+						value="registrations"
+						class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+					>
 						<section
 							class="flex flex-col gap-3"
 							aria-labelledby="registrations-heading"
@@ -211,7 +217,10 @@
 							</div>
 						</section>
 					</TabPanel>
-					<TabPanel value="agm" class="flex flex-col gap-8 pt-2 sm:pt-6">
+					<TabPanel
+						value="agm"
+						class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+					>
 						<section
 							v-if="hasAgm"
 							class="flex flex-col gap-3"
@@ -268,7 +277,10 @@
 							</div>
 						</section>
 					</TabPanel>
-					<TabPanel value="obligations" class="flex flex-col gap-8 pt-2 sm:pt-6">
+					<TabPanel
+						value="obligations"
+						class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+					>
 						<section
 							v-if="company"
 							class="flex flex-col gap-3"

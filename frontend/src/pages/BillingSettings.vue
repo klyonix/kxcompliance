@@ -31,16 +31,23 @@
 					:disabled="!setup.company"
 				/>
 			</TabList>
-			<TabPanel value="firm" class="flex flex-col gap-8 pt-2 sm:pt-6">
+			<TabPanel
+				value="firm"
+				class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+			>
 				<BillingFirm :setup="setup" @saved="(state) => (setup = state)" />
 			</TabPanel>
-			<TabPanel v-if="setup.company" value="rates" class="flex flex-col gap-8 pt-2 sm:pt-6">
+			<TabPanel
+				v-if="setup.company"
+				value="rates"
+				class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
+			>
 				<RateCards />
 			</TabPanel>
 			<TabPanel
 				v-if="setup.company"
 				value="reminders"
-				class="flex flex-col gap-8 pt-2 sm:pt-6"
+				class="data-[state=inactive]:hidden flex flex-col gap-8 pt-2 sm:pt-6"
 			>
 				<BillingReminders :setup="setup" @saved="(state) => (setup = state)" />
 			</TabPanel>

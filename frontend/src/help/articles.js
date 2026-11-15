@@ -174,7 +174,7 @@ export const ARTICLES = [
 		when: "When an item is due for renewal.",
 		steps: [
 			"Open the item.",
-			"Start a renewal and, once applied, mark it applied with the reference.",
+			"Press Start renewal and, once applied, mark it applied with the reference.",
 			"When the new licence comes, record its validity and certificate. A manager completes the renewal.",
 		],
 		page: "Register",
@@ -198,7 +198,7 @@ export const ARTICLES = [
 		when: "After a hearing or reply date.",
 		steps: [
 			"Open the case from Legal.",
-			"Under its dates, record what happened and the next date.",
+			"Under its dates, press Record outcome: what happened and the next date.",
 			"Attach the order if there is one.",
 		],
 		page: "Legal",
@@ -316,7 +316,7 @@ export const ARTICLES = [
 		when: "For each company whose compliance you track.",
 		steps: [
 			'Open Settings and press "Companies".',
-			"Open a company under Not set up yet.",
+			"Open a company under In ERPNext, not set up yet.",
 			"Choose its kind, add its registrations, and the people who handle and review its work.",
 			"The returns it needs are added, and the calendar starts making its filings.",
 		],

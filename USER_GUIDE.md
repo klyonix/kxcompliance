@@ -181,7 +181,7 @@ When you get a new licence, registration, certificate, policy or subscription.
 When an item is due for renewal.
 
 1. Open the item.
-2. Start a renewal and, once applied, mark it applied with the reference.
+2. Press Start renewal and, once applied, mark it applied with the reference.
 3. When the new licence comes, record its validity and certificate. A manager completes the renewal.
 
 ## Legal
@@ -199,7 +199,7 @@ The day a notice, order or summons comes in.
 After a hearing or reply date.
 
 1. Open the case from Legal.
-2. Under its dates, record what happened and the next date.
+2. Under its dates, press Record outcome: what happened and the next date.
 3. Attach the order if there is one.
 
 ## Clients
@@ -296,7 +296,7 @@ When a company's Companies Act annual filings show no due date.
 For each company whose compliance you track.
 
 1. Open Settings and press "Companies".
-2. Open a company under Not set up yet.
+2. Open a company under In ERPNext, not set up yet.
 3. Choose its kind, add its registrations, and the people who handle and review its work.
 4. The returns it needs are added, and the calendar starts making its filings.
 

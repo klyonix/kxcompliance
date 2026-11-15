@@ -166,6 +166,10 @@ export default {
 	Upload: "अपलोड करें",
 	"Nothing uploaded yet.": "अभी कुछ अपलोड नहीं हुआ।",
 	"The client has not uploaded yet.": "क्लाइंट ने अभी अपलोड नहीं किया है।",
+	"This opens in the Desk. Ask your firm about it.":
+		"यह डेस्क में खुलता है। इसके बारे में अपनी फ़र्म से पूछें।",
+	"The documents could not be loaded. They show again once you are back online.":
+		"दस्तावेज़ लोड नहीं हो सके। ऑनलाइन होते ही वे फिर दिखेंगे।",
 	Details: "विवरण",
 	Filing: "फ़ाइलिंग",
 	"Asked by": "किसने माँगा",

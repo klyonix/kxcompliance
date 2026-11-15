@@ -349,7 +349,8 @@
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
-			class="mx-auto flex w-full max-w-6xl flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			class="mx-auto flex w-full flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			:class="recordWidth(name, { client: clientLogin })"
 		>
 			<p v-if="footerError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ footerError }}
@@ -420,6 +421,7 @@ import { deskActions } from "@/navigation";
 import { SAVED_ON_DEVICE, isWaiting, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
 import { formatDate, pickerFormat } from "@/lib/format";
+import { recordWidth } from "@/lib/records";
 import { notLoaded } from "@/offline/reachability";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import EditableDetails from "@/components/EditableDetails.vue";

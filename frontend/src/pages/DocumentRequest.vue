@@ -94,7 +94,10 @@
 					<p v-if="uploadError" role="alert" class="text-base text-ink-red-4">
 						{{ uploadError }}
 					</p>
-					<p v-if="!documents.length" class="text-base text-ink-gray-5">
+					<p v-if="documentsError" role="alert" class="text-base text-ink-red-4">
+						{{ documentsError }}
+					</p>
+					<p v-else-if="!documents.length" class="text-base text-ink-gray-5">
 						{{
 							clientLogin
 								? t("Nothing uploaded yet.")
@@ -265,15 +268,21 @@ const menu = computed(() => [
 		: []),
 ]);
 
+const documentsError = ref("");
+
 async function loadDocuments() {
 	try {
 		documents.value = await call("kxcompliance.api.documents", {
 			doctype: "Document Request",
 			name: props.name,
 		});
-	} catch {
-		// Documents are extra; the request is still useful without them, offline included.
+		documentsError.value = "";
+	} catch (err) {
+		// The request is still useful without them, offline included; say they did not load.
 		documents.value = [];
+		documentsError.value = err.isNetwork
+			? t("The documents could not be loaded. They show again once you are back online.")
+			: err.message;
 	}
 }
 

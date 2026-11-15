@@ -294,6 +294,17 @@ class TestAppApi(IntegrationTestCase):
 		with self.set_user(MANAGER):
 			self.assertEqual(search("fire noc", kind="items")["items"][0].name, exact)
 
+	def test_staff_cannot_reassign_by_saving_the_record_itself(self):
+		item = make_item("Test App Licence", responsible=HOLDER)
+		with self.set_user(HOLDER):
+			mine = frappe.get_doc("Compliance Item", item.name)
+			mine.notes = "Kept in the office file"
+			mine.save()  # anything else of their own they may change
+			# Still holding it, they cannot pick its reviewer either: that is a manager's choice.
+			mine.reviewer = OTHER_HOLDER
+			with self.assertRaisesRegex(frappe.PermissionError, "Reviewer .* from nobody to"):
+				mine.save()
+
 	def test_a_manager_reassigns_a_filing_and_staff_cannot(self):
 		task = filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20", responsible=HOLDER)
 		with self.set_user(HOLDER), self.assertRaisesRegex(frappe.PermissionError, "Compliance Manager"):

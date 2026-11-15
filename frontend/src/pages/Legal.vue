@@ -37,7 +37,7 @@ function empty(view, searching) {
 	if (searching) return { title: "No matches", detail: "Try another word, or another tab." };
 	const action =
 		view === "cases" && mayRecord()
-			? { label: "Record a notice", route: { name: "NewNotice" } }
+			? { label: "Log a notice", route: { name: "NewNotice" } }
 			: null;
 	return { ...EMPTY[view], action };
 }

@@ -79,6 +79,20 @@ class TestTrademark(IntegrationTestCase):
 		)
 		self.assertEqual(str(frappe.db.get_value("Trademark", trademark.name, "next_date")), "2026-07-05")
 
+	def test_reassigning_a_mark_moves_its_open_dates(self):
+		trademark = make_trademark(examination_report_on="2026-06-01")
+		with self.set_user(MANAGER):
+			theirs = frappe.get_doc("Trademark", trademark.name)
+			theirs.responsible = OTHER_HOLDER
+			theirs.save()
+		people = frappe.get_all(
+			"Legal Date",
+			filters={"reference_name": trademark.name, "status": "Scheduled"},
+			fields=["responsible", "reviewer"],
+		)
+		self.assertTrue(people)
+		self.assertTrue(all(row.responsible == OTHER_HOLDER for row in people))
+
 	def test_advertisement_and_opposition_start_their_windows(self):
 		trademark = make_trademark(journal_date="2026-08-15")
 		self.assertEqual([str(day) for day in dates(trademark.name, "Opposition Window")], ["2026-12-15"])

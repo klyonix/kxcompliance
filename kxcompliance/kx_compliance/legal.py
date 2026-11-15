@@ -125,3 +125,18 @@ def escalate(row, key: str, managers: list[str]):
 	)
 	write_log("Escalation", key, recipients, legal_date=row.name, due_date=row.date)
 	notify(recipients, subject, message, "Legal Date", row.name)
+
+
+def pass_people_to_dates(doctype: str, name: str, responsible: str | None, reviewer: str | None):
+	"""A case's or trademark's people go on to its scheduled dates, which lists filter by."""
+	legal_date = frappe.qb.DocType("Legal Date")
+	(
+		frappe.qb.update(legal_date)
+		.set(legal_date.responsible, responsible)
+		.set(legal_date.reviewer, reviewer)
+		.where(
+			(legal_date.reference_doctype == doctype)
+			& (legal_date.reference_name == name)
+			& (legal_date.status == "Scheduled")
+		)
+	).run()

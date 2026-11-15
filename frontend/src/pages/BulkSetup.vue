@@ -69,6 +69,9 @@
 				<p v-if="running" class="text-sm text-ink-gray-5">
 					This runs on the server; you can leave this page and come back.
 				</p>
+				<p v-if="pollError" role="alert" class="text-sm text-ink-amber-4">
+					{{ pollError }} Checking again shortly.
+				</p>
 			</section>
 
 			<ul class="flex flex-col">
@@ -164,6 +167,7 @@ const input = ref(null);
 const sheet = ref(null);
 const busy = ref(false);
 const error = ref("");
+const pollError = ref("");
 let timer;
 
 const rows = computed(() => sortedRows(sheet.value?.rows || []));
@@ -184,7 +188,19 @@ async function load(name) {
 	sheet.value = await getDoc("Compliance Setup Import", name);
 	clearTimeout(timer);
 	// While the import runs on the server, look again every few seconds.
-	if (running.value) timer = setTimeout(() => load(name).catch(() => {}), POLL_MS);
+	if (running.value) timer = setTimeout(() => poll(name), POLL_MS);
+}
+
+// A look that fails (a dropped connection) tries again, so the import is never shown running
+// for ever; the person is told it is checking again.
+async function poll(name) {
+	try {
+		await load(name);
+		pollError.value = "";
+	} catch (err) {
+		pollError.value = friendly(err, "The import's progress");
+		timer = setTimeout(() => poll(name), POLL_MS * 2);
+	}
 }
 
 async function checkSheet(event) {

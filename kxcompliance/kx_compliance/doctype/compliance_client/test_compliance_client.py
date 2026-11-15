@@ -135,6 +135,10 @@ class TestComplianceClient(IntegrationTestCase):
 			{"user": ("in", [HOLDER, OTHER_HOLDER, MANAGER, CLIENT_LOGIN]), "allow": "Company"},
 		)
 		frappe.db.delete("Compliance Task", {"task_key": ("like", "client-test|%")})
+		# Those deletes skip Frappe's caches of each person's permissions; a request starts afresh.
+		for user in (HOLDER, OTHER_HOLDER, MANAGER, CLIENT_LOGIN):
+			frappe.cache.hdel("user_permissions", user)
+		frappe.local.request_cache.clear()
 
 	def test_the_team_sees_every_filing_of_the_clients_companies(self):
 		sunrise = client()
@@ -194,6 +198,21 @@ class TestComplianceClient(IntegrationTestCase):
 			for kind in ("clients", "companies", "rules", "obligations", "people", "customers"):
 				self.assertNotIn(kind, found)
 			self.assertEqual(search("GSTR", kind="obligations"), {})
+
+	def test_staff_on_one_team_still_see_the_work_they_hold_elsewhere(self):
+		sunrise = client("Sunrise Group", team=(HOLDER,))
+		profile(TEST_COMPANY, sunrise.name)
+		company(OTHER_COMPANY, "CTOC")
+		moonrise = client("Moonrise Retail", team=(OTHER_HOLDER,))
+		profile(OTHER_COMPANY, moonrise.name)
+		theirs_but_mine = task(OTHER_COMPANY, responsible=HOLDER)
+		only_theirs = task(OTHER_COMPANY, responsible=OTHER_HOLDER)
+		with self.set_user(HOLDER):
+			seen = frappe.get_list("Compliance Task", pluck="name")
+			self.assertIn(theirs_but_mine, seen)
+			self.assertTrue(frappe.has_permission("Compliance Task", "read", doc=theirs_but_mine))
+			# Not on that client's team: the rest of its work stays out of sight.
+			self.assertNotIn(only_theirs, seen)
 
 	def test_moving_a_company_to_another_client_moves_who_sees_it(self):
 		sunrise = client("Sunrise Group")

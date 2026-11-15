@@ -6,11 +6,13 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import nowdate
 
-from kxcompliance.kx_compliance.legal import CLOSED_CASE_STATUSES, pass_company_to_dates
+from kxcompliance.kx_compliance.legal import CLOSED_CASE_STATUSES, pass_company_to_dates, pass_people_to_dates
+from kxcompliance.kx_compliance.register import check_reassignment
 
 
 class LegalCase(Document):
 	def validate(self):
+		check_reassignment(self)
 		if self.appeal_of and self.appeal_of == self.name:
 			frappe.throw(_("A case cannot be an appeal of itself."))
 		if self.amount_involved and not self.risk:
@@ -24,20 +26,6 @@ class LegalCase(Document):
 
 	def on_update(self):
 		if self.has_value_changed("responsible") or self.has_value_changed("reviewer"):
-			self.pass_people_to_open_dates()
+			pass_people_to_dates(self.doctype, self.name, self.responsible, self.reviewer)
 		if self.has_value_changed("company"):
 			pass_company_to_dates(self.doctype, self.name, self.company)
-
-	def pass_people_to_open_dates(self):
-		# Legal Dates carry the case's people so lists can be filtered by them.
-		legal_date = frappe.qb.DocType("Legal Date")
-		(
-			frappe.qb.update(legal_date)
-			.set(legal_date.responsible, self.responsible)
-			.set(legal_date.reviewer, self.reviewer)
-			.where(
-				(legal_date.reference_doctype == self.doctype)
-				& (legal_date.reference_name == self.name)
-				& (legal_date.status == "Scheduled")
-			)
-		).run()

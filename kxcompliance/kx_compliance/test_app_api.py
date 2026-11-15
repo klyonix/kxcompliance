@@ -316,6 +316,21 @@ class TestAppApi(IntegrationTestCase):
 			(OTHER_HOLDER, REVIEWER),
 		)
 
+	def test_the_overview_narrows_to_one_clients_companies(self):
+		make_item("Test App Licence", responsible=HOLDER)
+		register = lambda result: next(s for s in result["sections"] if s["key"] == "register")  # noqa: E731
+		active = lambda result: sum(card["value"] for card in register(result)["cards"])  # noqa: E731
+		with self.set_user(MANAGER):
+			everyone = overview()
+			theirs = overview(companies=f'["{TEST_COMPANY}"]')
+			nobody = overview(companies='["A company that is not here"]')
+			with self.assertRaises(frappe.ValidationError):
+				overview(companies='{"name": ["!=", ""]}')
+		self.assertGreater(active(everyone), 0)
+		self.assertEqual(active(theirs), active(everyone))
+		self.assertEqual(active(nobody), 0)
+		self.assertEqual(nobody["scores"], [])
+
 	def test_search_one_kind_and_the_team_for_managers_only(self):
 		with self.set_user(MANAGER):
 			only_items = search("Test", kind="items")

@@ -195,6 +195,7 @@ import { useIsMobile } from "@/composables/useIsMobile";
 import { formatDate, formatMoney, pickerFormat } from "@/lib/format";
 import { personOptions } from "@/lib/people";
 import {
+	clientDefaults,
 	filledFilters,
 	initialFilters,
 	linkRoute,
@@ -207,6 +208,7 @@ import {
 	toCsv,
 } from "@/lib/reports";
 import { notLoaded } from "@/offline/reachability";
+import { chosenCompanies, clientFilter, loadClients } from "@/stores/clientFilter";
 
 const props = defineProps({ report: { type: String, required: true } });
 
@@ -372,10 +374,19 @@ watch(values, () => {
 	typing = setTimeout(run, 300);
 });
 
-onMounted(() => {
+onMounted(async () => {
 	if (!report.value) return;
 	rememberOpened(report.value.slug);
 	loadSources();
+	// With one client chosen, the report starts on it (stores/clientFilter).
+	await loadClients();
+	Object.assign(
+		values,
+		clientDefaults(report.value, route.query, {
+			client: clientFilter.client,
+			companies: chosenCompanies.value,
+		})
+	);
 	run();
 });
 </script>

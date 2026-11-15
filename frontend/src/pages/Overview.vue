@@ -12,6 +12,8 @@
 	</AppPageHeader>
 
 	<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-6 sm:px-6">
+		<!-- A firm sees every client's numbers, or one client's. -->
+		<ClientPicker />
 		<p
 			v-if="error"
 			role="alert"
@@ -278,13 +280,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import { Badge, Button, Skeleton } from "frappe-ui";
 import { BarChart } from "frappe-ui/charts";
 import { boot } from "@/boot";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import ClientPicker from "@/components/ClientPicker.vue";
 import RecentActivity from "@/components/RecentActivity.vue";
 import ScoreBadge from "@/components/ScoreBadge.vue";
 import UrgencyTiles from "@/components/UrgencyTiles.vue";
@@ -304,6 +307,7 @@ import {
 	valueClass,
 } from "@/lib/overview";
 import { notLoaded } from "@/offline/reachability";
+import { chosenCompanies, loadClients } from "@/stores/clientFilter";
 
 // The series of the two charts, as the server names them.
 const DUE_SERIES = ["Filings", "Renewals", "Legal dates"];
@@ -346,7 +350,8 @@ async function load() {
 	loading.value = true;
 	error.value = "";
 	try {
-		data.value = await call("kxcompliance.api.overview");
+		const params = chosenCompanies.value ? { companies: chosenCompanies.value } : {};
+		data.value = await call("kxcompliance.api.overview", params);
 	} catch (err) {
 		// Numbers already on screen stay; the banner says the server is not answering.
 		if (!(err.isNetwork && data.value)) {
@@ -357,5 +362,6 @@ async function load() {
 	}
 }
 
-onMounted(load);
+onMounted(() => loadClients().then(load));
+watch(chosenCompanies, load);
 </script>

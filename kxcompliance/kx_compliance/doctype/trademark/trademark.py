@@ -6,7 +6,14 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, add_months, getdate
 
-from kxcompliance.kx_compliance.legal import pass_company_to_dates, pass_people_to_dates
+from kxcompliance.kx_compliance.legal import (
+	ENDED_MARK_STATUSES,
+	MARK_STATUS_FIELDS,
+	cancel_scheduled_dates,
+	check_status_change,
+	pass_company_to_dates,
+	pass_people_to_dates,
+)
 from kxcompliance.kx_compliance.register import check_reassignment
 
 # A date entered on the trademark, the deadline it starts, and how long that deadline runs.
@@ -22,6 +29,7 @@ RENEWAL_ITEM_TYPE = "Trademark Registration"
 class Trademark(Document):
 	def validate(self):
 		check_reassignment(self)
+		check_status_change(self)
 		self.validate_classes()
 		if not self.renewal_item and self.filing_date:
 			self.valid_until = add_months(self.filing_date, VALIDITY_MONTHS)
@@ -63,6 +71,32 @@ class Trademark(Document):
 				)
 		if self.status == "Registered" and not self.renewal_item:
 			self.make_renewal_item()
+		if self.status in ENDED_MARK_STATUSES and self.has_value_changed("status"):
+			cancel_scheduled_dates(
+				self.doctype, self.name, _("Cancelled: the trademark was marked {0}.").format(_(self.status))
+			)
+
+	@frappe.whitelist(methods=["POST"])
+	def change_status(self, status: str, details: dict | None = None):
+		"""Move the mark to its next stage, with what the registry sent for it (MARK_STATUS_FIELDS)."""
+		self.check_permission("write")
+		if status not in self.meta.get_field("status").options.split("\n"):
+			frappe.throw(_("{0} is not a status a trademark can have.").format(status))
+		if status == self.status:
+			frappe.throw(_("{0} is already {1}.").format(self.mark, _(status)))
+		allowed = MARK_STATUS_FIELDS.get(status, ())
+		extra = sorted(set(details or {}) - set(allowed))
+		if extra:
+			frappe.throw(
+				_("{0} cannot be set when marking {1} {2}.").format(", ".join(extra), self.mark, _(status))
+			)
+		for fieldname, value in (details or {}).items():
+			if not isinstance(value, str | type(None)):
+				frappe.throw(_("{0} must be a single value.").format(_(self.meta.get_label(fieldname))))
+			if value:
+				self.set(fieldname, value)
+		self.status = status
+		self.save()
 
 	def set_deadline(self, event_field: str, kind: str, due):
 		existing = frappe.db.get_value(

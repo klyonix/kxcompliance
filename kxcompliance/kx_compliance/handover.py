@@ -16,10 +16,9 @@ from frappe import _
 from frappe.utils import escape_html
 
 from kxcompliance.kx_compliance.document_requests import OPEN_STATUSES as OPEN_REQUEST_STATUSES
-from kxcompliance.kx_compliance.legal import CLOSED_CASE_STATUSES
+from kxcompliance.kx_compliance.legal import CLOSED_CASE_STATUSES, ENDED_MARK_STATUSES
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 
-ENDED_MARK_STATUSES = ("Refused", "Abandoned", "Withdrawn", "Removed")
 # The records that move: (what they are called, doctype, which are still open, the people fields).
 RECORDS = (
 	("Filings", "Compliance Task", {"status": ("not in", CLOSED_TASK_STATUSES)}, ("responsible", "reviewer")),

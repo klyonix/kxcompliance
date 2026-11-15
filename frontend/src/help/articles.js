@@ -231,6 +231,19 @@ export const ARTICLES = [
 		page: "Legal",
 	},
 	{
+		id: "trademark-moves-on",
+		area: "Legal",
+		title: "The registry has written about a trademark. What do I record?",
+		when: "When an examination report, journal publication, opposition or registration certificate arrives.",
+		steps: [
+			"Open the trademark from Legal.",
+			'Press "Change status" and choose the new stage.',
+			"Fill in what the registry sent: the report date, journal number and date, opposition notice, or registration number and date. The deadline that follows is added to its dates.",
+		],
+		tip: "A mark that is refused, abandoned, withdrawn or removed has its scheduled dates cancelled.",
+		page: "Legal",
+	},
+	{
 		id: "add-a-client",
 		area: "Clients",
 		title: "How do I add a client?",

@@ -17,6 +17,16 @@
 		:may-edit="mayEdit"
 		@changed="load"
 	>
+		<template #status-actions>
+			<Button
+				v-if="mayEdit"
+				class="ml-auto"
+				size="sm"
+				icon-left="lucide-stamp"
+				label="Change status"
+				@click="statusOpen = true"
+			/>
+		</template>
 		<section v-if="mark?.logo || mark?.classes?.length" class="flex items-start gap-4">
 			<img
 				v-if="mark.logo"
@@ -37,13 +47,16 @@
 			</ul>
 		</section>
 	</LegalRecord>
+	<MarkStatusDialog v-if="mark" v-model:open="statusOpen" :mark="mark" @changed="load" />
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { Button } from "frappe-ui";
 import { getDoc } from "@/api";
 import { boot } from "@/boot";
 import LegalRecord from "@/components/LegalRecord.vue";
+import MarkStatusDialog from "@/components/MarkStatusDialog.vue";
 import { canAct } from "@/lib/items";
 import { ENDED_MARK_STATUSES, markRow } from "@/lib/legal";
 import { formatDate } from "@/lib/format";
@@ -63,6 +76,8 @@ const mayAct = computed(
 		canAct(mark.value, boot)
 );
 const mayEdit = computed(() => canAct(mark.value, boot));
+// Whoever holds or reviews the mark, or a manager, moves it on; the server keeps the same rule.
+const statusOpen = ref(false);
 
 const due = computed(() => {
 	const current = mark.value;

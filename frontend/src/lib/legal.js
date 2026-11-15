@@ -1,5 +1,6 @@
 // Rules for showing legal cases, trademarks and their dates, kept apart from the screens so they
 // can be tested. They mirror the checks the server makes on save.
+import { getList } from "@/api";
 import { relativeDue } from "@/pages/myWork";
 
 export const OPEN_CASE_STATUSES = ["Open", "Stayed", "Reserved for Order"];
@@ -23,6 +24,77 @@ export function cancelLine(count) {
 		: `Its ${count} scheduled dates will be cancelled, so no reminders go out for them:`;
 }
 export const ENDED_MARK_STATUSES = ["Refused", "Abandoned", "Withdrawn", "Removed"];
+export const MARK_STATUSES = [
+	"New Application",
+	"Formalities Check Pass",
+	"Marked for Exam",
+	"Objected",
+	"Accepted and Advertised",
+	"Opposed",
+	"Registered",
+	...ENDED_MARK_STATUSES,
+];
+// What the registry sends at each stage, asked for as the mark moves there, and the deadline it
+// starts. The server holds the same list (legal.MARK_STATUS_FIELDS).
+export const MARK_STATUS_FIELDS = {
+	Objected: {
+		fields: [
+			{ name: "examination_report_on", label: "Examination report received on", date: true },
+		],
+		follows: "The reply is due 30 days after the report; it is added to the dates.",
+	},
+	"Accepted and Advertised": {
+		fields: [
+			{ name: "journal_number", label: "Journal number" },
+			{ name: "journal_date", label: "Journal date", date: true },
+		],
+		follows:
+			"Anyone may oppose for 4 months from the journal date; the window is added to the dates.",
+	},
+	Opposed: {
+		fields: [
+			{ name: "opposition_number", label: "Opposition number" },
+			{ name: "opposition_notice_on", label: "Opposition notice received on", date: true },
+		],
+		follows:
+			"The counter-statement is due 2 months after the notice; it is added to the dates.",
+	},
+	Registered: {
+		fields: [
+			{ name: "registration_number", label: "Registration number", required: true },
+			{ name: "registration_date", label: "Registration date", date: true, required: true },
+		],
+		follows: "A renewal is added to the register, due ten years from filing.",
+	},
+};
+
+// The details for a stage that were filled in, and the required ones still missing.
+export function markStatusDetails(status, values) {
+	const fields = MARK_STATUS_FIELDS[status]?.fields || [];
+	const details = {};
+	for (const field of fields) {
+		const value = String(values[field.name] || "").trim();
+		if (value) details[field.name] = value;
+	}
+	const missing = fields.filter((field) => field.required && !details[field.name]);
+	return { details, missing: missing.map((field) => field.label) };
+}
+
+// The hearings and deadlines still ahead of a case or trademark, soonest first.
+export async function scheduledDates(doctype, name) {
+	return (
+		await getList("Legal Date", {
+			fields: ["name", "kind", "date"],
+			filters: [
+				["reference_doctype", "=", doctype],
+				["reference_name", "=", name],
+				["status", "=", "Scheduled"],
+			],
+			orderBy: "date asc",
+			limit: 50,
+		})
+	).rows;
+}
 export const OUTCOME_STATUSES = ["Done", "Adjourned", "Missed"];
 export const CASE_TYPES = [
 	"Litigation",

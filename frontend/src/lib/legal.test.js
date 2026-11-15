@@ -4,6 +4,7 @@ import {
 	caseRow,
 	dateRow,
 	markRow,
+	markStatusDetails,
 	nextCaseStatuses,
 	nextDateError,
 	outcomeValues,
@@ -130,5 +131,23 @@ describe("moving a case on", () => {
 		expect(cancelLine(0)).toBe("");
 		expect(cancelLine(1)).toMatch(/^Its 1 scheduled date will be cancelled/);
 		expect(cancelLine(3)).toMatch(/^Its 3 scheduled dates/);
+	});
+});
+
+describe("moving a trademark on", () => {
+	it("sends the stage's details that were filled in", () => {
+		expect(
+			markStatusDetails("Accepted and Advertised", {
+				journal_number: " 2140 ",
+				journal_date: "",
+				registration_number: "R-1",
+			})
+		).toEqual({ details: { journal_number: "2140" }, missing: [] });
+	});
+	it("needs the number and date to register", () => {
+		expect(markStatusDetails("Registered", { registration_number: "R-1" }).missing).toEqual([
+			"Registration date",
+		]);
+		expect(markStatusDetails("Refused", {})).toEqual({ details: {}, missing: [] });
 	});
 });

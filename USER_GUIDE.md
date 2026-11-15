@@ -224,6 +224,16 @@ When the final order comes, or the matter is settled or withdrawn.
 
 > **Tip.** Use the same button to mark a case stayed or reserved for order, or to open it again if it is appealed or restored.
 
+### The registry has written about a trademark. What do I record?
+
+When an examination report, journal publication, opposition or registration certificate arrives.
+
+1. Open the trademark from Legal.
+2. Press "Change status" and choose the new stage.
+3. Fill in what the registry sent: the report date, journal number and date, opposition notice, or registration number and date. The deadline that follows is added to its dates.
+
+> **Tip.** A mark that is refused, abandoned, withdrawn or removed has its scheduled dates cancelled.
+
 ## Clients
 
 ### How do I add a client?

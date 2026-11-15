@@ -1,11 +1,15 @@
 <template>
 	<Sidebar v-model:collapsed="collapsed" collapsed-width="3.5rem">
-		<SidebarHeader
-			:title="boot.appName"
-			:subtitle="boot.userFullname"
-			:logo="boot.appLogo || undefined"
-			:menu-items="menu"
-		/>
+		<SidebarHeader :title="boot.appName" :subtitle="boot.userFullname" :menu-items="menu">
+			<!-- Logos are mostly drawn for white paper: on a dark page one sits on a light tile. -->
+			<template v-if="boot.appLogo" #prefix>
+				<img
+					:src="boot.appLogo"
+					:alt="boot.appName"
+					class="h-full w-full object-contain dark:rounded-[6px] dark:bg-white dark:p-0.5"
+				/>
+			</template>
+		</SidebarHeader>
 		<!-- The rows keep a margin from the edges, so the open page's highlight never touches the
 		border, expanded or collapsed. -->
 		<div class="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2" data-tour="nav">

@@ -15,6 +15,7 @@ from frappe.utils import add_days, cint, get_datetime, getdate, now_datetime, no
 from kxcompliance.install import CLIENT_ROLE
 from kxcompliance.kx_compliance import (
 	app_settings,
+	billing,
 	clients,
 	companies,
 	document_requests,
@@ -37,7 +38,7 @@ from kxcompliance.kx_compliance.party_licences import (
 	party_licence_items,
 	requirements_for_party,
 )
-from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, is_approver
+from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, compliance_companies, is_approver
 from kxcompliance.kx_compliance.search import CANDIDATES as SEARCH_CANDIDATES
 from kxcompliance.kx_compliance.search import MIN_LENGTH as SEARCH_MIN_LENGTH
 from kxcompliance.kx_compliance.search import counts as search_record_counts
@@ -483,6 +484,29 @@ NEW_FILING_FIELDS = (
 	"reviewer",
 	"remarks",
 )
+
+
+@frappe.whitelist(methods=["GET"])
+def billing_setup() -> dict:
+	"""Whether the firm is set up to bill its clients, with its details for its bills."""
+	check_app_access()
+	billing.check_firm_manager()
+	return billing.setup_state()
+
+
+@frappe.whitelist(methods=["POST"])
+def set_up_billing(details: dict, name: str | None = None) -> dict:
+	"""Make the firm's own company for its bills (once, under `name`), and keep its GSTIN, state,
+	address, bank details and bill prefix."""
+	check_app_access()
+	billing.check_firm_manager()
+	if not billing_company_set() and not (name or "").strip():
+		frappe.throw(_("Give the firm's name as it appears on its bills."))
+	return billing.set_up_firm((name or "").strip(), details)
+
+
+def billing_company_set() -> bool:
+	return bool(frappe.get_cached_doc("KX Compliance Settings").billing_company)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -1384,11 +1408,13 @@ def app_companies() -> list[str]:
 		return sorted({permission.get("doc") for permission in allowed})
 	if is_client_login():
 		return []  # a client whose companies are not linked yet sees none, never every company
-	return frappe.get_all("Company", pluck="name", order_by="name")
+	return compliance_companies()
 
 
 def boot() -> dict:
 	settings = frappe.get_cached_doc("KX Compliance Settings")
+	companies = app_companies() if has_app_access() or is_client_login() else []
+	default = frappe.defaults.get_user_default("Company") or ""
 	return {
 		"user": frappe.session.user,
 		"user_fullname": frappe.utils.get_fullname(frappe.session.user),
@@ -1398,9 +1424,10 @@ def boot() -> dict:
 		"app_logo": settings.app_logo or "",
 		"csrf_token": frappe.sessions.get_csrf_token(),
 		"site_name": frappe.local.site,
-		"companies": app_companies() if has_app_access() or is_client_login() else [],
+		"companies": companies,
 		"client": client_of_login(),
-		"default_company": frappe.defaults.get_user_default("Company") or "",
+		# Never the firm's own billing company, which is not a compliance company.
+		"default_company": default if default in companies else "",
 		"date_format": frappe.db.get_default("date_format") or "dd-mm-yyyy",
 		"account_type": settings.account_type or "",
 		"lang": frappe.local.lang or "en",

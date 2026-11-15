@@ -19,6 +19,12 @@ def get_settings():
 	return frappe.get_cached_doc("KX Compliance Settings")
 
 
+def compliance_companies() -> list[str]:
+	"""Every ERPNext company except a firm's own billing company, which is not a client's."""
+	own = get_settings().billing_company
+	return [name for name in frappe.get_all("Company", pluck="name", order_by="name asc") if name != own]
+
+
 def due_soon_days() -> int:
 	value = get_settings().due_soon_days
 	return DEFAULT_DUE_SOON_DAYS if value is None else value

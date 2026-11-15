@@ -164,6 +164,18 @@ When you need a sales register, bank statement or anything else to file.
 2. Press "Ask the client", say what you need and by when.
 3. The client is emailed and uploads it from their own login. You are told when it comes.
 
+### How do I ask every client for the same document?
+
+*For: CA/CS firms.*
+
+Before filing day, when each client must send the same thing, such as the month's sales register.
+
+1. Open Filings, press "File in bulk" and pick the return and period.
+2. Press "Ask the clients for…", say what you need, and check how many will be asked.
+3. Each filing gets its own request, needed a day before that filing is due. You are told when they have gone.
+
+> **Tip.** Companies with a request already open, or not linked to a client, are left out. Choose a client at the top to ask only that client.
+
 ## Register
 
 ### How do I add a licence or certificate?

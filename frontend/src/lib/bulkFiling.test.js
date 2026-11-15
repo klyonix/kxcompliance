@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { matchFiles, nextStep, rowMissing, rowValues, saveLabel } from "./bulkFiling";
+import {
+	askPlanLine,
+	matchFiles,
+	nextStep,
+	rowMissing,
+	rowValues,
+	saveLabel,
+} from "./bulkFiling";
 
 const PREPARER = { user: "asha@example.com", roles: ["Compliance User"] };
 const REVIEWER = { user: "ravi@example.com", roles: ["Compliance User"] };
@@ -90,5 +97,21 @@ describe("what a row sends", () => {
 		expect(saveLabel(["Filed"])).toBe("Mark 1 filed");
 		expect(saveLabel(["Filed", "Ready for Review"])).toBe("Save 2");
 		expect(saveLabel([])).toBe("Nothing ticked");
+	});
+});
+
+describe("who asking in bulk reaches", () => {
+	it("says how many are asked and why the rest are not", () => {
+		expect(askPlanLine({ to_ask: 3, asked_already: 1, no_client: 2 })).toBe(
+			"3 companies will be asked; 1 company already has a request open; 2 companies are not linked to a client."
+		);
+	});
+	it("leaves out what does not apply", () => {
+		expect(askPlanLine({ to_ask: 1, asked_already: 0, no_client: 0 })).toBe(
+			"1 company will be asked."
+		);
+		expect(askPlanLine({ to_ask: 0, asked_already: 2, no_client: 0 })).toBe(
+			"Nobody is left to ask; 2 companies already have a request open."
+		);
 	});
 });

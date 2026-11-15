@@ -6,7 +6,8 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from kxcompliance.api import add_request_document, documents
+from kxcompliance.api import add_request_document, ask_clients_in_bulk, bulk_ask_plan, documents
+from kxcompliance.kx_compliance import document_requests
 from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import (
 	CLIENT_LOGIN,
 	OTHER_COMPANY,
@@ -165,6 +166,49 @@ class TestDocumentRequest(IntegrationTestCase):
 			),
 			["accounts@sunrise.example.com"],
 		)
+
+	def test_asking_every_client_with_a_return_at_once(self):
+		profile(SECOND_COMPANY)  # set up, but not linked to a client: cannot be asked
+		unlinked = task(SECOND_COMPANY, responsible=HOLDER)
+		where = {"obligation_template": "GSTR-3B (Monthly)", "period_end": "2026-10-31"}
+		with self.set_user(HOLDER):
+			plan = bulk_ask_plan(**where)
+			self.assertGreaterEqual(plan["to_ask"], 1)
+			self.assertGreaterEqual(plan["no_client"], 1)
+			with patch("frappe.enqueue") as enqueue:
+				ask_clients_in_bulk(**where, title="October purchase register", details="As Excel")
+			job = enqueue.call_args.kwargs
+		asking = [row["name"] for row in job["filings"]]
+		# The client's filing is asked; the company with no client is not.
+		self.assertIn(self.filing, asking)
+		self.assertNotIn(unlinked, asking)
+		# Whoever asks may have another company as their default; each request is still its filing's.
+		frappe.defaults.set_user_default("company", SECOND_COMPANY, HOLDER)
+		self.addCleanup(frappe.defaults.clear_user_default, "company", HOLDER)
+		# The job, as the worker runs it; it commits as it goes, which a test must not.
+		with self.freeze_time("2026-11-01"), patch("frappe.db.commit"):
+			document_requests.run_ask_in_bulk(job["filings"], job["title"], job["details"], by=HOLDER)
+		frappe.set_user("Administrator")
+		made = frappe.get_all(
+			"Document Request",
+			filters={"compliance_task": self.filing},
+			fields=["title", "client", "due_date", "requested_by"],
+		)
+		self.assertEqual(len(made), 1)
+		self.assertEqual((made[0].title, made[0].client, made[0].requested_by), ("October purchase register", "Sunrise Group", HOLDER))
+		self.assertTrue(notified(CLIENT_LOGIN, frappe.get_all("Document Request", filters={"compliance_task": self.filing}, pluck="name")[0]))
+		self.assertFalse(frappe.db.exists("Document Request", {"compliance_task": unlinked}))
+		# Asked once: the same return again skips every filing just asked.
+		with self.set_user(HOLDER):
+			again = bulk_ask_plan(**where)
+		self.assertEqual(again["asked_already"], len(asking))
+		self.assertEqual(again["to_ask"], 0)
+
+	def test_a_bulk_request_is_due_before_its_filing(self):
+		today = "2026-11-01"
+		self.assertEqual(str(document_requests.suggested_due_date("2026-11-20", today)), "2026-11-08")
+		self.assertEqual(str(document_requests.suggested_due_date("2026-11-05", today)), "2026-11-04")
+		self.assertEqual(str(document_requests.suggested_due_date("2026-11-01", today)), "2026-11-02")
 
 	def test_the_client_uploads_and_the_firm_accepts_or_sends_it_back(self):
 		with self.set_user(HOLDER):

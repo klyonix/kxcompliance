@@ -92,6 +92,14 @@
 						label="All that can be saved"
 						@update:model-value="tickAll"
 					/>
+					<Button
+						v-if="mayAsk"
+						class="ml-auto"
+						data-tour="bulk-ask"
+						icon-left="lucide-file-question"
+						label="Ask the clients for…"
+						@click="askOpen = true"
+					/>
 				</div>
 
 				<ul class="flex flex-col" data-tour="bulk-rows">
@@ -180,6 +188,14 @@
 					class="hidden"
 					@change="pickOne"
 				/>
+				<AskInBulk
+					v-if="mayAsk"
+					v-model:open="askOpen"
+					:template="chosen.split('|')[0]"
+					:period-end="chosen.split('|')[1]"
+					:return-label="chosenLabel"
+					:companies="chosenCompanies"
+				/>
 			</template>
 
 			<p v-else-if="chosen" class="py-10 text-center text-base text-ink-gray-5">
@@ -217,8 +233,9 @@ import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call, getDoc, getList } from "@/api";
-import { boot } from "@/boot";
+import { boot, mayRecord } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import AskInBulk from "@/components/AskInBulk.vue";
 import ClientPicker from "@/components/ClientPicker.vue";
 import {
 	BULK_FIELDS,
@@ -252,10 +269,17 @@ const saving = ref(false);
 const progress = ref("");
 const manyInput = ref(null);
 const oneInput = ref(null);
+const askOpen = ref(false);
 let pickingRow = null;
 
 const person = { user: boot.user, roles: boot.roles };
 const choiceKey = (choice) => `${choice.obligation_template}|${choice.period_end}`;
+// A firm's staff may ask every client with this return for the same document.
+const mayAsk = boot.accountType === "CA/CS Firm" && mayRecord();
+const chosenLabel = computed(() => {
+	const choice = choices.value?.find((item) => choiceKey(item) === chosen.value);
+	return choice ? `${choice.obligation_template}, ${choice.period_label}` : "";
+});
 const ticked = computed(() => rows.value.filter((row) => row.ticked && row.step.status));
 const saveable = computed(() =>
 	rows.value.filter((row) => row.step.status && row.result?.state !== "saved")

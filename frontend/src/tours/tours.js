@@ -262,6 +262,11 @@ export const TOURS = [
 				text: "Add each acknowledgement number, and attach any proof that did not match by itself.",
 			},
 			{
+				target: ["bulk-ask"],
+				title: "Ask every client at once",
+				text: "Need the same document from each client before filing? Ask them all here: one request per filing, needed a day before it is due. Companies already asked are left out.",
+			},
+			{
 				target: ["bulk-save"],
 				title: "Save them together",
 				text: "Each row is saved on its own, so the good ones are saved and any other says what is missing.",

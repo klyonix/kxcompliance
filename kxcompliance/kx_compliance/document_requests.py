@@ -9,6 +9,8 @@ overdue. Like every reminder, each message is recorded in a Compliance Reminder 
 unique key keeps a second run from sending it again.
 """
 
+from email.utils import parseaddr
+
 import frappe
 from frappe import _
 from frappe.utils import date_diff, escape_html, formatdate, get_url, getdate, now_datetime, nowdate
@@ -88,8 +90,10 @@ def sent_back(request):
 	tell_client(request, subject, lines)
 
 
-def received(request, document):
-	"""A document arrived: mark the request uploaded, put the file on its filing, tell the firm."""
+def received(request, document, by: str | None = None):
+	"""A document arrived: mark the request uploaded, put the file on its filing, tell the firm.
+
+	`by` names who sent it when it came by email rather than through the app."""
 	if request.status == "Requested":
 		request.status = "Uploaded"
 	request.uploaded_on = now_datetime()
@@ -108,11 +112,67 @@ def received(request, document):
 			}
 		).insert(ignore_permissions=True)  # the same file, also shown on the filing it is for
 	if request.requested_by and request.requested_by != frappe.session.user:
-		subject = _("{0} uploaded {1}").format(frappe.utils.get_fullname(frappe.session.user), request.title)
+		sender = by or frappe.utils.get_fullname(frappe.session.user)
+		subject = _("{0} uploaded {1}").format(sender, request.title)
 		body = escape_html(
 			_("{0} for {1} is ready for you to check: accept it or send it back.").format(
 				document.file_name, request.company
 			)
+		)
+		notify([request.requested_by], subject, f"<p>{body}</p>", DOCTYPE, request.name)
+
+
+def client_addresses(client: str) -> set[str]:
+	"""The email addresses a client may answer from: its logins' and its contact's."""
+	users = logins_of([client]).get(client, [])
+	addresses = set(frappe.get_all("User", filters={"name": ("in", users or [""])}, pluck="email"))
+	contact = frappe.db.get_value("Compliance Client", client, "contact_email")
+	if contact:
+		addresses.add(contact)
+	return {address.strip().lower() for address in addresses if address}
+
+
+def take_emailed_file(file_doc, method=None):
+	"""File.after_insert: a client answered a document request by email (RK, 15 Nov 2026).
+
+	Frappe files a reply to a request's email as a Communication on the request, and saves each
+	attachment on that Communication. A file from one of the client's own addresses, while the
+	request is open, goes on the request as an upload in the app would; anything else stays on the
+	reply, and the person who asked is told to look at it.
+	"""
+	if file_doc.attached_to_doctype != "Communication" or not file_doc.attached_to_name:
+		return
+	reply = frappe.db.get_value(
+		"Communication",
+		file_doc.attached_to_name,
+		["reference_doctype", "reference_name", "sent_or_received", "sender", "sender_full_name"],
+		as_dict=True,
+	)
+	if not reply or reply.reference_doctype != DOCTYPE or reply.sent_or_received != "Received":
+		return
+	request = frappe.get_doc(DOCTYPE, reply.reference_name)
+	sender = parseaddr(reply.sender or "")[1].strip().lower()
+	if request.status in OPEN_STATUSES and sender in client_addresses(request.client):
+		document = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": file_doc.file_name,
+				"file_url": file_doc.file_url,
+				"is_private": 1,
+				"attached_to_doctype": DOCTYPE,
+				"attached_to_name": request.name,
+			}
+		)
+		# Mail is read by the system, not by a user: the client's own address is the check here.
+		document.insert(ignore_permissions=True)
+		received(request, document, by=reply.sender_full_name or sender)
+		return
+	if request.requested_by:
+		subject = _("An email about {0} needs a look").format(request.title)
+		body = escape_html(
+			_(
+				"{0} sent {1} by email. It is on the request's activity; it was not taken as the document."
+			).format(reply.sender or _("Someone"), file_doc.file_name)
 		)
 		notify([request.requested_by], subject, f"<p>{body}</p>", DOCTYPE, request.name)
 

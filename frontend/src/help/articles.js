@@ -344,6 +344,7 @@ export const ARTICLES = [
 			"Open the request and upload the file from your computer or phone.",
 			"Your firm is told. They accept it, or send it back with a note.",
 		],
+		tip: "You can also reply to your firm's email with the file attached, from the address they have for you.",
 		page: "ClientHome",
 		client: true,
 		staff: false,

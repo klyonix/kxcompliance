@@ -368,6 +368,8 @@ When your firm emails you that they need something.
 2. Open the request and upload the file from your computer or phone.
 3. Your firm is told. They accept it, or send it back with a note.
 
+> **Tip.** You can also reply to your firm's email with the file attached, from the address they have for you.
+
 ### How do I see what my firm is doing for me?
 
 *For: Client logins.*

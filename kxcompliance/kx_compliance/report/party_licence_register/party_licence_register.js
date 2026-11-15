@@ -21,9 +21,9 @@ frappe.query_reports["Party Licence Register"] = {
 			fieldtype: "Select",
 			options: [
 				"",
-				"Draft",
 				"Active",
 				"Due for Renewal",
+				"Renewal Planned",
 				"Renewal in Progress",
 				"Expired",
 				"Lapsed",

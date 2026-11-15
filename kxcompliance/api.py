@@ -174,7 +174,10 @@ def my_work() -> dict:
 		"items": frappe.get_list(
 			"Compliance Item",
 			filters={
-				"status": ("in", ["Draft", "Due for Renewal", "Expired", "Lapsed", "Renewal in Progress"])
+				"status": (
+					"in",
+					["Due for Renewal", "Renewal Planned", "Expired", "Lapsed", "Renewal in Progress"],
+				)
 			},
 			or_filters=mine,
 			fields=[

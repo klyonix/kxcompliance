@@ -5,6 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate
 
+from kxcompliance.kx_compliance.register import compute_status
 from kxcompliance.kx_compliance.report.compliance_cost.compliance_cost import execute as cost_report
 from kxcompliance.kx_compliance.report.compliance_register.compliance_register import (
 	execute as register_report,
@@ -56,10 +57,31 @@ class TestComplianceItem(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "Valid Until is required"):
 			make_item("Test Expiring Licence", valid_until=None, days=None)
 
-	def test_a_certificate_is_needed_before_an_item_is_active(self):
-		self.assertEqual(self.status_on("2027-06-01", "Test Certified Licence"), "Draft")
+	def test_a_missing_certificate_is_flagged_without_hiding_the_dates(self):
+		with self.freeze_time(TODAY):
+			item = make_item("Test Certified Licence", valid_until="2026-05-25")
+			self.assertEqual((item.status, item.certificate_missing), ("Expired", 1))
+			item = make_item("Test Certified Licence", valid_until="2027-06-01", certificate=make_file())
+			self.assertEqual((item.status, item.certificate_missing), ("Active", 0))
+
+	def test_a_planned_renewal_shows_until_the_licence_runs_out(self):
+		with self.freeze_time(TODAY):
+			item = make_item("Test Expiring Licence", valid_until="2026-06-20")
+			self.assertEqual(item.status, "Due for Renewal")
+			frappe.get_doc(
+				{"doctype": "Compliance Renewal", "compliance_item": item.name, "status": "Planned"}
+			).insert()
+			self.assertEqual(frappe.db.get_value("Compliance Item", item.name, "status"), "Renewal Planned")
 		self.assertEqual(
-			self.status_on("2027-06-01", "Test Certified Licence", certificate=make_file()), "Active"
+			compute_status(
+				is_cancelled=False,
+				valid_until="2026-05-25",
+				renewal_status="Planned",
+				grace_days=10,
+				today=TODAY,
+				soon_days=30,
+			),
+			"Expired",
 		)
 
 	def test_valid_from_cannot_be_after_valid_until(self):

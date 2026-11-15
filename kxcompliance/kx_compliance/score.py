@@ -128,12 +128,13 @@ def company_scores(companies: list[str], today: str | None = None) -> dict[str, 
 			"company": ("in", companies),
 			"is_cancelled": 0,
 			"holder_type": ("not in", PARTY_HOLDERS),
-			"status": ("in", ["Expired", "Lapsed", "Due for Renewal"]),
+			# A planned renewal is still due: planning alone does not raise the score.
+			"status": ("in", ["Expired", "Lapsed", "Due for Renewal", "Renewal Planned"]),
 		},
 		fields=["company", "status", COUNT],
 		group_by="company, status",
 	):
-		key = "due_for_renewal" if row.status == "Due for Renewal" else "expired"
+		key = "due_for_renewal" if row.status in ("Due for Renewal", "Renewal Planned") else "expired"
 		counts[row.company][key] += row["count"]
 
 	for row in frappe.get_all(

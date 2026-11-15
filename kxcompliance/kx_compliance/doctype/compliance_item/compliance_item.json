@@ -11,6 +11,7 @@
   "category",
   "column_break_title",
   "status",
+  "certificate_missing",
   "reference_number",
   "section_holder",
   "company",
@@ -110,16 +111,24 @@
   },
   {
    "allow_on_submit": 0,
-   "default": "Draft",
+   "default": "Active",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Draft\nActive\nDue for Renewal\nRenewal in Progress\nExpired\nLapsed\nCancelled",
+   "options": "Active\nDue for Renewal\nRenewal Planned\nRenewal in Progress\nExpired\nLapsed\nCancelled",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "certificate_missing",
+   "fieldtype": "Check",
+   "label": "Certificate Missing",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "description": "Its type needs a certificate and none is attached."
   },
   {
    "description": "Licence, policy or registration number.",
@@ -470,7 +479,7 @@
  "index_web_pages_for_search": 0,
  "links": [],
  "make_attachments_public": 0,
- "modified": "2026-11-15 01:08:09.744208",
+ "modified": "2026-11-15 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Item",

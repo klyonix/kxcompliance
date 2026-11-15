@@ -7,8 +7,9 @@
 		@submit.prevent="save"
 	>
 		<p class="text-base text-ink-gray-6">
-			A draft bill for a client, from the returns filed for it, its fixed fee and anything
-			else. GST is added by the client's state. Check it on its page, then send it.
+			A draft bill for a client, from the returns filed for it, its recurring charges,
+			services and anything else. GST is added by the client's state. Check it on its page,
+			then send it.
 		</p>
 		<p v-if="error" role="alert" class="text-base text-ink-red-4">{{ error }}</p>
 
@@ -55,15 +56,77 @@
 			</section>
 
 			<label
-				v-if="options.fee_period"
-				class="flex items-center gap-3 rounded-lg bg-surface-gray-1 px-3 py-2.5"
+				v-if="options.recurring.length"
+				class="flex items-start gap-3 rounded-lg bg-surface-gray-1 px-3 py-2.5"
 			>
-				<input v-model="withFee" type="checkbox" class="rounded border-outline-gray-3" />
-				<span class="flex-1 text-base text-ink-gray-8"
-					>Fixed fee, {{ options.fee_period }}</span
-				>
-				<span class="text-base text-ink-gray-8">{{ money(options.fixed_fee) }}</span>
+				<input
+					v-model="withRecurring"
+					type="checkbox"
+					class="mt-1 rounded border-outline-gray-3"
+				/>
+				<span class="flex flex-1 flex-col gap-1">
+					<span class="text-base font-medium text-ink-gray-8"
+						>Recurring charges due</span
+					>
+					<span
+						v-for="charge in options.recurring"
+						:key="charge.description"
+						class="flex justify-between gap-3 text-base text-ink-gray-7"
+					>
+						<span>{{ charge.description }}</span>
+						<span>{{ money(charge.amount) }}</span>
+					</span>
+				</span>
 			</label>
+
+			<section
+				v-if="options.services.length"
+				class="flex flex-col gap-2"
+				aria-labelledby="services-heading"
+			>
+				<h2 id="services-heading" class="text-base font-semibold text-ink-gray-8">
+					Services done
+				</h2>
+				<div
+					v-for="(row, index) in services"
+					:key="index"
+					class="grid grid-cols-[1fr_6rem_auto] items-start gap-2"
+				>
+					<FormControl
+						v-model="row.service"
+						type="select"
+						:aria-label="`Service ${index + 1}`"
+						:options="[
+							{ label: 'Choose a service', value: '' },
+							...options.services.map((rate) => ({
+								label: `${rate.service} (${money(
+									rate.amount
+								)} ${rate.unit.toLowerCase()})`,
+								value: rate.service,
+							})),
+						]"
+					/>
+					<FormControl
+						v-model="row.qty"
+						type="number"
+						:placeholder="unitOf(row.service) === 'Per hour' ? 'Hours' : 'How many'"
+						:aria-label="`How many of service ${index + 1}`"
+					/>
+					<Button
+						variant="ghost"
+						icon="lucide-x"
+						:aria-label="`Remove service ${index + 1}`"
+						@click="services.splice(index, 1)"
+					/>
+				</div>
+				<div>
+					<Button
+						icon-left="lucide-plus"
+						label="Add a service"
+						@click="services.push({ service: '', qty: '' })"
+					/>
+				</div>
+			</section>
 
 			<section class="flex flex-col gap-2" aria-labelledby="other-heading">
 				<h2 id="other-heading" class="text-base font-semibold text-ink-gray-8">
@@ -132,7 +195,7 @@ import { useRoute, useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
-import { billSubtotal, linesProblem, linesToSend, money } from "@/lib/billing";
+import { billSubtotal, linesProblem, linesToSend, money, servicesProblem } from "@/lib/billing";
 
 const route = useRoute();
 const router = useRouter();
@@ -142,7 +205,8 @@ const client = ref(String(route.query.client || ""));
 const clients = ref([]);
 const options = ref(null);
 const ticked = ref([]);
-const withFee = ref(false);
+const withRecurring = ref(false);
+const services = ref([]);
 const lines = ref([]);
 const error = ref("");
 const formError = ref("");
@@ -158,8 +222,10 @@ const subtotal = computed(() =>
 		? billSubtotal({
 				filings: options.value.filings,
 				ticked: ticked.value,
-				fixedFee: options.value.fixed_fee,
-				withFee: withFee.value,
+				recurring: options.value.recurring,
+				withRecurring: withRecurring.value,
+				services: services.value,
+				rates: options.value.services,
 				lines: lines.value,
 		  })
 		: 0
@@ -173,14 +239,17 @@ async function loadOptions() {
 		options.value = await call("kxcompliance.api.bill_options", { client: client.value });
 		// Everything there is to bill starts ticked; the person unticks what waits.
 		ticked.value = options.value.filings.map((filing) => filing.name);
-		withFee.value = Boolean(options.value.fee_period);
+		withRecurring.value = options.value.recurring.length > 0;
+		services.value = [];
 	} catch (err) {
 		error.value = err.message;
 	}
 }
 
+const unitOf = (service) => options.value?.services.find((rate) => rate.service === service)?.unit;
+
 async function save() {
-	formError.value = linesProblem(lines.value) || "";
+	formError.value = servicesProblem(services.value) || linesProblem(lines.value) || "";
 	if (formError.value) return;
 	saving.value = true;
 	try {
@@ -189,7 +258,11 @@ async function save() {
 			{
 				client: client.value,
 				filings: ticked.value,
-				fixed_fee: withFee.value,
+				recurring: withRecurring.value,
+				services: services.value.map((row) => ({
+					service: row.service,
+					qty: Number(row.qty),
+				})),
 				lines: linesToSend(lines.value),
 			},
 			{ httpMethod: "POST" }

@@ -25,6 +25,8 @@ FIRM = "CA/CS Firm"
 SETTINGS = "KX Compliance Settings"
 FEES_ITEM = "Professional fees"
 GOVERNMENT_FEES_ITEM = "Government fees (reimbursed)"
+# Services charged by the hour, counted in hours (Nos must be whole numbers).
+HOURS_ITEM = "Professional fees (hours)"
 # The firm's output GST, and the two templates a bill uses: within the firm's state, or outside it.
 TAX_ACCOUNTS = ("Output CGST", "Output SGST", "Output IGST")
 WITHIN_STATE = "GST within state"
@@ -39,6 +41,7 @@ FIRM_FIELDS = (
 	"bank_details",
 	"upi_id",
 	"bill_prefix",
+	"default_sac",
 	"billing_logo",
 )
 # A firm registered for GST charges it on its bills; one not registered, or under composition
@@ -53,7 +56,11 @@ WITHOUT_GST = "Without GST"
 BILLING_ROLES = frozenset({"System Manager", "Compliance Manager", "Accounts Manager", "Accounts User"})
 # A bill is due this many days after it is made.
 BILL_DUE_DAYS = 15
-FEE_MONTHS = {"Monthly": 1, "Quarterly": 3, "Yearly": 12}
+# How a rate is charged: a return per filing; a service as it is done (per hour or item), or every
+# month, quarter or year from the client's "recurring charges from" date.
+PER_FILING = "Per filing"
+AS_DONE = ("Per hour", "Per item")
+RECURRING_MONTHS = {"Per month": 1, "Per quarter": 3, "Per year": 12}
 # How clients pay, each into the firm's cash or its bank (Mode of Payment, type).
 PAYMENT_MODES = {"Cash": "Cash", "Bank Transfer": "Bank", "UPI": "Bank", "Cheque": "Bank"}
 TDS_ACCOUNT = "TDS Receivable"
@@ -90,10 +97,6 @@ def setup_state() -> dict:
 		"states": [state for state in states.split("\n") if state],
 		"can_create_company": bool(frappe.has_permission("Company", "create")) and frappe.is_setup_complete(),
 		"gst_statuses": list(GST_STATUSES),
-		"return_fees": [
-			{"obligation_template": row.obligation_template, "amount": row.amount}
-			for row in settings.return_fees
-		],
 	}
 
 
@@ -149,6 +152,7 @@ def make_masters(company: str):
 	only if it is not there, so setting up again changes nothing."""
 	make_item(FEES_ITEM, _("Fees for professional services"))
 	make_item(GOVERNMENT_FEES_ITEM, _("Government fees paid for the client, passed on without GST"))
+	make_item(HOURS_ITEM, _("Professional services charged by the hour"), uom="Hour")
 	accounts = {name: tax_account(company, name) for name in TAX_ACCOUNTS}
 	half = GST_RATE / 2
 	tax_template(company, WITHIN_STATE, [(accounts["Output CGST"], half), (accounts["Output SGST"], half)])
@@ -229,7 +233,7 @@ def item_tax_template(company: str, accounts: list[str]) -> str:
 	)
 
 
-def make_item(code: str, description: str):
+def make_item(code: str, description: str, uom: str = "Nos"):
 	if frappe.db.exists("Item", code):
 		return
 	frappe.get_doc(
@@ -239,7 +243,7 @@ def make_item(code: str, description: str):
 			"item_name": code,
 			"description": description,
 			"item_group": "Services" if frappe.db.exists("Item Group", "Services") else root("Item Group"),
-			"stock_uom": "Nos",
+			"stock_uom": uom,
 			"is_stock_item": 0,
 			"include_item_in_manufacturing": 0,
 		}
@@ -303,32 +307,123 @@ def root(doctype: str) -> str:
 	)
 
 
-def check_return_fees(rows, where: str):
-	"""Each return priced once, from the library."""
+def rate_key(line) -> tuple[str, str]:
+	"""What a rate prices: a return, or a service by its name."""
+	if line.get("kind") == "Return":
+		return ("Return", line.get("obligation_template") or "")
+	return ("Service", (line.get("service") or "").strip())
+
+
+def check_rate_lines(lines, where: str):
+	"""Each line prices a return per filing, or a named service by hour, item or period; and each
+	return or service once."""
 	seen = set()
-	for row in rows:
-		if row.obligation_template in seen:
-			frappe.throw(
-				_("{0} row {1}: {2} already has a price.").format(where, row.idx, row.obligation_template)
-			)
-		seen.add(row.obligation_template)
+	for row in lines:
+		if row.kind == "Return":
+			row.service = None
+			if not row.obligation_template:
+				frappe.throw(_("{0} row {1}: choose the return it prices.").format(where, row.idx))
+			if row.unit != PER_FILING:
+				frappe.throw(
+					_("{0} row {1}: a return is charged per filing, not {2}.").format(
+						where, row.idx, _(row.unit)
+					)
+				)
+		else:
+			row.obligation_template = None
+			row.service = (row.service or "").strip()
+			if not row.service:
+				frappe.throw(_("{0} row {1}: name the service.").format(where, row.idx))
+			if row.unit == PER_FILING:
+				frappe.throw(
+					_("{0} row {1}: {2} is charged per hour, item, month, quarter or year.").format(
+						where, row.idx, row.service
+					)
+				)
+		key = rate_key(row)
+		if key in seen:
+			frappe.throw(_("{0} row {1}: {2} already has a rate.").format(where, row.idx, key[1]))
+		seen.add(key)
 
 
-def check_fee_plan(client):
-	"""A fixed fee says how often it is billed and from when."""
-	if not client.fixed_fee:
-		client.fee_frequency = None
-		client.fee_from = None
+def keep_one_default(card):
+	"""One default card at a time: making one the default takes it from the others."""
+	if not card.is_default:
 		return
-	missing = [
-		_(client.meta.get_label(field)) for field in ("fee_frequency", "fee_from") if not client.get(field)
+	table = frappe.qb.DocType("Rate Card")
+	(frappe.qb.update(table).set(table.is_default, 0).where(table.name != card.name)).run()
+
+
+def check_client_rates(client):
+	"""A client's own rates, and a start date for any monthly, quarterly or yearly charge it pays."""
+	check_rate_lines(client.own_rates, _("Own Rates"))
+	if client.billing_from:
+		return
+	recurring = [
+		line
+		for line in rates_for([client.name or ""], {client.name or "": client})
+		.get(client.name or "", {})
+		.values()
+		if line["unit"] in RECURRING_MONTHS
 	]
-	if missing:
+	if recurring:
 		frappe.throw(
-			_("{0} has a fixed fee of {1}; give {2} too.").format(
-				client.name or client.client_name, client.fixed_fee, ", ".join(missing)
+			_("{0} pays {1} {2}; give the date its recurring charges start from.").format(
+				client.client_name, recurring[0]["service"], _(recurring[0]["unit"]).lower()
 			)
 		)
+
+
+def default_card() -> str | None:
+	return frappe.db.get_value("Rate Card", {"is_default": 1})
+
+
+LINE_FIELDS = ["kind", "obligation_template", "service", "unit", "amount", "sac_code"]
+
+
+def rates_for(clients: list[str], unsaved: dict | None = None) -> dict[str, dict[tuple, dict]]:
+	"""Each client's rates: its card's (or the default card's), with its own rates in their place.
+	Read in a few queries however many clients there are. `unsaved` gives a client document being
+	saved, whose card and own rates are read from it rather than the database."""
+	unsaved = unsaved or {}
+	saved = [name for name in clients if name not in unsaved]
+	card_of = dict(
+		frappe.get_all(
+			"Compliance Client",
+			filters={"name": ("in", saved or [""])},
+			fields=["name", "rate_card"],
+			as_list=True,
+		)
+	)
+	for name, doc in unsaved.items():
+		card_of[name] = doc.rate_card
+	fallback = default_card()
+	cards = {card_of.get(name) or fallback for name in clients} - {None}
+	card_lines: dict[str, list] = {}
+	for row in frappe.get_all(
+		"Rate Card Line",
+		filters={"parenttype": "Rate Card", "parent": ("in", list(cards) or [""])},
+		fields=["parent", *LINE_FIELDS],
+		order_by="idx asc",
+	):
+		card_lines.setdefault(row.parent, []).append(row)
+	own: dict[str, list] = {}
+	for row in frappe.get_all(
+		"Rate Card Line",
+		filters={"parenttype": "Compliance Client", "parent": ("in", saved or [""])},
+		fields=["parent", *LINE_FIELDS],
+		order_by="idx asc",
+	):
+		own.setdefault(row.parent, []).append(row)
+	for name, doc in unsaved.items():
+		own[name] = [{field: row.get(field) for field in LINE_FIELDS} for row in doc.own_rates]
+	rates = {}
+	for name in clients:
+		merged = {}
+		for line in [*card_lines.get(card_of.get(name) or fallback, []), *own.get(name, [])]:
+			merged[rate_key(line)] = {field: line.get(field) for field in LINE_FIELDS}
+		rates[name] = merged
+	return rates
 
 
 def unbilled_filings(client: str) -> list[dict]:
@@ -338,8 +433,8 @@ def unbilled_filings(client: str) -> list[dict]:
 
 
 def unbilled_for(clients: list[str]) -> list[dict]:
-	"""Filed returns with a fee that are on no bill yet (sent or draft), for these clients, oldest
-	first; each with its client and fee. Read in a few queries however many clients there are."""
+	"""Filed returns with a rate that are on no bill yet (sent or draft), for these clients, oldest
+	first; each with its client, fee and SAC code. Read in a few queries however many clients."""
 	if not clients:
 		return []
 	owner = dict(
@@ -350,16 +445,9 @@ def unbilled_for(clients: list[str]) -> list[dict]:
 			as_list=True,
 		)
 	)
-	firm_prices = {row.obligation_template: row.amount for row in get_settings().return_fees}
-	own_prices: dict[str, dict[str, float]] = {}
-	for row in frappe.get_all(
-		"Return Fee",
-		filters={"parenttype": "Compliance Client", "parent": ("in", clients)},
-		fields=["parent", "obligation_template", "amount"],
-	):
-		own_prices.setdefault(row.parent, {})[row.obligation_template] = row.amount
-	if not owner or not (firm_prices or own_prices):
+	if not owner:
 		return []
+	rates = rates_for(clients)
 	rows = frappe.get_all(
 		"Compliance Task",
 		filters={
@@ -374,43 +462,22 @@ def unbilled_for(clients: list[str]) -> list[dict]:
 	found = []
 	for row in rows:
 		row.client = owner[row.company]
-		row.fee = own_prices.get(row.client, {}).get(
-			row.obligation_template, firm_prices.get(row.obligation_template)
-		)
+		rate = rates[row.client].get(("Return", row.obligation_template)) or {}
+		row.fee = rate.get("amount")
+		row.sac_code = rate.get("sac_code")
 		if row.fee and row.name not in drafted:
 			found.append(row)
 	return found
 
 
 def client_fees(client: str) -> dict:
-	"""A client's fee plan and what it would be billed for its filings now."""
-	values = frappe.db.get_value(
-		"Compliance Client", client, ["fixed_fee", "fee_frequency", "fee_from"], as_dict=True
-	)
+	"""What a client would be billed for its filings now, and the rates it pays."""
 	unbilled = unbilled_filings(client)
 	return {
-		**values,
+		"rates": list(rates_for([client])[client].values()),
 		"unbilled": unbilled,
 		"unbilled_total": sum(row.fee for row in unbilled),
 	}
-
-
-def save_return_fees(fees: list) -> list[dict]:
-	"""The firm's price per return, replacing the list; each row a return and its fee."""
-	check_firm_manager()
-	settings = frappe.get_doc(SETTINGS)
-	settings.set("return_fees", [])
-	for fee in fees:
-		if not isinstance(fee, dict) or set(fee) - {"obligation_template", "amount"}:
-			frappe.throw(_("Each price is a return and its fee."))
-		settings.append(
-			"return_fees",
-			{"obligation_template": fee.get("obligation_template"), "amount": flt(fee.get("amount"))},
-		)
-	settings.save()
-	return [
-		{"obligation_template": row.obligation_template, "amount": row.amount} for row in settings.return_fees
-	]
 
 
 def check_biller():
@@ -500,20 +567,33 @@ def series() -> str | None:
 	return name
 
 
-def fee_period(plan, month: date) -> str | None:
-	"""The fixed fee's period starting in this month, as a bill line says it; None when the fee is
-	not billed this month."""
-	step = FEE_MONTHS.get(plan.fee_frequency)
-	if not plan.fixed_fee or not step or not plan.fee_from:
-		return None
-	start = get_first_day(plan.fee_from)
-	gap = (month.year - start.year) * 12 + month.month - start.month
-	if gap < 0 or gap % step:
-		return None
+def period_name(month: date, months: int) -> str:
+	"""Nov 2026; or Nov 2026 to Jan 2027 for a quarter or a year."""
 	first = format_date(month, "MMM yyyy")
-	if step == 1:
+	if months == 1:
 		return first
-	return _("{0} to {1}").format(first, format_date(add_months(month, step - 1), "MMM yyyy"))
+	return _("{0} to {1}").format(first, format_date(add_months(month, months - 1), "MMM yyyy"))
+
+
+def recurring_due(rates: dict[tuple, dict], start, month: date) -> list[dict]:
+	"""The monthly, quarterly and yearly charges whose period starts in this month, counted from
+	the client's `start`; each a bill line's description, rate and SAC code."""
+	if not start:
+		return []
+	first = get_first_day(start)
+	gap = (month.year - first.year) * 12 + month.month - first.month
+	due = []
+	for line in rates.values():
+		months = RECURRING_MONTHS.get(line["unit"])
+		if months and gap >= 0 and not gap % months and line["amount"]:
+			due.append(
+				{
+					"description": _("{0}, {1}").format(line["service"], period_name(month, months)),
+					"amount": line["amount"],
+					"sac_code": line["sac_code"],
+				}
+			)
+	return due
 
 
 def on_drafts(filings: list[str]) -> set[str]:
@@ -536,12 +616,14 @@ def on_drafts(filings: list[str]) -> set[str]:
 def make_bill(
 	client: str,
 	filings: list[str] | None = None,
-	fee_month: date | None = None,
+	month: date | None = None,
 	lines: list[dict] | None = None,
 	key: str | None = None,
+	services: list[dict] | None = None,
 ) -> str:
-	"""A draft bill for a client: the filings chosen (from its unbilled ones), the fixed fee for
-	the period starting in `fee_month`, and any other lines ({description, amount, government})."""
+	"""A draft bill for a client: the filings chosen (from its unbilled ones), the recurring charges
+	whose period starts in `month`, services done ({service, qty}, at the client's rates), and any
+	other lines ({description, amount, government})."""
 	settings = get_settings()
 	unbilled = {row.name: row for row in unbilled_filings(client)}
 	asked = filings or []
@@ -562,27 +644,31 @@ def make_bill(
 			"qty": 1,
 			"rate": unbilled[name].fee,
 			"compliance_task": name,
+			"sac_code": unbilled[name].sac_code or settings.default_sac,
 		}
 		for name in asked
 	]
-	plan = frappe.db.get_value(
-		"Compliance Client", client, ["fixed_fee", "fee_frequency", "fee_from", "billing_state"], as_dict=True
-	)
-	period = fee_period(plan, fee_month) if fee_month else None
-	if period:
+	plan = frappe.db.get_value("Compliance Client", client, ["billing_from", "billing_state"], as_dict=True)
+	rates = rates_for([client])[client]
+	for charge in recurring_due(rates, plan.billing_from, month) if month else []:
 		items.append(
 			{
 				"item_code": FEES_ITEM,
-				"description": _("Fixed fee, {0}").format(period),
+				"description": charge["description"],
 				"qty": 1,
-				"rate": plan.fixed_fee,
+				"rate": charge["amount"],
+				"sac_code": charge["sac_code"] or settings.default_sac,
 			}
 		)
+	for done in services or []:
+		items.append(service_line(rates, done, settings.default_sac))
 	for line in lines or []:
 		items.append(other_line(line))
 	if not items:
 		frappe.throw(
-			_("Nothing to bill {0} for: choose filings, the fixed fee or add a line.").format(client)
+			_(
+				"Nothing to bill {0} for: choose filings, recurring charges or services, or add a line."
+			).format(client)
 		)
 	today = getdate(nowdate())
 	# Only a firm registered for GST charges it.
@@ -628,6 +714,31 @@ def template_taxes(template: str | None) -> list[dict]:
 		{field: row.get(field) for field in TAX_LINE_FIELDS}
 		for row in frappe.get_doc("Sales Taxes and Charges Template", template).taxes
 	]
+
+
+def service_line(rates: dict[tuple, dict], done: dict, default_sac: str | None) -> dict:
+	"""A service done for the client, at its rate: hours or items times the rate."""
+	if not isinstance(done, dict) or set(done) - {"service", "qty"}:
+		frappe.throw(_("Each service done is the service and how many hours or items."))
+	rate = rates.get(("Service", str(done.get("service") or "").strip()))
+	if not rate or rate["unit"] not in AS_DONE:
+		frappe.throw(
+			_("{0} is not a service charged by the hour or item for this client.").format(done.get("service"))
+		)
+	qty = flt(done.get("qty"), 2)
+	if qty <= 0:
+		frappe.throw(_("Give how many hours or items of {0}.").format(rate["service"]))
+	return {
+		"item_code": HOURS_ITEM if rate["unit"] == "Per hour" else FEES_ITEM,
+		"description": _("{0}, {1} {2}").format(
+			rate["service"],
+			frappe.format(qty, {"fieldtype": "Float"}),
+			_("hours" if rate["unit"] == "Per hour" else "items"),
+		),
+		"qty": qty,
+		"rate": rate["amount"],
+		"sac_code": rate["sac_code"] or default_sac,
+	}
 
 
 def other_line(line: dict) -> dict:
@@ -723,7 +834,7 @@ def unmark_filings_billed(bill, method=None):
 
 
 def make_monthly_drafts(today: date | None = None):
-	"""On the 1st: a draft bill per client with its fixed fee due or filed returns to bill, for a
+	"""On the 1st: a draft bill per client with recurring charges due or filed returns to bill, for a
 	manager to check and send. Made once per client and month; one client's problem stops no other."""
 	settings = get_settings()
 	if settings.account_type != FIRM or not settings.billing_company:
@@ -735,11 +846,9 @@ def make_monthly_drafts(today: date | None = None):
 			continue
 		try:
 			filings = [row.name for row in unbilled_filings(client)]
-			plan = frappe.db.get_value(
-				"Compliance Client", client, ["fixed_fee", "fee_frequency", "fee_from"], as_dict=True
-			)
-			if filings or fee_period(plan, month):
-				make_bill(client, filings=filings, fee_month=month, key=key)
+			start = frappe.db.get_value("Compliance Client", client, "billing_from")
+			if filings or recurring_due(rates_for([client])[client], start, month):
+				make_bill(client, filings=filings, month=month, key=key)
 			# A job may commit as it goes, so a later client's problem loses nothing made before it.
 			frappe.db.commit()
 		except Exception:
@@ -749,17 +858,16 @@ def make_monthly_drafts(today: date | None = None):
 
 
 def bill_options(client: str) -> dict:
-	"""What a new bill for a client may hold: its unbilled filings, and its fixed fee if one falls
-	due this month."""
+	"""What a new bill for a client may hold: its unbilled filings, the recurring charges due this
+	month, and the services it may be billed for by the hour or item."""
 	check_biller()
 	month = get_first_day(nowdate())
-	plan = frappe.db.get_value(
-		"Compliance Client", client, ["fixed_fee", "fee_frequency", "fee_from"], as_dict=True
-	)
+	rates = rates_for([client])[client]
+	start = frappe.db.get_value("Compliance Client", client, "billing_from")
 	return {
 		"filings": unbilled_filings(client),
-		"fixed_fee": plan.fixed_fee or 0,
-		"fee_period": fee_period(plan, month),
+		"recurring": recurring_due(rates, start, month),
+		"services": [line for line in rates.values() if line["unit"] in AS_DONE],
 	}
 
 

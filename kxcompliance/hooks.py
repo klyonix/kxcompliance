@@ -342,6 +342,7 @@ fixtures = [
 					"Sales Invoice-compliance_client",
 					"Sales Invoice-kx_billing_key",
 					"Sales Invoice Item-compliance_task",
+					"Sales Invoice Item-sac_code",
 				],
 			]
 		],

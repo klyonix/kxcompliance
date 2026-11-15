@@ -9,7 +9,7 @@
    "link_fieldname": "client"
   }
  ],
- "modified": "2026-11-16 14:00:00.000000",
+ "modified": "2026-11-16 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "owner": "Administrator",
@@ -41,10 +41,9 @@
   "billing_email",
   "billing_address",
   "fees_section",
-  "fixed_fee",
-  "fee_frequency",
-  "fee_from",
-  "return_fees"
+  "rate_card",
+  "billing_from",
+  "own_rates"
  ],
  "fields": [
   {
@@ -181,40 +180,32 @@
   {
    "fieldname": "fees_section",
    "fieldtype": "Section Break",
-   "label": "Fees"
-  },
-  {
-   "fieldname": "fixed_fee",
-   "fieldtype": "Currency",
-   "label": "Fixed Fee",
-   "non_negative": 1,
-   "description": "A retainer billed every period, on top of any fee per return."
-  },
-  {
-   "fieldname": "fee_frequency",
-   "fieldtype": "Select",
-   "label": "Billed",
-   "options": "\nMonthly\nQuarterly\nYearly",
-   "depends_on": "fixed_fee"
-  },
-  {
-   "fieldname": "fee_from",
-   "fieldtype": "Date",
-   "label": "Billed From",
-   "depends_on": "fixed_fee",
-   "description": "The first period's start; the fee is billed for each period from then."
-  },
-  {
-   "fieldname": "return_fees",
-   "fieldtype": "Table",
-   "options": "Return Fee",
-   "label": "Own Price per Return",
-   "description": "Only where this client pays differently from the firm's prices."
+   "label": "Rates"
   },
   {
    "fieldname": "logo",
    "fieldtype": "Attach Image",
    "label": "Logo"
+  },
+  {
+   "fieldname": "rate_card",
+   "fieldtype": "Link",
+   "options": "Rate Card",
+   "label": "Rate Card",
+   "description": "The firm's rates this client pays; the default card when left empty."
+  },
+  {
+   "fieldname": "billing_from",
+   "fieldtype": "Date",
+   "label": "Recurring Charges From",
+   "description": "Monthly, quarterly and yearly charges are billed for each period from this date."
+  },
+  {
+   "fieldname": "own_rates",
+   "fieldtype": "Table",
+   "options": "Rate Card Line",
+   "label": "Own Rates",
+   "description": "Only where this client pays differently from its card, or for a charge its card does not have."
   }
  ],
  "name": "Compliance Client",

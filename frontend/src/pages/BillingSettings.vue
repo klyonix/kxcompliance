@@ -29,7 +29,7 @@
 				<BillingFirm :setup="setup" @saved="(state) => (setup = state)" />
 			</TabPanel>
 			<TabPanel v-if="setup.company" value="rates" class="flex flex-col gap-8 pt-2 sm:pt-6">
-				<BillingPrices :setup="setup" />
+				<RateCards />
 			</TabPanel>
 		</Tabs>
 	</div>
@@ -43,7 +43,7 @@ import { call } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import BillingFirm from "@/components/BillingFirm.vue";
-import BillingPrices from "@/components/BillingPrices.vue";
+import RateCards from "@/components/RateCards.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { useTabQuery } from "@/composables/useTabQuery";
 

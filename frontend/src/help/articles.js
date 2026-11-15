@@ -305,7 +305,7 @@ export const ARTICLES = [
 		steps: [
 			"Open Settings, then Billing in its list (or Settings on the Billing page).",
 			"On the Firm tab give the firm's name, GST status, GSTIN, address, bank details, UPI ID, bill prefix and logo, and save.",
-			"On the Rate cards tab, give the fee for each return the firm files. A client's own prices and fixed fee go on the client's form.",
+			"On the Rate cards tab, make the firm's rate cards: a rate for filing each return, and services by the hour or item or every month, quarter or year. Give a client its card, and any own rates, on the client's form.",
 		],
 		tip: "Making bills needs the Accounts User role, which a System Manager gives in the Desk.",
 		page: "Settings",
@@ -316,10 +316,10 @@ export const ARTICLES = [
 		id: "bill-a-client",
 		area: "Clients",
 		title: "How do I bill a client?",
-		when: "When returns are filed, or the month's fixed fee is due.",
+		when: "When returns are filed, services are done, or the month's recurring charges are due.",
 		steps: [
 			'Open the client and press "New bill".',
-			"Untick any filed return to leave for later, keep the fixed fee if it is due, and add any other lines; government fees carry no GST.",
+			"Untick any filed return to leave for later, keep the recurring charges if they are due, add services done (hours or items) and any other lines; government fees carry no GST.",
 			'Press "Make the draft", check it, then "Send to client". It goes into the books and is emailed with its PDF.',
 		],
 		tip: "On the 1st of each month a draft is made for each client with something to bill; find them under Billing, Drafts.",

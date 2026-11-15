@@ -10,7 +10,7 @@
 		</template>
 	</AppPageHeader>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
+	<RecordFrame doctype="Compliance Task" :name="name" :facts="task ? keyFacts : []">
 		<p
 			v-if="error"
 			role="alert"
@@ -328,7 +328,7 @@
 				</dl>
 			</section>
 		</template>
-	</div>
+	</RecordFrame>
 
 	<AskDocument
 		v-if="mayAsk"
@@ -346,7 +346,7 @@
 		class="sticky bottom-0 z-10 mt-auto border-t border-outline-gray-1 bg-surface-base"
 	>
 		<div
-			class="mx-auto flex w-full max-w-3xl flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
+			class="mx-auto flex w-full max-w-6xl flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6"
 		>
 			<p v-if="footerError" role="alert" class="text-sm text-ink-red-4 sm:mr-auto">
 				{{ footerError }}
@@ -419,10 +419,24 @@ import { submit } from "@/offline/queue";
 import { formatDate, pickerFormat } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
 import { learnNames, nameOf } from "@/composables/usePeople";
+import RecordFrame from "@/components/RecordFrame.vue";
 
 const props = defineProps({ name: { type: String, required: true } });
 
 const task = ref(null);
+
+// The band across the top: when it is due, who prepares and who checks it, for which company.
+const keyFacts = computed(() => [
+	{
+		label: "Due",
+		icon: "lucide-calendar-clock",
+		value: formatDate(task.value.effective_due_date),
+		tone: task.value.is_overdue ? "red" : "plain",
+	},
+	{ label: "Responsible", icon: "lucide-user-round", value: nameOf(task.value.responsible) },
+	{ label: "Reviewer", icon: "lucide-user-check", value: nameOf(task.value.reviewer) },
+	{ label: "Company", icon: "lucide-building-2", value: task.value.company },
+]);
 const rules = ref(null);
 const error = ref("");
 const formError = ref("");

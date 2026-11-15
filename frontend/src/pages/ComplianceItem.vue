@@ -18,7 +18,7 @@
 		</template>
 	</AppPageHeader>
 
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
+	<RecordFrame doctype="Compliance Item" :name="name" :facts="item ? keyFacts : []">
 		<p
 			v-if="error"
 			role="alert"
@@ -245,7 +245,7 @@
 				</div>
 			</section>
 		</template>
-	</div>
+	</RecordFrame>
 </template>
 
 <script setup>
@@ -256,6 +256,7 @@ import { createDoc, getDoc, getList, runMethod, saveChanges } from "@/api";
 import { boot, isManager } from "@/boot";
 import RenewalDialog from "@/components/RenewalDialog.vue";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import RecordFrame from "@/components/RecordFrame.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import {
 	CUSTODY_STATES,
@@ -306,6 +307,30 @@ const validity = computed(() => {
 	const until = `Valid until ${formatDate(item.value.valid_until)}`;
 	return item.value.is_cancelled ? until : `${until} · ${row.value.due.text.toLowerCase()}`;
 });
+
+// The band across the top: when it runs out, who looks after it, whose it is, what it is.
+const keyFacts = computed(() => [
+	{
+		label: "Expires",
+		icon: "lucide-calendar-clock",
+		value: item.value.valid_until ? formatDate(item.value.valid_until) : "Does not expire",
+		tone: ["Expired", "Lapsed"].includes(item.value.status)
+			? "red"
+			: item.value.status === "Due for Renewal"
+			? "amber"
+			: "plain",
+	},
+	{ label: "Responsible", icon: "lucide-user-round", value: nameOf(item.value.responsible) },
+	{
+		label: "Held by",
+		icon: "lucide-building-2",
+		value:
+			item.value.holder_type === "Company"
+				? item.value.company
+				: item.value.holder_name || item.value.holder,
+	},
+	{ label: "Type", icon: "lucide-file-badge", value: item.value.item_type },
+]);
 
 const certificateLabel = computed(() => {
 	if (pendingCertificate.value) return pendingCertificate.value;

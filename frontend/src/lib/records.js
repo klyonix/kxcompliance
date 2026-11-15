@@ -18,3 +18,19 @@ export function recordRoute(doctype, name) {
 	if (PAGES[doctype] && name) return { name: PAGES[doctype], params: { name } };
 	return LISTS[doctype] || null;
 }
+
+// What someone typed in a comment box, as the HTML a Comment holds: escaped, line by line.
+export function commentHtml(text) {
+	const escape = (line) =>
+		line
+			.replaceAll("&", "&amp;")
+			.replaceAll("<", "&lt;")
+			.replaceAll(">", "&gt;")
+			.replaceAll('"', "&quot;")
+			.replaceAll("'", "&#39;");
+	return text
+		.trim()
+		.split("\n")
+		.map((line) => `<p>${escape(line) || "<br>"}</p>`)
+		.join("");
+}

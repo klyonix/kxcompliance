@@ -203,6 +203,16 @@ export const TOURS = [
 				title: "The next step",
 				text: "Send it for review, or mark it filed where no review is needed. A reviewer marks it filed or sends it back with a note.",
 			},
+			{
+				target: ["record-facts"],
+				title: "At a glance",
+				text: "When it is due, who looks after it and whose it is, in one band across the top.",
+			},
+			{
+				target: ["record-activity"],
+				title: "Activity",
+				text: "Every change, with who made it and when, and comments for the team. On a phone it is at the foot of the page.",
+			},
 		],
 	},
 	{
@@ -321,6 +331,16 @@ export const TOURS = [
 				target: ["page-actions"],
 				title: "Renew or change it",
 				text: "Start a renewal or edit the item from here.",
+			},
+			{
+				target: ["record-facts"],
+				title: "At a glance",
+				text: "When it is due, who looks after it and whose it is, in one band across the top.",
+			},
+			{
+				target: ["record-activity"],
+				title: "Activity",
+				text: "Every change, with who made it and when, and comments for the team. On a phone it is at the foot of the page.",
 			},
 		],
 	},

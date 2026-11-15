@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { recordRoute } from "./records";
+import { commentHtml, recordRoute } from "./records";
 
 describe("where a notification's record opens", () => {
 	it("opens records with a page of their own there, and lists for the rest", () => {
@@ -9,5 +9,14 @@ describe("where a notification's record opens", () => {
 		});
 		expect(recordRoute("Legal Date", "LD-1")).toEqual({ name: "Legal" });
 		expect(recordRoute("Sales Invoice", "SINV-1")).toBeNull();
+	});
+});
+
+describe("a comment", () => {
+	it("is kept as escaped text, line by line", () => {
+		expect(commentHtml(" Filed today.\n<script>alert(1)</script> ")).toBe(
+			"<p>Filed today.</p><p>&lt;script&gt;alert(1)&lt;/script&gt;</p>"
+		);
+		expect(commentHtml("a\n\nb")).toBe("<p>a</p><p><br></p><p>b</p>");
 	});
 });

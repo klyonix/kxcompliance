@@ -659,6 +659,11 @@ export const TOURS = [
 				text: "Their open filings, register items, cases and trademarks. Each number opens the list.",
 			},
 			{
+				target: ["section:handover-heading"],
+				title: "Hand over their work",
+				text: "When they leave or move to other clients, give everything they hold to one person in one go.",
+			},
+			{
 				target: ["section:sign-in-heading"],
 				title: "Signing in",
 				text: "Email them a password reset, or set a temporary password to pass on in person.",

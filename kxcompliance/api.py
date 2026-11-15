@@ -879,6 +879,21 @@ def set_temporary_password(user: str, password: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+def hand_over_work(from_user: str, to_user: str) -> dict:
+	"""Move someone's open work and their places on companies and clients to another person on
+	the team; it runs in the background and the manager is told when it is done (managers only)."""
+	check_app_access()
+	return people.start_handover(from_user, to_user)
+
+
+@frappe.whitelist(methods=["GET"])
+def former_people() -> list[dict]:
+	"""People taken off the team who still hold open work, to hand it over (managers only)."""
+	check_app_access()
+	return people.former_holders()
+
+
+@frappe.whitelist(methods=["POST"])
 def new_sign_in_link(user: str) -> dict:
 	"""A fresh link to set a password, for someone added who has never signed in."""
 	check_app_access()

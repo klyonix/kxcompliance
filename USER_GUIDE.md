@@ -259,6 +259,16 @@ When someone joins, or needs to use the app.
 2. Press "Invite someone", give their name and email, and choose Manager, Staff or Auditor.
 3. They get an email to set a password. Where the site cannot send email yet, you are given a link to send them.
 
+### Someone is leaving. How do I hand over their work?
+
+*For: Managers.*
+
+When a colleague leaves, goes on leave, or moves to other clients.
+
+1. Open Settings, press "People" and open the person. Someone already taken off the team is listed under "No longer on the team, still holding work".
+2. Under "Hand over their work", check what would move, choose who takes it, and press "Hand over".
+3. Their open filings, register items, cases, trademarks, dates and document requests move, with their places as a company's default, an obligation's holder and on clients' teams. You are told when it is done; work already finished stays with them.
+
 ### How do I make sure reminders go out?
 
 *For: Managers.*

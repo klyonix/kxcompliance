@@ -1,11 +1,15 @@
 # Copyright (c) 2026, KlyONIX Tech Consulting Pvt Ltd and contributors
 # For license information, please see license.txt
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import (
+	former_people,
 	getting_started_checklist,
+	hand_over_work,
 	hide_getting_started,
 	invite_person,
 	new_sign_in_link,
@@ -16,9 +20,14 @@ from kxcompliance.api import (
 	set_temporary_password,
 	team,
 )
+from kxcompliance.kx_compliance import handover
+from kxcompliance.kx_compliance.test_bulk_filing import filing
 from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
 	MANAGER,
+	OTHER_HOLDER,
+	REVIEWER,
+	TEST_COMPANY,
 	make_company,
 	make_item,
 	make_item_type,
@@ -125,6 +134,47 @@ class TestPeople(IntegrationTestCase):
 			else:
 				with self.assertRaisesRegex(frappe.ValidationError, "cannot send email"):
 					send_password_reset(NEWCOMER)
+
+	def test_a_manager_hands_someones_open_work_to_another(self):
+		make_company()
+		make_item_type("Test People Licence")
+		item = make_item("Test People Licence", responsible=HOLDER, reviewer=REVIEWER).name
+		task = filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20", responsible=OTHER_HOLDER)
+		frappe.db.set_value("Compliance Task", task, "reviewer", HOLDER)
+		done = filing("GSTR-1 (Monthly)", "2026-10-31", "2026-11-11", responsible=HOLDER, status="Filed")
+		with self.set_user(MANAGER):
+			counts = {kind["label"]: kind["count"] for kind in person(HOLDER)["handover"]}
+			self.assertGreaterEqual(counts["Register items"], 1)
+			self.assertGreaterEqual(counts["Filings"], 1)
+			with self.assertRaisesRegex(frappe.ValidationError, "not on the team"):
+				hand_over_work(HOLDER, "Guest")
+			with patch("frappe.enqueue") as enqueue:
+				hand_over_work(HOLDER, OTHER_HOLDER)
+			self.assertEqual(enqueue.call_args.kwargs["to_user"], OTHER_HOLDER)
+		# The job itself, as the worker runs it; it commits as it goes, which a test must not.
+		with patch("frappe.db.commit"):
+			handover.run(HOLDER, OTHER_HOLDER, by=MANAGER)
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Compliance Item", item, "responsible"), OTHER_HOLDER)
+		# They were the reviewer of a filing the new person holds: it has no reviewer now.
+		self.assertEqual(
+			frappe.db.get_value("Compliance Task", task, ["responsible", "reviewer"]), (OTHER_HOLDER, None)
+		)
+		# Work already done stays with whoever did it.
+		self.assertEqual(frappe.db.get_value("Compliance Task", done, "responsible"), HOLDER)
+
+	def test_someone_off_the_team_with_work_is_listed_to_hand_over(self):
+		make_company()
+		make_item_type("Test People Licence")
+		with self.set_user(MANAGER):
+			invite_person("Neha Joshi", NEWCOMER, "Staff")
+		make_item("Test People Licence", responsible=NEWCOMER)
+		with self.set_user(MANAGER):
+			remove_person(NEWCOMER)
+			self.assertIn(NEWCOMER, [row["user"] for row in former_people()])
+			page = person(NEWCOMER)
+		self.assertFalse(page["on_team"])
+		self.assertIsNone(page["role"])
 
 	def test_the_checklist_ticks_itself_off_and_can_be_hidden(self):
 		with self.change_settings(SETTINGS, enabled=0, email_account=None):

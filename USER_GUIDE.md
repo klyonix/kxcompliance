@@ -73,8 +73,8 @@ When you have just started using the app.
 
 Planning the month, or checking a day before you take leave.
 
-1. Open the Calendar.
-2. Each day shows its filings, expiries, legal dates and documents due.
+1. Open the Calendar, and choose Month, Week or Day.
+2. Each day shows its filings, expiries, legal dates and documents due. Only mine, Open only and the kinds narrow what shows.
 3. Choose a day to list what falls on it, and open any of them.
 
 > **Tip.** You can also add your work to your phone's or Outlook's calendar from Account.

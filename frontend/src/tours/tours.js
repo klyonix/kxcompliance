@@ -105,18 +105,23 @@ export const TOURS = [
 		steps: [
 			{
 				target: ["calendar-grid"],
-				title: "A month at a glance",
+				title: "At a glance",
 				text: "Filings on their due dates, licences on the day they expire, hearings, and documents due from clients. Overdue shows in red; filed is struck through.",
 			},
 			{
-				target: ["calendar-kinds"],
+				target: ["calendar-views"],
+				title: "Month, week or day",
+				text: "A month's grid, a week day by day, or everything on one day.",
+			},
+			{
+				target: ["calendar-filters"],
 				title: "Show what you need",
-				text: "Switch each kind on or off.",
+				text: "Switch each kind on or off, show only yours or someone else's, or only what is still open.",
 			},
 			{
 				target: ["page-actions"],
-				title: "Move between months",
-				text: "The arrows go back and forward a month; This month brings you back to today.",
+				title: "Move in time",
+				text: "The arrows go back and forward a month, week or day; Today brings you back.",
 			},
 			{
 				target: ["section:day-heading"],

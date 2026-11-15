@@ -51,6 +51,16 @@ class TestMonthCalendar(IntegrationTestCase):
 		self.assertTrue(events[0]["done"])
 		self.assertFalse(events[2]["done"])
 
+	def test_each_event_says_who_is_responsible_and_a_week_is_allowed(self):
+		mine = filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20")
+		theirs = filing("GSTR-1 (Monthly)", "2026-10-31", "2026-11-18", responsible=OTHER_HOLDER)
+		with self.set_user(MANAGER):
+			week = month_events("2026-11-15", "2026-11-21")
+		self.assertEqual(
+			{event["name"]: event["responsible"] for event in week},
+			{mine: frappe.db.get_value("Compliance Task", mine, "responsible"), theirs: OTHER_HOLDER},
+		)
+
 	def test_the_client_filter_and_permissions_narrow_it(self):
 		mine = filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20")
 		filing("GSTR-1 (Monthly)", "2026-10-31", "2026-11-11", responsible=OTHER_HOLDER)

@@ -1,9 +1,10 @@
 # Copyright (c) 2026, KlyONIX Tech Consulting Pvt Ltd and contributors
 # For license information, please see license.txt
 
-"""What falls on each day of a month, for the app's calendar: filings on their due dates, register
+"""What falls on each day of a month, week or day, for the app's calendar: filings on their due dates, register
 items on the day they expire, hearings and other legal dates, and the dates documents are due from
 clients. Everything is read with the person's own permissions, so each sees what they may see.
+Each carries who is responsible, so the calendar can show one person's.
 """
 
 import frappe
@@ -50,6 +51,7 @@ def filings(start, end, by_company: dict) -> list[dict]:
 			"status",
 			"is_overdue",
 			"effective_due_date",
+			"responsible",
 		],
 		limit=LIMIT,
 	)
@@ -63,6 +65,7 @@ def filings(start, end, by_company: dict) -> list[dict]:
 			"status": row.status,
 			"done": row.status in FILED,
 			"overdue": bool(row.is_overdue),
+			"responsible": row.responsible,
 		}
 		for row in rows
 	]
@@ -77,7 +80,7 @@ def expiries(start, end, by_company: dict) -> list[dict]:
 			"holder_type": ("not in", PARTY_HOLDERS),
 			**by_company,
 		},
-		fields=["name", "title", "item_type", "company", "status", "valid_until"],
+		fields=["name", "title", "item_type", "company", "status", "valid_until", "responsible"],
 		limit=LIMIT,
 	)
 	return [
@@ -91,6 +94,7 @@ def expiries(start, end, by_company: dict) -> list[dict]:
 			# Renewed means a new validity was recorded, which moves the item off this day.
 			"done": False,
 			"overdue": row.status in ("Expired", "Lapsed"),
+			"responsible": row.responsible,
 		}
 		for row in rows
 	]
@@ -110,6 +114,7 @@ def legal_dates(start, end, by_company: dict) -> list[dict]:
 			"reference_name",
 			"reference_title",
 			"company",
+			"responsible",
 		],
 		limit=LIMIT,
 	)
@@ -126,6 +131,7 @@ def legal_dates(start, end, by_company: dict) -> list[dict]:
 			"overdue": row.status == "Missed",
 			"reference_doctype": row.reference_doctype,
 			"reference_name": row.reference_name,
+			"responsible": row.responsible,
 		}
 		for row in rows
 	]
@@ -135,7 +141,7 @@ def requests(start, end, by_company: dict) -> list[dict]:
 	rows = frappe.get_list(
 		"Document Request",
 		filters={"due_date": ("between", [start, end]), "status": ("!=", "Withdrawn"), **by_company},
-		fields=["name", "title", "company", "status", "due_date"],
+		fields=["name", "title", "company", "status", "due_date", "requested_by"],
 		limit=LIMIT,
 	)
 	return [
@@ -148,6 +154,8 @@ def requests(start, end, by_company: dict) -> list[dict]:
 			"status": row.status,
 			"done": row.status == "Accepted",
 			"overdue": False,
+			# The firm's person waiting for the document.
+			"responsible": row.requested_by,
 		}
 		for row in rows
 	]

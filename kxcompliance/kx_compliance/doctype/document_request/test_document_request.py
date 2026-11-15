@@ -63,6 +63,33 @@ def upload_as(user: str, request: str, file_name: str = "october-sales.csv"):
 		frappe.local.request = previous
 
 
+def emailed(request: str, sender: str, file_name: str = "october-sales.csv"):
+	"""A reply to the request's email, as Frappe files it: a Communication and its attachment."""
+	reply = frappe.get_doc(
+		{
+			"doctype": "Communication",
+			"communication_type": "Communication",
+			"communication_medium": "Email",
+			"sent_or_received": "Received",
+			"subject": "Re: October sales register",
+			"sender": sender,
+			"reference_doctype": "Document Request",
+			"reference_name": request,
+			"content": "Attached.",
+		}
+	).insert(ignore_permissions=True)
+	frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": file_name,
+			"attached_to_doctype": "Communication",
+			"attached_to_name": reply.name,
+			"is_private": 1,
+			"content": b"invoice,amount\n1,100\n",
+		}
+	).insert(ignore_permissions=True)
+
+
 class TestDocumentRequest(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
@@ -185,3 +212,32 @@ class TestDocumentRequest(IntegrationTestCase):
 			[(2, CLIENT_LOGIN), (0, CLIENT_LOGIN), (0, HOLDER), (-7, CLIENT_LOGIN)],
 		)
 		self.assertEqual(frappe.db.get_value("Document Request", request.name, "is_overdue"), 1)
+
+	def test_a_reply_from_the_clients_login_is_taken_as_the_document(self):
+		with self.set_user(HOLDER):
+			request = ask(compliance_task=self.filing)
+		emailed(request.name, f"Client <{frappe.db.get_value('User', CLIENT_LOGIN, 'email')}>")
+		request.reload()
+		self.assertEqual(request.status, "Uploaded")
+		self.assertTrue(
+			frappe.db.exists(
+				"File",
+				{"attached_to_doctype": "Document Request", "attached_to_name": request.name},
+			)
+		)
+		self.assertTrue(notified(HOLDER, request.name))
+
+	def test_a_reply_from_anyone_else_waits_for_a_look(self):
+		with self.set_user(HOLDER):
+			request = ask(compliance_task=self.filing)
+		frappe.db.delete("Notification Log", {"for_user": HOLDER})
+		emailed(request.name, "stranger@example.net")
+		request.reload()
+		self.assertEqual(request.status, "Requested")
+		self.assertFalse(
+			frappe.db.exists(
+				"File",
+				{"attached_to_doctype": "Document Request", "attached_to_name": request.name},
+			)
+		)
+		self.assertTrue(notified(HOLDER, request.name))

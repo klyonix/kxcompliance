@@ -279,6 +279,9 @@ doc_events = {
 	"Notification Log": {
 		"before_insert": "kxcompliance.kx_compliance.app_links.point_notification_to_app",
 	},
+	"File": {
+		"after_insert": "kxcompliance.kx_compliance.document_requests.take_emailed_file",
+	},
 	"Quotation": {
 		"validate": "kxcompliance.kx_compliance.party_licences.check_document",
 		"on_submit": "kxcompliance.kx_compliance.party_licences.check_document",

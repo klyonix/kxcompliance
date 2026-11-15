@@ -62,6 +62,7 @@ declare module 'vue' {
     RowList: typeof import('./src/components/RowList.vue')['default']
     ScoreBadge: typeof import('./src/components/ScoreBadge.vue')['default']
     SearchPalette: typeof import('./src/components/SearchPalette.vue')['default']
+    SignInLinkDialog: typeof import('./src/components/SignInLinkDialog.vue')['default']
     StatementDialog: typeof import('./src/components/StatementDialog.vue')['default']
     SyncStatus: typeof import('./src/components/SyncStatus.vue')['default']
     ThemeToggle: typeof import('./src/components/ThemeToggle.vue')['default']

@@ -233,6 +233,24 @@ def new_sign_in_link(user: str) -> dict:
 	return {"user": user, "link": sign_in_link(frappe.get_doc("User", user))}
 
 
+def client_login_link(client: str, email: str) -> dict:
+	"""A link to set a password for one of a client's logins who has never signed in, to pass on
+	where the site cannot email it. Those who may edit the client give its people their logins."""
+	doc = frappe.get_doc("Compliance Client", client)
+	doc.check_permission("write")
+	row = next((row for row in doc.logins if row.user and row.user == email), None)
+	if not row:
+		frappe.throw(_("{0} is not a saved login of {1}.").format(email, client))
+	if not row.enabled or doc.status == "Left":
+		frappe.throw(_("{0}'s login is turned off; turn it on and save first.").format(email))
+	roles = set(frappe.get_roles(row.user))
+	if CLIENT_ROLE not in roles or roles & set(ROLES):
+		frappe.throw(_("{0} is not only a client's login.").format(email), frappe.PermissionError)
+	if frappe.db.get_value("User", row.user, "last_login"):
+		frappe.throw(_("{0} has signed in before; they can reset their own password.").format(email))
+	return {"user": row.user, "link": sign_in_link(frappe.get_doc("User", row.user))}
+
+
 def send_password_reset(user: str) -> dict:
 	"""Email someone Frappe's link to set a new password themselves; the manager never sees it."""
 	check_manager()

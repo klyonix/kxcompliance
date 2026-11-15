@@ -1504,6 +1504,20 @@ def former_people() -> list[dict]:
 
 
 @frappe.whitelist(methods=["POST"])
+def client_login_link(client: str, email: str) -> dict:
+	"""A link to set a password for a client's login who has never signed in."""
+	check_app_access()
+	return people.client_login_link(client, email)
+
+
+@frappe.whitelist(methods=["GET"])
+def can_send_email() -> bool:
+	"""Whether the site can email, so the app says what happens to invitations."""
+	check_app_access()
+	return people.outgoing_email()
+
+
+@frappe.whitelist(methods=["POST"])
 def new_sign_in_link(user: str) -> dict:
 	"""A fresh link to set a password, for someone added who has never signed in."""
 	check_app_access()

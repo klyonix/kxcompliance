@@ -44,7 +44,9 @@
   "column_break_billing",
   "billing_address",
   "bank_details",
-  "bill_prefix"
+  "bill_prefix",
+  "fees_section",
+  "return_fees"
  ],
  "fields": [
   {
@@ -289,13 +291,25 @@
    "fieldtype": "Data",
    "label": "Bill Number Prefix",
    "description": "Bills are numbered with this, the financial year and a running number, e.g. RA/26-27/0001."
+  },
+  {
+   "fieldname": "fees_section",
+   "fieldtype": "Section Break",
+   "label": "Price per Return"
+  },
+  {
+   "fieldname": "return_fees",
+   "fieldtype": "Table",
+   "options": "Return Fee",
+   "label": "Price per Return",
+   "description": "What the firm charges for filing each return; a client's own price overrides it."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-16 09:00:00.000000",
+ "modified": "2026-11-16 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "KX Compliance Settings",

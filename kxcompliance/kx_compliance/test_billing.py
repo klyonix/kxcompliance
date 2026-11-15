@@ -4,11 +4,13 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from kxcompliance.api import app_companies, billing_setup, set_up_billing
+from kxcompliance.api import app_companies, billing_setup, client_fees, save_return_fees, set_up_billing
 from kxcompliance.kx_compliance.billing import OUTSIDE_STATE, WITHIN_STATE, state_of
 from kxcompliance.kx_compliance.companies import companies_overview
+from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import client, profile
 from kxcompliance.kx_compliance.register import compliance_companies
-from kxcompliance.kx_compliance.test_utils import HOLDER, make_company, make_users
+from kxcompliance.kx_compliance.test_bulk_filing import filing
+from kxcompliance.kx_compliance.test_utils import HOLDER, TEST_COMPANY, make_company, make_users
 
 SETTINGS = "KX Compliance Settings"
 FIRM = "Billing Test Associates"
@@ -74,3 +76,52 @@ class TestBillingSetup(IntegrationTestCase):
 		self.assertEqual(state_of("", "Goa"), "Goa")
 		with self.assertRaisesRegex(frappe.ValidationError, "GSTIN pattern"):
 			state_of("29ABC")
+
+
+class TestFees(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_company()
+		make_users()
+
+	def test_filed_returns_not_yet_billed_are_priced_for_the_client(self):
+		with self.change_settings(SETTINGS, account_type="CA/CS Firm"):
+			save_return_fees(
+				[
+					{"obligation_template": "GSTR-3B (Monthly)", "amount": 1500},
+					{"obligation_template": "GSTR-1 (Monthly)", "amount": 1000},
+				]
+			)
+			sunrise = client("Billing Fee Client")
+			sunrise.append("return_fees", {"obligation_template": "GSTR-1 (Monthly)", "amount": 800})
+			sunrise.save()
+			profile(TEST_COMPANY, sunrise.name)
+			filed = filing("GSTR-3B (Monthly)", "2026-09-30", "2026-10-20", status="Filed")
+			late = filing("GSTR-1 (Monthly)", "2026-09-30", "2026-10-11", status="Filed Late")
+			filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20")  # still open: not billed
+			billed = filing("GSTR-1 (Monthly)", "2026-08-31", "2026-09-11", status="Filed")
+			frappe.db.set_value("Compliance Task", billed, "billed_in", "ACC-SINV-TEST")
+			fees = client_fees(sunrise.name)
+		by_name = {row.name: row.fee for row in fees["unbilled"]}
+		# The firm's price, and the client's own where it has one; a billed filing is left out.
+		self.assertEqual(by_name, {filed: 1500, late: 800})
+		self.assertEqual(fees["unbilled_total"], 2300)
+
+	def test_a_fixed_fee_says_how_often_and_from_when_and_a_return_is_priced_once(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "give Billed, Billed From"):
+			client("Billing Fee Client", fixed_fee=5000)
+		plan = client("Billing Fee Client", fixed_fee=5000, fee_frequency="Monthly", fee_from="2026-04-01")
+		self.assertEqual((plan.fee_frequency, str(plan.fee_from)), ("Monthly", "2026-04-01"))
+		cleared = client("Billing Fee Client", fixed_fee=0, fee_frequency="Monthly", fee_from="2026-04-01")
+		self.assertEqual((cleared.fee_frequency, cleared.fee_from), (None, None))
+		with self.change_settings(SETTINGS, account_type="CA/CS Firm"):
+			with self.assertRaisesRegex(frappe.ValidationError, "already has a price"):
+				save_return_fees(
+					[
+						{"obligation_template": "GSTR-3B (Monthly)", "amount": 1500},
+						{"obligation_template": "GSTR-3B (Monthly)", "amount": 900},
+					]
+				)
+			with self.assertRaisesRegex(frappe.ValidationError, "a return and its fee"):
+				save_return_fees([{"obligation_template": "GSTR-3B (Monthly)", "amount": 1, "status": "x"}])

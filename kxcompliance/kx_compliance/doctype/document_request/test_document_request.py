@@ -30,7 +30,7 @@ from kxcompliance.kx_compliance.test_utils import (
 )
 
 # These tests build their own records; skip ERPNext's generated ones.
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User"]
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User", "Sales Invoice"]
 
 SETTINGS = "KX Compliance Settings"
 

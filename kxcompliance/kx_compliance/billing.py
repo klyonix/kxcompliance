@@ -10,6 +10,7 @@ billing needs on it once: the items billed, and GST within and outside the firm'
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 from kxcompliance.kx_compliance.onboarding import make_company
 from kxcompliance.kx_compliance.register import get_settings, is_approver
@@ -26,6 +27,8 @@ OUTSIDE_STATE = "GST outside state"
 GST_RATE = 18
 # What the firm sets about itself for its bills, from Settings → Billing.
 FIRM_FIELDS = ("billing_gstin", "billing_state", "billing_address", "bank_details", "bill_prefix")
+# A filing is billed once it is filed (compliance_task.FILED_STATUSES).
+BILLABLE_STATUSES = ("Filed", "Filed Late")
 
 
 def check_firm_manager():
@@ -58,6 +61,10 @@ def setup_state() -> dict:
 		**{field: settings.get(field) or "" for field in FIRM_FIELDS},
 		"states": [state for state in states.split("\n") if state],
 		"can_create_company": bool(frappe.has_permission("Company", "create")) and frappe.is_setup_complete(),
+		"return_fees": [
+			{"obligation_template": row.obligation_template, "amount": row.amount}
+			for row in settings.return_fees
+		],
 	}
 
 
@@ -178,3 +185,100 @@ def root(doctype: str) -> str:
 	return frappe.db.get_value(
 		doctype, {"is_group": 1, f"parent_{frappe.scrub(doctype)}": ("in", ("", None))}
 	)
+
+
+def check_return_fees(rows, where: str):
+	"""Each return priced once, from the library."""
+	seen = set()
+	for row in rows:
+		if row.obligation_template in seen:
+			frappe.throw(
+				_("{0} row {1}: {2} already has a price.").format(where, row.idx, row.obligation_template)
+			)
+		seen.add(row.obligation_template)
+
+
+def check_fee_plan(client):
+	"""A fixed fee says how often it is billed and from when."""
+	if not client.fixed_fee:
+		client.fee_frequency = None
+		client.fee_from = None
+		return
+	missing = [
+		_(client.meta.get_label(field)) for field in ("fee_frequency", "fee_from") if not client.get(field)
+	]
+	if missing:
+		frappe.throw(
+			_("{0} has a fixed fee of {1}; give {2} too.").format(
+				client.name or client.client_name, client.fixed_fee, ", ".join(missing)
+			)
+		)
+
+
+def prices_for(client: str) -> dict[str, float]:
+	"""Each return's fee for this client: its own price, else the firm's."""
+	prices = {row.obligation_template: row.amount for row in get_settings().return_fees}
+	prices.update(
+		{
+			row.obligation_template: row.amount
+			for row in frappe.get_all(
+				"Return Fee",
+				filters={"parenttype": "Compliance Client", "parent": client},
+				fields=["obligation_template", "amount"],
+			)
+		}
+	)
+	return prices
+
+
+def unbilled_filings(client: str) -> list[dict]:
+	"""The client's filings that are filed, have a fee and are not on a bill yet, oldest first."""
+	companies = frappe.get_all("Company Compliance Profile", filters={"client": client}, pluck="company")
+	prices = prices_for(client)
+	if not companies or not prices:
+		return []
+	rows = frappe.get_all(
+		"Compliance Task",
+		filters={
+			"company": ("in", companies),
+			"status": ("in", BILLABLE_STATUSES),
+			"billed_in": ("is", "not set"),
+			"obligation_template": ("in", list(prices)),
+		},
+		fields=["name", "obligation_template", "period_label", "company", "filed_on"],
+		order_by="filed_on asc, name asc",
+	)
+	for row in rows:
+		row.fee = prices[row.obligation_template]
+	return [row for row in rows if row.fee]
+
+
+def client_fees(client: str) -> dict:
+	"""A client's fee plan and what it would be billed for its filings now."""
+	values = frappe.db.get_value(
+		"Compliance Client", client, ["fixed_fee", "fee_frequency", "fee_from"], as_dict=True
+	)
+	unbilled = unbilled_filings(client)
+	return {
+		**values,
+		"unbilled": unbilled,
+		"unbilled_total": sum(row.fee for row in unbilled),
+	}
+
+
+def save_return_fees(fees: list) -> list[dict]:
+	"""The firm's price per return, replacing the list; each row a return and its fee."""
+	check_firm_manager()
+	settings = frappe.get_doc(SETTINGS)
+	settings.set("return_fees", [])
+	for fee in fees:
+		if not isinstance(fee, dict) or set(fee) - {"obligation_template", "amount"}:
+			frappe.throw(_("Each price is a return and its fee."))
+		settings.append(
+			"return_fees",
+			{"obligation_template": fee.get("obligation_template"), "amount": flt(fee.get("amount"))},
+		)
+	settings.save()
+	return [
+		{"obligation_template": row.obligation_template, "amount": row.amount} for row in settings.return_fees
+	]

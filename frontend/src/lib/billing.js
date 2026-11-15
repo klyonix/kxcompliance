@@ -295,3 +295,27 @@ export const statementLink = (client, from, to) =>
 		from_date: from,
 		to_date: to,
 	})}`;
+
+// The firm's year in figures, for Billing's Summary tab (the server's billing.billing_summary).
+export function summaryFacts({ activity, ageing }) {
+	const late = Number(ageing.outstanding || 0) - Number(ageing.not_due || 0);
+	return [
+		{ label: "Billed", value: money(activity.billed) },
+		{ label: "Received", value: money(activity.received) },
+		{
+			label: "Still due",
+			value: money(ageing.outstanding),
+			detail: late > 0 ? `${money(late)} overdue` : "",
+			tone: late > 0 ? "red" : "gray",
+		},
+		{ label: "TDS deducted", value: money(activity.tds) },
+		{ label: "Credit notes", value: money(activity.credited) },
+		{ label: "Written off", value: money(activity.written_off) },
+	];
+}
+
+// How wide each month's bar is beside the largest month's, as a percentage.
+export const barWidth = (value, months) => {
+	const most = Math.max(...months.map((month) => Number(month.total) || 0), 0);
+	return most > 0 ? Math.round((Math.max(Number(value) || 0, 0) / most) * 100) : 0;
+};

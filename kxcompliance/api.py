@@ -682,6 +682,15 @@ def bills(
 
 
 @frappe.whitelist(methods=["GET"])
+def billing_summary(client: str | None = None) -> dict:
+	"""The firm's billing this financial year, for one client or all."""
+	check_app_access_or_accounts()
+	if client:
+		check_billed_client(client)
+	return billing.billing_summary(client)
+
+
+@frappe.whitelist(methods=["GET"])
 def bill_counts(client: str | None = None, text: str | None = None) -> dict:
 	"""How many bills each tab holds, and what is still due in it."""
 	check_app_access_or_accounts()

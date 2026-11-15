@@ -35,7 +35,11 @@
 			<TabList v-else class="overflow-x-auto" data-tour="billing-sections">
 				<TabTrigger value="bills" label="Bills" icon-left="lucide-receipt" />
 				<TabTrigger value="payments" label="Payments" icon-left="lucide-indian-rupee" />
+				<TabTrigger value="summary" label="Summary" icon-left="lucide-chart-column" />
 			</TabList>
+			<TabPanel value="summary" class="data-[state=inactive]:hidden pt-4">
+				<BillingSummary />
+			</TabPanel>
 			<TabPanel value="payments" class="data-[state=inactive]:hidden pt-4">
 				<PaymentsList />
 			</TabPanel>
@@ -141,6 +145,7 @@ import {
 import { call } from "@/api";
 import { isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import BillingSummary from "@/components/BillingSummary.vue";
 import ClientPicker from "@/components/ClientPicker.vue";
 import ListPager from "@/components/ListPager.vue";
 import PaymentsList from "@/components/PaymentsList.vue";
@@ -154,6 +159,7 @@ import { clientFilter, loadClients } from "@/stores/clientFilter";
 const SECTIONS = [
 	{ label: "Bills", value: "bills" },
 	{ label: "Payments", value: "payments" },
+	{ label: "Summary", value: "summary" },
 ];
 const isMobile = useIsMobile();
 const section = useTabQuery(

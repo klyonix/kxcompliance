@@ -396,6 +396,20 @@ export const ARTICLES = [
 		firm: true,
 	},
 	{
+		id: "billing-summary",
+		area: "Billing",
+		title: "How is billing going this year?",
+		when: "For a monthly review, or before chasing what is due.",
+		steps: [
+			'Open Billing and choose the "Summary" tab.',
+			"It shows what has been billed, received, deducted as TDS, credited and written off this financial year, and what is still due by how late.",
+			"Below are the months, the clients owing most (each opening its Billing tab) and filed returns not billed yet, each with a button to bill it.",
+		],
+		tip: "Choose a client at the top to see only theirs.",
+		page: "Billing",
+		firm: true,
+	},
+	{
 		id: "statement-of-account",
 		area: "Billing",
 		title: "How do I give a client a statement of account?",

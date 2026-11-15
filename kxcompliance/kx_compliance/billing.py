@@ -1535,8 +1535,9 @@ def filings_due(client: str, from_date, to_date) -> list[dict]:
 	).run(as_dict=True)
 
 
-def year_activity(client: str, customer: str | None, from_date, to_date) -> dict:
-	"""What was billed, credited, received, deducted as TDS and written off in these dates."""
+def year_activity(client: str | None, customer: str | None, from_date, to_date) -> dict:
+	"""What was billed, credited, received, deducted as TDS and written off in these dates: for one
+	client (and its customer), or with no client, for every client the firm bills."""
 	from frappe.query_builder import Case
 
 	company = get_settings().billing_company
@@ -1550,19 +1551,19 @@ def year_activity(client: str, customer: str | None, from_date, to_date) -> dict
 		)
 		.where(
 			(invoice.company == company)
-			& (invoice.compliance_client == client)
+			& (invoice.compliance_client == client if client else invoice.compliance_client.isnotnull())
 			& (invoice.docstatus == 1)
 			& invoice.posting_date.between(from_date, to_date)
 		)
 	).run()[0]
 	activity = {"billed": flt(billed), "credited": flt(credited), "received": 0, "tds": 0, "written_off": 0}
-	if not customer:
-		return activity
+	if client and not customer:
+		return activity  # never billed, so nothing paid either
 	entry = frappe.qb.DocType("Payment Entry")
 	paid_in = (
 		(entry.company == company)
 		& (entry.party_type == "Customer")
-		& (entry.party == customer)
+		& ((entry.party == customer) if customer else entry.party.isnotnull())
 		& (entry.payment_type == "Receive")
 		& (entry.docstatus == 1)
 		& entry.posting_date.between(from_date, to_date)
@@ -1592,11 +1593,44 @@ def year_activity(client: str, customer: str | None, from_date, to_date) -> dict
 			& (journal.docstatus == 1)
 			& journal.posting_date.between(from_date, to_date)
 			& (line.party_type == "Customer")
-			& (line.party == customer)
+			& ((line.party == customer) if customer else line.party.isnotnull())
 		)
 		.run()[0][0]
 	)
 	return activity
+
+
+def billing_summary(client: str | None = None) -> dict:
+	"""The firm's billing this financial year, for one client or all: billed, received, TDS,
+	credited and written off; what is still due by how late; month by month; the clients owing
+	most; and what is filed but not billed."""
+	from kxcompliance.kx_compliance.client_reports import financial_year
+
+	check_biller()
+	from_date, to_date = financial_year()
+	customer = frappe.db.get_value("Compliance Client", client, "customer") if client else None
+	owing = outstanding_by_client(client, getdate(nowdate()))
+	unbilled = unbilled_for_clients(client)
+	unbilled_by_client: dict[str, dict] = {}
+	for row in unbilled:
+		line = unbilled_by_client.setdefault(row.client, {"client": row.client, "count": 0, "total": 0})
+		line["count"] += 1
+		line["total"] = flt(line["total"] + flt(row.fee), 2)
+	return {
+		"year": {"from_date": from_date, "to_date": to_date},
+		"activity": year_activity(client, customer, from_date, to_date),
+		"ageing": {
+			key: flt(sum(line[key] for line in owing), 2)
+			for key in ["outstanding", *(k for k, _l, _h in AGEING)]
+		},
+		"by_month": billing_by_month(from_date, to_date, client),
+		"owing_most": sorted(owing, key=lambda line: -line["outstanding"])[:5],
+		"unbilled": {
+			"count": len(unbilled),
+			"total": flt(sum(flt(row.fee) for row in unbilled), 2),
+			"clients": sorted(unbilled_by_client.values(), key=lambda line: -line["total"])[:5],
+		},
+	}
 
 
 # Where an entry on a client's account sits on its statement: under the company its bill was for,

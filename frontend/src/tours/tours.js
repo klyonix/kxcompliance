@@ -610,7 +610,7 @@ export const TOURS = [
 			{
 				target: ["billing-sections"],
 				title: "Bills and payments",
-				text: "Bills lists what you have billed; Payments, what has come in, with any TDS and advances still held.",
+				text: "Bills lists what you have billed; Payments, what has come in, with any TDS and advances still held; Summary, the year in figures: billed, received, still due by how late, month by month, who owes most and what is not billed yet.",
 			},
 			{
 				target: ["bill-views"],

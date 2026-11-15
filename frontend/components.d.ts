@@ -28,6 +28,7 @@ declare module 'vue' {
     LegalDates: typeof import('./src/components/LegalDates.vue')['default']
     LegalRecord: typeof import('./src/components/LegalRecord.vue')['default']
     ListControls: typeof import('./src/components/ListControls.vue')['default']
+    ListPager: typeof import('./src/components/ListPager.vue')['default']
     LucideActivity: typeof import('~icons/lucide/activity')['default']
     LucideChevronDown: typeof import('~icons/lucide/chevron-down')['default']
     LucideChevronUp: typeof import('~icons/lucide/chevron-up')['default']

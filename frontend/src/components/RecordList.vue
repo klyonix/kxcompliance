@@ -203,13 +203,16 @@
 			:date-label="dateLabel"
 			:name-label="nameLabel"
 		/>
-		<Button
-			v-if="hasMore && layout !== 'kanban'"
-			class="self-center"
-			:label="t('Show more')"
+		<ListPager
+			v-if="layout !== 'kanban' && (records.length || page > 1)"
+			v-model:page="page"
+			v-model:size="pageSize"
+			:total="total"
 			:loading="loading"
-			@click="load(true)"
 		/>
+		<p v-else-if="layout === 'kanban' && records.length" class="text-base text-ink-gray-6">
+			{{ rangeLine(1, records.length, records.length, t) }}
+		</p>
 	</div>
 </template>
 
@@ -240,6 +243,7 @@ import ClientPicker from "@/components/ClientPicker.vue";
 import DataTable from "@/components/DataTable.vue";
 import KanbanBoard from "@/components/KanbanBoard.vue";
 import ListControls from "@/components/ListControls.vue";
+import ListPager from "@/components/ListPager.vue";
 import RowList from "@/components/RowList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { learnNames, nameOf } from "@/composables/usePeople";
@@ -248,6 +252,7 @@ import { companyFilters } from "@/lib/clientFilter";
 import { searchFilter } from "@/lib/items";
 import { parseListFilters } from "@/lib/listFilters";
 import { t } from "@/lib/i18n";
+import { clampPage, rangeLine, savePageSize, savedPageSize } from "@/lib/paging";
 import { choiceFilters, groupBy, groupRows } from "@/lib/listViews";
 import {
 	LAYOUTS,
@@ -291,7 +296,6 @@ const props = defineProps({
 	filterBy: { type: Object, default: () => ({}) },
 });
 
-const PAGE = 30;
 // A board shows every card at once, up to this many.
 const BOARD_LIMIT = 300;
 
@@ -347,7 +351,11 @@ const pinnedViews = computed(() => savedViews.value.filter((saved) => saved.is_p
 const mayChange = (saved) => saved.owner === boot.user || (saved.is_shared && isManager());
 
 const records = ref([]);
-const hasMore = ref(false);
+// Which page of the list is shown, how many a page holds (remembered per list on this device),
+// and how many records the list has with its filters and search, counted by the server.
+const page = ref(1);
+const pageSize = ref(savedPageSize(listKey.value));
+const total = ref(0);
 const loading = ref(false);
 const error = ref("");
 const counts = ref({});
@@ -651,7 +659,7 @@ const unpin = () => {
 	const query = { ...route.query };
 	delete query.f;
 	delete query.label;
-	router.replace({ query }).then(() => load());
+	router.replace({ query }).then(() => reloadAll());
 };
 
 function filtersOf(option) {
@@ -703,7 +711,7 @@ function fieldsToLoad() {
 // tab or search the person has already left cannot replace the rows they are looking at.
 let latest = 0;
 
-async function load(more = false) {
+async function load() {
 	const ticket = ++latest;
 	loading.value = true;
 	error.value = "";
@@ -722,24 +730,27 @@ async function load(more = false) {
 				fields: fieldsToLoad(),
 				filters,
 				orderBy: userOrder.value || orderBy,
-				start: more ? records.value.length : 0,
+				start: kanban ? 0 : (page.value - 1) * pageSize.value,
 				limit,
 			});
-		let page;
+		let loaded;
 		if (scope) {
 			const [main, also] = await Promise.all([
 				query([...scope.filters, ...narrowing], BOARD_LIMIT),
 				scope.also ? query([...scope.also, ...narrowing], BOARD_LIMIT) : { rows: [] },
 			]);
-			page = { rows: [...main.rows, ...also.rows], hasMore: false };
+			loaded = { rows: [...main.rows, ...also.rows] };
 		} else {
-			page = await query(
-				[
-					...(pinned.value || [...filtersOf(current.value), ...userFilters.value]),
-					...searchFilter(search.value, searchField || props.searchField),
-				],
-				kanban ? BOARD_LIMIT : PAGE
-			);
+			const filters = [
+				...(pinned.value || [...filtersOf(current.value), ...userFilters.value]),
+				...searchFilter(search.value, searchField || props.searchField),
+			];
+			const [rowsOfPage, count] = await Promise.all([
+				query(filters, kanban ? BOARD_LIMIT : pageSize.value),
+				kanban ? null : countOf(currentDoctype.value, filters),
+			]);
+			loaded = rowsOfPage;
+			if (count !== null) total.value = count;
 		}
 		if (ticket !== latest) return;
 		const people = [
@@ -747,16 +758,22 @@ async function load(more = false) {
 			...(layout.value === "table" ? PERSON_FIELDS : []),
 		];
 		await learnNames(
-			page.rows.flatMap((row) => people.map((field) => row[field])).filter(Boolean)
+			loaded.rows.flatMap((row) => people.map((field) => row[field])).filter(Boolean)
 		);
-		records.value = more ? [...records.value, ...page.rows] : page.rows;
-		hasMore.value = !kanban && page.hasMore;
+		records.value = loaded.rows;
+		// Past the last page (records removed since): go to the last one there is.
+		if (!kanban && !loaded.rows.length && page.value > 1) {
+			page.value = clampPage(page.value, total.value, pageSize.value);
+		}
 	} catch (err) {
 		if (ticket === latest) error.value = err.isNetwork ? notLoaded("this list") : err.message;
 	} finally {
 		if (ticket === latest) loading.value = false;
 	}
 }
+
+// How many records match, counted by the server with the same permissions as the list.
+const countOf = (doctype, filters) => call("frappe.client.get_count", { doctype, filters });
 
 // How many each tab holds with the filters chosen (not the search), counted by the server.
 async function loadCounts() {
@@ -765,10 +782,10 @@ async function loadCounts() {
 			// Another record type's filters do not apply to its tab.
 			const same = (option.doctype || props.doctype) === currentDoctype.value;
 			try {
-				const count = await call("frappe.client.get_count", {
-					doctype: option.doctype || props.doctype,
-					filters: [...filtersOf(option), ...(same ? userFilters.value : [])],
-				});
+				const count = await countOf(option.doctype || props.doctype, [
+					...filtersOf(option),
+					...(same ? userFilters.value : []),
+				]);
 				return [option.value, count];
 			} catch {
 				// A tab without its number still works.
@@ -788,10 +805,17 @@ async function loadSaved() {
 	}
 }
 
-function reloadAll() {
-	records.value = [];
-	load();
+// A new tab, filter or choice starts from the first page; someone else's change keeps the page.
+function reloadAll({ keepPage = false } = {}) {
+	if (!keepPage) records.value = [];
 	loadCounts();
+	firstPageOr(keepPage);
+}
+
+// Back to the first page, which the page watcher loads; or, already there, load it here.
+function firstPageOr(keepPage = false) {
+	if (!keepPage && page.value !== 1) page.value = 1;
+	else load();
 }
 
 let typing;
@@ -830,14 +854,21 @@ watch(search, () => {
 	clearTimeout(typing);
 	typing = setTimeout(() => {
 		remember();
-		load();
+		firstPageOr();
 	}, 300);
 });
+// Another page, or another page size (remembered for this list), is read from the server.
+watch([page, pageSize], () => load());
+watch(pageSize, (size) => savePageSize(listKey.value, size));
+watch(listKey, (key) => {
+	pageSize.value = savedPageSize(key);
+});
+
 // Someone else's change to a record of this type reloads the list and its counts.
 let stopWatching = null;
 function watchCurrent() {
 	stopWatching?.();
-	stopWatching = watchDoctype(currentDoctype.value, reloadAll);
+	stopWatching = watchDoctype(currentDoctype.value, () => reloadAll({ keepPage: true }));
 }
 watch(currentDoctype, watchCurrent);
 onBeforeUnmount(() => stopWatching?.());

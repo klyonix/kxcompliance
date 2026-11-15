@@ -28,6 +28,7 @@
 		</div>
 		<RowList
 			v-else
+			paged="people"
 			data-tour="people-list"
 			:groups="groups"
 			:columns="[{ label: 'Last signed in' }]"

@@ -18,6 +18,7 @@ from kxcompliance.api import (
 	overview,
 	save_changes,
 	search,
+	search_counts,
 )
 from kxcompliance.kx_compliance.overview import desk_link, total
 from kxcompliance.kx_compliance.test_bulk_filing import filing
@@ -305,6 +306,21 @@ class TestAppApi(IntegrationTestCase):
 			make_item("Test App Licence", title=f"Fire NOC renewal {index}")
 		with self.set_user(MANAGER):
 			self.assertEqual(search("fire noc", kind="items")["items"][0].name, exact)
+
+	def test_search_pages_through_every_match_and_counts_them(self):
+		exact = make_item("Test App Licence", title="Boiler NOC").name
+		for index in range(35):
+			make_item("Test App Licence", title=f"Boiler NOC renewal {index}")
+		with self.set_user(MANAGER):
+			total = search_counts("boiler noc")["items"]
+			first = search("boiler noc", kind="items", start=0, page_length=20)["items"]
+			second = search("boiler noc", kind="items", start=20, page_length=20)["items"]
+			self.assertEqual(search("boiler noc", kind="items", page_length=1000)["items"].__len__(), 36)
+		self.assertEqual(total, 36)
+		self.assertEqual(first[0].name, exact)
+		self.assertEqual((len(first), len(second)), (20, 16))
+		# Each page carries on from the last: no record twice, none left out.
+		self.assertEqual(len({row.name for row in first + second}), 36)
 
 	def test_staff_cannot_reassign_by_saving_the_record_itself(self):
 		item = make_item("Test App Licence", responsible=HOLDER)

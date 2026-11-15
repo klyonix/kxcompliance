@@ -71,6 +71,7 @@
 			</p>
 			<RowList
 				v-else
+				paged="clients"
 				data-tour="clients-list"
 				:rows="rows"
 				:columns="[{ label: 'Lowest score' }, { label: 'What is due' }]"

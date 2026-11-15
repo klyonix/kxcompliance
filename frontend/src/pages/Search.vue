@@ -98,13 +98,15 @@
 					class="flex items-center gap-2 px-3 pb-1 text-sm font-semibold text-ink-gray-7"
 				>
 					{{ section.label }}
-					<span class="font-normal text-ink-gray-5">{{ countText(section.rows) }}</span>
+					<span class="font-normal text-ink-gray-5">{{
+						countText(section.rows, totals[section.key])
+					}}</span>
 				</h2>
 				<div class="flex flex-col [&>*+*]:border-t [&>*+*]:border-outline-gray-1">
 					<WorkRow
 						v-for="row in tab === 'all'
 							? section.rows.slice(0, PREVIEW)
-							: section.rows"
+							: kindRows || section.rows"
 						:key="row.key"
 						:row="row"
 						@click="remember"
@@ -115,15 +117,17 @@
 					class="self-start"
 					variant="ghost"
 					icon-right="lucide-arrow-right"
-					:label="`Show all ${countText(section.rows)}`"
+					:label="`Show all ${countText(section.rows, totals[section.key])}`"
 					@click="tab = section.key"
 				/>
-				<p
-					v-if="tab !== 'all' && section.rows.length >= CANDIDATES"
-					class="px-3 text-sm text-ink-gray-5"
-				>
-					These are the closest {{ CANDIDATES }}. Add a word to narrow it down.
-				</p>
+				<ListPager
+					v-if="tab !== 'all'"
+					v-model:page="kindPage"
+					v-model:size="kindSize"
+					class="mt-2"
+					:total="totals[section.key] ?? section.rows.length"
+					:loading="pageLoading"
+				/>
 			</section>
 		</template>
 	</div>
@@ -138,16 +142,11 @@ import { useRoute, useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, TabButtons, TextInput } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import ListPager from "@/components/ListPager.vue";
 import WorkRow from "@/components/WorkRow.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
-import {
-	CANDIDATES,
-	MIN_LENGTH,
-	PREVIEW,
-	countText,
-	resultSections,
-	searchTabs,
-} from "@/lib/search";
+import { savePageSize, savedPageSize } from "@/lib/paging";
+import { MIN_LENGTH, PREVIEW, countText, resultSections, searchTabs } from "@/lib/search";
 import { recentSearches, rememberSearch, shortcutLabel } from "@/lib/quickSearch";
 import { notLoaded } from "@/offline/reachability";
 
@@ -163,9 +162,15 @@ const searching = ref(false);
 const error = ref("");
 const box = ref(null);
 const recent = ref(recentSearches());
+// How many each kind finds (counted by the server), and the page of one kind's tab.
+const totals = ref({});
+const kindPage = ref(1);
+const kindSize = ref(savedPageSize("search"));
+const kindRows = ref(null);
+const pageLoading = ref(false);
 
 const sections = computed(() => resultSections(results.value));
-const tabs = computed(() => searchTabs(sections.value));
+const tabs = computed(() => searchTabs(sections.value, totals.value));
 const shown = computed(() =>
 	tab.value === "all"
 		? sections.value
@@ -183,13 +188,22 @@ async function run() {
 	error.value = "";
 	if (query.length < MIN_LENGTH) {
 		results.value = null;
+		totals.value = {};
 		return;
 	}
 	searching.value = true;
 	try {
-		const found = await call("kxcompliance.api.search", { text: query });
+		const [found, counted] = await Promise.all([
+			call("kxcompliance.api.search", { text: query }),
+			// Without the counts the tabs show what came back, "30+" where it stopped.
+			call("kxcompliance.api.search_counts", { text: query }).catch(() => ({})),
+		]);
 		// A slower earlier search must not replace the answer to a later one.
-		if (ticket === latest) results.value = found;
+		if (ticket === latest) {
+			results.value = found;
+			totals.value = counted;
+			loadKindPage();
+		}
 	} catch (err) {
 		if (ticket === latest)
 			error.value = err.isNetwork ? notLoaded("this search") : err.message;
@@ -207,11 +221,44 @@ function keepInAddress() {
 
 watch(text, () => {
 	tab.value = "all";
+	kindPage.value = 1;
 	keepInAddress();
 	clearTimeout(typing);
 	typing = setTimeout(run, 250);
 });
-watch(tab, keepInAddress);
+// One kind's tab shows a page of it at a time, read from the server.
+let pageTicket = 0;
+async function loadKindPage() {
+	const kind = tab.value;
+	const query = text.value.trim();
+	kindRows.value = null;
+	if (kind === "all" || query.length < MIN_LENGTH) return;
+	const ticket = ++pageTicket;
+	pageLoading.value = true;
+	try {
+		const found = await call("kxcompliance.api.search", {
+			text: query,
+			kind,
+			start: (kindPage.value - 1) * kindSize.value,
+			page_length: kindSize.value,
+		});
+		if (ticket === pageTicket) kindRows.value = resultSections(found)[0]?.rows || [];
+	} catch (err) {
+		if (ticket === pageTicket) {
+			error.value = err.isNetwork ? notLoaded("this search") : err.message;
+		}
+	} finally {
+		if (ticket === pageTicket) pageLoading.value = false;
+	}
+}
+
+watch(tab, () => {
+	keepInAddress();
+	if (kindPage.value !== 1) kindPage.value = 1;
+	else loadKindPage();
+});
+watch([kindPage, kindSize], loadKindPage);
+watch(kindSize, (size) => savePageSize("search", size));
 // A kind that found nothing for these words goes back to All.
 watch(sections, (now) => {
 	if (!results.value) return;

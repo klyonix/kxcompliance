@@ -26,6 +26,7 @@
 		</p>
 		<RowList
 			v-else
+			paged="licence-blocks"
 			data-tour="licence-blocks-list"
 			:rows="shown"
 			name-label="Document"

@@ -16,6 +16,7 @@
 				label="Search"
 				:route="{ name: 'Search' }"
 			/>
+			<NotificationBell v-if="!checksOnly()" />
 			<TourMenu />
 		</template>
 		<PageHeaderMobileTitle :title="title" />
@@ -59,6 +60,7 @@ import {
 	PageHeaderTitle,
 } from "frappe-ui";
 import { checksOnly } from "@/boot";
+import NotificationBell from "@/components/NotificationBell.vue";
 import TourMenu from "@/components/TourMenu.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { goBack } from "@/navigation";

@@ -9,6 +9,7 @@
 		<!-- The rows keep a margin from the edges, so the open page's highlight never touches the
 		border, expanded or collapsed. -->
 		<div class="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2" data-tour="nav">
+			<NotificationBell v-if="!checksOnly()" in-sidebar />
 			<template v-for="section in sections" :key="section.route">
 				<template v-if="section.route === 'Settings'">
 					<!-- Collapsed to icons, the group has no room to open: the icon opens Settings. -->
@@ -81,7 +82,8 @@
 import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { Sidebar, SidebarCollapseToggle, SidebarHeader, SidebarItem } from "frappe-ui";
-import { boot, mayUseDesk } from "@/boot";
+import { boot, checksOnly, mayUseDesk } from "@/boot";
+import NotificationBell from "@/components/NotificationBell.vue";
 import { isSettingsPageOpen, sections, settingsPagesFor, signOut } from "@/navigation";
 import { clearOutbox, outbox } from "@/offline/outbox";
 import { counts } from "@/stores/work";

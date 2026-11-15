@@ -5,6 +5,7 @@
 		v-if="route.name === 'Onboarding' || (route.name === 'PrivacyNotice' && route.query.next)"
 	/>
 	<MobileShell v-else-if="isMobile">
+		<NotificationsDrawer />
 		<UpdatePrompt />
 		<ConnectionBanner />
 		<RouterView />
@@ -34,6 +35,7 @@
 		<template #sidebar>
 			<AppSidebar />
 		</template>
+		<NotificationsDrawer />
 		<UpdatePrompt />
 		<ConnectionBanner />
 		<RouterView />
@@ -53,6 +55,7 @@ import { onBeforeUnmount, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { boot, checksOnly } from "./boot";
 import AppSidebar from "./components/AppSidebar.vue";
+import NotificationsDrawer from "./components/NotificationsDrawer.vue";
 import ConnectionBanner from "./components/ConnectionBanner.vue";
 import UpdatePrompt from "./components/UpdatePrompt.vue";
 import { useIsMobile } from "./composables/useIsMobile";

@@ -2,6 +2,7 @@ import path from "path";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import frappeui from "frappe-ui/vite";
+import frameworkUI from "@framework/ui/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const appRoot = path.resolve(import.meta.dirname, "..");
@@ -12,6 +13,7 @@ export default defineConfig({
 		frappeui({
 			frontendRoute: "/compliance",
 			frappeProxy: true,
+			lucideIcons: true,
 			jinjaBootData: true,
 			buildConfig: {
 				outDir,
@@ -21,6 +23,8 @@ export default defineConfig({
 			},
 		}),
 		vue(),
+		// Frappe's own shared components (apps/frappe/ui), compiled here with this app's copies.
+		frameworkUI(),
 		VitePWA({
 			// The manifest comes from /compliance_manifest.json, which carries each site's
 			// own app name and logo; the worker is served from /compliance_sw.js and

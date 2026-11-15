@@ -1,13 +1,17 @@
 import "./index.css";
 
 import { createApp } from "vue";
-import { FrappeUI, FrappeUIProvider } from "frappe-ui";
+import { FrappeUI, FrappeUIProvider, frappeRequest, setConfig } from "frappe-ui";
 import { h } from "vue";
 
 import App from "./App.vue";
 import router from "./router";
 import { watchConnection } from "./offline/outbox";
 import { watchForUpdates } from "./offline/updates";
+
+// frappe-ui's resources (used by Frappe's shared components, such as notifications) call the
+// site's API through Frappe's own request helper.
+setConfig("resourceFetcher", frappeRequest);
 
 createApp({ render: () => h(FrappeUIProvider, null, { default: () => h(App) }) })
 	.use(router)

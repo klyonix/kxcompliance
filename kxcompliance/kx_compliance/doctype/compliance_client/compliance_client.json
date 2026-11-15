@@ -9,7 +9,7 @@
    "link_fieldname": "client"
   }
  ],
- "modified": "2026-11-16 10:00:00.000000",
+ "modified": "2026-11-16 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "owner": "Administrator",
@@ -19,6 +19,7 @@
  "description": "A CA/CS firm's client: one business group or individual, owning one or more companies.",
  "field_order": [
   "client_name",
+  "logo",
   "client_kind",
   "status",
   "column_break_main",
@@ -209,6 +210,11 @@
    "options": "Return Fee",
    "label": "Own Price per Return",
    "description": "Only where this client pays differently from the firm's prices."
+  },
+  {
+   "fieldname": "logo",
+   "fieldtype": "Attach Image",
+   "label": "Logo"
   }
  ],
  "name": "Compliance Client",

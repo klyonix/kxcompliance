@@ -393,6 +393,7 @@ def client_detail(name: str) -> dict:
 	return {
 		"name": client.name,
 		"client_kind": client.client_kind,
+		"logo": client.logo,
 		"status": client.status,
 		"relationship_manager": client.relationship_manager,
 		"team": [row.user for row in client.team],

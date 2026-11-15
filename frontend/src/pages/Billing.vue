@@ -2,6 +2,12 @@
 	<AppPageHeader title="Billing">
 		<template #actions>
 			<Button
+				v-if="isManager()"
+				icon-left="lucide-settings"
+				label="Settings"
+				:route="{ name: 'BillingSettings' }"
+			/>
+			<Button
 				variant="solid"
 				icon-left="lucide-plus"
 				label="New bill"
@@ -90,6 +96,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import { Badge, Button, Skeleton, TabButtons, TextInput } from "frappe-ui";
 import { call } from "@/api";
+import { isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import ClientPicker from "@/components/ClientPicker.vue";
 import ListPager from "@/components/ListPager.vue";

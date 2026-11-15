@@ -328,6 +328,31 @@ class TestBills(IntegrationTestCase):
 		self.assertEqual(ageing_bucket("2026-09-01", today), "late_90")
 		self.assertEqual(ageing_bucket("2025-01-01", today), "late_more")
 
+	def test_a_firm_not_registered_or_under_composition_charges_no_gst(self):
+		registered = {**DETAILS, "bill_prefix": "TBA", "gst_status": "Registered"}
+		self.addCleanup(set_up_billing, registered)
+		set_up_billing(
+			{**DETAILS, "gst_status": "Not registered", "billing_gstin": "", "billing_state": "Karnataka"}
+		)
+		self.assertFalse(frappe.db.get_single_value(SETTINGS, "billing_gstin"))
+		plain = bill(create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"])
+		self.assertEqual((plain["taxes"], plain["grand_total"]), ([], 1000))
+		with self.assertRaisesRegex(frappe.ValidationError, "composition has a GSTIN"):
+			set_up_billing({**DETAILS, "gst_status": "Composition", "billing_gstin": ""})
+		set_up_billing({**DETAILS, "gst_status": "Composition"})
+		supply = bill(create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"])
+		self.assertEqual(supply["taxes"], [])
+		with self.assertRaisesRegex(frappe.ValidationError, "GST status is one of"):
+			set_up_billing({**DETAILS, "gst_status": "Exempt"})
+
+	def test_the_firms_logo_is_public_and_goes_on_its_company(self):
+		self.addCleanup(set_up_billing, {**DETAILS, "bill_prefix": "TBA", "billing_logo": ""})
+		with self.assertRaisesRegex(frappe.ValidationError, "public file"):
+			set_up_billing({**DETAILS, "billing_logo": "/private/files/logo.png"})
+		set_up_billing({**DETAILS, "billing_logo": "/files/firm-logo.png"})
+		company = frappe.db.get_single_value(SETTINGS, "billing_company")
+		self.assertEqual(frappe.db.get_value("Company", company, "company_logo"), "/files/firm-logo.png")
+
 	def test_a_draft_is_not_paid(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
 		with self.assertRaisesRegex(frappe.ValidationError, "Send"):

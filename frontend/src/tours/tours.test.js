@@ -46,6 +46,7 @@ const NO_TOUR = {
 	NewFiling: "a form; each field is labelled",
 	NewBill: "a form; each part says what it is",
 	Billing: "its tabs and columns say what they are",
+	BillingSettings: "its tabs and sections say what they are",
 	Bill: "its sections say what they are",
 	NewTrademark: "a form; each field is labelled",
 	LicenceRuleNew: "a form; each section says what it is",

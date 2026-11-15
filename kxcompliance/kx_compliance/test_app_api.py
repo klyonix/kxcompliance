@@ -179,7 +179,7 @@ class TestAppApi(IntegrationTestCase):
 		make_item("Test App Licence", days=-30, responsible=HOLDER)
 		after = self.overview_card("Register", "Expired or lapsed")
 		self.assertEqual(after["value"], before + 1)
-		self.assertTrue(after["link"].startswith("/app/compliance-item?"))
+		self.assertTrue(after["link"].startswith("/desk/compliance-item?"))
 		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
 			overview()
 
@@ -211,7 +211,7 @@ class TestAppApi(IntegrationTestCase):
 		)
 		self.assertEqual(
 			link,
-			"/app/compliance-item?status=%5B%22in%22%2C+%5B%22Expired%22%2C+%22Lapsed%22%5D%5D"
+			"/desk/compliance-item?status=%5B%22in%22%2C+%5B%22Expired%22%2C+%22Lapsed%22%5D%5D"
 			"&holder_type=Company",
 		)
 		rows = [
@@ -226,8 +226,8 @@ class TestAppApi(IntegrationTestCase):
 		with self.set_user(MANAGER):
 			link = overview()["on_time"]["link"]
 		path = unquote(urlsplit(link).path)
-		self.assertTrue(path.startswith("/app/query-report/"))
-		self.assertTrue(frappe.db.exists("Report", path.removeprefix("/app/query-report/")))
+		self.assertTrue(path.startswith("/desk/query-report/"))
+		self.assertTrue(frappe.db.exists("Report", path.removeprefix("/desk/query-report/")))
 
 	def test_the_app_shows_people_by_name(self):
 		with self.set_user(HOLDER):

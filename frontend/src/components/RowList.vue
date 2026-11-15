@@ -7,10 +7,14 @@
 		>
 			<span class="w-8 shrink-0" />
 			<span class="flex-1">{{ t(nameLabel) }}</span>
-			<span v-for="column in columns" :key="column.label" class="w-40 shrink-0">{{
-				t(column.label)
-			}}</span>
-			<span class="w-36 shrink-0">{{ t(statusLabel) }}</span>
+			<!-- Extra columns from a wide screen; between that and a phone the name has the room. -->
+			<span
+				v-for="column in columns"
+				:key="column.label"
+				class="hidden w-40 shrink-0 lg:block"
+				>{{ t(column.label) }}</span
+			>
+			<span v-if="statusLabel !== null" class="w-36 shrink-0">{{ t(statusLabel) }}</span>
 			<span v-if="dateLabel !== null" class="w-28 shrink-0 text-right">{{
 				t(dateLabel)
 			}}</span>
@@ -33,6 +37,7 @@
 					:row="entry"
 					:cells="entry.cells"
 					:date-column="dateLabel !== null"
+					:status-column="statusLabel !== null"
 				>
 					<template v-if="withActions" #actions>
 						<div class="flex items-center gap-2 sm:justify-end" :class="actionsWidth">
@@ -59,6 +64,7 @@ const props = defineProps({
 	// [{ label }]: the headings of each row's `cells`.
 	columns: { type: Array, default: () => [] },
 	nameLabel: { type: String, default: "Name" },
+	// null for a list without a status column.
 	statusLabel: { type: String, default: "Status" },
 	// null for a list without a date column.
 	dateLabel: { type: String, default: "Date" },

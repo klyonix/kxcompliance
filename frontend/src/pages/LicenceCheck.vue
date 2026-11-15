@@ -75,7 +75,7 @@
 			:rows="results.map((result) => partyRow(result, partyType))"
 			:name-label="partyType"
 			:columns="[{ label: 'Group' }]"
-			status-label=""
+			:status-label="null"
 			:date-label="null"
 		/>
 	</div>

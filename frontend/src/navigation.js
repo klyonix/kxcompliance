@@ -144,9 +144,13 @@ export function goBack(router, fallback) {
 	else router.push(fallback);
 }
 
+// The Desk's address in Frappe 16 (/app still redirects there, one step slower).
+export const DESK = "/desk";
+export const deskPath = (path = "") => `${DESK}${path ? `/${path}` : ""}`;
+
 // Where each record opens until it has a screen of its own in the app.
 export const deskRoute = (doctype, name) =>
-	`/app/${doctype.toLowerCase().replace(/ /g, "-")}/${encodeURIComponent(name)}`;
+	deskPath(`${doctype.toLowerCase().replace(/ /g, "-")}/${encodeURIComponent(name)}`);
 
 // A record menu's "Open in the Desk", for those who have the Desk.
 export const deskActions = (doctype, name) =>

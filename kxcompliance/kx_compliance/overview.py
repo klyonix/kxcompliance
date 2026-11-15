@@ -31,6 +31,8 @@ PENDING_MARK_STATUSES = [
 ]
 ON_TIME_MONTHS = 12
 ON_TIME_REPORT = "On-time Filing"
+# The Desk's address in Frappe 16; /app still redirects there.
+DESK = "/desk"
 OPEN_REQUEST_STATUSES = ["Open", "In Progress"]
 # A renewal planned or applied for: someone is on it.
 RENEWING = ["Renewal Planned", "Renewal in Progress"]
@@ -67,7 +69,7 @@ def desk_link(doctype: str, filters: dict) -> str:
 		field: json.dumps(list(value)) if isinstance(value, list | tuple) else value
 		for field, value in filters.items()
 	}
-	return f"/app/{frappe.scrub(doctype).replace('_', '-')}?{urlencode(query)}"
+	return f"{DESK}/{frappe.scrub(doctype).replace('_', '-')}?{urlencode(query)}"
 
 
 def card(label: str, value: int, tone: str, doctype: str, filters: dict, act: bool = False) -> dict:
@@ -357,6 +359,6 @@ def on_time_rate(today: str) -> dict:
 		"late": late,
 		"overdue": overdue,
 		"percent": round(on_time * 100 / counted, 1) if counted else None,
-		"link": f"/app/query-report/{quote(ON_TIME_REPORT)}?"
+		"link": f"{DESK}/query-report/{quote(ON_TIME_REPORT)}?"
 		+ urlencode({"from_date": str(since), "to_date": str(today)}),
 	}

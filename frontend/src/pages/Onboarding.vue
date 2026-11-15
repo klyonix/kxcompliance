@@ -29,7 +29,7 @@
 					class="self-start"
 					variant="solid"
 					label="Open the system setup"
-					href="/app"
+					:href="deskPath()"
 				/>
 			</div>
 
@@ -255,6 +255,7 @@ import {
 	setupAnswers,
 	stateFromGstin,
 } from "@/lib/onboarding";
+import { deskPath } from "@/navigation";
 
 const isMobile = useIsMobile();
 const buttonSize = computed(() => (isMobile.value ? "md" : "sm"));

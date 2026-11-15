@@ -276,6 +276,9 @@ has_permission = {
 calendars = ["Compliance Item", "Compliance Task", "Legal Date"]
 
 doc_events = {
+	"Notification Log": {
+		"before_insert": "kxcompliance.kx_compliance.app_links.point_notification_to_app",
+	},
 	"Quotation": {
 		"validate": "kxcompliance.kx_compliance.party_licences.check_document",
 		"on_submit": "kxcompliance.kx_compliance.party_licences.check_document",

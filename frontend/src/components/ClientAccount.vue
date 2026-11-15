@@ -116,11 +116,10 @@
 			<p v-if="!summary.payments.length" class="text-base text-ink-gray-5">
 				No payments yet.
 			</p>
-			<a
+			<RouterLink
 				v-for="payment in summary.payments"
 				:key="payment.name"
-				:href="receiptLink(payment.name)"
-				target="_blank"
+				:to="{ name: 'Payment', params: { name: payment.name } }"
 				class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-outline-gray-1 py-2 last:border-b-0 hover:bg-surface-gray-1"
 			>
 				<span class="flex min-w-0 flex-1 flex-col">
@@ -134,8 +133,8 @@
 					}}</span>
 				</span>
 				<span class="text-base text-ink-gray-8">{{ money(payment.paid_amount) }}</span>
-				<span class="lucide-file-down size-4 text-ink-gray-5" aria-label="Receipt" />
-			</a>
+				<span class="lucide-chevron-right size-4 text-ink-gray-5" aria-hidden="true" />
+			</RouterLink>
 		</section>
 
 		<section class="flex flex-col gap-1" aria-labelledby="rates-heading">
@@ -217,9 +216,6 @@ const unpricedLine = computed(() => {
 		count === 1 ? "has" : "have"
 	} no rate, so ${count === 1 ? "is" : "are"} not counted.`;
 });
-
-const receiptLink = (name) =>
-	`/api/method/kxcompliance.api.receipt_pdf?name=${encodeURIComponent(name)}`;
 
 function seeAllPayments() {
 	chooseClient(props.client);

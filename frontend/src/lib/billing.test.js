@@ -9,6 +9,7 @@ import {
 	creditProblem,
 	linesProblem,
 	linesToSend,
+	paymentFacts,
 	paymentProblem,
 	rateLine,
 	ratesProblem,
@@ -222,5 +223,24 @@ describe("a client's year with the firm", () => {
 		expect(statementLink("A & B", "2026-04-01", "2027-03-31")).toBe(
 			"/api/method/kxcompliance.api.statement_pdf?client=A+%26+B&from_date=2026-04-01&to_date=2027-03-31"
 		);
+	});
+});
+
+describe("a payment's page", () => {
+	it("gives the amount, how it came, and TDS and the reference only when there are any", () => {
+		const cash = paymentFacts({ paid_amount: 2000, mode_of_payment: "Cash", tds: 0 });
+		expect(cash.map((fact) => fact.label)).toEqual(["Received", "How"]);
+		const bank = paymentFacts({
+			paid_amount: 5000,
+			mode_of_payment: "Bank Transfer",
+			tds: 1000,
+			reference_no: "UTR1",
+		});
+		expect(bank.map((fact) => fact.label)).toEqual([
+			"Received",
+			"How",
+			"TDS deducted",
+			"Reference",
+		]);
 	});
 });

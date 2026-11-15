@@ -660,6 +660,31 @@ export const TOURS = [
 		],
 	},
 	{
+		id: "payment",
+		title: "A payment",
+		route: "Payment",
+		record: true,
+		firm: true,
+		billing: true,
+		steps: [
+			{
+				target: ["payment-state"],
+				title: "Who paid, and when",
+				text: "The client, the date it came in, and whether the receipt has been emailed.",
+			},
+			{
+				target: ["section:settled-heading"],
+				title: "What it paid",
+				text: "Each bill it settled, opening the bill; or, for an advance, what is still held for the client's next bills.",
+			},
+			{
+				target: ["page-actions"],
+				title: "The receipt",
+				text: "Download the receipt as a PDF, or email it to the client's billing email.",
+			},
+		],
+	},
+	{
 		id: "billing-settings",
 		title: "Billing settings",
 		route: "BillingSettings",

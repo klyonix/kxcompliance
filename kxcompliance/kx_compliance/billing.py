@@ -1074,9 +1074,10 @@ def payments_of(bill: str) -> list[dict]:
 	return rows
 
 
-def cancel_payment(name: str):
-	"""Cancel a payment recorded against one of the firm's bills (the bill is due again), or an
-	advance a client paid."""
+def payment_of(name: str):
+	"""A payment to the firm, for those who bill: one against its bills, or an advance."""
+	if not isinstance(name, str) or not frappe.db.exists("Payment Entry", name):
+		frappe.throw(_("Payment {0} does not exist.").format(name), frappe.DoesNotExistError)
 	entry = frappe.get_doc("Payment Entry", name)
 	bills = [row.reference_name for row in entry.references if row.reference_doctype == "Sales Invoice"]
 	if bills:
@@ -1085,6 +1086,117 @@ def cancel_payment(name: str):
 		check_biller()
 		if entry.company != get_settings().billing_company or entry.party_type != "Customer":
 			frappe.throw(_("{0} is not a payment to the firm.").format(name), frappe.PermissionError)
+	return entry
+
+
+def client_of_payment(entry) -> str | None:
+	"""The client who paid: the customer the payment is from is that client's."""
+	return (
+		frappe.db.get_value("Compliance Client", {"customer": entry.party}, "name") if entry.party else None
+	)
+
+
+def payment_detail(name: str) -> dict:
+	"""A payment as its page shows it: who paid, when and how, TDS, the bills it settled and what
+	is still held as an advance."""
+	entry = payment_of(name)
+	client = client_of_payment(entry)
+	settled = [row for row in entry.references if row.reference_doctype == "Sales Invoice"]
+	bills = {
+		row.name: row
+		for row in frappe.get_all(
+			"Sales Invoice",
+			filters={"name": ("in", [row.reference_name for row in settled] or [""])},
+			fields=["name", "posting_date", "grand_total", "rounded_total", "outstanding_amount"],
+		)
+	}
+	emails = (
+		frappe.db.get_value("Compliance Client", client, ["billing_email", "contact_email"], as_dict=True)
+		if client
+		else None
+	)
+	return {
+		"name": entry.name,
+		"docstatus": entry.docstatus,
+		"client": client,
+		"party_name": entry.party_name,
+		"posting_date": entry.posting_date,
+		"mode_of_payment": entry.mode_of_payment,
+		"reference_no": entry.reference_no if entry.reference_no != entry.mode_of_payment else None,
+		"paid_amount": flt(entry.paid_amount),
+		"tds": flt(sum(flt(row.amount) for row in entry.deductions)),
+		"unallocated_amount": flt(entry.unallocated_amount),
+		"currency": entry.paid_to_account_currency or "INR",
+		"bills": [
+			{
+				"name": row.reference_name,
+				"allocated": flt(row.allocated_amount),
+				"posting_date": bills.get(row.reference_name, {}).get("posting_date"),
+				"total": flt(
+					bills.get(row.reference_name, {}).get("rounded_total")
+					or bills.get(row.reference_name, {}).get("grand_total")
+				),
+				"still_due": flt(bills.get(row.reference_name, {}).get("outstanding_amount")),
+			}
+			for row in settled
+		],
+		"email_to": emails and (emails.billing_email or emails.contact_email),
+		"emailed": frappe.db.count(
+			"Communication",
+			{"reference_doctype": "Payment Entry", "reference_name": entry.name, "sent_or_received": "Sent"},
+		),
+	}
+
+
+def email_receipt(name: str) -> str:
+	"""Email a payment's receipt to the client's billing email, else its contact; the address."""
+	from kxcompliance.kx_compliance.reminders import sender_address
+
+	entry = payment_of(name)
+	if entry.docstatus != 1:
+		frappe.throw(_("{0} is cancelled; it has no receipt to send.").format(name))
+	client = client_of_payment(entry)
+	address = (
+		frappe.db.get_value("Compliance Client", client, ["billing_email", "contact_email"], as_dict=True)
+		if client
+		else None
+	)
+	to = address and (address.billing_email or address.contact_email)
+	if not to:
+		frappe.throw(
+			_("{0} has no billing or contact email; give it one on the client's form.").format(client)
+		)
+	sender = sender_address()
+	if not sender:
+		frappe.throw(
+			_("The app has no email account to send from; set one in Settings, Reminders and email.")
+		)
+	frappe.sendmail(
+		recipients=[to],
+		sender=sender,
+		subject=_("Receipt {0} from {1}").format(entry.name, entry.company),
+		message=_("Thank you for your payment of {0} on {1}. The receipt is attached.").format(
+			frappe.format(entry.paid_amount, {"fieldtype": "Currency"}), format_date(entry.posting_date)
+		),
+		attachments=[
+			frappe.attach_print(
+				"Payment Entry",
+				entry.name,
+				file_name=entry.name,
+				print_format=RECEIPT_FORMAT,
+				print_letterhead=False,  # the layout carries the firm's own heading
+			)
+		],
+		reference_doctype="Payment Entry",
+		reference_name=entry.name,
+	)
+	return to
+
+
+def cancel_payment(name: str):
+	"""Cancel a payment recorded against one of the firm's bills (the bill is due again), or an
+	advance a client paid."""
+	entry = payment_of(name)
 	if entry.docstatus != 1:
 		frappe.throw(_("{0} is not a recorded payment.").format(name))
 	entry.cancel()
@@ -1689,9 +1801,7 @@ def receipt_print(entry) -> dict:
 	from frappe.utils import money_in_words
 
 	bills = [row for row in entry.references if row.reference_doctype == "Sales Invoice"]
-	client = (
-		frappe.db.get_value("Sales Invoice", bills[0].reference_name, "compliance_client") if bills else None
-	)
+	client = client_of_payment(entry)
 	tds = flt(sum(flt(row.amount) for row in entry.deductions))
 	return {
 		"firm": firm_details(),

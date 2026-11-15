@@ -220,6 +220,12 @@ export const routes = [
 	},
 	{ path: "/billing/new", name: "NewBill", component: () => import("./pages/NewBill.vue") },
 	{
+		path: "/billing/payment/:name",
+		name: "Payment",
+		component: () => import("./pages/Payment.vue"),
+		props: true,
+	},
+	{
 		// A bill's name has slashes in it (RA/26-27/0001), so it is taken whole.
 		path: "/billing/bill/:name(.*)",
 		name: "Bill",

@@ -821,6 +821,27 @@ def remove_person(user: str) -> dict:
 	return people.remove(user)
 
 
+@frappe.whitelist(methods=["GET"])
+def person(user: str) -> dict:
+	"""One person on the team, with the open work they hold, for their page (managers only)."""
+	check_app_access()
+	return people.person(user)
+
+
+@frappe.whitelist(methods=["POST"])
+def send_password_reset(user: str) -> dict:
+	"""Email someone the link to set a new password themselves (managers only)."""
+	check_app_access()
+	return people.send_password_reset(user)
+
+
+@frappe.whitelist(methods=["POST"])
+def set_temporary_password(user: str, password: str) -> dict:
+	"""Set a password for someone to pass on in person, ending their open sessions (managers only)."""
+	check_app_access()
+	return people.set_temporary_password(user, password)
+
+
 @frappe.whitelist(methods=["POST"])
 def new_sign_in_link(user: str) -> dict:
 	"""A fresh link to set a password, for someone added who has never signed in."""

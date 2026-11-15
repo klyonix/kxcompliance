@@ -9,11 +9,22 @@ from kxcompliance.api import (
 	hide_getting_started,
 	invite_person,
 	new_sign_in_link,
+	person,
 	remove_person,
+	send_password_reset,
 	set_person_role,
+	set_temporary_password,
 	team,
 )
-from kxcompliance.kx_compliance.test_utils import HOLDER, MANAGER, make_user, make_users
+from kxcompliance.kx_compliance.test_utils import (
+	HOLDER,
+	MANAGER,
+	make_company,
+	make_item,
+	make_item_type,
+	make_user,
+	make_users,
+)
 
 NEWCOMER = "newcomer@example.com"
 SETTINGS = "KX Compliance Settings"
@@ -70,6 +81,50 @@ class TestPeople(IntegrationTestCase):
 				remove_person(admin)
 			with self.assertRaisesRegex(frappe.ValidationError, "signed in before"):
 				new_sign_in_link(HOLDER)
+
+	def test_a_persons_page_shows_their_role_and_the_work_they_hold(self):
+		make_company()
+		make_item_type("Test People Licence")
+		make_item("Test People Licence", responsible=HOLDER)
+		with self.set_user(MANAGER):
+			holder = person(HOLDER)
+			with self.assertRaises(frappe.DoesNotExistError):
+				person("Administrator")
+		self.assertEqual(holder["role"], "Staff")
+		work = {card["doctype"]: card for card in holder["work"]}
+		self.assertGreaterEqual(work["Compliance Item"]["value"], 1)
+		self.assertEqual(work["Compliance Item"]["filters"][0], ["responsible", "=", HOLDER])
+		self.assertEqual(set(work), {"Compliance Task", "Compliance Item", "Legal Case", "Trademark"})
+		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
+			person(MANAGER)
+
+	def test_a_manager_sets_a_temporary_password_that_signs_the_person_out(self):
+		with self.set_user(MANAGER):
+			invite_person("Neha Joshi", NEWCOMER, "Staff")
+			with self.assertRaisesRegex(frappe.ValidationError, "at least 8"):
+				set_temporary_password(NEWCOMER, "short")
+			set_temporary_password(NEWCOMER, "Kx!Temporary-2026-pass")
+			with self.assertRaisesRegex(frappe.ValidationError, "your own role"):
+				set_temporary_password(MANAGER, "Kx!Temporary-2026-pass")
+		frappe.local.login_manager = None
+		self.assertEqual(frappe.utils.password.check_password(NEWCOMER, "Kx!Temporary-2026-pass"), NEWCOMER)
+		self.assertTrue(
+			frappe.db.exists(
+				"Comment",
+				{"reference_doctype": "User", "reference_name": NEWCOMER, "comment_type": "Info"},
+			)
+		)
+		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
+			set_temporary_password(NEWCOMER, "Kx!Another-2026-pass")
+
+	def test_a_reset_link_is_emailed_only_where_email_can_go(self):
+		with self.set_user(MANAGER):
+			invite_person("Neha Joshi", NEWCOMER, "Staff")
+			if frappe.db.exists("Email Account", {"default_outgoing": 1, "enable_outgoing": 1}):
+				self.assertTrue(send_password_reset(NEWCOMER)["emailed"])
+			else:
+				with self.assertRaisesRegex(frappe.ValidationError, "cannot send email"):
+					send_password_reset(NEWCOMER)
 
 	def test_the_checklist_ticks_itself_off_and_can_be_hidden(self):
 		with self.change_settings(SETTINGS, enabled=0, email_account=None):

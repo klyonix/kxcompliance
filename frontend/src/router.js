@@ -90,6 +90,12 @@ export const routes = [
 		component: () => import("./pages/People.vue"),
 	},
 	{
+		path: "/settings/people/:user",
+		name: "Person",
+		component: () => import("./pages/Person.vue"),
+		props: true,
+	},
+	{
 		path: "/settings/item-types",
 		name: "ItemTypes",
 		component: () => import("./pages/ItemTypes.vue"),

@@ -36,6 +36,7 @@ TOURS = (
 	"bulk-setup",
 	"settings",
 	"people",
+	"person",
 	"companies",
 	"company",
 	"obligations",

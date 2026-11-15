@@ -742,6 +742,7 @@ async function load() {
 				limit,
 			});
 		let loaded;
+		let counted = null;
 		if (scope) {
 			const [main, also] = await Promise.all([
 				query([...scope.filters, ...narrowing], BOARD_LIMIT),
@@ -758,9 +759,11 @@ async function load() {
 				kanban ? null : countOf(currentDoctype.value, filters),
 			]);
 			loaded = rowsOfPage;
-			if (count !== null) total.value = count;
+			counted = count;
 		}
+		// A slower, earlier load must not overwrite the rows or the count of a later one.
 		if (ticket !== latest) return;
+		if (counted !== null) total.value = counted;
 		const people = [
 			...columns.value.filter((column) => column.person).map((column) => column.field),
 			...(layout.value === "table" ? PERSON_FIELDS : []),

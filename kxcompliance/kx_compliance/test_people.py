@@ -163,6 +163,31 @@ class TestPeople(IntegrationTestCase):
 		# Work already done stays with whoever did it.
 		self.assertEqual(frappe.db.get_value("Compliance Task", done, "responsible"), HOLDER)
 
+	def test_a_companys_default_people_move_in_a_hand_over(self):
+		from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import profile
+
+		make_company()
+		name = profile(TEST_COMPANY).name
+		frappe.db.set_value("Company Compliance Profile", name, "default_responsible", HOLDER)
+		self.assertTrue(handover.move_on_profile(name, HOLDER, OTHER_HOLDER))
+		self.assertEqual(
+			frappe.db.get_value("Company Compliance Profile", name, "default_responsible"), OTHER_HOLDER
+		)
+
+	def test_a_hearing_that_follows_its_case_is_not_counted_as_moved(self):
+		from kxcompliance.kx_compliance.doctype.legal_case.test_legal_case import make_case, make_date
+
+		make_company()
+		case = make_case(responsible=HOLDER, reviewer=REVIEWER)
+		hearing = make_date(case.name, "2026-12-20")
+		# The hearing takes its people from its case on every save, so moving it alone changes
+		# nothing: the hand-over must say it could not move, not count it as moved.
+		moved = handover.move_record(
+			"Legal Date", hearing.name, ("responsible", "reviewer"), HOLDER, OTHER_HOLDER
+		)
+		self.assertFalse(moved)
+		self.assertEqual(frappe.db.get_value("Legal Date", hearing.name, "responsible"), HOLDER)
+
 	def test_someone_off_the_team_with_work_is_listed_to_hand_over(self):
 		make_company()
 		make_item_type("Test People Licence")

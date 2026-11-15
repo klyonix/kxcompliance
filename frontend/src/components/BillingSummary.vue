@@ -85,7 +85,7 @@
 					<span class="w-24 text-base text-ink-gray-8">{{ month.month_name }}</span>
 					<span class="flex-1 text-sm text-ink-gray-5">
 						{{ month.bills }} {{ month.bills === 1 ? "bill" : "bills" }} ·
-						{{ money(month.received) }} settled
+						{{ money(month.settled) }} settled
 						<template v-if="month.still_due > 0">
 							· {{ money(month.still_due) }} due</template
 						>
@@ -95,7 +95,7 @@
 				<div
 					class="h-1.5 overflow-hidden rounded-full bg-surface-gray-2"
 					role="img"
-					:aria-label="`${money(month.received)} of ${money(month.total)} settled`"
+					:aria-label="`${money(month.settled)} of ${money(month.total)} settled`"
 				>
 					<div
 						class="h-full rounded-full bg-surface-gray-4"
@@ -103,7 +103,7 @@
 					>
 						<div
 							class="h-full rounded-full bg-surface-gray-7"
-							:style="{ width: `${barWidth(month.received, [month])}%` }"
+							:style="{ width: `${barWidth(month.settled, [month])}%` }"
 						/>
 					</div>
 				</div>

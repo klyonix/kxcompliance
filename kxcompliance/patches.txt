@@ -23,3 +23,4 @@ kxcompliance.patches.v1_0.move_prices_to_rate_cards
 kxcompliance.patches.v1_0.complete_billing_masters #2026-11-16 hours
 kxcompliance.patches.v1_0.complete_billing_masters #2026-11-16 layouts
 kxcompliance.patches.v1_0.set_billed_company
+kxcompliance.patches.v1_0.clear_self_review

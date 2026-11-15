@@ -1,9 +1,5 @@
 <template>
-	<Dialog
-		v-model:open="open"
-		title="Record an advance"
-		:actions="[{ label: 'Record advance', variant: 'solid', onClick: save }]"
-	>
+	<Dialog v-model:open="open" title="Record an advance" :actions="actions">
 		<form class="flex flex-col gap-4" @submit.prevent>
 			<p class="text-base text-ink-gray-6">
 				Money a client pays before it is billed. It is held for the client and used against
@@ -77,6 +73,19 @@ const form = reactive({
 	paid_by: "",
 });
 const error = ref("");
+// The actions keep one identity, so the dialog keeps its button busy while saving; and one save
+// at a time, so a second click while the first is on its way records nothing twice.
+const actions = [{ label: "Record advance", variant: "solid", onClick: save }];
+const saving = ref(false);
+async function save(args) {
+	if (saving.value) return;
+	saving.value = true;
+	try {
+		await record(args);
+	} finally {
+		saving.value = false;
+	}
+}
 const checking = ref(false);
 
 const clientOptions = computed(() =>
@@ -106,7 +115,7 @@ watch(open, (now) => {
 	checking.value = false;
 });
 
-async function save({ close }) {
+async function record({ close }) {
 	checking.value = true;
 	error.value = "";
 	if (advanceProblem(form)) return;

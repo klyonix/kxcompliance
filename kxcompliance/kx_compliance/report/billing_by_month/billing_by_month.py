@@ -9,7 +9,8 @@ from kxcompliance.kx_compliance.client_reports import financial_year
 
 
 def execute(filters: dict | None = None):
-	"""The firm's sent bills month by month: how many, before GST, GST, total, received, still due."""
+	"""The firm's sent bills month by month: how many, before GST, GST, total, settled, still due,
+	and the credit notes made."""
 	filters = frappe._dict(filters or {})
 	if not (filters.from_date and filters.to_date):
 		filters.from_date, filters.to_date = financial_year()
@@ -23,6 +24,7 @@ def get_columns():
 		{"label": _("Before GST"), "fieldname": "before_gst", "fieldtype": "Currency", "width": 130},
 		{"label": _("GST"), "fieldname": "gst", "fieldtype": "Currency", "width": 120},
 		{"label": _("Total"), "fieldname": "total", "fieldtype": "Currency", "width": 130},
-		{"label": _("Received"), "fieldname": "received", "fieldtype": "Currency", "width": 130},
+		{"label": _("Settled"), "fieldname": "settled", "fieldtype": "Currency", "width": 130},
 		{"label": _("Still Due"), "fieldname": "still_due", "fieldtype": "Currency", "width": 130},
+		{"label": _("Credit Notes"), "fieldname": "credited", "fieldtype": "Currency", "width": 130},
 	]

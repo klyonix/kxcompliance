@@ -1,9 +1,5 @@
 <template>
-	<Dialog
-		v-model:open="open"
-		:title="`Credit ${bill.name}`"
-		:actions="[{ label: 'Make credit note', variant: 'solid', onClick: save }]"
-	>
+	<Dialog v-model:open="open" :title="`Credit ${bill.name}`" :actions="actions">
 		<form class="flex flex-col gap-4" @submit.prevent>
 			<p class="text-base text-ink-gray-6">
 				A credit note lowers what the client owes on this bill, with the GST on it, up to
@@ -49,6 +45,19 @@ const open = defineModel("open", { type: Boolean, default: false });
 const ALL = "all";
 const form = reactive({ line: ALL, amount: "", reason: "" });
 const error = ref("");
+// The actions keep one identity, so the dialog keeps its button busy while saving; and one save
+// at a time, so a second click while the first is on its way records nothing twice.
+const actions = [{ label: "Make credit note", variant: "solid", onClick: save }];
+const saving = ref(false);
+async function save(args) {
+	if (saving.value) return;
+	saving.value = true;
+	try {
+		await record(args);
+	} finally {
+		saving.value = false;
+	}
+}
 const checking = ref(false);
 
 const openLines = computed(() => props.bill.items.filter((line) => Number(line.creditable) > 0));
@@ -99,7 +108,7 @@ watch(
 	{ immediate: true }
 );
 
-async function save({ close }) {
+async function record({ close }) {
 	checking.value = true;
 	error.value = "";
 	if (creditProblem({ ...form, line: chosen.value })) return;

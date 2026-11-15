@@ -44,6 +44,7 @@ from kxcompliance.kx_compliance.billing import (
 	send_overdue_reminders,
 	state_of,
 	statement,
+	statement_html,
 )
 from kxcompliance.kx_compliance.companies import companies_overview
 from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import client, profile
@@ -264,9 +265,16 @@ class TestRates(IntegrationTestCase):
 
 	def test_a_recurring_charge_needs_the_date_it_is_billed_from(self):
 		card("Billing Retainer", [service("Retainer", "Per month", 5000)])
+		# A recurring line on the default card stops no client from being saved...
+		self.assertTrue(client("Billing Fee Client").name)
+		# ...but one on the card chosen for a client, or its own rates, needs the start date.
 		with self.assertRaisesRegex(frappe.ValidationError, "recurring charges start from"):
-			client("Billing Fee Client")
-		self.assertTrue(client("Billing Fee Client", billing_from="2026-04-01").name)
+			client("Billing Fee Client", rate_card="Billing Retainer")
+		with self.assertRaisesRegex(frappe.ValidationError, "recurring charges start from"):
+			client("Billing Fee Client", own_rates=[service("Retainer", "Per month", 4000)])
+		self.assertTrue(
+			client("Billing Fee Client", rate_card="Billing Retainer", billing_from="2026-04-01").name
+		)
 
 	def test_old_prices_and_fixed_fees_move_onto_rate_cards(self):
 		from kxcompliance.patches.v1_0.move_prices_to_rate_cards import execute as move_prices
@@ -346,6 +354,13 @@ class TestBills(IntegrationTestCase):
 		).name
 		profile(TEST_COMPANY, self.client)
 		self.filed = filing("GSTR-3B (Monthly)", "2026-09-30", "2026-10-20", status="Filed")
+		# Bills stay until the class ends; an earlier test's month bill must not count as this one's.
+		invoice = frappe.qb.DocType("Sales Invoice")
+		(
+			frappe.qb.update(invoice)
+			.set(invoice.kx_billing_key, None)
+			.where(invoice.compliance_client == self.client)
+		).run()
 
 	def test_a_bill_charges_gst_on_fees_and_none_on_government_fees(self):
 		options = bill_options(self.client)
@@ -481,7 +496,7 @@ class TestBills(IntegrationTestCase):
 		)
 		self.assertEqual(len(months), 1)
 		self.assertGreaterEqual(months[0].bills, 1)
-		self.assertEqual(months[0].received + months[0].still_due, months[0].total)
+		self.assertEqual(months[0].settled + months[0].still_due, months[0].total)
 		_columns, waiting = unbilled({"client": self.client})
 		self.assertIn(self.filed, [row.name for row in waiting])
 		self.assertEqual({row.client for row in waiting}, {self.client})
@@ -648,6 +663,8 @@ class TestBills(IntegrationTestCase):
 		self.assertEqual(bill(name)["advance_held"], 2000)
 		send_bill(name)
 		self.assertEqual(bill(name)["outstanding_amount"], 0)  # 1,180 of the advance used
+		# What the advance paid on this bill, with no TDS (not the advance's whole 2,000).
+		self.assertEqual([(row["paid_amount"], row["tds"]) for row in bill(name)["payments"]], [(1180, 0)])
 		self.assertEqual(frappe.db.get_value("Payment Entry", advance, "unallocated_amount"), 820)
 		cancel_payment(advance)
 		self.assertEqual(bill(name)["outstanding_amount"], 1180)
@@ -927,6 +944,61 @@ class TestBills(IntegrationTestCase):
 			self.assertRaisesRegex(frappe.PermissionError, "not a payment against one of your bills"),
 		):
 			receipt_pdf(advance)
+
+	def test_a_months_recurring_charges_go_on_one_bill_only(self):
+		month = frappe.utils.get_first_day(frappe.utils.nowdate())
+		first = create_bill(self.client, recurring=True)["name"]
+		self.assertTrue(any(row["description"].startswith("Fixed fee") for row in bill(first)["items"]))
+		# Not offered again, refused if asked for, and the monthly draft makes no second.
+		self.assertEqual(bill_options(self.client)["recurring"], [])
+		with self.assertRaisesRegex(frappe.ValidationError, "already on a bill"):
+			create_bill(self.client, recurring=True)
+		with patch("frappe.db.commit"), patch("frappe.db.rollback"):
+			make_monthly_drafts(month)
+		self.assertEqual(
+			frappe.db.count(
+				"Sales Invoice",
+				{"compliance_client": self.client, "docstatus": 0, "kx_billing_key": ("is", "set")},
+			),
+			1,
+		)
+		# Once that bill is cancelled (here, a draft deleted), the month may be billed again.
+		cancel_bill(first)
+		self.assertTrue(create_bill(self.client, recurring=True)["name"])
+
+	def test_what_people_type_is_printed_as_text(self):
+		frappe.db.set_value(
+			"Compliance Client", self.client, "billing_address", "<img src=x onerror=alert(1)>"
+		)
+		name = create_bill(self.client, lines=[{"description": "<b>Advisory</b>", "amount": 1000}])["name"]
+		send_bill(name)
+		credit = credit_bill(name, "<script>steal()</script>")["credit_note"]
+		for doc, layout in ((name, BILL_FORMAT), (credit, BILL_FORMAT)):
+			html = frappe.get_print("Sales Invoice", doc, print_format=layout, no_letterhead=1)
+			self.assertNotIn("<img src=x", html)
+			self.assertNotIn("<script>steal", html)
+			self.assertIn("&lt;img src=x", html)
+		statement = statement_html(self.client, frappe.utils.nowdate(), frappe.utils.nowdate())
+		self.assertNotIn("<img src=x", statement)
+		self.assertIn("&lt;img src=x", statement)
+
+	def test_staff_bill_only_the_clients_they_work_on(self):
+		other = client("Billing Other Client", team=(MANAGER,)).name
+		theirs = create_bill(other, lines=[{"description": "Advisory", "amount": 1000}])["name"]
+		scoped = make_user("billing-scoped@example.com", ("Compliance User", "Accounts User"))
+		with self.set_user(scoped):
+			with self.assertRaisesRegex(frappe.PermissionError, "do not work on"):
+				bill(theirs)
+			with self.assertRaises(frappe.PermissionError):
+				bills("all", client=other)
+			self.assertNotIn(theirs, [row.name for row in bills("all", page_length=100)["rows"]])
+			with self.assertRaisesRegex(frappe.PermissionError, "Choose one of your clients"):
+				billing_summary()
+		# Accounts staff without the app's roles bill every client, and see their accounts.
+		make_user(ACCOUNTS, ("Accounts User",))
+		with self.set_user(ACCOUNTS):
+			self.assertEqual(bill(theirs)["name"], theirs)
+			self.assertIn("commitment", client_summary(other))
 
 	def test_a_draft_is_not_paid(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]

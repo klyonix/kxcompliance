@@ -515,7 +515,7 @@ export const TOURS = [
 			{
 				target: ["record-facts"],
 				title: "At a glance",
-				text: "When it is due, who looks after it and whose it is, in one band across the top.",
+				text: "Who at the firm looks after the client, its companies, open filings and documents asked for, in one band across the top.",
 			},
 			{
 				target: ["record-activity"],
@@ -740,12 +740,12 @@ export const TOURS = [
 	},
 	{
 		id: "licence-check",
-		title: "Licence check",
+		title: "Licence Check",
 		route: "LicenceCheck",
 		licenceCheck: true,
 		steps: [
 			{
-				title: "Licence check",
+				title: "Licence Check",
 				text: "Before you sell to a customer or buy from a supplier, check they hold the licences the sale needs.",
 			},
 			{

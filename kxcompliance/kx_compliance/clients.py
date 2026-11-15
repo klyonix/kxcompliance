@@ -406,3 +406,52 @@ def client_detail(name: str) -> dict:
 		"year": {**year, "from_date": from_date, "to_date": to_date, "currency": currency_of(names)},
 		**add_up(counts, names),
 	}
+
+
+# Where each record keeps its company, for letting the people who hold it see it.
+HOLDER_COMPANY_FIELDS = {
+	"Compliance Task": "company",
+	"Compliance Item": "company",
+	"Legal Case": "company",
+	"Trademark": "applicant",
+	"Legal Date": "company",
+}
+
+
+def let_holders_see(doc, method=None):
+	"""on_update: whoever is made responsible for or reviewer of a record still sees it.
+
+	Someone on one client's team is kept to that client's companies by User Permissions, and
+	Frappe applies those on top of permissions.py, so work they hold at another client's company
+	would be hidden from them. They are allowed that company too; permissions.py still shows them
+	only the records there they hold, since they are not on that client's team. The permission
+	stays if the work later moves on, which shows them nothing more there than the records they
+	hold (or did, for the ones with no query conditions: signatories and company profiles).
+	"""
+	company_field = HOLDER_COMPANY_FIELDS[doc.doctype]
+	company = doc.get(company_field)
+	if not company or not any(
+		doc.has_value_changed(field) for field in ("responsible", "reviewer", company_field)
+	):
+		return
+	for user in {doc.get("responsible"), doc.get("reviewer")} - {None, ""}:
+		allow_company(user, company)
+
+
+def allow_company(user: str, company: str):
+	"""Let a person kept to some companies see one more; nothing for anyone not kept to any."""
+	if not is_restricted(user) or CLIENT_ROLE in frappe.get_roles(user):
+		return
+	kept_to = frappe.get_all("User Permission", filters={"user": user, "allow": "Company"}, pluck="for_value")
+	if not kept_to or company in kept_to:
+		return
+	# Made by the app for the work the person holds, not by the person assigning it.
+	frappe.get_doc(
+		{
+			"doctype": "User Permission",
+			"user": user,
+			"allow": "Company",
+			"for_value": company,
+			"apply_to_all_doctypes": 1,
+		}
+	).insert(ignore_permissions=True)

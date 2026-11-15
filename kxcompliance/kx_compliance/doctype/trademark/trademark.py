@@ -6,7 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, add_months, getdate
 
-from kxcompliance.kx_compliance.legal import pass_company_to_dates
+from kxcompliance.kx_compliance.legal import pass_company_to_dates, pass_people_to_dates
+from kxcompliance.kx_compliance.register import check_reassignment
 
 # A date entered on the trademark, the deadline it starts, and how long that deadline runs.
 DEADLINES = (
@@ -20,6 +21,7 @@ RENEWAL_ITEM_TYPE = "Trademark Registration"
 
 class Trademark(Document):
 	def validate(self):
+		check_reassignment(self)
 		self.validate_classes()
 		if not self.renewal_item and self.filing_date:
 			self.valid_until = add_months(self.filing_date, VALIDITY_MONTHS)
@@ -52,6 +54,8 @@ class Trademark(Document):
 	def on_update(self):
 		if self.has_value_changed("applicant"):
 			pass_company_to_dates(self.doctype, self.name, self.applicant)
+		if self.has_value_changed("responsible") or self.has_value_changed("reviewer"):
+			pass_people_to_dates(self.doctype, self.name, self.responsible, self.reviewer)
 		for event_field, kind, months, days in DEADLINES:
 			if self.get(event_field) and self.has_value_changed(event_field):
 				self.set_deadline(

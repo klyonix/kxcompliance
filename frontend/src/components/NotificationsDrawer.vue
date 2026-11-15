@@ -34,6 +34,9 @@
 import { onBeforeUnmount, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { NotificationPanel } from "@framework/ui/components/Notifications/index.ts";
+import { toast } from "frappe-ui";
+import { mayUseDesk } from "@/boot";
+import { t } from "@/lib/i18n";
 import { deskRoute } from "@/navigation";
 import { recordRoute } from "@/lib/records";
 import { notifications, panelOpen } from "@/stores/notifications";
@@ -75,6 +78,8 @@ function open(notification) {
 	if (!doctype) return;
 	const to = recordRoute(doctype, name);
 	if (to) router.push(to);
-	else window.location.href = deskRoute(doctype, name);
+	// Only someone who uses the Desk is sent there; a client's login is told where it is.
+	else if (mayUseDesk()) window.location.href = deskRoute(doctype, name);
+	else toast.info(t("This opens in the Desk. Ask your firm about it."));
 }
 </script>

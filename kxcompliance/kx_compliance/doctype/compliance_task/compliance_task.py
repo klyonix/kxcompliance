@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate, nowdate
 
-from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, is_approver
+from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, check_reassignment, is_approver
 
 FILED_STATUSES = ("Filed", "Filed Late")
 # Set when the task is made or by an extension; nobody edits them by hand.
@@ -27,6 +27,7 @@ SCHEDULE_FIELDS = (
 
 class ComplianceTask(Document):
 	def validate(self):
+		check_reassignment(self)
 		self.effective_due_date = self.extended_due_date or self.due_date
 		before = self.get_doc_before_save()
 		previous = before.status if before else None

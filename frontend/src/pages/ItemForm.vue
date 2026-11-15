@@ -162,17 +162,21 @@
 					People and cost
 				</h2>
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+					<!-- Once the item exists, a Compliance Manager changes who looks after it. -->
 					<FormControl
 						v-model="form.responsible"
 						type="select"
 						label="Responsible"
 						:options="[{ label: 'Choose someone', value: '' }, ...people]"
+						:disabled="peopleFixed"
+						:description="peopleFixed ? 'A Compliance Manager changes this.' : ''"
 					/>
 					<FormControl
 						v-model="form.reviewer"
 						type="select"
 						label="Reviewer"
 						:options="[{ label: 'No reviewer', value: '' }, ...people]"
+						:disabled="peopleFixed"
 					/>
 					<FormControl v-model="form.cost" type="number" label="Cost" />
 				</div>
@@ -208,7 +212,7 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call, createDoc, getDoc, updateDoc } from "@/api";
-import { boot } from "@/boot";
+import { boot, isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import { pickerFormat } from "@/lib/format";
 import { DSC_TYPE } from "@/lib/items";
@@ -248,6 +252,7 @@ const options = ref(null);
 const signatoryRows = ref([]);
 const error = ref("");
 const saveError = ref("");
+const peopleFixed = computed(() => Boolean(props.name) && !isManager());
 const saving = ref(false);
 const form = reactive({
 	...Object.fromEntries(FIELDS.map((field) => [field, ""])),

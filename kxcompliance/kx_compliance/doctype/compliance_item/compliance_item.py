@@ -11,6 +11,7 @@ CUSTODY_STATES = ("With the Firm", "With the Client", "With the Holder", "Not Kn
 
 from kxcompliance.kx_compliance.doctype.trademark.trademark import follow_renewal
 from kxcompliance.kx_compliance.register import (
+	check_reassignment,
 	compute_status,
 	due_soon_days,
 	get_type_rules,
@@ -21,6 +22,7 @@ from kxcompliance.kx_compliance.register import (
 
 class ComplianceItem(Document):
 	def validate(self):
+		check_reassignment(self)
 		rules = get_type_rules([self.item_type]).get(self.item_type) or frappe._dict()
 		self.set_holder()
 		self.set_custody()

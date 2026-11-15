@@ -1,7 +1,7 @@
 <template>
 	<AppPageHeader
 		title="Blocks and warnings"
-		:parent="{ label: 'Licence rules', route: { name: 'LicenceRules' } }"
+		:parent="{ label: 'Customer and supplier licences', route: { name: 'LicenceRules' } }"
 	/>
 
 	<div class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">

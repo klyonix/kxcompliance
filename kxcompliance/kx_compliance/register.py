@@ -4,6 +4,7 @@
 """Rules shared by the Compliance Item form and the daily job."""
 
 import frappe
+from frappe import _
 from frappe.utils import date_diff, getdate
 
 DEFAULT_DUE_SOON_DAYS = 30
@@ -88,3 +89,22 @@ def open_renewal_statuses(items: list[str]) -> dict[str, str]:
 
 def is_approver(user: str | None = None) -> bool:
 	return bool(APPROVER_ROLES & set(frappe.get_roles(user)))
+
+
+PEOPLE_FIELDS = ("responsible", "reviewer")
+
+
+def check_reassignment(doc):
+	"""Once a record exists, only a Compliance Manager changes who is responsible for or reviews
+	it; whoever creates one names them. Held here so every way of saving keeps the rule."""
+	if doc.is_new() or is_approver():
+		return
+	for field in PEOPLE_FIELDS:
+		if doc.has_value_changed(field):
+			before = (doc.get_doc_before_save() or {}).get(field) or _("nobody")
+			frappe.throw(
+				_("Only a Compliance Manager can change {0} of {1} from {2} to {3}.").format(
+					_(doc.meta.get_label(field)), doc.name, before, doc.get(field) or _("nobody")
+				),
+				frappe.PermissionError,
+			)

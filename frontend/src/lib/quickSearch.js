@@ -58,7 +58,7 @@ export function goToItems({
 		records && { label: "Add a signatory", icon: "lucide-pen-line", route: "SignatoryNew" },
 		manager && firm && { label: "Add a client", icon: "lucide-user-plus", route: "ClientNew" },
 		manager && {
-			label: "File several at once",
+			label: "File in bulk",
 			icon: "lucide-list-checks",
 			route: "BulkFiling",
 		},

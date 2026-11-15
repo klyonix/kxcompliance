@@ -275,7 +275,15 @@ has_permission = {
 
 calendars = ["Compliance Item", "Compliance Task", "Legal Date"]
 
+# Whoever holds a firm's work at another client's company still sees it (clients.py).
+_HOLDERS_SEE = {"on_update": "kxcompliance.kx_compliance.clients.let_holders_see"}
+
 doc_events = {
+	"Compliance Task": _HOLDERS_SEE,
+	"Compliance Item": _HOLDERS_SEE,
+	"Legal Case": _HOLDERS_SEE,
+	"Trademark": _HOLDERS_SEE,
+	"Legal Date": _HOLDERS_SEE,
 	"Notification Log": {
 		"before_insert": "kxcompliance.kx_compliance.app_links.point_notification_to_app",
 	},

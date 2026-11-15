@@ -32,6 +32,7 @@ declare module 'vue' {
     LucideChevronUp: typeof import('~icons/lucide/chevron-up')['default']
     LucideDownload: typeof import('~icons/lucide/download')['default']
     LucidePaperclip: typeof import('~icons/lucide/paperclip')['default']
+    MarkStatusDialog: typeof import('./src/components/MarkStatusDialog.vue')['default']
     NoticeEditor: typeof import('./src/components/NoticeEditor.vue')['default']
     NotificationBell: typeof import('./src/components/NotificationBell.vue')['default']
     NotificationsDrawer: typeof import('./src/components/NotificationsDrawer.vue')['default']

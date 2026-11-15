@@ -47,7 +47,7 @@
 // A case moves on: stayed, reserved for order, closed with its outcome, or opened again.
 import { computed, reactive, ref, watch } from "vue";
 import { Dialog, FormControl, toast } from "frappe-ui";
-import { getList, runMethod } from "@/api";
+import { runMethod } from "@/api";
 import { noteText } from "@/lib/editing";
 import { formatDate, pickerFormat } from "@/lib/format";
 import {
@@ -90,18 +90,7 @@ watch(open, async (now) => {
 	scheduled.value = [];
 	if (!isOpen) return;
 	try {
-		scheduled.value = (
-			await getList("Legal Date", {
-				fields: ["name", "kind", "date"],
-				filters: [
-					["reference_doctype", "=", "Legal Case"],
-					["reference_name", "=", props.legalCase.name],
-					["status", "=", "Scheduled"],
-				],
-				orderBy: "date asc",
-				limit: 50,
-			})
-		).rows;
+		scheduled.value = await scheduledDates("Legal Case", props.legalCase.name);
 	} catch {
 		// The list is only shown; the server cancels the dates whether or not it is.
 		scheduled.value = [];

@@ -21,6 +21,15 @@ REFERENCE_TITLES = {"Legal Case": "title", "Trademark": "mark"}
 # The field that names the company a case or trademark belongs to.
 REFERENCE_COMPANIES = {"Legal Case": "company", "Trademark": "applicant"}
 CLOSED_CASE_STATUSES = ("Disposed - In Our Favour", "Disposed - Against Us", "Settled", "Withdrawn")
+ENDED_MARK_STATUSES = ("Refused", "Abandoned", "Withdrawn", "Removed")
+# What the registry sends at each stage of a trademark, recorded as it moves there; the dates
+# start the trademark's deadlines (see Trademark.DEADLINES).
+MARK_STATUS_FIELDS = {
+	"Objected": ("examination_report_on",),
+	"Accepted and Advertised": ("journal_number", "journal_date"),
+	"Opposed": ("opposition_number", "opposition_notice_on"),
+	"Registered": ("registration_number", "registration_date"),
+}
 REMINDER_DAYS = (7, 2, 1)
 DATE_FIELDS = [
 	"name",

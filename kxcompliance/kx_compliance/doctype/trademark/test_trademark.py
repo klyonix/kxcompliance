@@ -153,3 +153,39 @@ class TestTrademark(IntegrationTestCase):
 			str(frappe.db.get_value("Compliance Item", trademark.renewal_item, "valid_until")), "2026-02-01"
 		)
 		self.assertEqual([str(day) for day in dates(trademark.name, "Other")], ["2030-01-15"])
+
+	def test_moving_a_mark_on_records_what_the_registry_sent_and_its_deadline(self):
+		mark = make_trademark()
+		with self.set_user(HOLDER):
+			frappe.get_doc("Trademark", mark.name).change_status(
+				"Objected", {"examination_report_on": "2026-11-02"}
+			)
+		self.assertEqual(frappe.db.get_value("Trademark", mark.name, "status"), "Objected")
+		self.assertEqual([str(day) for day in dates(mark.name, "Examination Report Reply")], ["2026-12-02"])
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot be set when marking"):
+			frappe.get_doc("Trademark", mark.name).change_status("Refused", {"registration_number": "1"})
+
+	def test_registering_needs_its_number_and_date(self):
+		mark = make_trademark()
+		with self.assertRaisesRegex(frappe.ValidationError, "before marking"):
+			frappe.get_doc("Trademark", mark.name).change_status("Registered", {})
+		frappe.get_doc("Trademark", mark.name).change_status(
+			"Registered", {"registration_number": "R-77", "registration_date": "2026-11-01"}
+		)
+		self.assertTrue(frappe.db.get_value("Trademark", mark.name, "renewal_item"))
+
+	def test_an_ended_mark_has_nothing_left_scheduled(self):
+		mark = make_trademark(examination_report_on="2026-11-02")
+		self.assertTrue(dates(mark.name, "Examination Report Reply"))
+		frappe.get_doc("Trademark", mark.name).change_status("Abandoned")
+		self.assertFalse(
+			frappe.db.exists(
+				"Legal Date",
+				{"reference_doctype": "Trademark", "reference_name": mark.name, "status": "Scheduled"},
+			)
+		)
+
+	def test_only_its_holder_reviewer_or_a_manager_moves_a_mark(self):
+		mark = make_trademark()
+		with self.set_user(OTHER_HOLDER), self.assertRaises(frappe.PermissionError):
+			frappe.get_doc("Trademark", mark.name).change_status("Objected")

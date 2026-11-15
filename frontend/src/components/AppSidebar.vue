@@ -1,12 +1,14 @@
 <template>
-	<Sidebar v-model:collapsed="collapsed">
+	<Sidebar v-model:collapsed="collapsed" collapsed-width="3.5rem">
 		<SidebarHeader
 			:title="boot.appName"
 			:subtitle="boot.userFullname"
 			:logo="boot.appLogo || undefined"
 			:menu-items="menu"
 		/>
-		<div class="flex flex-1 flex-col gap-0.5 overflow-y-auto" data-tour="nav">
+		<!-- The rows keep a margin from the edges, so the open page's highlight never touches the
+		border, expanded or collapsed. -->
+		<div class="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2" data-tour="nav">
 			<template v-for="section in sections" :key="section.route">
 				<template v-if="section.route === 'Settings'">
 					<!-- Collapsed to icons, the group has no room to open: the icon opens Settings. -->

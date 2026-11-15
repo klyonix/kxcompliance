@@ -35,11 +35,35 @@ FEED_TITLES = {
 }
 
 
-def by_date(doctype: str, date_field: str, filters: dict) -> list[dict]:
+# Where each record keeps its company, to narrow the overview to one client's companies.
+COMPANY_FIELDS = {
+	"Compliance Item": "company",
+	"Compliance Task": "company",
+	"Legal Date": "company",
+	"Legal Case": "company",
+	"Trademark": "applicant",
+	"Document Request": "company",
+}
+
+
+def within(doctype: str, filters: dict | list | None, companies: list[str] | None):
+	"""The filters, narrowed to these companies; None is every company. Records with no company
+	(licence checks, privacy) are the firm's own and stay as they are."""
+	field = COMPANY_FIELDS.get(doctype)
+	if companies is None or not field:
+		return filters or {}
+	# No company at all narrows to nothing, as a client with no companies yet should.
+	wanted = list(companies) or [""]
+	if isinstance(filters, list):
+		return [*filters, [field, "in", wanted]]
+	return {**(filters or {}), field: ("in", wanted)}
+
+
+def by_date(doctype: str, date_field: str, filters: dict, companies: list[str] | None = None) -> list[dict]:
 	"""How many records fall on each date, as [{date, count}]."""
 	rows = frappe.get_list(
 		doctype,
-		filters=filters,
+		filters=within(doctype, filters, companies),
 		fields=[f"{date_field} as date", COUNT],
 		group_by=date_field,
 		order_by=None,
@@ -51,7 +75,7 @@ def sum_between(rows: list[dict], start, end) -> int:
 	return sum(row["count"] for row in rows if start <= row["date"] <= end)
 
 
-def urgency(today) -> list[dict]:
+def urgency(today, companies: list[str] | None = None) -> list[dict]:
 	"""Late, due this week and due later in the month, across filings, own licences and legal
 	dates; each split by kind, with the filters that list exactly what it counts."""
 	week, month = add_days(today, SOON_DAYS), add_days(today, MONTH_DAYS)
@@ -80,7 +104,7 @@ def urgency(today) -> list[dict]:
 		("month", _("Due in 30 days"), [["between", [str(add_days(week, 1)), str(month)]]]),
 	]
 	counted = {
-		label: by_date(doctype, field, {row[0]: (row[1], row[2]) for row in base})
+		label: by_date(doctype, field, {row[0]: (row[1], row[2]) for row in base}, companies)
 		for label, doctype, field, base in kinds
 	}
 	long_ago = getdate("1900-01-01")
@@ -105,9 +129,11 @@ def urgency(today) -> list[dict]:
 		tiles.append(
 			{"key": key, "label": title, "value": sum(part["value"] for part in parts), "parts": parts}
 		)
-	review = frappe.get_list("Compliance Task", filters={"status": "Ready for Review"}, fields=[COUNT])[0][
-		"count"
-	]
+	review = frappe.get_list(
+		"Compliance Task",
+		filters=within("Compliance Task", {"status": "Ready for Review"}, companies),
+		fields=[COUNT],
+	)[0]["count"]
 	tiles.append(
 		{
 			"key": "review",
@@ -130,7 +156,7 @@ def month_starts(first, count: int) -> list:
 	return [add_months(first, step) for step in range(count)]
 
 
-def due_by_month(today) -> list[dict]:
+def due_by_month(today, companies: list[str] | None = None) -> list[dict]:
 	"""What falls due in each of the next months: filings, licence renewals and legal dates."""
 	first = get_first_day(today)
 	end = add_days(add_months(first, MONTHS_AHEAD), -1)
@@ -139,13 +165,15 @@ def due_by_month(today) -> list[dict]:
 		"Compliance Task",
 		"effective_due_date",
 		{"status": ("not in", CLOSED_TASK_STATUSES), "effective_due_date": window},
+		companies,
 	)
 	items = by_date(
 		"Compliance Item",
 		"valid_until",
 		{"is_cancelled": 0, "holder_type": ("not in", PARTY_HOLDERS), "valid_until": window},
+		companies,
 	)
-	dates = by_date("Legal Date", "date", {"status": "Scheduled", "date": window})
+	dates = by_date("Legal Date", "date", {"status": "Scheduled", "date": window}, companies)
 	months = []
 	for start in month_starts(first, MONTHS_AHEAD):
 		stop = add_days(add_months(start, 1), -1)
@@ -160,13 +188,17 @@ def due_by_month(today) -> list[dict]:
 	return months
 
 
-def filed_by_month(today) -> list[dict]:
+def filed_by_month(today, companies: list[str] | None = None) -> list[dict]:
 	"""Filings that fell due in each of the last months: filed on time, filed late, still open."""
 	first = add_months(get_first_day(today), -(MONTHS_BACK - 1))
 	window = ("between", [first, today])
 	rows = frappe.get_list(
 		"Compliance Task",
-		filters={"effective_due_date": window, "status": ("not in", ["Not Applicable", "Cancelled"])},
+		filters=within(
+			"Compliance Task",
+			{"effective_due_date": window, "status": ("not in", ["Not Applicable", "Cancelled"])},
+			companies,
+		),
 		fields=["effective_due_date as date", "status", COUNT],
 		group_by="effective_due_date, status",
 		order_by=None,
@@ -190,7 +222,7 @@ def filed_by_month(today) -> list[dict]:
 	return months
 
 
-def recent_activity() -> list[dict]:
+def recent_activity(companies: list[str] | None = None) -> list[dict]:
 	"""The latest changes to filings, licences, cases, trademarks and document requests, with
 	who made them. Only what the person may read: each record's title is read with get_list."""
 	# Only System Managers read Version, so the who-and-when is read here; what is shown is limited
@@ -209,7 +241,7 @@ def recent_activity() -> list[dict]:
 	for doctype, names in by_type.items():
 		for row in frappe.get_list(
 			doctype,
-			filters={"name": ("in", list(names))},
+			filters=within(doctype, {"name": ("in", list(names))}, companies),
 			fields=["name", f"{FEED_TITLES[doctype]} as title"],
 			limit=len(names),
 		):
@@ -235,11 +267,11 @@ def recent_activity() -> list[dict]:
 	return feed
 
 
-def get_dashboard(today) -> dict:
+def get_dashboard(today, companies: list[str] | None = None) -> dict:
 	today = getdate(today)
 	return {
-		"urgency": urgency(today),
-		"due_by_month": due_by_month(today),
-		"filed_by_month": filed_by_month(today),
-		"recent": recent_activity(),
+		"urgency": urgency(today, companies),
+		"due_by_month": due_by_month(today, companies),
+		"filed_by_month": filed_by_month(today, companies),
+		"recent": recent_activity(companies),
 	}

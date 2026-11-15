@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
 	REPORTS,
+	clientDefaults,
 	filledFilters,
 	financialYear,
 	initialFilters,
@@ -15,8 +16,8 @@ import {
 	reportsFor,
 	rowsOf,
 	sortRows,
-	toCsv,
 	splitTotal,
+	toCsv,
 } from "./reports";
 
 const REPORT_DIR = path.resolve(import.meta.dirname, "../../../kxcompliance/kx_compliance/report");
@@ -121,5 +122,22 @@ describe("finding a report", () => {
 	it("shrugs off a damaged list", () => {
 		const storage = { getItem: () => "{not json", setItem: () => {} };
 		expect(recentReports(all, storage)).toEqual([]);
+	});
+});
+
+describe("a report opened with one client chosen", () => {
+	const byClient = { filters: [{ fieldname: "client" }, { fieldname: "company" }] };
+	const byCompany = { filters: [{ fieldname: "company" }] };
+	const chosen = { client: "Sunrise Group", companies: ["Sunrise Foods"] };
+
+	it("starts on that client, or on its only company", () => {
+		expect(clientDefaults(byClient, {}, chosen)).toEqual({ client: "Sunrise Group" });
+		expect(clientDefaults(byCompany, {}, chosen)).toEqual({ company: "Sunrise Foods" });
+	});
+
+	it("leaves a client of several companies, the address and no client alone", () => {
+		expect(clientDefaults(byCompany, {}, { ...chosen, companies: ["A", "B"] })).toEqual({});
+		expect(clientDefaults(byClient, { client: "" }, chosen)).toEqual({});
+		expect(clientDefaults(byClient, {}, {})).toEqual({});
 	});
 });

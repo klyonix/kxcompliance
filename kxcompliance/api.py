@@ -263,12 +263,26 @@ def my_work() -> dict:
 
 
 @frappe.whitelist(methods=["GET"])
-def overview() -> dict:
-	"""The managers' numbers across the register, filings, legal work and party licences."""
+def overview(companies: str | None = None) -> dict:
+	"""The managers' numbers across the register, filings, legal work and party licences.
+
+	`companies`, a JSON list of company names, narrows them to one client's (the client filter);
+	none means every company. A GET request carries it as text, so it is read and checked here.
+	"""
 	check_app_access()
 	if not is_approver():
 		frappe.throw(_("Only a Compliance Manager can open the overview."), frappe.PermissionError)
-	return get_overview()
+	return get_overview(company_list(companies))
+
+
+def company_list(companies: str | None) -> list[str] | None:
+	"""The client filter's companies from a GET request's text: a list of names, or None for all."""
+	chosen = frappe.parse_json(companies) if companies else None
+	if chosen is not None and not (
+		isinstance(chosen, list) and all(isinstance(name, str) for name in chosen)
+	):
+		frappe.throw(_("Companies must be a list of company names."), frappe.ValidationError)
+	return chosen
 
 
 @frappe.whitelist(methods=["POST"])
@@ -921,21 +935,21 @@ def month_events(start: str, end: str, companies: str | None = None) -> list[dic
 	filter); none means all. A GET request carries it as text, so it is read and checked here.
 	"""
 	check_app_access()
-	chosen = frappe.parse_json(companies) if companies else None
-	if chosen is not None and not (
-		isinstance(chosen, list) and all(isinstance(name, str) for name in chosen)
-	):
-		frappe.throw(_("Companies must be a list of company names."), frappe.ValidationError)
-	return month_calendar.month_events(start, end, chosen)
+	return month_calendar.month_events(start, end, company_list(companies))
 
 
 @frappe.whitelist(methods=["GET"])
-def bulk_filing_choices() -> list[dict]:
-	"""The returns and periods the person has open filings for, soonest due first, for filing in bulk."""
+def bulk_filing_choices(companies: str | None = None) -> list[dict]:
+	"""The returns and periods the person has open filings for, soonest due first, for filing in bulk;
+	`companies` (the client filter, as for the overview) keeps to one client's."""
 	check_app_access()
+	filters = {"status": ("in", BULK_STATUSES)}
+	chosen = company_list(companies)
+	if chosen is not None:
+		filters["company"] = ("in", chosen or [""])
 	rows = frappe.get_list(
 		"Compliance Task",
-		filters={"status": ("in", BULK_STATUSES)},
+		filters=filters,
 		fields=[
 			"obligation_template",
 			"period_end",

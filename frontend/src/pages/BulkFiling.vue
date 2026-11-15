@@ -5,6 +5,8 @@
 	/>
 
 	<div class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
+		<!-- One client's returns, or every client's. -->
+		<ClientPicker />
 		<p
 			v-if="error"
 			role="alert"
@@ -217,6 +219,7 @@ import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call, getDoc, getList } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import ClientPicker from "@/components/ClientPicker.vue";
 import {
 	BULK_FIELDS,
 	BULK_STATUSES,
@@ -232,6 +235,8 @@ import { isoDate } from "@/lib/obligations";
 import { SAVED_ON_DEVICE, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
 import { notLoaded } from "@/offline/reachability";
+import { companyFilters } from "@/lib/clientFilter";
+import { chosenCompanies, loadClients } from "@/stores/clientFilter";
 
 const route = useRoute();
 const router = useRouter();
@@ -308,6 +313,7 @@ async function loadRows() {
 					["obligation_template", "=", template],
 					["period_end", "=", periodEnd],
 					["status", "in", BULK_STATUSES],
+					...companyFilters(chosenCompanies.value),
 				],
 				orderBy: "company asc",
 				limit: 500,
@@ -381,9 +387,26 @@ async function saveAll() {
 
 watch(chosen, loadRows);
 
+async function loadChoices() {
+	const params = chosenCompanies.value ? { companies: chosenCompanies.value } : {};
+	choices.value = await call("kxcompliance.api.bulk_filing_choices", params);
+}
+
+// Another client: its own returns to choose from, and the chosen one's filings again.
+watch(chosenCompanies, async () => {
+	try {
+		await loadChoices();
+		if (!choices.value.some((choice) => choiceKey(choice) === chosen.value)) chosen.value = "";
+		else loadRows();
+	} catch (err) {
+		error.value = err.isNetwork ? notLoaded("the returns to file") : err.message;
+	}
+});
+
 onMounted(async () => {
 	try {
-		choices.value = await call("kxcompliance.api.bulk_filing_choices");
+		await loadClients();
+		await loadChoices();
 		const { return: template, period } = route.query;
 		const wanted = choices.value.find(
 			(choice) => choice.obligation_template === template && choice.period_end === period

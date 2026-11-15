@@ -386,3 +386,14 @@ export function toCsv(columns, rows) {
 		lines.push(columns.map((column) => cell(row[column.fieldname])).join(","));
 	return lines.join("\n");
 }
+
+// A firm with one client chosen opens a report on that client: its Client filter, or its Company
+// filter when the client has just one company. A filter given in the address wins.
+export function clientDefaults(report, query = {}, { client = "", companies = null } = {}) {
+	const has = (fieldname) => report.filters.some((filter) => filter.fieldname === fieldname);
+	const given = typeof query.client === "string" || typeof query.company === "string";
+	if (!client || given) return {};
+	if (has("client")) return { client };
+	if (has("company") && companies?.length === 1) return { company: companies[0] };
+	return {};
+}

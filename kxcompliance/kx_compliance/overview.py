@@ -15,7 +15,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, nowdate
 
-from kxcompliance.kx_compliance.dashboard import get_dashboard
+from kxcompliance.kx_compliance.dashboard import get_dashboard, within
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 
 COUNT = {"COUNT": "*", "as": "count"}
@@ -38,10 +38,12 @@ OPEN_REQUEST_STATUSES = ["Open", "In Progress"]
 RENEWING = ["Renewal Planned", "Renewal in Progress"]
 
 
-def grouped_counts(doctype: str, group_by: list[str], filters: dict | None = None) -> list[dict]:
+def grouped_counts(
+	doctype: str, group_by: list[str], filters: dict | None = None, companies: list[str] | None = None
+) -> list[dict]:
 	return frappe.get_list(
 		doctype,
-		filters=filters or {},
+		filters=within(doctype, filters, companies),
 		fields=[*group_by, COUNT],
 		group_by=", ".join(group_by),
 		order_by=None,
@@ -59,8 +61,8 @@ def total(rows: list[dict], **match) -> int:
 	)
 
 
-def count(doctype: str, filters: dict) -> int:
-	return frappe.get_list(doctype, filters=filters, fields=[COUNT])[0]["count"]
+def count(doctype: str, filters: dict, companies: list[str] | None = None) -> int:
+	return frappe.get_list(doctype, filters=within(doctype, filters, companies), fields=[COUNT])[0]["count"]
 
 
 def desk_link(doctype: str, filters: dict) -> str:
@@ -102,19 +104,20 @@ def list_filters(filters: dict) -> list[list]:
 	return out
 
 
-def get_overview() -> dict:
+def get_overview(companies: list[str] | None = None) -> dict:
+	"""The overview, of every company the person may see, or only of these (one client's)."""
 	today = nowdate()
 	week = ("between", [today, add_days(today, 7)])
 	not_party = ("not in", PARTY_HOLDERS)
 	is_party = ("in", PARTY_HOLDERS)
 
-	items = grouped_counts("Compliance Item", ["status", "holder_type"])
+	items = grouped_counts("Compliance Item", ["status", "holder_type"], companies=companies)
 	own = [row for row in items if row.holder_type not in PARTY_HOLDERS]
 	parties = [row for row in items if row.holder_type in PARTY_HOLDERS]
-	tasks = grouped_counts("Compliance Task", ["status", "is_overdue"])
-	dates = grouped_counts("Legal Date", ["status", "is_overdue"])
-	cases = grouped_counts("Legal Case", ["status", "risk"])
-	marks = grouped_counts("Trademark", ["status"])
+	tasks = grouped_counts("Compliance Task", ["status", "is_overdue"], companies=companies)
+	dates = grouped_counts("Legal Date", ["status", "is_overdue"], companies=companies)
+	cases = grouped_counts("Legal Case", ["status", "risk"], companies=companies)
+	marks = grouped_counts("Trademark", ["status"], companies=companies)
 
 	expired = ["Expired", "Lapsed"]
 	return {
@@ -323,30 +326,33 @@ def get_overview() -> dict:
 				],
 			},
 		],
-		"on_time": on_time_rate(today),
-		"scores": scores_worst_first(),
-		"dashboard": get_dashboard(today),
+		"on_time": on_time_rate(today, companies),
+		"scores": scores_worst_first(companies),
+		"dashboard": get_dashboard(today, companies),
 	}
 
 
-def scores_worst_first() -> list[dict]:
+def scores_worst_first(companies: list[str] | None = None) -> list[dict]:
 	"""Every company the person may see that is set up, by score, the lowest first."""
 	# Imported here: score.py takes its case statuses and party holders from this module.
 	from kxcompliance.kx_compliance.score import company_scores
 
-	companies = frappe.get_list("Company Compliance Profile", pluck="company", limit=1000)
-	scores = company_scores(companies)
-	rows = [{"company": company, **scores[company]} for company in companies]
+	seen = frappe.get_list("Company Compliance Profile", pluck="company", limit=1000)
+	if companies is not None:
+		seen = [company for company in seen if company in companies]
+	scores = company_scores(seen)
+	rows = [{"company": company, **scores[company]} for company in seen]
 	return sorted(rows, key=lambda row: (row["score"], -row["late_fees_so_far"], row["company"]))
 
 
-def on_time_rate(today: str) -> dict:
+def on_time_rate(today: str, companies: list[str] | None = None) -> dict:
 	"""Filings due in the last twelve months: filed on time, filed late, and overdue."""
 	since = add_months(today, -ON_TIME_MONTHS)
 	rows = grouped_counts(
 		"Compliance Task",
 		["status", "is_overdue"],
 		{"effective_due_date": ("between", [since, today])},
+		companies,
 	)
 	on_time = total(rows, status="Filed")
 	late = total(rows, status="Filed Late")

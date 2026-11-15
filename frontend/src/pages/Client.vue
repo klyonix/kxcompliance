@@ -80,6 +80,8 @@
 				</dl>
 			</section>
 
+			<BillingCard v-if="clientLogin || boot.mayBill" :client="name" :own="clientLogin" />
+
 			<section class="flex flex-col gap-1" aria-labelledby="requests-heading">
 				<div class="flex items-center justify-between gap-3 pb-2">
 					<h2 id="requests-heading" class="text-base font-semibold text-ink-gray-8">
@@ -231,6 +233,7 @@ import { chooseClient } from "@/stores/clientFilter";
 import { call } from "@/api";
 import { boot, isClientLogin, isManager, mayRecord, mayUseDesk } from "@/boot";
 import AskDocument from "@/components/AskDocument.vue";
+import BillingCard from "@/components/BillingCard.vue";
 import ScoreBadge from "@/components/ScoreBadge.vue";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RecordFrame from "@/components/RecordFrame.vue";

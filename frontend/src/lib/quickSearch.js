@@ -37,6 +37,7 @@ export function goToItems({
 	manager = isManager(),
 	records = mayRecord(),
 	firm = boot.accountType === "CA/CS Firm",
+	bills = boot.mayBill,
 } = {}) {
 	const pages = [...menu.filter((section) => section.route !== "Search"), ...settings].map(
 		(page) => ({
@@ -58,6 +59,7 @@ export function goToItems({
 			route: "RecordEvent",
 		},
 		records && { label: "Add a one-off filing", icon: "lucide-file-plus", route: "NewFiling" },
+		bills && { label: "New bill", icon: "lucide-receipt", route: "NewBill" },
 		records && { label: "Add a signatory", icon: "lucide-pen-line", route: "SignatoryNew" },
 		manager && firm && { label: "Add a client", icon: "lucide-user-plus", route: "ClientNew" },
 		manager && {

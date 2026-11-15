@@ -9,12 +9,17 @@ from frappe.tests import IntegrationTestCase
 from kxcompliance.api import (
 	app_companies,
 	bill,
+	bill_counts,
 	bill_options,
+	bill_pdf,
 	billing_setup,
+	bills,
 	cancel_bill,
 	cancel_payment,
+	client_billing,
 	client_fees,
 	create_bill,
+	own_bill,
 	record_payment,
 	save_return_fees,
 	send_bill,
@@ -235,6 +240,50 @@ class TestBills(IntegrationTestCase):
 		self.assertEqual(bill(name)["outstanding_amount"], 0)
 		cancel_payment(first)
 		self.assertEqual(bill(name)["outstanding_amount"], 6000)
+
+	def test_the_billing_list_counts_each_tab_and_what_is_due(self):
+		draft = create_bill(self.client, lines=[{"description": "Draft advisory", "amount": 1000}])["name"]
+		sent = create_bill(self.client, lines=[{"description": "Sent advisory", "amount": 2000}])["name"]
+		send_bill(sent)
+		counts = bill_counts(client=self.client)
+		drafts = bills("drafts", client=self.client, page_length=100)
+		self.assertIn(draft, [row.name for row in drafts["rows"]])
+		self.assertEqual(counts["drafts"]["count"], drafts["total"])
+		unpaid = bills("unpaid", client=self.client)
+		self.assertIn(sent, [row.name for row in unpaid["rows"]])
+		self.assertNotIn(draft, [row.name for row in unpaid["rows"]])
+		self.assertEqual(unpaid["total"], counts["unpaid"]["count"])
+		self.assertEqual(counts["unpaid"]["due"], sum(row.outstanding_amount for row in unpaid["rows"]))
+		self.assertEqual([row.name for row in bills("all", text=sent)["rows"]], [sent])
+		with self.assertRaisesRegex(frappe.ValidationError, "not a list of bills"):
+			bills("cancelled-and-hidden")
+
+	def test_a_client_sees_only_the_bills_sent_to_it(self):
+		draft = create_bill(self.client, lines=[{"description": "Draft advisory", "amount": 1000}])["name"]
+		sent = create_bill(self.client, lines=[{"description": "Sent advisory", "amount": 2000}])["name"]
+		send_bill(sent)
+		firm = client_billing(self.client)
+		self.assertTrue({draft, sent} <= {row.name for row in firm["bills"]})
+		self.assertIn("unbilled_total", firm)
+		with (
+			patch("kxcompliance.api.is_client_login", return_value=True),
+			patch("kxcompliance.api.client_of_login", return_value=self.client),
+		):
+			own = client_billing(self.client)
+			self.assertIn(sent, [row.name for row in own["bills"]])
+			self.assertNotIn(draft, [row.name for row in own["bills"]])
+			self.assertNotIn("unbilled_total", own)
+			self.assertGreaterEqual(own["outstanding"], 2360)
+			self.assertEqual(own_bill(sent).name, sent)
+			bill_pdf(sent)
+			self.assertEqual(frappe.local.response.type, "pdf")
+			self.assertTrue(frappe.local.response.filecontent.startswith(b"%PDF"))
+			# Printing past the invoice's permissions is for that one bill, then off again.
+			self.assertFalse(frappe.flags.ignore_print_permissions)
+			with self.assertRaisesRegex(frappe.PermissionError, "only bills sent to you"):
+				own_bill(draft)
+			with self.assertRaisesRegex(frappe.PermissionError, "only your own bills"):
+				client_billing("Someone Else")
 
 	def test_a_draft_is_not_paid(self):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]

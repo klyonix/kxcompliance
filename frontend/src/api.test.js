@@ -21,6 +21,16 @@ describe("the API client", () => {
 		expect(seen.init.method).toBe("GET");
 	});
 
+	it("leaves a GET parameter that is not set out of the address", async () => {
+		let seen;
+		const fetcher = async (url) => {
+			seen = url;
+			return answer(200, { message: 1 })();
+		};
+		await call("x.y", { a: "b", client: undefined }, { fetcher });
+		expect(seen).toBe("/api/method/x.y?a=b");
+	});
+
 	it("turns a refusal into an error carrying the server sentence, as text", async () => {
 		const body = {
 			exc_type: "ValidationError",

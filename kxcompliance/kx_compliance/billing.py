@@ -847,3 +847,100 @@ def cancel_payment(name: str):
 	if entry.docstatus != 1:
 		frappe.throw(_("{0} is not a recorded payment.").format(name))
 	entry.cancel()
+
+
+# The Billing list's tabs, and what each holds.
+BILL_VIEWS = {
+	"drafts": [["docstatus", "=", 0]],
+	"unpaid": [["docstatus", "=", 1], ["outstanding_amount", ">", 0]],
+	"paid": [["docstatus", "=", 1], ["outstanding_amount", "<=", 0]],
+	"all": [],
+}
+LIST_FIELDS = [
+	"name",
+	"compliance_client",
+	"customer_name",
+	"posting_date",
+	"due_date",
+	"grand_total",
+	"rounded_total",
+	"outstanding_amount",
+	"docstatus",
+	"status",
+	"currency",
+]
+TOTALS = [{"COUNT": "*", "as": "count"}, {"SUM": "outstanding_amount", "as": "due"}]
+
+
+def bill_filters(view: str, client: str | None, text: str | None) -> tuple[list, list | None]:
+	"""The firm's bills in a tab, of one client if chosen, matching the words typed."""
+	if view not in BILL_VIEWS:
+		frappe.throw(_("{0} is not a list of bills.").format(view))
+	filters = [
+		["company", "=", get_settings().billing_company],
+		["compliance_client", "is", "set"],
+		*BILL_VIEWS[view],
+	]
+	if client:
+		filters.append(["compliance_client", "=", client])
+	text = (text or "").strip()
+	matching = [["name", "like", f"%{text}%"], ["customer_name", "like", f"%{text}%"]] if text else None
+	return filters, matching
+
+
+def bills(view: str, client: str | None, text: str | None, start: int, limit: int) -> dict:
+	"""One page of the firm's bills in a tab, newest first, with how many there are in all."""
+	check_biller()
+	filters, matching = bill_filters(view, client, text)
+	rows = frappe.get_list(
+		"Sales Invoice",
+		filters=filters,
+		or_filters=matching,
+		fields=LIST_FIELDS,
+		order_by="posting_date desc, name desc",
+		start=start,
+		page_length=limit,
+	)
+	total = frappe.get_list("Sales Invoice", filters=filters, or_filters=matching, fields=TOTALS)
+	return {"rows": rows, "total": total[0]["count"] if total else 0}
+
+
+def bill_counts(client: str | None, text: str | None) -> dict:
+	"""Each tab's count and what is still due in it."""
+	check_biller()
+	counts = {}
+	for view in BILL_VIEWS:
+		filters, matching = bill_filters(view, client, text)
+		row = frappe.get_list("Sales Invoice", filters=filters, or_filters=matching, fields=TOTALS)
+		counts[view] = {"count": row[0]["count"] if row else 0, "due": flt(row[0]["due"]) if row else 0}
+	return counts
+
+
+def client_billing(client: str, own: bool) -> dict:
+	"""A client's bills and balance. `own` is the client's own login, which sees only bills sent
+	to it; the firm also sees drafts and what it has yet to bill. The caller has checked who may
+	see this; a client's login reads its bills here, as it may not read ERPNext's invoices."""
+	company = get_settings().billing_company
+	if not company:
+		return {"bills": [], "outstanding": 0, "overdue": 0}
+	sent = {"company": company, "compliance_client": client, "docstatus": 1}
+	shown = sent if own else {**sent, "docstatus": ("in", (0, 1))}
+	bills_shown = frappe.get_all(
+		"Sales Invoice", filters=shown, fields=LIST_FIELDS, order_by="posting_date desc, name desc", limit=10
+	)
+	due = frappe.get_all(
+		"Sales Invoice",
+		filters={**sent, "outstanding_amount": (">", 0)},
+		fields=["outstanding_amount", "due_date"],
+	)
+	today = getdate(nowdate())
+	result = {
+		"bills": bills_shown,
+		"outstanding": sum(flt(row.outstanding_amount) for row in due),
+		"overdue": sum(flt(row.outstanding_amount) for row in due if getdate(row.due_date) < today),
+	}
+	if not own:
+		unbilled = unbilled_filings(client)
+		result["unbilled_count"] = len(unbilled)
+		result["unbilled_total"] = sum(row.fee for row in unbilled)
+	return result

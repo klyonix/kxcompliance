@@ -5,10 +5,13 @@ vi.mock("frappe-ui", () =>
 	Object.fromEntries(
 		["Avatar", "Badge", "Button", "Dialog", "Dropdown", "ErrorMessage", "FormControl"]
 			.concat(["LoadingIndicator", "Skeleton", "TabButtons", "TextInput", "toast"])
+			.concat(["Tabs", "TabList", "TabTrigger", "TabPanel"])
 			.map((name) => [name, { name }])
 	)
 );
 vi.mock("@/components/AppPageHeader.vue", () => ({ default: { name: "AppPageHeader" } }));
+vi.mock("@/composables/useIsMobile", () => ({ useIsMobile: () => false }));
+vi.mock("@/composables/useTabQuery", () => ({ useTabQuery: () => null }));
 import { boot, mayUseDesk } from "./boot";
 import { sections, settingsPagesFor } from "./navigation";
 import { addPage, host, loadPlugins } from "./plugins";
@@ -59,6 +62,9 @@ describe("plug-in pages", () => {
 		expect(given.version).toBe(1);
 		expect(given.components.AppPageHeader).toBeTruthy();
 		expect(given.ui.Button).toBeTruthy();
+		expect(given.ui.Tabs).toBeTruthy();
+		expect(given.useIsMobile).toBeTypeOf("function");
+		expect(given.useTabQuery).toBeTypeOf("function");
 		expect(given.vue.ref).toBeTypeOf("function");
 		given.addPage({ path: "/y", name: "Y", component: Page });
 		expect(router.addRoute).toHaveBeenCalled();

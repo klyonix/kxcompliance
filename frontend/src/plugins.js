@@ -14,12 +14,18 @@ import {
 	LoadingIndicator,
 	Skeleton,
 	TabButtons,
+	TabList,
+	TabPanel,
+	Tabs,
+	TabTrigger,
 	TextInput,
 	toast,
 } from "frappe-ui";
 import { ApiError, call } from "@/api";
 import { boot, isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import { useIsMobile } from "@/composables/useIsMobile";
+import { useTabQuery } from "@/composables/useTabQuery";
 import { t } from "@/lib/i18n";
 import { addMenuPage } from "@/navigation";
 
@@ -53,10 +59,18 @@ export function host(router) {
 			LoadingIndicator,
 			Skeleton,
 			TabButtons,
+			TabList,
+			TabPanel,
+			Tabs,
+			TabTrigger,
 			TextInput,
 			toast,
 		},
 		components: { AppPageHeader },
+		// Whether the screen is a phone's, as the app's own pages decide it.
+		useIsMobile,
+		// The open tab kept in the address (?tab=), as the app's own tabbed pages do.
+		useTabQuery,
 		ApiError,
 		call,
 		boot,

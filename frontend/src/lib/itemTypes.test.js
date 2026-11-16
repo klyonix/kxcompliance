@@ -28,7 +28,7 @@ describe("item types", () => {
 		expect(typesShown(types, "active").map((type) => type.name)).toEqual(["Trade Licence"]);
 		expect(typesShown(types, "off").map((type) => type.name)).toEqual(["Fire NOC"]);
 		expect(typesShown(types, "all", "fire").map((type) => type.name)).toEqual(["Fire NOC"]);
-		expect(typeRow(types[1]).detail).toContain("your own settings");
+		expect(typeRow(types[1]).detail).toMatch(/^Your own settings/);
 		expect(typeRow(types[0]).cells).toEqual(["Licence", "Every 12 months"]);
 	});
 });

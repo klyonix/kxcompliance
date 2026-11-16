@@ -75,7 +75,8 @@ export function typeRow(type) {
 		key: type.name,
 		kind: "item-type",
 		title: type.name,
-		detail: type.set_by_firm ? `${typeSummary(type)} · your own settings` : typeSummary(type),
+		// First, so a narrow row that cuts the line short still says so.
+		detail: type.set_by_firm ? `Your own settings · ${typeSummary(type)}` : typeSummary(type),
 		status: type.is_active ? "In use" : "Off",
 		theme: type.is_active ? "green" : "gray",
 		cells: [type.category, renewsText(type)],

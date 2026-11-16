@@ -11,7 +11,7 @@
 	</AppPageHeader>
 
 	<div class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
-		<ClientPicker />
+		<ClientPicker :company-choice="false" />
 		<div v-if="data" class="flex flex-wrap items-center gap-2" data-tour="companies-filter">
 			<TextInput
 				v-model="search"

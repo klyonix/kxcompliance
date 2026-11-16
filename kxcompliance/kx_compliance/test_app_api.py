@@ -21,6 +21,7 @@ from kxcompliance.api import (
 	search,
 	search_counts,
 )
+from kxcompliance.kx_compliance.onboarding import keep_in_view
 from kxcompliance.kx_compliance.overview import desk_link, total
 from kxcompliance.kx_compliance.test_bulk_filing import filing
 from kxcompliance.kx_compliance.test_utils import (
@@ -220,6 +221,29 @@ class TestAppApi(IntegrationTestCase):
 		).insert()
 		with self.set_user(HOLDER):
 			self.assertEqual(app_companies(), [TEST_COMPANY])
+
+	def test_a_company_made_by_someone_limited_to_some_stays_in_their_view(self):
+		second = "Second View Test Co"
+		if not frappe.db.exists("Company", second):
+			frappe.get_doc(
+				{
+					"doctype": "Company",
+					"company_name": second,
+					"abbr": "SVTC",
+					"default_currency": "INR",
+					"country": "India",
+				}
+			).insert()
+		frappe.db.delete("User Permission", {"user": ("in", (HOLDER, MANAGER))})
+		with self.set_user(MANAGER):
+			keep_in_view(second)  # sees every company already: nothing added
+		self.assertFalse(frappe.db.exists("User Permission", {"user": MANAGER}))
+		frappe.get_doc(
+			{"doctype": "User Permission", "user": HOLDER, "allow": "Company", "for_value": TEST_COMPANY}
+		).insert()
+		with self.set_user(HOLDER):
+			keep_in_view(second)
+			self.assertEqual(app_companies(), sorted([TEST_COMPANY, second]))
 
 	def overview_card(self, section: str, label: str) -> dict:
 		with self.set_user(MANAGER):

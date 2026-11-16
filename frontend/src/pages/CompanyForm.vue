@@ -461,7 +461,7 @@ import {
 	toast,
 } from "frappe-ui";
 import { call } from "@/api";
-import { boot } from "@/boot";
+import { addCompany, boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import ScoreBadge from "@/components/ScoreBadge.vue";
@@ -570,6 +570,7 @@ async function save() {
 			},
 			{ httpMethod: "POST" }
 		);
+		addCompany(result.company);
 		const added = result.obligations
 			? ` ${result.obligations} obligations and ${result.tasks} filings added.`
 			: "";

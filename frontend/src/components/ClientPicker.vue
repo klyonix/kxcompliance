@@ -20,15 +20,51 @@
 			@click="chooseClient('')"
 		/>
 	</div>
+	<div
+		v-else-if="companyChoice && companyFilterOffered()"
+		class="flex items-center gap-2"
+		data-tour="company-filter"
+	>
+		<Combobox
+			class="min-w-0 flex-1 sm:w-72 sm:flex-none"
+			:model-value="chosenCompanies?.[0] || null"
+			:options="boot.companies.map((name) => ({ label: name, value: name }))"
+			placeholder="All companies"
+			aria-label="Show one company"
+			@update:model-value="(value) => chooseCompany(value || '')"
+		/>
+		<Button
+			v-if="chosenCompanies"
+			variant="ghost"
+			icon="lucide-x"
+			label="Show all companies"
+			@click="chooseCompany('')"
+		/>
+	</div>
 </template>
 
 <script setup>
 // Pick a client to narrow the app to; the choice carries over to every page on this device. With
-// many clients, typing finds one by its name or by one of its companies.
+// many clients, typing finds one by its name or by one of its companies. An organisation with
+// more than one company picks a company here instead.
 import { computed, onMounted, ref } from "vue";
 import { Button, Combobox } from "frappe-ui";
+import { boot } from "@/boot";
 import { clientLabel } from "@/lib/clients";
-import { chooseClient, clientFilter, filterOffered, loadClients } from "@/stores/clientFilter";
+import {
+	chooseClient,
+	chooseCompany,
+	chosenCompanies,
+	clientFilter,
+	companyFilterOffered,
+	filterOffered,
+	loadClients,
+} from "@/stores/clientFilter";
+
+defineProps({
+	// False where a company choice means nothing, such as the list of companies itself.
+	companyChoice: { type: Boolean, default: true },
+});
 
 const query = ref("");
 // Every word typed must be in the client's name or one of its companies, so a company's name

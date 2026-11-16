@@ -51,6 +51,11 @@ export const TOURS = [
 				text: "Choose a client to see only their work, here and on every list. Choose All clients to see everything again.",
 			},
 			{
+				target: ["company-filter"],
+				title: "One company at a time",
+				text: "Choose a company to see only its work, here and on every list. Choose All companies to see everything again.",
+			},
+			{
 				target: ["my-work-list"],
 				title: "What needs you",
 				text: "Overdue first, then this week, then later. Open any row to act on it.",

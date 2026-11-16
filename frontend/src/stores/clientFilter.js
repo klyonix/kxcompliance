@@ -1,14 +1,16 @@
-// The client a firm's staff member has chosen to look at, shared by every list and kept on this
-// device (per site and person) until they clear it.
+// The client a firm's staff member has chosen to look at, or the company an organisation's people
+// have, shared by every list and kept on this device (per site and person) until they clear it.
 import { computed, reactive } from "vue";
 import { call } from "@/api";
 import { boot, checksOnly, isClientLogin } from "@/boot";
-import { companiesOf } from "@/lib/clientFilter";
+import { companiesOf, companyChosen } from "@/lib/clientFilter";
 
 const KEY = `kxcompliance:${boot.siteName}:${boot.user}:client`;
+const COMPANY_KEY = `kxcompliance:${boot.siteName}:${boot.user}:company`;
 
 export const clientFilter = reactive({
 	client: localStorage.getItem(KEY) || "",
+	company: localStorage.getItem(COMPANY_KEY) || "",
 	clients: [],
 	loaded: false,
 });
@@ -17,11 +19,20 @@ export const clientFilter = reactive({
 export const filterOffered = () =>
 	boot.accountType === "CA/CS Firm" && !isClientLogin() && !checksOnly();
 
-// The chosen client's companies, or null for every client. Until the clients are loaded the
-// choice cannot be applied, so lists wait for them (see loadClients).
-export const chosenCompanies = computed(() =>
-	filterOffered() ? companiesOf(clientFilter.clients, clientFilter.client) : null
-);
+// An organisation with more than one company narrows the app to one of them instead.
+export const companyFilterOffered = () =>
+	boot.accountType !== "CA/CS Firm" &&
+	!isClientLogin() &&
+	!checksOnly() &&
+	boot.companies.length > 1;
+
+// The chosen client's companies (or the organisation's one company), or null for all. Until the
+// clients are loaded a client cannot be applied, so lists wait for them (see loadClients).
+export const chosenCompanies = computed(() => {
+	if (filterOffered()) return companiesOf(clientFilter.clients, clientFilter.client);
+	if (companyFilterOffered()) return companyChosen(boot.companies, clientFilter.company);
+	return null;
+});
 
 // The chosen client's name as people know it, for saying which client a page shows.
 export const chosenClientName = computed(() => {
@@ -33,6 +44,12 @@ export function chooseClient(name) {
 	clientFilter.client = name || "";
 	if (clientFilter.client) localStorage.setItem(KEY, clientFilter.client);
 	else localStorage.removeItem(KEY);
+}
+
+export function chooseCompany(name) {
+	clientFilter.company = name || "";
+	if (clientFilter.company) localStorage.setItem(COMPANY_KEY, clientFilter.company);
+	else localStorage.removeItem(COMPANY_KEY);
 }
 
 let loading;

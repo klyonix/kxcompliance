@@ -1,4 +1,6 @@
 // Values the server writes into the page (kxcompliance.api.boot), read once.
+import { reactive } from "vue";
+
 export const boot = {
 	user: window.user || "Guest",
 	siteName: window.site_name || "",
@@ -6,7 +8,8 @@ export const boot = {
 	roles: window.roles || [],
 	appName: window.app_name || "KlyONIX Compliance",
 	appLogo: window.app_logo || "",
-	companies: window.companies || [],
+	// Reactive, so a company added in the app is offered at once (addCompany).
+	companies: reactive(window.companies || []),
 	// The site's date format setting, such as "dd-mm-yyyy".
 	dateFormat: window.date_format || "",
 	// "Organisation" or "CA/CS Firm", chosen in onboarding.
@@ -38,6 +41,13 @@ export const boot = {
 	// Set by another app that keeps this person off the Desk.
 	hideDesk: Boolean(window.hide_desk),
 };
+
+// A company just made or set up here joins the pickers without a reload, in name order.
+export function addCompany(name) {
+	if (!name || boot.companies.includes(name)) return;
+	boot.companies.push(name);
+	boot.companies.sort((a, b) => a.localeCompare(b));
+}
 
 const COMPLIANCE_ROLES = [
 	"Compliance Manager",

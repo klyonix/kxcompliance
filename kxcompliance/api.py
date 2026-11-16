@@ -23,6 +23,7 @@ from kxcompliance.kx_compliance import (
 	getting_started,
 	month_calendar,
 	onboarding,
+	penalty_figures,
 	people,
 	privacy,
 	score,
@@ -1673,6 +1674,27 @@ def licence_rule_options() -> dict:
 		**groups,
 		"documents": documents,
 	}
+
+
+@frappe.whitelist(methods=["GET"])
+def obligation_figures(template: str) -> dict:
+	"""A standard obligation's late-filing figures as the firm uses them."""
+	check_manager_access(_("Only a Compliance Manager can change the obligation library."))
+	return penalty_figures.figures_of(template)
+
+
+@frappe.whitelist(methods=["POST"])
+def save_obligation_figures(template: str, figures: dict) -> dict:
+	"""Keep the firm's own late-filing figures for a standard obligation."""
+	check_manager_access(_("Only a Compliance Manager can change the obligation library."))
+	return penalty_figures.save_figures(template, figures)
+
+
+@frappe.whitelist(methods=["POST"])
+def use_library_figures(template: str) -> dict:
+	"""Go back to the library's late-filing figures for a standard obligation."""
+	check_manager_access(_("Only a Compliance Manager can change the obligation library."))
+	return penalty_figures.use_library_figures(template)
 
 
 @frappe.whitelist(methods=["GET"])

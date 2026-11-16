@@ -7,8 +7,8 @@ These are the figures the penalty estimate uses: a late fee per day, a one-off l
 cap, whether the fee is capped at the tax, and interest a year on tax paid late. Fines that
 depend on an officer's judgement or a turnover slab are not counted; the rule in words says
 so. Every figure is taken from the Act or notification named, and stays marked as not checked
-(penalty_checked_on empty) until a chartered accountant has confirmed it. A firm that changes
-a template's figures ticks Set by Us, and they are then kept on every update.
+(penalty_checked_on empty) until a chartered accountant has confirmed it. A firm that reckons
+differently keeps its own figures apart (penalty_figures.py), so updates never touch them.
 """
 
 GST_RETURN = (
@@ -182,10 +182,3 @@ def penalty_of(template: dict) -> dict:
 		else:
 			figures = {}
 	return {field: figures.get(field, 0 if field != "penalty_rule" else None) for field in FIELDS}
-
-
-def keep_firms_figures(doc, values: dict) -> dict:
-	"""The library's figures, unless the firm has set its own for this template."""
-	if doc and doc.get("penalty_set_by_firm"):
-		return {key: value for key, value in values.items() if key not in FIELDS}
-	return values

@@ -1,0 +1,137 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-16 20:00:00.000000",
+ "modified": "2026-11-16 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "description": "A firm's own late-filing figures for a standard obligation, used instead of the library's.",
+ "field_order": [
+  "obligation_template",
+  "column_break_main",
+  "late_fee_per_day",
+  "late_fee_flat",
+  "late_fee_cap",
+  "cap_at_tax",
+  "column_break_figures",
+  "interest_percent",
+  "penalty_rule"
+ ],
+ "fields": [
+  {
+   "fieldname": "obligation_template",
+   "fieldtype": "Link",
+   "label": "Obligation",
+   "options": "Compliance Obligation Template",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "late_fee_per_day",
+   "fieldtype": "Currency",
+   "label": "Late Fee per Day",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "late_fee_flat",
+   "fieldtype": "Currency",
+   "label": "Late Fee (One-off)",
+   "description": "Charged once the filing is late, such as ₹5,000 for DIR-3 KYC."
+  },
+  {
+   "fieldname": "late_fee_cap",
+   "fieldtype": "Currency",
+   "label": "Late Fee Cap",
+   "description": "The most the late fee can come to; 0 for no cap."
+  },
+  {
+   "fieldname": "cap_at_tax",
+   "fieldtype": "Check",
+   "label": "Capped at the Tax Amount",
+   "description": "The late fee cannot exceed the tax deducted or paid (as under s.234E)."
+  },
+  {
+   "fieldname": "column_break_figures",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "interest_percent",
+   "fieldtype": "Float",
+   "label": "Interest (% a Year)",
+   "description": "On tax paid late."
+  },
+  {
+   "fieldname": "penalty_rule",
+   "fieldtype": "Small Text",
+   "label": "The Rule",
+   "description": "The rule in words, with its section, including fines the estimate cannot count."
+  }
+ ],
+ "links": [],
+ "modified_by": "Administrator",
+ "module": "KX Compliance",
+ "name": "Compliance Penalty Figures",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance User",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Auditor",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "row_format": "Dynamic",
+ "title_field": "obligation_template",
+ "track_changes": 1
+}

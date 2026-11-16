@@ -46,7 +46,6 @@
   "interest_percent",
   "penalty_rule",
   "penalty_checked_on",
-  "penalty_set_by_firm",
   "section_notes",
   "description"
  ],
@@ -298,12 +297,6 @@
    "description": "When a chartered accountant last confirmed these figures. Blank means not yet."
   },
   {
-   "fieldname": "penalty_set_by_firm",
-   "fieldtype": "Check",
-   "label": "Set by Us",
-   "description": "Keep these figures as they are when the app updates its library."
-  },
-  {
    "collapsible": 1,
    "fieldname": "section_notes",
    "fieldtype": "Section Break",
@@ -325,7 +318,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-15 01:08:09.744208",
+ "modified": "2026-11-16 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Obligation Template",

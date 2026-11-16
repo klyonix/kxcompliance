@@ -14,7 +14,7 @@ Extension on the site, and here in the next release.
 import frappe
 
 from kxcompliance import scoped
-from kxcompliance.kx_compliance.penalty_library import keep_firms_figures, penalty_of
+from kxcompliance.kx_compliance.penalty_library import penalty_of
 
 COMPANIES = ["Private Limited", "Public Limited", "One Person Company"]
 FIRMS = ["LLP", "Partnership"]
@@ -695,7 +695,6 @@ def sync_standard_templates():
 			doc = frappe.get_doc("Compliance Obligation Template", name)
 			for fieldname in CLIENT_OWNED_FIELDS:
 				values = {**values, fieldname: doc.get(fieldname)}
-			values = keep_firms_figures(doc, values)
 			# update() replaces child tables wholesale, so rows dropped from LIBRARY go too.
 			doc.update({key: value for key, value in values.items() if key != "template_name"})
 		else:

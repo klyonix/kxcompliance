@@ -205,17 +205,15 @@ def make_masters(company: str):
 	half = GST_RATE / 2
 	tax_template(company, WITHIN_STATE, [(accounts["Output CGST"], half), (accounts["Output SGST"], half)])
 	tax_template(company, OUTSIDE_STATE, [(accounts["Output IGST"], GST_RATE)])
-	# Government fees passed on carry no GST: their item is taxed at nothing on every GST account.
-	without = item_tax_template(company, list(accounts.values()))
-	item = frappe.get_doc("Item", GOVERNMENT_FEES_ITEM)
-	if without not in [row.item_tax_template for row in item.taxes]:
-		item.append("taxes", {"item_tax_template": without})
-		item.save()
-	# Payments: into cash or the firm's bank, and TDS the client deducts, kept as an asset.
-	bank = bank_ledger(company)
-	cash = scoped.get_value("Company", company, "default_cash_account")
+	# Government fees passed on carry no GST: each such line on a bill takes this template, taxed at
+	# nothing on every GST account (see government_fees_untaxed). The item is shared by every
+	# company on the site, so the template goes on the bill's line, not on the item.
+	item_tax_template(company, list(accounts.values()))
+	# Payments: into cash or the firm's bank (payment_account), and TDS the client deducts, kept as
+	# an asset.
+	bank_ledger(company)
 	for mode, kind in PAYMENT_MODES.items():
-		payment_mode(mode, kind, company, cash if kind == "Cash" else bank)
+		payment_mode(mode, kind)
 	ledger(company, TDS_ACCOUNT, "Tax Assets")
 	# On a firm's site invoices and payments are the firm's bills and receipts: print them so.
 	for doctype, layout in (("Sales Invoice", BILL_FORMAT), ("Payment Entry", RECEIPT_FORMAT)):
@@ -264,14 +262,17 @@ def bank_ledger(company: str) -> str:
 	return bank
 
 
-def payment_mode(mode: str, kind: str, company: str, account: str):
-	"""A way of paying, which pays into this account for the company."""
+def payment_mode(mode: str, kind: str):
+	"""A way of paying. Modes are shared by every company on the site, so the account a payment
+	goes into is the company's own (payment_account), not one kept on the mode."""
 	if not scoped.exists("Mode of Payment", mode):
 		frappe.get_doc({"doctype": "Mode of Payment", "mode_of_payment": mode, "type": kind}).insert()
-	doc = frappe.get_doc("Mode of Payment", mode)
-	if not any(row.company == company for row in doc.accounts):
-		doc.append("accounts", {"company": company, "default_account": account})
-		doc.save()
+
+
+def payment_account(company: str, mode: str) -> str | None:
+	"""Where a payment by this mode goes in the company's books: its cash or its bank account."""
+	field = "default_cash_account" if PAYMENT_MODES.get(mode) == "Cash" else "default_bank_account"
+	return scoped.get_value("Company", company, field)
 
 
 def item_tax_template(company: str, accounts: list[str]) -> str:
@@ -890,6 +891,8 @@ def make_bill(
 	# Only a firm registered for GST charges it.
 	party = billing_party(client, company)
 	template = tax_template_for(party.billing_state) if settings.gst_status == REGISTERED else None
+	if template:
+		government_fees_untaxed(items, settings.billing_company)
 	bill = frappe.get_doc(
 		{
 			"doctype": "Sales Invoice",
@@ -966,6 +969,17 @@ def service_line(rates: dict[tuple, dict], done: dict, default_sac: str | None) 
 		"rate": rate["amount"],
 		"sac_code": rate["sac_code"] or default_sac,
 	}
+
+
+def government_fees_untaxed(items: list[dict], company: str):
+	"""Government fees passed on carry no GST: their lines take the company's template that taxes
+	them at nothing."""
+	without = scoped.get_value("Item Tax Template", {"company": company, "title": WITHOUT_GST})
+	if not without:
+		frappe.throw(_("Set billing up again: {0} has no {1} tax template.").format(company, WITHOUT_GST))
+	for item in items:
+		if item.get("item_code") == GOVERNMENT_FEES_ITEM:
+			item["item_tax_template"] = without
 
 
 def other_line(line: dict, default_sac: str | None = None) -> dict:
@@ -1274,9 +1288,7 @@ def record_payment(
 		frappe.throw(_("Pay by one of {0}, not {1}.").format(", ".join(PAYMENT_MODES), mode))
 	from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 
-	account = scoped.get_value(
-		"Mode of Payment Account", {"parent": mode, "company": bill.company}, "default_account"
-	)
+	account = payment_account(bill.company, mode)
 	entry = get_payment_entry("Sales Invoice", bill.name, party_amount=amount)
 	entry.posting_date = getdate(paid_on)
 	entry.mode_of_payment = mode
@@ -2634,9 +2646,7 @@ def record_advance(
 			"company": company,
 			"posting_date": getdate(paid_on),
 			"paid_from": get_party_account("Customer", customer, company),
-			"paid_to": scoped.get_value(
-				"Mode of Payment Account", {"parent": mode, "company": company}, "default_account"
-			),
+			"paid_to": payment_account(company, mode),
 			"paid_amount": amount,
 			"received_amount": amount,
 			"mode_of_payment": mode,

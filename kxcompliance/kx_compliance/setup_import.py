@@ -352,7 +352,8 @@ def set_up(values: dict) -> int:
 		)
 	company = values["company"]
 	if not scoped.exists("Company", company):
-		make_company(company)
+		# The name made may differ from the one asked for (another app may keep names unique).
+		company = make_company(company)
 	if scoped.exists("Company Compliance Profile", company):
 		frappe.throw(_("{0} was set up for compliance after the sheet was checked.").format(company))
 	_obligations, tasks = set_up_company(

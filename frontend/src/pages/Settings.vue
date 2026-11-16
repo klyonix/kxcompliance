@@ -390,11 +390,9 @@ async function uploadLogo(event) {
 	if (!file) return;
 	uploading.value = true;
 	try {
-		const uploaded = await upload(file, {
-			doctype: "KX Compliance Settings",
-			docname: "KX Compliance Settings",
-			isPrivate: false,
-		});
+		// The settings may be kept on a record other than KX Compliance Settings; the server says which.
+		const { doctype, name } = options.value.settings_record;
+		const uploaded = await upload(file, { doctype, docname: name, isPrivate: false });
 		form.app_logo = uploaded.file_url;
 	} catch (err) {
 		toast.error(err.message);

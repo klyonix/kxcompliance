@@ -41,8 +41,8 @@
 			v-model="form.billing_logo"
 			label="Logo on bills and statements"
 			alt="The firm's logo"
-			doctype="KX Compliance Settings"
-			docname="KX Compliance Settings"
+			:doctype="setup.settings_record.doctype"
+			:docname="setup.settings_record.name"
 		/>
 
 		<div class="flex flex-col gap-1.5">

@@ -117,6 +117,7 @@ def setup_state() -> dict:
 		"states": [state for state in states.split("\n") if state],
 		"can_create_company": bool(frappe.has_permission("Company", "create")) and frappe.is_setup_complete(),
 		"gst_statuses": list(GST_STATUSES),
+		"settings_record": scoped.settings_record(),
 	}
 
 

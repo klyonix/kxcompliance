@@ -171,9 +171,12 @@ class TestScopedReads(IntegrationTestCase):
 		with patch(f"{__name__}.settings_hook", return_value=stand_in) as hook:
 			with self.hooked("kxcompliance_settings", f"{__name__}.settings_hook"):
 				self.assertEqual(scoped.settings().app_name, "Stand-in")
+				stand_in.update(doctype="Other Settings", name="OS-1")
+				self.assertEqual(scoped.settings_record(), {"doctype": "Other Settings", "name": "OS-1"})
 				scoped.settings(for_update=True)
 			hook.assert_called_with(for_update=True)
 		self.assertEqual(scoped.settings().doctype, scoped.SETTINGS)
+		self.assertEqual(scoped.settings_record(), {"doctype": scoped.SETTINGS, "name": scoped.SETTINGS})
 
 	def test_a_limit_hook_can_refuse(self):
 		with patch(f"{__name__}.limit_hook", side_effect=frappe.ValidationError("over")) as hook:

@@ -61,6 +61,7 @@ def options() -> dict:
 	templates = scoped.get_all("Email Template", pluck="name", order_by="name asc")
 	return {
 		"values": {field: settings.get(field) for field in FIELDS},
+		"settings_record": scoped.settings_record(),
 		"notice_version": settings.notice_version,
 		"standard_notice": standard_notice(),
 		"email_accounts": accounts,

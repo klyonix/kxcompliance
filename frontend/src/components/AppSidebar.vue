@@ -11,8 +11,12 @@
 			</template>
 		</SidebarHeader>
 		<!-- The rows keep a margin from the edges, so the open page's highlight never touches the
-		border, expanded or collapsed. -->
-		<div class="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2" data-tour="nav">
+		border, expanded or collapsed. They keep their height too: with Settings open the list
+		scrolls instead of squeezing every row. -->
+		<div
+			class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 [&>*]:shrink-0"
+			data-tour="nav"
+		>
 			<NotificationBell v-if="!checksOnly()" in-sidebar />
 			<template v-for="section in sections" :key="section.route">
 				<template v-if="section.route === 'Settings'">

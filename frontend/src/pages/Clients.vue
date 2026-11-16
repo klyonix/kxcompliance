@@ -25,7 +25,7 @@
 		</template>
 	</AppPageHeader>
 
-	<div class="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
+	<div class="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6 sm:px-6">
 		<p
 			v-if="error"
 			role="alert"

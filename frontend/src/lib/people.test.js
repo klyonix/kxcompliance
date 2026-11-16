@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { filterPeople, inviteEmailHint, personOptions, personRow, roleChoices } from "./people";
+import {
+	filterPeople,
+	inviteEmailHint,
+	personOptions,
+	personRow,
+	roleChoices,
+	switchWords,
+} from "./people";
 
 describe("personOptions", () => {
 	it("names people, and adds the email only where names repeat", () => {
@@ -59,5 +66,17 @@ describe("filtering people", () => {
 		expect(roleChoices(true)[0].detail).toContain("clients");
 		expect(roleChoices(false)[0].detail).not.toContain("clients");
 		expect(inviteEmailHint(false)).toBe("neha@yourcompany.in");
+	});
+});
+
+describe("switchWords", () => {
+	it("says what switching off keeps, and that switching on restores the role", () => {
+		const off = switchWords({ full_name: "Neha Joshi" }, false);
+		expect(off.confirmLabel).toBe("Switch off");
+		expect(off.message).toContain(
+			"Their role, the records they worked on and their history stay"
+		);
+		const on = switchWords({ full_name: "Neha Joshi" }, true);
+		expect([on.confirmLabel, on.done]).toEqual(["Switch on", "Neha Joshi can sign in again"]);
 	});
 });

@@ -154,7 +154,7 @@ import AppPageHeader from "@/components/AppPageHeader.vue";
 import RowList from "@/components/RowList.vue";
 import SignInLinkDialog from "@/components/SignInLinkDialog.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
-import { inviteEmailHint, roleChoices, filterPeople, personRow } from "@/lib/people";
+import { filterPeople, inviteEmailHint, personRow, roleChoices, switchWords } from "@/lib/people";
 import { notLoaded } from "@/offline/reachability";
 
 const firm = boot.accountType === "CA/CS Firm";
@@ -258,9 +258,9 @@ function menuFor(person) {
 		});
 	}
 	options.push({
-		label: "Remove from the team",
-		icon: "lucide-user-minus",
-		onClick: () => removePerson(person),
+		label: person.enabled ? "Switch off" : "Switch on",
+		icon: person.enabled ? "lucide-user-x" : "lucide-user-check",
+		onClick: () => switchPerson(person, !person.enabled),
 	});
 	return options;
 }
@@ -278,19 +278,20 @@ async function newLink(person) {
 	}
 }
 
-function removePerson(person) {
+function switchPerson(person, on) {
+	const words = switchWords(person, on);
 	dialog.confirm({
-		title: "Remove from the team",
-		message: `${person.full_name} can no longer open the app. Filings and items they hold stay as they are; give them to someone else from each record.`,
-		confirmLabel: "Remove",
+		title: words.title,
+		message: words.message,
+		confirmLabel: words.confirmLabel,
 		onConfirm: async () => {
 			try {
 				await call(
-					"kxcompliance.api.remove_person",
-					{ user: person.user },
+					"kxcompliance.api.switch_person",
+					{ user: person.user, enabled: on },
 					{ httpMethod: "POST" }
 				);
-				toast.success(`${person.full_name} removed from the team`);
+				toast.success(words.done);
 			} catch (err) {
 				toast.error(err.message);
 			}

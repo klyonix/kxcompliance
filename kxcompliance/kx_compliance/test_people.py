@@ -14,10 +14,10 @@ from kxcompliance.api import (
 	invite_person,
 	new_sign_in_link,
 	person,
-	remove_person,
 	send_password_reset,
 	set_person_role,
 	set_temporary_password,
+	switch_person,
 	team,
 )
 from kxcompliance.kx_compliance import handover
@@ -72,7 +72,7 @@ class TestPeople(IntegrationTestCase):
 			with self.assertRaisesRegex(frappe.ValidationError, "already on the team"):
 				invite_person("Holder", HOLDER, "Staff")
 
-	def test_changing_a_role_and_taking_someone_off_the_team(self):
+	def test_changing_a_role_and_switching_someone_off_and_on(self):
 		with self.set_user(MANAGER):
 			invite_person("Neha Joshi", NEWCOMER, "Staff")
 			set_person_role(NEWCOMER, "Auditor")
@@ -80,15 +80,29 @@ class TestPeople(IntegrationTestCase):
 				set(frappe.get_roles(NEWCOMER)) & {"Compliance User", "Compliance Auditor"},
 				{"Compliance Auditor"},
 			)
-			remove_person(NEWCOMER)
-		self.assertFalse(set(frappe.get_roles(NEWCOMER)) & {"Compliance User", "Compliance Auditor"})
+			switch_person(NEWCOMER, False)
+		# Switched off, nobody is deleted: they keep their role and cannot sign in.
+		self.assertEqual(frappe.db.get_value("User", NEWCOMER, "enabled"), 0)
+		self.assertIn("Compliance Auditor", frappe.get_roles(NEWCOMER))
+		with self.set_user(MANAGER):
+			self.assertFalse(next(row for row in team() if row["user"] == NEWCOMER)["enabled"])
+			switch_person(NEWCOMER, True)
+		self.assertEqual(frappe.db.get_value("User", NEWCOMER, "enabled"), 1)
+
+	def test_only_a_manager_switches_and_never_themselves(self):
+		with self.set_user(MANAGER):
+			invite_person("Neha Joshi", NEWCOMER, "Staff")
+			with self.assertRaisesRegex(frappe.ValidationError, "switch yourself off"):
+				switch_person(MANAGER, False)
+		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
+			switch_person(NEWCOMER, False)
 
 	def test_an_administrator_and_someone_signed_in_before_are_left_alone(self):
 		admin = make_user("compliance-admin@example.com", ("Compliance Manager", "System Manager"))
 		frappe.db.set_value("User", HOLDER, "last_login", "2026-11-01 10:00:00")
 		with self.set_user(MANAGER):
 			with self.assertRaisesRegex(frappe.ValidationError, "administrator"):
-				remove_person(admin)
+				switch_person(admin, False)
 			with self.assertRaisesRegex(frappe.ValidationError, "signed in before"):
 				new_sign_in_link(HOLDER)
 
@@ -195,8 +209,10 @@ class TestPeople(IntegrationTestCase):
 		with self.set_user(MANAGER):
 			invite_person("Neha Joshi", NEWCOMER, "Staff")
 		make_item("Test People Licence", responsible=NEWCOMER)
+		# Taken off the team in the Desk: the app's roles go, the work stays with them.
+		user = frappe.get_doc("User", NEWCOMER)
+		user.remove_roles("Compliance User")
 		with self.set_user(MANAGER):
-			remove_person(NEWCOMER)
 			self.assertIn(NEWCOMER, [row["user"] for row in former_people()])
 			page = person(NEWCOMER)
 		self.assertFalse(page["on_team"])

@@ -1473,10 +1473,10 @@ def set_person_role(user: str, role: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
-def remove_person(user: str) -> dict:
-	"""Take someone off the team; their work stays as it is."""
+def switch_person(user: str, enabled: bool) -> dict:
+	"""Switch someone's sign-in off or back on; nobody is deleted (managers only)."""
 	check_app_access()
-	return people.remove(user)
+	return people.switch(user, enabled)
 
 
 @frappe.whitelist(methods=["GET"])

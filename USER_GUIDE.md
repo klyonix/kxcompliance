@@ -442,6 +442,7 @@ When a colleague leaves, goes on leave, or moves to other clients.
 1. Open Settings, press "People" and open the person. Someone already taken off the team is listed under "No longer on the team, still holding work".
 2. Under "Hand over their work", check what would move, choose who takes it, and press "Hand over".
 3. Their open filings, register items, cases, trademarks, dates and document requests move, with their places as a company's default, an obligation's holder and on clients' teams. You are told when it is done; work already finished stays with them.
+4. Then press "Switch off" on their page, so they can no longer sign in. Nobody is deleted: the records they worked on keep their name, and "Switch on" lets them back with the role they had.
 
 ### How do I make sure reminders go out?
 

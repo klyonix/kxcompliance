@@ -30,6 +30,25 @@ export function roleChoices(firm) {
 	];
 }
 
+// What switching someone's sign-in off or back on says, before and after. Nobody is deleted: the
+// records they worked on keep their name.
+export function switchWords(person, on) {
+	const name = person.full_name;
+	return on
+		? {
+				title: "Switch on",
+				message: `${name} can sign in again, with the role they had.`,
+				confirmLabel: "Switch on",
+				done: `${name} can sign in again`,
+		  }
+		: {
+				title: "Switch off",
+				message: `${name} can no longer sign in. Their role, the records they worked on and their history stay; switch them on again any time. Hand over the work they hold from their page.`,
+				confirmLabel: "Switch off",
+				done: `${name} is switched off`,
+		  };
+}
+
 // An example address for the invitation, at the firm or the company.
 export const inviteEmailHint = (firm) => (firm ? "neha@yourfirm.in" : "neha@yourcompany.in");
 

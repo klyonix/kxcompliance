@@ -56,19 +56,27 @@ def filters(doctype: str, given=None):
 
 
 def merge(given, extra: dict):
+	"""Both the given filters and the extra conditions apply, also when they name the same field."""
 	if given is None:
 		return dict(extra)
 	if isinstance(given, str | int):
-		return {"name": given, **extra}
+		given = {"name": given}
 	if isinstance(given, dict):
-		return {**given, **extra}
-	rows = list(given)
-	if rows and isinstance(rows[0], str):
-		rows = [rows]
-	for fieldname, value in extra.items():
-		operator, value = value if isinstance(value, tuple) else ("=", value)
-		rows.append([fieldname, operator, value])
-	return rows
+		if not set(given) & set(extra):
+			return {**given, **extra}
+		rows = [as_row(fieldname, value) for fieldname, value in given.items()]
+	else:
+		rows = list(given)
+		if rows and isinstance(rows[0], str):
+			rows = [rows]
+	return rows + [as_row(fieldname, value) for fieldname, value in extra.items()]
+
+
+def as_row(fieldname: str, value) -> list:
+	"""A dict filter's entry as a list filter: {"status": "Open"} or {"status": ("in", [...])}."""
+	if isinstance(value, list | tuple) and len(value) == 2 and isinstance(value[0], str):
+		return [fieldname, value[0], value[1]]
+	return [fieldname, "=", value]
 
 
 def get_all(doctype: str, **kwargs) -> list:

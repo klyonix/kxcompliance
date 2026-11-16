@@ -14,6 +14,7 @@
 				:route="{ name: 'BillingSettings' }"
 			/>
 			<Button
+				v-if="setUp"
 				variant="solid"
 				icon-left="lucide-plus"
 				label="New bill"
@@ -23,8 +24,25 @@
 	</AppPageHeader>
 
 	<div class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 sm:px-6">
-		<ClientPicker />
-		<Tabs v-model="section">
+		<!-- Until the firm's details are set, there is nothing to bill from: say so and lead there. -->
+		<div v-if="!setUp" class="flex flex-col items-center gap-2 py-16 text-center">
+			<p class="text-lg font-medium text-ink-gray-8">Billing is not set up yet</p>
+			<p class="max-w-sm text-base text-ink-gray-5">
+				Bills to clients carry the firm's name, GSTIN, bank details and rates. Fill them in
+				once in Billing setup, and bills can be made here.
+			</p>
+			<Button
+				v-if="isManager()"
+				class="mt-2"
+				variant="solid"
+				icon-left="lucide-settings"
+				label="Open Billing setup"
+				:route="{ name: 'BillingSettings' }"
+			/>
+			<p v-else class="max-w-sm text-base text-ink-gray-5">Ask a manager to set it up.</p>
+		</div>
+		<ClientPicker v-if="setUp" />
+		<Tabs v-if="setUp" v-model="section">
 			<FormControl
 				v-if="isMobile"
 				v-model="section"
@@ -143,7 +161,7 @@ import {
 	TextInput,
 } from "frappe-ui";
 import { call } from "@/api";
-import { isManager } from "@/boot";
+import { boot, isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import BillingSummary from "@/components/BillingSummary.vue";
 import ClientPicker from "@/components/ClientPicker.vue";
@@ -162,6 +180,8 @@ const SECTIONS = [
 	{ label: "Summary", value: "summary" },
 ];
 const isMobile = useIsMobile();
+// Bills need the firm's billing details first (Billing setup).
+const setUp = boot.billingSetUp;
 const section = useTabQuery(
 	SECTIONS.map((option) => option.value),
 	"bills",
@@ -240,6 +260,7 @@ watch([page, size], load);
 watch(size, (chosen) => savePageSize("billing", chosen));
 
 onMounted(async () => {
+	if (!setUp) return;
 	await loadClients();
 	load();
 });

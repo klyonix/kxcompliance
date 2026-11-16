@@ -80,7 +80,7 @@ export function sectionsFor({ checks, client }) {
 	if (checks) return ALL_SECTIONS.filter((section) => section.route === "LicenceCheck");
 	if (client) return ALL_SECTIONS.filter((section) => CLIENT_SECTIONS.includes(section.route));
 	const firm = boot.accountType === "CA/CS Firm";
-	// A firm's manager finds Billing before it is set up; it opens the setup.
+	// A firm's manager finds Client billing before it is set up; the page leads to Billing setup.
 	const setUpBilling = firm && isManager() && !boot.billingSetUp;
 	const shown = ALL_SECTIONS.filter((section) => {
 		if (section.managers && !isManager()) return false;
@@ -88,9 +88,7 @@ export function sectionsFor({ checks, client }) {
 		if (section.clientLogin) return false;
 		if (section.billing && !boot.mayBill && !setUpBilling) return false;
 		return !(section.licenceCheck && !licenceCheckOn());
-	}).map((section) =>
-		section.billing && !boot.mayBill ? { ...section, route: "BillingSettings" } : section
-	);
+	});
 	return withClientBilling(shown);
 }
 
@@ -107,13 +105,7 @@ function withClientBilling(shown) {
 		...clients,
 		pages: [
 			{ label: "Clients", route: "Clients", also: CLIENT_PAGES },
-			{
-				label: billing.label,
-				route: billing.route,
-				also: BILLING_PAGES,
-				// Before billing is set up the row opens Billing setup, whose own row is marked there.
-				marksOwnRoute: billing.route === "Billing",
-			},
+			{ label: billing.label, route: billing.route, also: BILLING_PAGES },
 		],
 	};
 	return shown
@@ -198,8 +190,7 @@ export const settingsPagesFor = ({
 
 // Whether a settings page's row is the one open, counting the pages opened from it.
 export const isSettingsPageOpen = (page, routeName) =>
-	(page.route === routeName && page.marksOwnRoute !== false) ||
-	(page.also || []).includes(routeName);
+	page.route === routeName || (page.also || []).includes(routeName);
 
 // Back to where the person came from in the app, with that list's tab and search as they left
 // them; to the record's list when the page was opened directly (a link, a reload).

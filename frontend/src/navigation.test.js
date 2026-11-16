@@ -41,7 +41,7 @@ describe("sectionsFor", () => {
 		expect(routes({ checks: false, client: false })).not.toContain("ClientHome");
 	});
 
-	it("shows a firm's manager Billing before it is set up, opening its setup", () => {
+	it("shows a firm's manager Client billing before it is set up", () => {
 		const saved = { ...boot };
 		Object.assign(boot, {
 			accountType: "CA/CS Firm",
@@ -50,11 +50,11 @@ describe("sectionsFor", () => {
 			billingSetUp: false,
 		});
 		try {
-			expect(routes({ checks: false, client: false })).toContain("BillingSettings");
+			expect(routes({ checks: false, client: false })).toContain("Billing");
 			boot.roles = ["Compliance User"];
-			expect(routes({ checks: false, client: false })).not.toContain("BillingSettings");
+			expect(routes({ checks: false, client: false })).not.toContain("Billing");
 			Object.assign(boot, { roles: ["Compliance Manager"], billingSetUp: true });
-			expect(routes({ checks: false, client: false })).not.toContain("BillingSettings");
+			expect(routes({ checks: false, client: false })).not.toContain("Billing");
 		} finally {
 			Object.assign(boot, saved);
 		}
@@ -80,12 +80,12 @@ describe("sectionsFor", () => {
 			expect(settingsPagesFor({ firm: true }).map((page) => page.label)).toContain(
 				"Billing setup"
 			);
-			// Before billing is set up the row opens the setup, and only Billing setup is marked there.
+			// Before billing is set up the row still opens Client billing, which leads to the setup.
 			Object.assign(boot, { mayBill: false, billingSetUp: false });
 			const early = sectionsFor({ checks: false, client: false }).find(
 				(section) => section.route === "Clients"
 			).pages[1];
-			expect(early.route).toBe("BillingSettings");
+			expect(early.route).toBe("Billing");
 			expect(isSettingsPageOpen(early, "BillingSettings")).toBe(false);
 			// Someone who may not bill sees Clients as a plain row.
 			Object.assign(boot, { roles: ["Compliance User"], mayBill: false });

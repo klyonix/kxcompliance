@@ -10,6 +10,7 @@ DSC_TYPE = "Digital Signature Certificate"
 CUSTODY_STATES = ("With the Firm", "With the Client", "With the Holder", "Not Known")
 
 from kxcompliance.kx_compliance.doctype.trademark.trademark import follow_renewal
+from kxcompliance.kx_compliance.item_type_settings import reminder_days
 from kxcompliance.kx_compliance.register import (
 	check_reassignment,
 	compute_status,
@@ -87,9 +88,8 @@ class ComplianceItem(Document):
 	def copy_reminders_from_type(self):
 		if self.reminders or not self.item_type:
 			return
-		type_doc = frappe.get_cached_doc("Compliance Item Type", self.item_type)
-		for rule in type_doc.reminders:
-			self.append("reminders", {"days_before": rule.days_before})
+		for days in reminder_days(self.item_type):
+			self.append("reminders", {"days_before": days})
 
 	def validate_dates(self, rules: frappe._dict):
 		if rules.renewal_cycle_months and not self.valid_until:

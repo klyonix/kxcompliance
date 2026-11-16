@@ -1,0 +1,134 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-16 22:00:00.000000",
+ "modified": "2026-11-16 22:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "description": "A firm's own settings for an item type it shares with others, used instead of the type's.",
+ "field_order": [
+  "item_type",
+  "is_active",
+  "column_break_main",
+  "renewal_cycle_months",
+  "grace_days",
+  "requires_document",
+  "section_reminders",
+  "reminders"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_type",
+   "fieldtype": "Link",
+   "label": "Item Type",
+   "options": "Compliance Item Type",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Leave blank if it does not expire.",
+   "fieldname": "renewal_cycle_months",
+   "fieldtype": "Int",
+   "label": "Renewal Cycle (Months)",
+   "non_negative": 1
+  },
+  {
+   "description": "Days after expiry during which it can still be renewed.",
+   "fieldname": "grace_days",
+   "fieldtype": "Int",
+   "label": "Grace Days",
+   "non_negative": 1
+  },
+  {
+   "description": "An item of this type counts as Active only once its certificate is attached.",
+   "fieldname": "requires_document",
+   "fieldtype": "Check",
+   "label": "Requires a Certificate"
+  },
+  {
+   "fieldname": "section_reminders",
+   "fieldtype": "Section Break",
+   "label": "Reminders"
+  },
+  {
+   "fieldname": "reminders",
+   "fieldtype": "Table",
+   "label": "Reminders",
+   "options": "Compliance Reminder Rule"
+  }
+ ],
+ "links": [],
+ "modified_by": "Administrator",
+ "module": "KX Compliance",
+ "name": "Compliance Item Type Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance User",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Compliance Auditor",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "row_format": "Dynamic",
+ "title_field": "item_type",
+ "track_changes": 1
+}

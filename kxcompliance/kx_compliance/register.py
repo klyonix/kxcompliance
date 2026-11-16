@@ -73,6 +73,9 @@ def is_certificate_missing(*, requires_document: bool, has_certificate: bool, is
 
 
 def get_type_rules(item_types: list[str]) -> dict[str, frappe._dict]:
+	"""Each item type's rules as the firm uses them (its own settings over a shared type's)."""
+	from kxcompliance.kx_compliance.item_type_settings import as_used
+
 	if not item_types:
 		return {}
 	rows = scoped.get_all(
@@ -80,7 +83,7 @@ def get_type_rules(item_types: list[str]) -> dict[str, frappe._dict]:
 		filters={"name": ("in", list(set(item_types)))},
 		fields=["name", "requires_document", "grace_days", "renewal_cycle_months"],
 	)
-	return {row.name: row for row in rows}
+	return {row.name: row for row in as_used(rows)}
 
 
 def open_renewal_statuses(items: list[str]) -> dict[str, str]:

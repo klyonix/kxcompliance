@@ -159,12 +159,12 @@ scheduler_events = {
 	# 		"kxcompliance.tasks.all"
 	# 	],
 	"daily": [
-		"kxcompliance.kx_compliance.reminders.run_daily",
-		"kxcompliance.kx_compliance.statutory.run_daily",
-		"kxcompliance.kx_compliance.legal.run_daily",
-		"kxcompliance.kx_compliance.document_requests.run_daily",
-		"kxcompliance.kx_compliance.privacy.run_daily",
-		"kxcompliance.kx_compliance.billing.send_overdue_reminders",
+		"kxcompliance.jobs.reminders_daily",
+		"kxcompliance.jobs.statutory_daily",
+		"kxcompliance.jobs.legal_daily",
+		"kxcompliance.jobs.document_requests_daily",
+		"kxcompliance.jobs.privacy_daily",
+		"kxcompliance.jobs.billing_overdue_reminders",
 	],
 	# 	"hourly": [
 	# 		"kxcompliance.tasks.hourly"
@@ -173,7 +173,7 @@ scheduler_events = {
 	# 		"kxcompliance.tasks.weekly"
 	# 	],
 	"monthly": [
-		"kxcompliance.kx_compliance.billing.make_monthly_drafts",
+		"kxcompliance.jobs.billing_monthly_drafts",
 	],
 }
 

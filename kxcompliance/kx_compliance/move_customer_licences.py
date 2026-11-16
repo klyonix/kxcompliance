@@ -13,6 +13,8 @@ import frappe
 from frappe import _
 from frappe.utils import escape_html
 
+from kxcompliance import scoped
+
 SAVEPOINT = "move_customer_licence_row"
 
 # The old customer licence tables another app adds to Customer, and the type each becomes.
@@ -24,13 +26,13 @@ def move_customer_licences() -> dict[str, dict[str, int]]:
 	return {
 		doctype: move_rows(doctype, "Compliance Item", move_customer_licence_row)
 		for doctype in CUSTOMER_LICENCE_TABLES
-		if frappe.db.exists("DocType", doctype)
+		if scoped.exists("DocType", doctype)
 	}
 
 
 def move_customer_licence_row(doctype: str, row, company: str) -> str:
 	item_type = CUSTOMER_LICENCE_TABLES[doctype]
-	customer_name = frappe.db.get_value("Customer", row.parent, "customer_name") or row.parent
+	customer_name = scoped.get_value("Customer", row.parent, "customer_name") or row.parent
 	notes = ""
 	if row.get("component"):
 		notes = f"<p><strong>{_('Component')}:</strong> {escape_html(str(row.component))}</p>"
@@ -57,8 +59,8 @@ def move_customer_licence_row(doctype: str, row, company: str) -> str:
 
 
 def move_rows(doctype: str, target: str, mover) -> dict[str, int]:
-	rows = frappe.get_all(doctype, fields=["*"], order_by="creation asc")
-	moved_keys = set(frappe.get_all(target, filters={"source_doctype": doctype}, pluck="source_key"))
+	rows = scoped.get_all(doctype, fields=["*"], order_by="creation asc")
+	moved_keys = set(scoped.get_all(target, filters={"source_doctype": doctype}, pluck="source_key"))
 	counts = {"total": len(rows), "moved": 0, "already_moved": 0, "failed": 0}
 	if not rows:
 		return counts
@@ -83,7 +85,7 @@ def move_rows(doctype: str, target: str, mover) -> dict[str, int]:
 
 def responsible_for(row) -> str:
 	for user in (row.in_charge, row.owner):
-		if user and frappe.db.get_value("User", user, "enabled"):
+		if user and scoped.get_value("User", user, "enabled"):
 			return user
 	return "Administrator"
 
@@ -93,7 +95,7 @@ def default_company() -> str:
 	company = frappe.defaults.get_global_default("company")
 	if company:
 		return company
-	companies = frappe.get_all("Company", pluck="name", limit=2)
+	companies = scoped.get_all("Company", pluck="name", limit=2)
 	if len(companies) == 1:
 		return companies[0]
 	frappe.throw(

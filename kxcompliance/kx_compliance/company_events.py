@@ -8,6 +8,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, formatdate, getdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.statutory import extensions_for, find_extension
 
 
@@ -18,9 +19,14 @@ def event_types_for(company_type: str) -> list[str]:
 	rows = (
 		frappe.qb.from_(template)
 		.left_join(kind)
-		.on((kind.parent == template.name) & (kind.parenttype == "Compliance Obligation Template"))
+		.on(
+			(kind.parent == template.name)
+			& (kind.parenttype == "Compliance Obligation Template")
+			& scoped.where(kind)
+		)
 		.select(template.event_type, kind.company_type)
 		.where((template.is_active == 1) & template.event_type.isnotnull() & (template.event_type != ""))
+		.where(scoped.where(template))
 	).run(as_dict=True)
 	# A template that names no company types applies to every kind of company.
 	types_by_event: dict[str, set] = {}
@@ -39,7 +45,7 @@ def event_type_query(
 	"""The Desk's Event Type picker on a Compliance Event: only events that call for a filing
 	from the chosen company's kind."""
 	frappe.has_permission("Compliance Event", "create", throw=True)
-	company_type = frappe.db.get_value(
+	company_type = scoped.get_value(
 		"Company Compliance Profile", (filters or {}).get("company") or "", "company_type"
 	)
 	if not company_type:
@@ -52,6 +58,7 @@ def event_type_query(
 		frappe.qb.from_(event_type)
 		.select(event_type.name, event_type.description)
 		.where(event_type.name.isin(names) & event_type.name.like(f"%{txt}%"))
+		.where(scoped.where(event_type))
 		.orderby(event_type.name)
 		.limit(page_len)
 		.offset(start)
@@ -62,7 +69,7 @@ def event_templates(event_type: str, company_type: str) -> list:
 	"""The active templates an event of this type calls for, for this kind of company."""
 	templates = [
 		frappe.get_cached_doc("Compliance Obligation Template", name)
-		for name in frappe.get_all(
+		for name in scoped.get_all(
 			"Compliance Obligation Template",
 			filters={"is_active": 1, "event_type": event_type},
 			pluck="name",

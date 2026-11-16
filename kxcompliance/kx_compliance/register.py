@@ -7,6 +7,8 @@ import frappe
 from frappe import _
 from frappe.utils import date_diff, getdate
 
+from kxcompliance import scoped
+
 DEFAULT_DUE_SOON_DAYS = 30
 DEFAULT_ESCALATE_AFTER_DAYS = 7
 
@@ -16,13 +18,13 @@ APPROVER_ROLES = frozenset({"System Manager", "Compliance Manager"})
 
 
 def get_settings():
-	return frappe.get_cached_doc("KX Compliance Settings")
+	return scoped.settings()
 
 
 def compliance_companies() -> list[str]:
 	"""Every ERPNext company except a firm's own billing company, which is not a client's."""
 	own = get_settings().billing_company
-	return [name for name in frappe.get_all("Company", pluck="name", order_by="name asc") if name != own]
+	return [name for name in scoped.get_all("Company", pluck="name", order_by="name asc") if name != own]
 
 
 def due_soon_days() -> int:
@@ -73,7 +75,7 @@ def is_certificate_missing(*, requires_document: bool, has_certificate: bool, is
 def get_type_rules(item_types: list[str]) -> dict[str, frappe._dict]:
 	if not item_types:
 		return {}
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Compliance Item Type",
 		filters={"name": ("in", list(set(item_types)))},
 		fields=["name", "requires_document", "grace_days", "renewal_cycle_months"],
@@ -85,7 +87,7 @@ def open_renewal_statuses(items: list[str]) -> dict[str, str]:
 	"""Each item's open renewal, Planned or Applied; an item has one at most."""
 	if not items:
 		return {}
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Compliance Renewal",
 		filters={"compliance_item": ("in", items), "status": ("in", OPEN_RENEWAL_STATUSES)},
 		fields=["compliance_item", "status"],

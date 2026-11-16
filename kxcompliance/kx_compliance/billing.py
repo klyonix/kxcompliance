@@ -19,6 +19,7 @@ from frappe.query_builder.functions import Sum
 from frappe.utils import add_days, add_months, flt, format_date, get_first_day, getdate, nowdate
 from frappe.utils.caching import request_cache
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.onboarding import make_company
 from kxcompliance.kx_compliance.register import get_settings, is_approver
 from kxcompliance.kx_compliance.setup_import import GST_STATE_CODES, GSTIN_PATTERN
@@ -116,18 +117,18 @@ def setup_state() -> dict:
 def firms_own_companies() -> list[str]:
 	"""Companies that are no client's: the firm's own, such as the one ERPNext's setup made."""
 	clients = set(
-		frappe.get_all("Company Compliance Profile", filters={"client": ("is", "set")}, pluck="company")
+		scoped.get_all("Company Compliance Profile", filters={"client": ("is", "set")}, pluck="company")
 	)
 	return [
-		name for name in frappe.get_all("Company", pluck="name", order_by="creation") if name not in clients
+		name for name in scoped.get_all("Company", pluck="name", order_by="creation") if name not in clients
 	]
 
 
 def firm_company(name: str) -> str:
 	"""The firm's company under this name: the existing one if it is the firm's own, else a new one."""
-	if not frappe.db.exists("Company", name):
+	if not scoped.exists("Company", name):
 		return make_company(name)
-	client = frappe.db.get_value("Company Compliance Profile", {"company": name}, "client")
+	client = scoped.get_value("Company Compliance Profile", {"company": name}, "client")
 	if client:
 		frappe.throw(
 			_("{0} is a company of the client {1}; give the firm's own name for its bills.").format(
@@ -141,7 +142,7 @@ def set_up_firm(name: str, details: dict) -> dict:
 	"""Take the firm's own company, made if it is not there, and what billing needs on it, once;
 	then keep its details."""
 	check_firm_manager()
-	settings = frappe.get_doc(SETTINGS)
+	settings = scoped.settings(for_update=True)
 	if not settings.billing_company:
 		settings.billing_company = firm_company(name)
 	save_details(settings, details)
@@ -206,7 +207,7 @@ def make_masters(company: str):
 		item.save()
 	# Payments: into cash or the firm's bank, and TDS the client deducts, kept as an asset.
 	bank = bank_ledger(company)
-	cash = frappe.db.get_value("Company", company, "default_cash_account")
+	cash = scoped.get_value("Company", company, "default_cash_account")
 	for mode, kind in PAYMENT_MODES.items():
 		payment_mode(mode, kind, company, cash if kind == "Cash" else bank)
 	ledger(company, TDS_ACCOUNT, "Tax Assets")
@@ -225,10 +226,10 @@ def make_masters(company: str):
 
 def ledger(company: str, name: str, parent_name: str, account_type: str | None = None) -> str:
 	"""An account under one of the company's groups, made only if it is not there."""
-	existing = frappe.db.get_value("Account", {"company": company, "account_name": name, "is_group": 0})
+	existing = scoped.get_value("Account", {"company": company, "account_name": name, "is_group": 0})
 	if existing:
 		return existing
-	parent = frappe.db.get_value("Account", {"company": company, "account_name": parent_name, "is_group": 1})
+	parent = scoped.get_value("Account", {"company": company, "account_name": parent_name, "is_group": 1})
 	if not parent:
 		frappe.throw(_("{0} has no {1} account to keep {2} under.").format(company, parent_name, name))
 	return (
@@ -248,7 +249,7 @@ def ledger(company: str, name: str, parent_name: str, account_type: str | None =
 
 def bank_ledger(company: str) -> str:
 	"""The company's bank account in the books: its default, else one made under Bank Accounts."""
-	bank = frappe.db.get_value("Company", company, "default_bank_account")
+	bank = scoped.get_value("Company", company, "default_bank_account")
 	if bank:
 		return bank
 	bank = ledger(company, "Bank", "Bank Accounts", "Bank")
@@ -259,7 +260,7 @@ def bank_ledger(company: str) -> str:
 
 def payment_mode(mode: str, kind: str, company: str, account: str):
 	"""A way of paying, which pays into this account for the company."""
-	if not frappe.db.exists("Mode of Payment", mode):
+	if not scoped.exists("Mode of Payment", mode):
 		frappe.get_doc({"doctype": "Mode of Payment", "mode_of_payment": mode, "type": kind}).insert()
 	doc = frappe.get_doc("Mode of Payment", mode)
 	if not any(row.company == company for row in doc.accounts):
@@ -268,7 +269,7 @@ def payment_mode(mode: str, kind: str, company: str, account: str):
 
 
 def item_tax_template(company: str, accounts: list[str]) -> str:
-	existing = frappe.db.get_value("Item Tax Template", {"company": company, "title": WITHOUT_GST})
+	existing = scoped.get_value("Item Tax Template", {"company": company, "title": WITHOUT_GST})
 	if existing:
 		return existing
 	return (
@@ -286,7 +287,7 @@ def item_tax_template(company: str, accounts: list[str]) -> str:
 
 
 def make_item(code: str, description: str, uom: str = "Nos"):
-	if frappe.db.exists("Item", code):
+	if scoped.exists("Item", code):
 		return
 	frappe.get_doc(
 		{
@@ -294,7 +295,7 @@ def make_item(code: str, description: str, uom: str = "Nos"):
 			"item_code": code,
 			"item_name": code,
 			"description": description,
-			"item_group": "Services" if frappe.db.exists("Item Group", "Services") else root("Item Group"),
+			"item_group": "Services" if scoped.exists("Item Group", "Services") else root("Item Group"),
 			"stock_uom": uom,
 			"is_stock_item": 0,
 			"include_item_in_manufacturing": 0,
@@ -303,10 +304,10 @@ def make_item(code: str, description: str, uom: str = "Nos"):
 
 
 def tax_account(company: str, account_name: str) -> str:
-	existing = frappe.db.get_value("Account", {"company": company, "account_name": account_name})
+	existing = scoped.get_value("Account", {"company": company, "account_name": account_name})
 	if existing:
 		return existing
-	parent = frappe.db.get_value(
+	parent = scoped.get_value(
 		"Account", {"company": company, "account_name": "Duties and Taxes", "is_group": 1}
 	)
 	if not parent:
@@ -328,7 +329,7 @@ def tax_account(company: str, account_name: str) -> str:
 
 
 def tax_template(company: str, title: str, lines: list[tuple[str, float]]) -> str:
-	existing = frappe.db.get_value("Sales Taxes and Charges Template", {"company": company, "title": title})
+	existing = scoped.get_value("Sales Taxes and Charges Template", {"company": company, "title": title})
 	if existing:
 		return existing
 	return (
@@ -341,7 +342,7 @@ def tax_template(company: str, title: str, lines: list[tuple[str, float]]) -> st
 					{
 						"charge_type": "On Net Total",
 						"account_head": account,
-						"description": frappe.db.get_value("Account", account, "account_name"),
+						"description": scoped.get_value("Account", account, "account_name"),
 						"rate": rate,
 					}
 					for account, rate in lines
@@ -354,9 +355,7 @@ def tax_template(company: str, title: str, lines: list[tuple[str, float]]) -> st
 
 
 def root(doctype: str) -> str:
-	return frappe.db.get_value(
-		doctype, {"is_group": 1, f"parent_{frappe.scrub(doctype)}": ("in", ("", None))}
-	)
+	return scoped.get_value(doctype, {"is_group": 1, f"parent_{frappe.scrub(doctype)}": ("in", ("", None))})
 
 
 def rate_key(line) -> tuple[str, str]:
@@ -403,7 +402,12 @@ def keep_one_default(card):
 	if not card.is_default:
 		return
 	table = frappe.qb.DocType("Rate Card")
-	(frappe.qb.update(table).set(table.is_default, 0).where(table.name != card.name)).run()
+	(
+		frappe.qb.update(table)
+		.set(table.is_default, 0)
+		.where(table.name != card.name)
+		.where(scoped.where(table))
+	).run()
 
 
 def check_client_rates(client):
@@ -416,7 +420,7 @@ def check_client_rates(client):
 		return
 	lines = list(client.own_rates)
 	if client.rate_card:
-		lines += frappe.get_all(
+		lines += scoped.get_all(
 			"Rate Card Line",
 			filters={"parenttype": "Rate Card", "parent": client.rate_card},
 			fields=["service", "unit"],
@@ -431,7 +435,7 @@ def check_client_rates(client):
 
 
 def default_card() -> str | None:
-	return frappe.db.get_value("Rate Card", {"is_default": 1})
+	return scoped.get_value("Rate Card", {"is_default": 1})
 
 
 LINE_FIELDS = ["kind", "obligation_template", "service", "unit", "amount", "sac_code"]
@@ -444,7 +448,7 @@ def rates_for(clients: list[str], unsaved: dict | None = None) -> dict[str, dict
 	unsaved = unsaved or {}
 	saved = [name for name in clients if name not in unsaved]
 	card_of = dict(
-		frappe.get_all(
+		scoped.get_all(
 			"Compliance Client",
 			filters={"name": ("in", saved or [""])},
 			fields=["name", "rate_card"],
@@ -456,7 +460,7 @@ def rates_for(clients: list[str], unsaved: dict | None = None) -> dict[str, dict
 	fallback = default_card()
 	cards = {card_of.get(name) or fallback for name in clients} - {None}
 	card_lines: dict[str, list] = {}
-	for row in frappe.get_all(
+	for row in scoped.get_all(
 		"Rate Card Line",
 		filters={"parenttype": "Rate Card", "parent": ("in", list(cards) or [""])},
 		fields=["parent", *LINE_FIELDS],
@@ -464,7 +468,7 @@ def rates_for(clients: list[str], unsaved: dict | None = None) -> dict[str, dict
 	):
 		card_lines.setdefault(row.parent, []).append(row)
 	own: dict[str, list] = {}
-	for row in frappe.get_all(
+	for row in scoped.get_all(
 		"Rate Card Line",
 		filters={"parenttype": "Compliance Client", "parent": ("in", saved or [""])},
 		fields=["parent", *LINE_FIELDS],
@@ -494,7 +498,7 @@ def unbilled_for(clients: list[str]) -> list[dict]:
 	if not clients:
 		return []
 	owner = dict(
-		frappe.get_all(
+		scoped.get_all(
 			"Company Compliance Profile",
 			filters={"client": ("in", clients)},
 			fields=["company", "client"],
@@ -504,7 +508,7 @@ def unbilled_for(clients: list[str]) -> list[dict]:
 	if not owner:
 		return []
 	rates = rates_for(clients)
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Compliance Task",
 		filters={
 			"company": ("in", list(owner)),
@@ -576,20 +580,20 @@ def check_biller():
 def leaf(doctype: str, preferred: tuple[str | None, ...]) -> str | None:
 	"""The first of `preferred` that exists and is not a group, else any that is not."""
 	for name in preferred:
-		if name and frappe.db.exists(doctype, {"name": name, "is_group": 0}):
+		if name and scoped.exists(doctype, {"name": name, "is_group": 0}):
 			return name
-	return frappe.db.get_value(doctype, {"is_group": 0})
+	return scoped.get_value(doctype, {"is_group": 0})
 
 
 def customer_for(client: str) -> str:
 	"""The client's Customer, made the first time it is billed. A link the app keeps, not a state
 	of the client, so it is written directly."""
-	values = frappe.db.get_value(
+	values = scoped.get_value(
 		"Compliance Client", client, ["client_name", "client_kind", "customer", "gstin"], as_dict=True
 	)
 	if not values:
 		frappe.throw(_("Client {0} does not exist.").format(client))
-	if values.customer and frappe.db.exists("Customer", values.customer):
+	if values.customer and scoped.exists("Customer", values.customer):
 		return values.customer
 	selling = frappe.get_single("Selling Settings")
 	customer = frappe.get_doc(
@@ -620,7 +624,7 @@ def follow_client(client):
 
 def client_companies(client: str) -> list[str]:
 	"""The client's companies, by name (a profile is named after its company)."""
-	return frappe.get_all(
+	return scoped.get_all(
 		"Company Compliance Profile", filters={"client": client}, pluck="name", order_by="name asc"
 	)
 
@@ -640,7 +644,7 @@ def bill_company(client: str, company: str | None) -> str | None:
 
 def recurring_company_of(client: str, companies: list[str]) -> str | None:
 	"""The company whose bills carry the client's recurring charges: the one chosen, else its first."""
-	chosen = frappe.db.get_value("Compliance Client", client, "recurring_company")
+	chosen = scoped.get_value("Compliance Client", client, "recurring_company")
 	if chosen in companies:
 		return chosen
 	return companies[0] if companies else None
@@ -650,7 +654,7 @@ def billing_party(client: str | None, company: str | None = None) -> frappe._dic
 	"""Who a bill is to: the company, with its own billing details where it has them, else the
 	client's. `client_name` is the name printed on the bill."""
 	base = (
-		frappe.db.get_value(
+		scoped.get_value(
 			"Compliance Client",
 			client,
 			[
@@ -668,7 +672,7 @@ def billing_party(client: str | None, company: str | None = None) -> frappe._dic
 		else None
 	) or frappe._dict()
 	own = (
-		frappe.db.get_value(
+		scoped.get_value(
 			"Company Compliance Profile",
 			company,
 			["billing_gstin", "billing_state", "billing_address", "billing_email"],
@@ -697,7 +701,7 @@ def gst_registration(company: str | None) -> frappe._dict:
 	one a bill is to is the profile's billing GSTIN to say."""
 	if not company:
 		return frappe._dict()
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Compliance Registration",
 		filters={"parent": company, "parenttype": "Company Compliance Profile", "registration_type": "GST"},
 		fields=["registration_number", "state"],
@@ -713,7 +717,7 @@ def tax_template_for(client_state: str | None) -> str | None:
 	"""Within the firm's state, CGST and SGST; elsewhere (or not known), IGST."""
 	settings = get_settings()
 	title = WITHIN_STATE if client_state and client_state == settings.billing_state else OUTSIDE_STATE
-	return frappe.db.get_value(
+	return scoped.get_value(
 		"Sales Taxes and Charges Template", {"company": settings.billing_company, "title": title}
 	)
 
@@ -794,6 +798,8 @@ def on_drafts(filings: list[str]) -> set[str]:
 			.on(invoice.name == item.parent)
 			.select(item.compliance_task)
 			.where(item.compliance_task.isin(filings) & (invoice.docstatus == 0))
+			.where(scoped.where(item))
+			.where(scoped.where(invoice))
 		).run(pluck=True)
 	)
 
@@ -838,7 +844,7 @@ def make_bill(
 		}
 		for name in asked
 	]
-	start = frappe.db.get_value("Compliance Client", client, "billing_from")
+	start = scoped.get_value("Compliance Client", client, "billing_from")
 	rates = rates_for([client])[client]
 	carries_recurring = company == recurring_company_of(client, client_companies(client))
 	charges = recurring_due(rates, start, month) if month and carries_recurring else []
@@ -1065,11 +1071,17 @@ def mark_filings_billed(bill, method=None):
 		frappe.qb.from_(task)
 		.select(task.name, task.billed_in)
 		.where(task.name.isin(filings) & task.billed_in.isnotnull() & (task.billed_in != bill.name))
+		.where(scoped.where(task))
 	).run(as_dict=True)
 	if elsewhere:
 		frappe.throw(_("{0} is already billed in {1}.").format(elsewhere[0].name, elsewhere[0].billed_in))
 	# A link kept by the bill's own submit, not a state of the filing.
-	(frappe.qb.update(task).set(task.billed_in, bill.name).where(task.name.isin(filings))).run()
+	(
+		frappe.qb.update(task)
+		.set(task.billed_in, bill.name)
+		.where(task.name.isin(filings))
+		.where(scoped.where(task))
+	).run()
 
 
 def unmark_filings_billed(bill, method=None):
@@ -1079,7 +1091,12 @@ def unmark_filings_billed(bill, method=None):
 		follow_credits(bill.return_against)
 		return
 	task = frappe.qb.DocType("Compliance Task")
-	(frappe.qb.update(task).set(task.billed_in, None).where(task.billed_in == bill.name)).run()
+	(
+		frappe.qb.update(task)
+		.set(task.billed_in, None)
+		.where(task.billed_in == bill.name)
+		.where(scoped.where(task))
+	).run()
 
 
 def make_monthly_drafts(today: date | None = None):
@@ -1089,7 +1106,7 @@ def make_monthly_drafts(today: date | None = None):
 	if settings.account_type != FIRM or not settings.billing_company:
 		return
 	month = get_first_day(today or nowdate())
-	for client in frappe.get_all("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name"):
+	for client in scoped.get_all("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name"):
 		companies = client_companies(client)
 		for company in companies or [None]:
 			make_monthly_draft(client, company, companies, month)
@@ -1102,7 +1119,7 @@ def month_key(client: str, company: str | None, month: date) -> str:
 
 
 def month_billed(key: str) -> bool:
-	return bool(frappe.db.exists("Sales Invoice", {"kx_billing_key": key, "docstatus": ("!=", 2)}))
+	return bool(scoped.exists("Sales Invoice", {"kx_billing_key": key, "docstatus": ("!=", 2)}))
 
 
 def make_monthly_draft(client: str, company: str | None, companies: list[str], month: date):
@@ -1115,7 +1132,7 @@ def make_monthly_draft(client: str, company: str | None, companies: list[str], m
 		filings = [row.name for row in unbilled_filings(client) if company is None or row.company == company]
 		recurring = company == recurring_company_of(client, companies) and recurring_due(
 			rates_for([client])[client],
-			frappe.db.get_value("Compliance Client", client, "billing_from"),
+			scoped.get_value("Compliance Client", client, "billing_from"),
 			month,
 		)
 		if filings or recurring:
@@ -1139,7 +1156,7 @@ def bill_options(client: str, company: str | None = None) -> dict:
 		frappe.throw(_("{0} is not one of {1}'s companies.").format(company, client))
 	month = get_first_day(nowdate())
 	rates = rates_for([client])[client]
-	start = frappe.db.get_value("Compliance Client", client, "billing_from")
+	start = scoped.get_value("Compliance Client", client, "billing_from")
 	recurring_to = recurring_company_of(client, companies)
 	return {
 		"companies": companies,
@@ -1247,7 +1264,7 @@ def record_payment(
 		frappe.throw(_("Pay by one of {0}, not {1}.").format(", ".join(PAYMENT_MODES), mode))
 	from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 
-	account = frappe.db.get_value(
+	account = scoped.get_value(
 		"Mode of Payment Account", {"parent": mode, "company": bill.company}, "default_account"
 	)
 	entry = get_payment_entry("Sales Invoice", bill.name, party_amount=amount)
@@ -1265,10 +1282,10 @@ def record_payment(
 		entry.append(
 			"deductions",
 			{
-				"account": frappe.db.get_value(
+				"account": scoped.get_value(
 					"Account", {"company": bill.company, "account_name": TDS_ACCOUNT, "is_group": 0}
 				),
-				"cost_center": frappe.db.get_value("Company", bill.company, "cost_center"),
+				"cost_center": scoped.get_value("Company", bill.company, "cost_center"),
 				"amount": tds,
 				"description": _("TDS deducted by the client"),
 			},
@@ -1299,6 +1316,8 @@ def payments_of(bill: str) -> list[dict]:
 			& (reference.reference_name == bill)
 			& (entry.docstatus == 1)
 		)
+		.where(scoped.where(reference))
+		.where(scoped.where(entry))
 		.orderby(entry.posting_date)
 		.orderby(entry.name)
 	).run(as_dict=True)
@@ -1306,7 +1325,7 @@ def payments_of(bill: str) -> list[dict]:
 	# TDS is shared by what it settled of each, and what it paid on this bill is the rest.
 	names = [row.name for row in rows] or [""]
 	deducted: dict[str, float] = {}
-	for line in frappe.get_all(
+	for line in scoped.get_all(
 		"Payment Entry Deduction",
 		filters={"parenttype": "Payment Entry", "parent": ("in", names)},
 		fields=["parent", "amount"],
@@ -1317,6 +1336,7 @@ def payments_of(bill: str) -> list[dict]:
 			frappe.qb.from_(reference)
 			.select(reference.parent, Sum(reference.allocated_amount))
 			.where((reference.parent.isin(names)) & (reference.reference_doctype == "Sales Invoice"))
+			.where(scoped.where(reference))
 			.groupby(reference.parent)
 		).run()
 	)
@@ -1329,7 +1349,7 @@ def payments_of(bill: str) -> list[dict]:
 
 def payment_of(name: str):
 	"""A payment to the firm, for those who bill: one against its bills, or an advance."""
-	if not isinstance(name, str) or not frappe.db.exists("Payment Entry", name):
+	if not isinstance(name, str) or not scoped.exists("Payment Entry", name):
 		frappe.throw(_("Payment {0} does not exist.").format(name), frappe.DoesNotExistError)
 	entry = frappe.get_doc("Payment Entry", name)
 	bills = [row.reference_name for row in entry.references if row.reference_doctype == "Sales Invoice"]
@@ -1345,9 +1365,7 @@ def payment_of(name: str):
 
 def client_of_payment(entry) -> str | None:
 	"""The client who paid: the customer the payment is from is that client's."""
-	return (
-		frappe.db.get_value("Compliance Client", {"customer": entry.party}, "name") if entry.party else None
-	)
+	return scoped.get_value("Compliance Client", {"customer": entry.party}, "name") if entry.party else None
 
 
 def payment_detail(name: str) -> dict:
@@ -1358,14 +1376,14 @@ def payment_detail(name: str) -> dict:
 	settled = [row for row in entry.references if row.reference_doctype == "Sales Invoice"]
 	bills = {
 		row.name: row
-		for row in frappe.get_all(
+		for row in scoped.get_all(
 			"Sales Invoice",
 			filters={"name": ("in", [row.reference_name for row in settled] or [""])},
 			fields=["name", "posting_date", "grand_total", "rounded_total", "outstanding_amount"],
 		)
 	}
 	emails = (
-		frappe.db.get_value("Compliance Client", client, ["billing_email", "contact_email"], as_dict=True)
+		scoped.get_value("Compliance Client", client, ["billing_email", "contact_email"], as_dict=True)
 		if client
 		else None
 	)
@@ -1396,7 +1414,7 @@ def payment_detail(name: str) -> dict:
 			for row in settled
 		],
 		"email_to": emails and (emails.billing_email or emails.contact_email),
-		"emailed": frappe.db.count(
+		"emailed": scoped.count(
 			"Communication",
 			{"reference_doctype": "Payment Entry", "reference_name": entry.name, "sent_or_received": "Sent"},
 		),
@@ -1412,7 +1430,7 @@ def email_receipt(name: str) -> str:
 		frappe.throw(_("{0} is cancelled; it has no receipt to send.").format(name))
 	client = client_of_payment(entry)
 	address = (
-		frappe.db.get_value("Compliance Client", client, ["billing_email", "contact_email"], as_dict=True)
+		scoped.get_value("Compliance Client", client, ["billing_email", "contact_email"], as_dict=True)
 		if client
 		else None
 	)
@@ -1541,10 +1559,10 @@ def client_billing(client: str, own: bool) -> dict:
 	from_date, to_date = financial_year()
 	sent = {"company": company, "compliance_client": client, "docstatus": 1}
 	shown = sent if own else {**sent, "docstatus": ("in", (0, 1))}
-	bills_shown = frappe.get_all(
+	bills_shown = scoped.get_all(
 		"Sales Invoice", filters=shown, fields=LIST_FIELDS, order_by="posting_date desc, name desc", limit=10
 	)
-	due = frappe.get_all(
+	due = scoped.get_all(
 		"Sales Invoice",
 		filters={**sent, "outstanding_amount": (">", 0)},
 		fields=["outstanding_amount", "due_date"],
@@ -1574,7 +1592,7 @@ def client_summary(client: str) -> dict:
 	from kxcompliance.kx_compliance.client_reports import financial_year
 
 	from_date, to_date = financial_year()
-	values = frappe.db.get_value(
+	values = scoped.get_value(
 		"Compliance Client", client, ["customer", "rate_card", "billing_from"], as_dict=True
 	)
 	rates = rates_for([client])[client]
@@ -1669,6 +1687,8 @@ def filings_due(client: str, from_date, to_date) -> list[dict]:
 			& task.effective_due_date.between(from_date, to_date)
 			& task.status.notin(NOT_EXPECTED)
 		)
+		.where(scoped.where(task))
+		.where(scoped.where(profile))
 		.groupby(task.obligation_template)
 		.orderby(task.obligation_template)
 	).run(as_dict=True)
@@ -1694,6 +1714,7 @@ def year_activity(client: str | None, customer: str | None, from_date, to_date) 
 			& (invoice.docstatus == 1)
 			& invoice.posting_date.between(from_date, to_date)
 		)
+		.where(scoped.where(invoice))
 	).run()[0]
 	activity = {"billed": flt(billed), "credited": flt(credited), "received": 0, "tds": 0, "written_off": 0}
 	if client and not customer:
@@ -1706,6 +1727,7 @@ def year_activity(client: str | None, customer: str | None, from_date, to_date) 
 		& (entry.payment_type == "Receive")
 		& (entry.docstatus == 1)
 		& entry.posting_date.between(from_date, to_date)
+		& scoped.where(entry)
 	)
 	activity["received"] = flt(
 		frappe.qb.from_(entry).select(Sum(entry.paid_amount)).where(paid_in).run()[0][0]
@@ -1717,6 +1739,7 @@ def year_activity(client: str | None, customer: str | None, from_date, to_date) 
 		.on(entry.name == deduction.parent)
 		.select(Sum(deduction.amount))
 		.where(paid_in & (deduction.parenttype == "Payment Entry"))
+		.where(scoped.where(deduction))
 		.run()[0][0]
 	)
 	journal = frappe.qb.DocType("Journal Entry")
@@ -1734,6 +1757,8 @@ def year_activity(client: str | None, customer: str | None, from_date, to_date) 
 			& (line.party_type == "Customer")
 			& ((line.party == customer) if customer else line.party.isnotnull())
 		)
+		.where(scoped.where(line))
+		.where(scoped.where(journal))
 		.run()[0][0]
 	)
 	return activity
@@ -1752,7 +1777,7 @@ def billing_summary(client: str | None = None) -> dict:
 		# The firm's totals are for those who bill every client; the rest choose one of theirs.
 		frappe.throw(_("Choose one of your clients to see its billing."), frappe.PermissionError)
 	from_date, to_date = financial_year()
-	customer = frappe.db.get_value("Compliance Client", client, "customer") if client else None
+	customer = scoped.get_value("Compliance Client", client, "customer") if client else None
 	owing = outstanding_by_client(client, getdate(nowdate()))
 	unbilled = unbilled_for_clients(client)
 	unbilled_by_client: dict[str, dict] = {}
@@ -1793,7 +1818,7 @@ def account_entries(customer: str, to_date, own: bool = False) -> list[dict]:
 	to_date = getdate(to_date)
 	bills = {
 		row.name: row
-		for row in frappe.get_all(
+		for row in scoped.get_all(
 			"Sales Invoice",
 			filters={"company": company, "customer": customer, "docstatus": 1},
 			fields=[
@@ -1872,7 +1897,11 @@ def payment_entries(customer: str, company: str, to_date, bills: dict) -> list[d
 	rows = (
 		frappe.qb.from_(payment)
 		.left_join(reference)
-		.on((reference.parent == payment.name) & (reference.reference_doctype == "Sales Invoice"))
+		.on(
+			(reference.parent == payment.name)
+			& (reference.reference_doctype == "Sales Invoice")
+			& scoped.where(reference)
+		)
 		.select(
 			payment.name,
 			payment.posting_date,
@@ -1891,6 +1920,7 @@ def payment_entries(customer: str, company: str, to_date, bills: dict) -> list[d
 			& (payment.docstatus == 1)
 			& (payment.posting_date <= to_date)
 		)
+		.where(scoped.where(payment))
 		.orderby(payment.posting_date)
 		.orderby(payment.name)
 	).run(as_dict=True)
@@ -1898,7 +1928,7 @@ def payment_entries(customer: str, company: str, to_date, bills: dict) -> list[d
 	for row in rows:
 		payments.setdefault(row.name, []).append(row)
 	deducted: dict[str, float] = {}
-	for row in frappe.get_all(
+	for row in scoped.get_all(
 		"Payment Entry Deduction",
 		filters={"parenttype": "Payment Entry", "parent": ("in", list(payments) or [""])},
 		fields=["parent", "amount"],
@@ -1988,6 +2018,8 @@ def write_off_entries(customer: str, company: str, to_date, bills: dict, own: bo
 			& (line.party == customer)
 			& (line.reference_type == "Sales Invoice")
 		)
+		.where(scoped.where(line))
+		.where(scoped.where(journal))
 	).run(as_dict=True)
 	return [
 		entry(
@@ -2026,7 +2058,7 @@ def statement(client: str, from_date, to_date, own: bool = False) -> dict:
 				format_date(from_date), format_date(to_date)
 			)
 		)
-	customer = frappe.db.get_value("Compliance Client", client, "customer")
+	customer = scoped.get_value("Compliance Client", client, "customer")
 	entries = account_entries(customer, to_date, own) if customer else []
 	sections: dict = {}
 	for row in entries:
@@ -2093,7 +2125,7 @@ def still_open(entries: list[dict], today) -> list[dict]:
 		if row["kind"] != "bill" and row["bill"] in bills:
 			bills[row["bill"]]["due"] = flt(bills[row["bill"]]["due"] - row["credit"] + row["debit"], 2)
 	due_dates = dict(
-		frappe.get_all(
+		scoped.get_all(
 			"Sales Invoice",
 			filters={"name": ("in", list(bills) or [""])},
 			fields=["name", "due_date"],
@@ -2127,7 +2159,7 @@ def statement_html(client: str, from_date, to_date, own: bool = False) -> str:
 			"client": billing_party(client),
 			"ageing_labels": AGEING_LABELS,
 			"own": own,
-			"currency": frappe.db.get_value("Company", get_settings().billing_company, "default_currency")
+			"currency": scoped.get_value("Company", get_settings().billing_company, "default_currency")
 			or "INR",
 		},
 	)
@@ -2174,6 +2206,7 @@ def outstanding_by_client(client: str | None, today) -> list[dict]:
 			& (invoice.docstatus == 1)
 			& (invoice.outstanding_amount > 0)
 		)
+		.where(scoped.where(invoice))
 	)
 	if client:
 		query = query.where(invoice.compliance_client == client)
@@ -2226,6 +2259,7 @@ def billing_by_month(from_date, to_date, client: str | None) -> list[dict]:
 			& (invoice.docstatus == 1)
 			& invoice.posting_date.between(from_date, to_date)
 		)
+		.where(scoped.where(invoice))
 		.groupby(year, month)
 		.orderby(year)
 		.orderby(month)
@@ -2245,7 +2279,7 @@ def unbilled_for_clients(client: str | None) -> list[dict]:
 	clients = (
 		[client]
 		if client
-		else frappe.get_all("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name")
+		else scoped.get_all("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name")
 	)
 	return sorted(unbilled_for(clients), key=lambda row: (row.client, str(row.filed_on or ""), row.name))
 
@@ -2302,7 +2336,7 @@ def bill_print(bill) -> dict:
 	if credit and bill.return_against:
 		against = {
 			"name": bill.return_against,
-			"date": frappe.db.get_value("Sales Invoice", bill.return_against, "posting_date"),
+			"date": scoped.get_value("Sales Invoice", bill.return_against, "posting_date"),
 		}
 	return {
 		"title": "Credit Note" if credit else title,
@@ -2347,6 +2381,8 @@ def credited_lines(bill: str) -> dict[str, frappe._dict]:
 		.on(note.name == row.parent)
 		.select(row.sales_invoice_item, Sum(row.qty).as_("qty"), Sum(row.amount).as_("amount"))
 		.where((note.return_against == bill) & (note.is_return == 1) & (note.docstatus == 1))
+		.where(scoped.where(row))
+		.where(scoped.where(note))
 		.groupby(row.sales_invoice_item)
 	).run(as_dict=True)
 	return {r.sales_invoice_item: frappe._dict(qty=-flt(r.qty), amount=-flt(r.amount)) for r in rows}
@@ -2383,12 +2419,14 @@ def follow_credits(original: str | None):
 			frappe.qb.update(task)
 			.set(task.billed_in, None)
 			.where(task.name.isin(freed) & (task.billed_in == original))
+			.where(scoped.where(task))
 		).run()
 	if kept:
 		(
 			frappe.qb.update(task)
 			.set(task.billed_in, original)
 			.where(task.name.isin(kept) & task.billed_in.isnull())
+			.where(scoped.where(task))
 		).run()
 
 
@@ -2467,7 +2505,7 @@ def credit_note(name: str, reason: str, amount: float | None = None, line: str |
 
 
 def credit_notes_of(bill: str) -> list[dict]:
-	return frappe.get_all(
+	return scoped.get_all(
 		"Sales Invoice",
 		filters={"return_against": bill, "is_return": 1, "docstatus": 1},
 		fields=["name", "posting_date", "grand_total", "remarks"],
@@ -2485,7 +2523,7 @@ def write_off(name: str, reason: str) -> str:
 	reason = (reason or "").strip()
 	if not reason:
 		frappe.throw(_("Say why what is left on {0} is written off.").format(name))
-	company = frappe.db.get_value("Company", bill.company, ["write_off_account", "cost_center"], as_dict=True)
+	company = scoped.get_value("Company", bill.company, ["write_off_account", "cost_center"], as_dict=True)
 	if not company.write_off_account:
 		frappe.throw(_("{0} has no write-off account set.").format(bill.company))
 	entry = frappe.get_doc(
@@ -2537,6 +2575,8 @@ def written_off(bill: str) -> list[dict]:
 			& (entry.voucher_type == "Write Off Entry")
 			& (entry.docstatus == 1)
 		)
+		.where(scoped.where(account))
+		.where(scoped.where(entry))
 	).run(as_dict=True)
 
 
@@ -2572,7 +2612,7 @@ def record_advance(
 			"company": company,
 			"posting_date": getdate(paid_on),
 			"paid_from": get_party_account("Customer", customer, company),
-			"paid_to": frappe.db.get_value(
+			"paid_to": scoped.get_value(
 				"Mode of Payment Account", {"parent": mode, "company": company}, "default_account"
 			),
 			"paid_amount": amount,
@@ -2603,6 +2643,7 @@ def advance_held(customer: str | None) -> float:
 			& (entry.company == get_settings().billing_company)
 			& (entry.docstatus == 1)
 		)
+		.where(scoped.where(entry))
 	).run()[0][0]
 	return flt(held)
 
@@ -2619,9 +2660,9 @@ def payments(client: str | None, text: str | None, start: int, limit: int) -> di
 	]
 	if client:
 		check_client_allowed(client)
-		filters.append(["party", "=", frappe.db.get_value("Compliance Client", client, "customer") or ""])
+		filters.append(["party", "=", scoped.get_value("Compliance Client", client, "customer") or ""])
 	elif billable_clients() is not None:
-		customers = frappe.get_all(
+		customers = scoped.get_all(
 			"Compliance Client",
 			filters={"name": ("in", list(billable_clients()) or [""])},
 			pluck="customer",
@@ -2665,7 +2706,7 @@ def payments(client: str | None, text: str | None, start: int, limit: int) -> di
 	)
 	names = [row.name for row in rows]
 	client_of = dict(
-		frappe.get_all(
+		scoped.get_all(
 			"Compliance Client",
 			filters={"customer": ("in", [row.party for row in rows] or [""])},
 			fields=["customer", "name"],
@@ -2673,7 +2714,7 @@ def payments(client: str | None, text: str | None, start: int, limit: int) -> di
 		)
 	)
 	bills: dict[str, list[str]] = {}
-	for ref in frappe.get_all(
+	for ref in scoped.get_all(
 		"Payment Entry Reference",
 		filters={"parent": ("in", names or [""]), "reference_doctype": "Sales Invoice"},
 		fields=["parent", "reference_name"],
@@ -2711,7 +2752,7 @@ def send_overdue_reminders(today: date | None = None):
 		return
 	today = getdate(today or nowdate())
 	steps = reminder_steps(settings.reminder_steps)
-	late = frappe.get_all(
+	late = scoped.get_all(
 		"Sales Invoice",
 		filters={
 			"company": settings.billing_company,

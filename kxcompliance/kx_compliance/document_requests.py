@@ -15,6 +15,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, date_diff, escape_html, formatdate, get_url, getdate, now_datetime, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.register import get_settings
 from kxcompliance.kx_compliance.reminders import (
 	already_sent,
@@ -33,7 +34,7 @@ REQUEST_FIELDS = ["name", "title", "client", "company", "due_date", "requested_b
 
 def logins_of(clients: list[str]) -> dict[str, list[str]]:
 	"""The users of each client's logins that are on."""
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Compliance Client Login",
 		filters={"parent": ("in", clients or [""]), "parenttype": "Compliance Client", "enabled": 1},
 		fields=["parent", "user"],
@@ -66,7 +67,7 @@ def tell_client(request, subject: str, lines: list[str]) -> bool:
 	if users:
 		notify(users, subject, message(request, lines), DOCTYPE, request.name)
 		return True
-	contact = frappe.db.get_value("Compliance Client", request.client, "contact_email")
+	contact = scoped.get_value("Compliance Client", request.client, "contact_email")
 	return email_contact(request, contact, subject, lines)
 
 
@@ -179,8 +180,8 @@ def received(request, document, by: str | None = None):
 def client_addresses(client: str) -> set[str]:
 	"""The email addresses a client may answer from: its logins' and its contact's."""
 	users = logins_of([client]).get(client, [])
-	addresses = set(frappe.get_all("User", filters={"name": ("in", users or [""])}, pluck="email"))
-	contact = frappe.db.get_value("Compliance Client", client, "contact_email")
+	addresses = set(scoped.get_all("User", filters={"name": ("in", users or [""])}, pluck="email"))
+	contact = scoped.get_value("Compliance Client", client, "contact_email")
 	if contact:
 		addresses.add(contact)
 	return {address.strip().lower() for address in addresses if address}
@@ -196,7 +197,7 @@ def take_emailed_file(file_doc, method=None):
 	"""
 	if file_doc.attached_to_doctype != "Communication" or not file_doc.attached_to_name:
 		return
-	reply = frappe.db.get_value(
+	reply = scoped.get_value(
 		"Communication",
 		file_doc.attached_to_name,
 		["reference_doctype", "reference_name", "sent_or_received", "sender", "sender_full_name"],
@@ -244,7 +245,7 @@ def run_daily():
 
 
 def refresh_overdue(today):
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		DOCTYPE,
 		filters={"status": ("in", OPEN_STATUSES)},
 		fields=["name", "status", "due_date", "is_overdue"],
@@ -263,7 +264,7 @@ def reminder_due(days_left: int) -> bool:
 
 
 def send_reminders(today):
-	rows = frappe.get_all(DOCTYPE, filters={"status": "Requested"}, fields=REQUEST_FIELDS)
+	rows = scoped.get_all(DOCTYPE, filters={"status": "Requested"}, fields=REQUEST_FIELDS)
 	planned = []
 	for row in rows:
 		days_left = date_diff(row.due_date, today)
@@ -276,7 +277,7 @@ def send_reminders(today):
 	logins = logins_of(clients)
 	# A client with no login is reminded at its contact email, read once for all of them.
 	contacts = dict(
-		frappe.get_all(
+		scoped.get_all(
 			"Compliance Client",
 			filters={"name": ("in", clients or [""])},
 			fields=["name", "contact_email"],
@@ -366,7 +367,7 @@ def bulk_plan(filings: list[dict]) -> dict:
 	"""Which of these filings would be asked: those of a client's company with no request open."""
 	names = [row.name for row in filings]
 	asked_already = set(
-		frappe.get_all(
+		scoped.get_all(
 			DOCTYPE,
 			filters={"compliance_task": ("in", names or [""]), "status": ("in", OPEN_STATUSES)},
 			pluck="compliance_task",
@@ -374,7 +375,7 @@ def bulk_plan(filings: list[dict]) -> dict:
 	)
 	companies = {row.company for row in filings}
 	with_client = set(
-		frappe.get_all(
+		scoped.get_all(
 			"Company Compliance Profile",
 			filters={"company": ("in", list(companies) or [""]), "client": ("is", "set")},
 			pluck="company",

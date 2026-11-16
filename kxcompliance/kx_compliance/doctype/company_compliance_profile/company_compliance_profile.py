@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_first_day, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.billing import state_of
 from kxcompliance.kx_compliance.clients import sync_client_access
 from kxcompliance.kx_compliance.statutory import generate_tasks
@@ -68,7 +69,7 @@ class CompanyComplianceProfile(Document):
 			(row.obligation_template, row.registration_number or row.state or "") for row in self.obligations
 		}
 		added = 0
-		for template_name in frappe.get_all(
+		for template_name in scoped.get_all(
 			"Compliance Obligation Template",
 			# Event templates are not standing obligations; recording the event makes their tasks.
 			filters={"is_active": 1, "add_by_default": 1, "event_type": ("is", "not set")},

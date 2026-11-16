@@ -15,6 +15,7 @@ import frappe
 from frappe import _
 from frappe.utils import escape_html
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.document_requests import OPEN_STATUSES as OPEN_REQUEST_STATUSES
 from kxcompliance.kx_compliance.legal import CLOSED_CASE_STATUSES, ENDED_MARK_STATUSES
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
@@ -37,21 +38,21 @@ def held_by(user: str, doctype: str, open_filters: dict, fields: tuple) -> list[
 	"""The open records of one kind where the person is in any of the people fields."""
 	names: set[str] = set()
 	for field in fields:
-		names.update(frappe.get_all(doctype, filters={**open_filters, field: user}, pluck="name"))
+		names.update(scoped.get_all(doctype, filters={**open_filters, field: user}, pluck="name"))
 	return sorted(names)
 
 
 def companies_of(user: str) -> list[str]:
 	"""The companies whose defaults or obligations name the person."""
 	names = set(
-		frappe.get_all(
+		scoped.get_all(
 			"Company Compliance Profile",
 			or_filters={"default_responsible": user, "default_reviewer": user},
 			pluck="name",
 		)
 	)
 	names.update(
-		frappe.get_all(
+		scoped.get_all(
 			"Company Obligation",
 			or_filters={"responsible": user, "reviewer": user},
 			filters={"parenttype": "Company Compliance Profile"},
@@ -63,9 +64,9 @@ def companies_of(user: str) -> list[str]:
 
 def clients_of(user: str) -> list[str]:
 	"""The clients the person manages or is on the team of."""
-	names = set(frappe.get_all("Compliance Client", filters={"relationship_manager": user}, pluck="name"))
+	names = set(scoped.get_all("Compliance Client", filters={"relationship_manager": user}, pluck="name"))
 	names.update(
-		frappe.get_all(
+		scoped.get_all(
 			"Compliance Client Member",
 			filters={"user": user, "parenttype": "Compliance Client"},
 			pluck="parent",
@@ -80,7 +81,7 @@ def preview(user: str) -> list[dict]:
 		{"label": label, "count": len(held_by(user, doctype, filters, fields))}
 		for label, doctype, filters, fields in RECORDS
 	]
-	obligations = frappe.get_all(
+	obligations = scoped.get_all(
 		"Company Obligation",
 		or_filters={"responsible": user, "reviewer": user},
 		filters={"parenttype": "Company Compliance Profile"},
@@ -199,7 +200,7 @@ def tell_manager(manager: str, from_user: str, to_user: str, moved: int, failed:
 	from kxcompliance.kx_compliance.reminders import notify
 
 	names = dict(
-		frappe.get_all(
+		scoped.get_all(
 			"User", filters={"name": ("in", [from_user, to_user])}, fields=["name", "full_name"], as_list=True
 		)
 	)

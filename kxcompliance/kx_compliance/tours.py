@@ -12,6 +12,8 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from kxcompliance import scoped
+
 VIEW = "Compliance Tour View"
 
 # Every tour the app ships; tours.js must list the same ids, which test_tours holds.
@@ -62,7 +64,7 @@ TOURS = (
 
 def seen() -> dict:
 	user = frappe.session.user
-	names = frappe.get_all(VIEW, filters={"user": user}, pluck="tour")
+	names = scoped.get_all(VIEW, filters={"user": user}, pluck="tour")
 	return {"seen": sorted(set(names) & set(TOURS))}
 
 
@@ -73,7 +75,7 @@ def opened(tour: str) -> dict:
 	user = frappe.session.user
 	now = now_datetime()
 	name = f"{user}:{tour}"
-	times = frappe.db.get_value(VIEW, name, "times_opened")
+	times = scoped.get_value(VIEW, name, "times_opened")
 	if times is not None:
 		frappe.db.set_value(
 			VIEW, name, {"times_opened": int(times) + 1, "last_seen_on": now}, update_modified=False

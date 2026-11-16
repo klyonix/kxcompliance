@@ -22,6 +22,7 @@ from frappe.utils import (
 	nowdate,
 )
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.app_links import app_url
 from kxcompliance.kx_compliance.register import (
 	CLOSED_TASK_STATUSES,
@@ -65,7 +66,7 @@ def run_daily():
 
 
 def refresh_statuses(today):
-	items = frappe.get_all("Compliance Item", filters={"is_cancelled": 0}, fields=ITEM_FIELDS)
+	items = scoped.get_all("Compliance Item", filters={"is_cancelled": 0}, fields=ITEM_FIELDS)
 	rules = get_type_rules([item.item_type for item in items])
 	renewals = open_renewal_statuses([item.name for item in items])
 	soon = due_soon_days()
@@ -85,7 +86,7 @@ def refresh_statuses(today):
 
 
 def send_reminders(today):
-	items = frappe.get_all(
+	items = scoped.get_all(
 		"Compliance Item",
 		filters={"status": ("not in", QUIET_STATUSES), "valid_until": (">=", today)},
 		fields=ITEM_FIELDS,
@@ -123,7 +124,7 @@ def send_party_reminders(today):
 	template_name = get_settings().party_email_template
 	if not template_name or not get_settings().email_account:
 		return
-	items = frappe.get_all(
+	items = scoped.get_all(
 		"Compliance Item",
 		filters={
 			"holder_type": ("in", list(PARTY_EMAIL_FIELDS)),
@@ -150,13 +151,13 @@ def send_party_reminders(today):
 
 
 def remind_party(item, days: int, key: str, template):
-	email = frappe.db.get_value(item.holder_type, item.holder, PARTY_EMAIL_FIELDS[item.holder_type])
+	email = scoped.get_value(item.holder_type, item.holder, PARTY_EMAIL_FIELDS[item.holder_type])
 	if not email:
 		return
 	context = {
 		"doc": item,
 		"party": item.holder,
-		"party_name": frappe.db.get_value(
+		"party_name": scoped.get_value(
 			item.holder_type, item.holder, frappe.scrub(item.holder_type) + "_name"
 		),
 		"valid_until": formatdate(item.valid_until),
@@ -169,7 +170,7 @@ def remind_party(item, days: int, key: str, template):
 		template.response_html if template.use_html else template.response, context
 	)
 	write_log("Party Reminder", key, [email], item=item.name, rule_days=days, due_date=item.valid_until)
-	sender = frappe.db.get_value("Email Account", get_settings().email_account, "email_id")
+	sender = scoped.get_value("Email Account", get_settings().email_account, "email_id")
 	frappe.sendmail(
 		recipients=[email],
 		sender=sender,
@@ -182,7 +183,7 @@ def remind_party(item, days: int, key: str, template):
 
 def send_escalations(today):
 	cut_off = add_days(today, -escalate_after_days())
-	items = frappe.get_all(
+	items = scoped.get_all(
 		"Compliance Item",
 		filters={"status": ("in", OVERDUE_STATUSES), "valid_until": ("<=", cut_off)},
 		fields=ITEM_FIELDS,
@@ -211,13 +212,13 @@ def escalate(item, key: str, managers: list[str]):
 
 def send_digests(today):
 	horizon = add_days(today, due_soon_days())
-	items = frappe.get_all(
+	items = scoped.get_all(
 		"Compliance Item",
 		filters={"status": ("!=", "Cancelled"), "valid_until": ("<=", horizon)},
 		fields=ITEM_FIELDS,
 		order_by="valid_until asc",
 	)
-	tasks = frappe.get_all(
+	tasks = scoped.get_all(
 		"Compliance Task",
 		filters={"status": ("not in", CLOSED_TASK_STATUSES), "effective_due_date": ("<=", horizon)},
 		fields=[
@@ -241,7 +242,7 @@ def send_digests(today):
 		row = digest_row("Compliance Task", task.name, title, task.status, task.effective_due_date)
 		for user in {task.responsible, task.reviewer} - {None, ""}:
 			by_user.setdefault(user, []).append(row)
-	legal_dates = frappe.get_all(
+	legal_dates = scoped.get_all(
 		"Legal Date",
 		filters={"status": "Scheduled", "date": ("<=", horizon)},
 		fields=["name", "kind", "reference_title", "status", "date", "is_overdue", "responsible", "reviewer"],
@@ -296,7 +297,7 @@ def run_for_item(label: str, work):
 def reminder_days_by_item(items: list[str]) -> dict[str, list[int]]:
 	if not items:
 		return {}
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Compliance Reminder Rule",
 		filters={"parenttype": "Compliance Item", "parent": ("in", items)},
 		fields=["parent", "days_before"],
@@ -310,7 +311,7 @@ def reminder_days_by_item(items: list[str]) -> dict[str, list[int]]:
 def already_sent(keys: list[str]) -> set[str]:
 	if not keys:
 		return set()
-	return set(frappe.get_all("Compliance Reminder Log", filters={"log_key": ("in", keys)}, pluck="log_key"))
+	return set(scoped.get_all("Compliance Reminder Log", filters={"log_key": ("in", keys)}, pluck="log_key"))
 
 
 def compliance_managers() -> list[str]:
@@ -328,6 +329,8 @@ def compliance_managers() -> list[str]:
 			& (user.enabled == 1)
 			& (user.user_type == "System User")
 		)
+		.where(scoped.where(has_role))
+		.where(scoped.where(user))
 	).run(pluck=True)
 
 
@@ -348,6 +351,9 @@ def relationship_managers(companies) -> dict[str, str]:
 		.on(user.name == client.relationship_manager)
 		.select(profile.company, client.relationship_manager)
 		.where(profile.company.isin(companies) & (client.status != "Left") & (user.enabled == 1))
+		.where(scoped.where(profile))
+		.where(scoped.where(client))
+		.where(scoped.where(user))
 	).run(as_dict=True)
 	return {row.company: row.relationship_manager for row in rows}
 
@@ -373,14 +379,14 @@ def notify(users: list[str], subject: str, message: str, doctype: str, name: str
 def sender_address() -> str | None:
 	"""The address the app sends from: the email account chosen in its settings, if any."""
 	account = get_settings().email_account
-	return frappe.db.get_value("Email Account", account, "email_id") if account else None
+	return scoped.get_value("Email Account", account, "email_id") if account else None
 
 
 def send_email(
 	users: list[str], subject: str, message: str, doctype: str | None = None, name: str | None = None
 ):
 	sender = sender_address()
-	recipients = frappe.get_all("User", filters={"name": ("in", users), "enabled": 1}, pluck="email")
+	recipients = scoped.get_all("User", filters={"name": ("in", users), "enabled": 1}, pluck="email")
 	if not sender or not recipients:
 		return
 	frappe.sendmail(

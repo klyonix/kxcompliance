@@ -4,6 +4,8 @@
 import frappe
 from frappe import _
 
+from kxcompliance import scoped
+
 
 def execute(filters: dict | None = None):
 	filters = frappe._dict(filters or {})
@@ -54,7 +56,7 @@ def get_data(filters: frappe._dict):
 	rows = frappe.get_list("Trademark", filters=conditions, fields=fields, order_by="filing_date desc")
 	classes: dict[str, list[str]] = {}
 	if rows:
-		for row in frappe.get_all(
+		for row in scoped.get_all(
 			"Trademark Class",
 			filters={"parenttype": "Trademark", "parent": ("in", [row.name for row in rows])},
 			fields=["parent", "class_number"],

@@ -19,6 +19,7 @@ from frappe.utils import cstr
 from frappe.utils.csvutils import read_csv_content
 from frappe.utils.xlsxutils import make_xlsx, read_xlsx_file_from_attached_file
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.onboarding import (
 	STATE_REGISTRATIONS,
 	clean_registrations,
@@ -193,7 +194,7 @@ def people_on_site(rows: list[dict]) -> set[str]:
 	if not named:
 		return set()
 	return set(
-		frappe.get_all(
+		scoped.get_all(
 			"User",
 			filters={"name": ("in", list(named)), "enabled": 1, "user_type": "System User"},
 			pluck="name",
@@ -207,9 +208,9 @@ def check_rows(rows: list[dict], account_type: str) -> list[dict]:
 	client_kinds = set(select_options("Compliance Client", "client_kind"))
 	people = people_on_site(rows)
 	companies = {row.get("company") for row in rows if row.get("company")}
-	existing = set(frappe.get_all("Company", filters={"name": ("in", list(companies) or [""])}, pluck="name"))
+	existing = set(scoped.get_all("Company", filters={"name": ("in", list(companies) or [""])}, pluck="name"))
 	set_up = set(
-		frappe.get_all(
+		scoped.get_all(
 			"Company Compliance Profile",
 			filters={"company": ("in", list(companies) or [""])},
 			pluck="company",
@@ -217,7 +218,7 @@ def check_rows(rows: list[dict], account_type: str) -> list[dict]:
 	)
 	clients = {row.get("client") for row in rows if row.get("client")}
 	known_clients = set(
-		frappe.get_all("Compliance Client", filters={"name": ("in", list(clients) or [""])}, pluck="name")
+		scoped.get_all("Compliance Client", filters={"name": ("in", list(clients) or [""])}, pluck="name")
 	)
 	can_create = frappe.has_permission("Company", "create")
 	may_create = bool(can_create) and bool(frappe.is_setup_complete())
@@ -331,7 +332,7 @@ def plan(values: dict) -> str:
 def set_up(values: dict) -> int:
 	"""Make what a ready row describes; returns the number of filings made."""
 	client = values["client"] or None
-	if client and not frappe.db.exists("Compliance Client", client):
+	if client and not scoped.exists("Compliance Client", client):
 		frappe.get_doc(
 			{
 				"doctype": "Compliance Client",
@@ -342,9 +343,9 @@ def set_up(values: dict) -> int:
 			}
 		).insert()
 	company = values["company"]
-	if not frappe.db.exists("Company", company):
+	if not scoped.exists("Company", company):
 		make_company(company)
-	if frappe.db.exists("Company Compliance Profile", company):
+	if scoped.exists("Company Compliance Profile", company):
 		frappe.throw(_("{0} was set up for compliance after the sheet was checked.").format(company))
 	_obligations, tasks = set_up_company(
 		company,

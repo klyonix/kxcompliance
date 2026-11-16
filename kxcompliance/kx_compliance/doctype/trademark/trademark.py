@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, add_months, getdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.legal import (
 	ENDED_MARK_STATUSES,
 	MARK_STATUS_FIELDS,
@@ -99,7 +100,7 @@ class Trademark(Document):
 		self.save()
 
 	def set_deadline(self, event_field: str, kind: str, due):
-		existing = frappe.db.get_value(
+		existing = scoped.get_value(
 			"Legal Date",
 			{
 				"reference_doctype": self.doctype,
@@ -148,7 +149,7 @@ class Trademark(Document):
 
 
 def ensure_renewal_item_type():
-	if frappe.db.exists("Compliance Item Type", RENEWAL_ITEM_TYPE):
+	if scoped.exists("Compliance Item Type", RENEWAL_ITEM_TYPE):
 		return
 	frappe.get_doc(
 		{
@@ -168,4 +169,5 @@ def follow_renewal(item):
 		frappe.qb.update(trademark)
 		.set(trademark.valid_until, item.valid_until)
 		.where(trademark.renewal_item == item.name)
+		.where(scoped.where(trademark))
 	).run()

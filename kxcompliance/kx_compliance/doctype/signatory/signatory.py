@@ -7,6 +7,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from kxcompliance import scoped
+
 DIN_PATTERN = re.compile(r"^\d{8}$")
 PAN_PATTERN = re.compile(r"^[A-Z]{5}\d{4}[A-Z]$")
 
@@ -37,7 +39,7 @@ class Signatory(Document):
 	def validate_unique_din(self):
 		if not self.din:
 			return
-		other = frappe.db.get_value(
+		other = scoped.get_value(
 			"Signatory", {"din": self.din, "company": self.company, "name": ("!=", self.name)}, "full_name"
 		)
 		if other:

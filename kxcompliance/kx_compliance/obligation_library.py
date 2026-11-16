@@ -13,6 +13,7 @@ Extension on the site, and here in the next release.
 
 import frappe
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.penalty_library import keep_firms_figures, penalty_of
 
 COMPANIES = ["Private Limited", "Public Limited", "One Person Company"]
@@ -673,7 +674,7 @@ CLIENT_OWNED_FIELDS = ("is_active",)
 
 def sync_standard_event_types():
 	for name, description in EVENT_TYPES.items():
-		if frappe.db.exists("Compliance Event Type", name):
+		if scoped.exists("Compliance Event Type", name):
 			doc = frappe.get_doc("Compliance Event Type", name)
 		else:
 			doc = frappe.new_doc("Compliance Event Type")
@@ -690,7 +691,7 @@ def sync_standard_templates():
 	for values in LIBRARY:
 		name = values["template_name"]
 		values = {**values, **penalty_of(values)}
-		if frappe.db.exists("Compliance Obligation Template", name):
+		if scoped.exists("Compliance Obligation Template", name):
 			doc = frappe.get_doc("Compliance Obligation Template", name)
 			for fieldname in CLIENT_OWNED_FIELDS:
 				values = {**values, fieldname: doc.get(fieldname)}

@@ -13,6 +13,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, formatdate, getdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.onboarding import (
 	STATE_REGISTRATIONS,
 	clean_registrations,
@@ -54,7 +55,7 @@ def companies_overview() -> dict:
 
 
 def counts_by_parent(doctype: str, parents: list[str], filters: dict | None = None) -> dict[str, int]:
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		doctype,
 		filters={"parenttype": PROFILE, "parent": ("in", parents), **(filters or {})},
 		fields=["parent", COUNT],
@@ -66,7 +67,7 @@ def counts_by_parent(doctype: str, parents: list[str], filters: dict | None = No
 def form_options() -> dict:
 	"""What the company screen offers to choose from."""
 	check_manager()
-	set_up = set(frappe.get_all(PROFILE, pluck="company"))
+	set_up = set(scoped.get_all(PROFILE, pluck="company"))
 	return {
 		"company_types": select_options(PROFILE, "company_type"),
 		"registration_types": select_options("Compliance Registration", "registration_type"),
@@ -91,7 +92,7 @@ def company_detail(company: str) -> dict:
 	profile.check_permission("read")
 	templates = {
 		row.name: row
-		for row in frappe.get_all(
+		for row in scoped.get_all(
 			"Compliance Obligation Template",
 			filters={"name": ("in", [row.obligation_template for row in profile.obligations] or [""])},
 			fields=["name", "law", "frequency", "due_after_event", "event_type"],
@@ -169,10 +170,10 @@ def save_company(company: str, values: dict, new_company: bool = False) -> dict:
 		frappe.throw(_("You cannot choose the client {0}.").format(client), frappe.PermissionError)
 	registrations = clean_registrations(values.get("registrations"))
 
-	if not frappe.db.exists(PROFILE, company):
+	if not scoped.exists(PROFILE, company):
 		if new_company:
 			company = make_company(company)
-		elif not frappe.db.exists("Company", company):
+		elif not scoped.exists("Company", company):
 			frappe.throw(_("{0} is not a company here; add it as a new company.").format(company))
 		obligations, tasks = set_up_company(
 			company, company_type, responsible, values.get("default_reviewer"), registrations, client

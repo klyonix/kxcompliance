@@ -14,6 +14,7 @@ from frappe.utils import validate_email_address
 from frappe.utils.password import update_password
 from frappe.utils.password_strength import test_password_strength
 
+from kxcompliance import scoped
 from kxcompliance.install import CLIENT_ROLE, ROLES
 from kxcompliance.kx_compliance.handover import RECORDS, preview
 from kxcompliance.kx_compliance.legal import CLOSED_CASE_STATUSES
@@ -46,7 +47,7 @@ def role_of(label: str) -> str:
 def team() -> list[dict]:
 	"""Everyone with one of the app's roles, managers first."""
 	check_manager()
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Has Role", filters={"role": ("in", ROLES), "parenttype": "User"}, fields=["parent", "role"]
 	)
 	roles: dict[str, set[str]] = {}
@@ -56,13 +57,13 @@ def team() -> list[dict]:
 	if not names:
 		return []
 	admins = set(
-		frappe.get_all(
+		scoped.get_all(
 			"Has Role",
 			filters={"role": "System Manager", "parenttype": "User", "parent": ("in", names)},
 			pluck="parent",
 		)
 	)
-	users = frappe.get_all(
+	users = scoped.get_all(
 		"User",
 		filters={"name": ("in", names)},
 		fields=["name", "full_name", "enabled", "last_login"],
@@ -97,7 +98,7 @@ def person(user: str) -> dict:
 	roles = set(frappe.get_roles(user))
 	# Taken off the team, someone with no Desk role left becomes a Website User in Frappe, so the
 	# type is not asked for; a client's login never holds the firm's work.
-	row = frappe.db.get_value("User", user, ["name", "full_name", "enabled", "last_login"], as_dict=True)
+	row = scoped.get_value("User", user, ["name", "full_name", "enabled", "last_login"], as_dict=True)
 	if CLIENT_ROLE in roles:
 		row = None
 	handing_over = preview(user) if row and user not in PROTECTED else []
@@ -130,14 +131,14 @@ def open_work(user: str) -> list[dict]:
 				"label": label,
 				"doctype": doctype,
 				"filters": filters,
-				"value": frappe.db.count(doctype, filters),
+				"value": scoped.count(doctype, filters),
 			}
 		)
 	return work
 
 
 def outgoing_email() -> bool:
-	return bool(frappe.db.exists("Email Account", {"default_outgoing": 1, "enable_outgoing": 1}))
+	return bool(scoped.exists("Email Account", {"default_outgoing": 1, "enable_outgoing": 1}))
 
 
 def invite(full_name: str, email: str, role: str) -> dict:
@@ -149,7 +150,8 @@ def invite(full_name: str, email: str, role: str) -> dict:
 	full_name = (full_name or "").strip()
 	if not full_name:
 		frappe.throw(_("Give the person's name."))
-	existing = frappe.db.get_value("User", email, ["name", "user_type"], as_dict=True)
+	scoped.check_limit("User", email=email, role=role)
+	existing = scoped.get_value("User", email, ["name", "user_type"], as_dict=True)
 	if existing:
 		return add_to_team(existing, role)
 	first, _space, last = full_name.partition(" ")
@@ -228,7 +230,7 @@ def new_sign_in_link(user: str) -> dict:
 	"""
 	check_manager()
 	check_changeable(user)
-	if frappe.db.get_value("User", user, "last_login"):
+	if scoped.get_value("User", user, "last_login"):
 		frappe.throw(_("{0} has signed in before; they can reset their own password.").format(user))
 	return {"user": user, "link": sign_in_link(frappe.get_doc("User", user))}
 
@@ -246,7 +248,7 @@ def client_login_link(client: str, email: str) -> dict:
 	roles = set(frappe.get_roles(row.user))
 	if CLIENT_ROLE not in roles or roles & set(ROLES):
 		frappe.throw(_("{0} is not only a client's login.").format(email), frappe.PermissionError)
-	if frappe.db.get_value("User", row.user, "last_login"):
+	if scoped.get_value("User", row.user, "last_login"):
 		frappe.throw(_("{0} has signed in before; they can reset their own password.").format(email))
 	return {"user": row.user, "link": sign_in_link(frappe.get_doc("User", row.user))}
 
@@ -291,7 +293,7 @@ def check_strength(user: str, password: str) -> str:
 	"""Why the site's password policy refuses this password, or "" when it passes (or is off)."""
 	if not frappe.get_system_settings("enable_password_policy"):
 		return ""
-	details = frappe.db.get_value(
+	details = scoped.get_value(
 		"User", user, ["first_name", "middle_name", "last_name", "email", "birth_date"]
 	)
 	result = test_password_strength(password, user_inputs=details)
@@ -332,15 +334,15 @@ def former_holders() -> list[dict]:
 	for _label, doctype, filters, fields in RECORDS:
 		for field in fields:
 			holders.update(
-				frappe.get_all(doctype, filters={**filters, field: ("is", "set")}, pluck=field, distinct=True)
+				scoped.get_all(doctype, filters={**filters, field: ("is", "set")}, pluck=field, distinct=True)
 			)
 	on_team = set(
-		frappe.get_all("Has Role", filters={"role": ("in", ROLES), "parenttype": "User"}, pluck="parent")
+		scoped.get_all("Has Role", filters={"role": ("in", ROLES), "parenttype": "User"}, pluck="parent")
 	)
 	former = sorted(holders - on_team - set(PROTECTED))
 	if not former:
 		return []
-	users = frappe.get_all(
+	users = scoped.get_all(
 		"User", filters={"name": ("in", former)}, fields=["name", "full_name", "enabled", "last_login"]
 	)
 	return [{**person_row(user, set(), False), "on_team": False} for user in users]

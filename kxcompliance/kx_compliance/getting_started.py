@@ -8,6 +8,7 @@ each ticked off by itself once done. A manager may hide it; it goes once everyth
 import frappe
 from frappe import _
 
+from kxcompliance import scoped
 from kxcompliance.install import ROLES
 from kxcompliance.kx_compliance.register import get_settings, is_approver
 
@@ -21,11 +22,11 @@ def is_firm() -> bool:
 def colleagues() -> int:
 	"""Other enabled people on the team besides the person asking and the Administrator."""
 	users = set(
-		frappe.get_all("Has Role", filters={"role": ("in", ROLES), "parenttype": "User"}, pluck="parent")
+		scoped.get_all("Has Role", filters={"role": ("in", ROLES), "parenttype": "User"}, pluck="parent")
 	) - {frappe.session.user, "Administrator", "Guest"}
 	if not users:
 		return 0
-	return frappe.db.count("User", {"name": ("in", list(users)), "enabled": 1})
+	return scoped.count("User", {"name": ("in", list(users)), "enabled": 1})
 
 
 def checklist() -> dict:
@@ -37,7 +38,7 @@ def checklist() -> dict:
 			"key": "company",
 			"label": _("Set up a company"),
 			"detail": _("Its kind, registrations and people, so the calendar starts making filings."),
-			"done": bool(frappe.db.count("Company Compliance Profile")),
+			"done": bool(scoped.count("Company Compliance Profile")),
 		},
 		*(
 			[
@@ -45,7 +46,7 @@ def checklist() -> dict:
 					"key": "client",
 					"label": _("Add a client"),
 					"detail": _("The client, its companies and the team who looks after it."),
-					"done": bool(frappe.db.count("Compliance Client")),
+					"done": bool(scoped.count("Compliance Client")),
 				}
 			]
 			if is_firm()

@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import date_diff, escape_html, formatdate, getdate, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.register import get_settings
 from kxcompliance.kx_compliance.reminders import (
 	already_sent,
@@ -52,14 +53,15 @@ def pass_company_to_dates(doctype: str, name: str, company: str | None):
 		frappe.qb.update(legal_date)
 		.set(legal_date.company, company)
 		.where((legal_date.reference_doctype == doctype) & (legal_date.reference_name == name))
+		.where(scoped.where(legal_date))
 	).run()
 
 
 def refresh_next_date(doctype: str, name: str):
 	"""Keep the case's or trademark's Next Date on its earliest scheduled step."""
-	if doctype not in REFERENCE_TITLES or not frappe.db.exists(doctype, name):
+	if doctype not in REFERENCE_TITLES or not scoped.exists(doctype, name):
 		return
-	dates = frappe.get_all(
+	dates = scoped.get_all(
 		"Legal Date",
 		filters={"reference_doctype": doctype, "reference_name": name, "status": "Scheduled"},
 		pluck="date",
@@ -84,7 +86,7 @@ def run_daily():
 
 
 def refresh_overdue(today):
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Legal Date", filters={"status": "Scheduled"}, fields=["name", "date", "is_overdue"]
 	)
 	for row in rows:
@@ -93,7 +95,7 @@ def refresh_overdue(today):
 
 
 def send_reminders(today):
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Legal Date", filters={"status": "Scheduled", "date": (">=", today)}, fields=DATE_FIELDS
 	)
 	due = []
@@ -117,7 +119,7 @@ def remind(row, days: int, key: str):
 
 
 def send_escalations(today):
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Legal Date", filters={"status": "Scheduled", "date": ("<", today)}, fields=DATE_FIELDS
 	)
 	due = [(row, f"{row.name}|escalation|{row.date}") for row in rows]
@@ -153,6 +155,7 @@ def pass_people_to_dates(doctype: str, name: str, responsible: str | None, revie
 			& (legal_date.reference_name == name)
 			& (legal_date.status == "Scheduled")
 		)
+		.where(scoped.where(legal_date))
 	).run()
 
 
@@ -175,7 +178,7 @@ def check_status_change(doc):
 
 
 def scheduled_dates(doctype: str, name: str) -> list[str]:
-	return frappe.get_all(
+	return scoped.get_all(
 		"Legal Date",
 		filters={"reference_doctype": doctype, "reference_name": name, "status": "Scheduled"},
 		pluck="name",

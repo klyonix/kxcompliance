@@ -11,6 +11,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.privacy import MAX_LOG_DAYS, MIN_LOG_DAYS, standard_notice
 from kxcompliance.kx_compliance.register import is_approver
 
@@ -48,16 +49,16 @@ def check_manager():
 def options() -> dict:
 	"""The settings, and the choices the screen offers."""
 	check_manager()
-	settings = frappe.get_doc(SETTINGS)
+	settings = scoped.settings()
 	meta = frappe.get_meta(SETTINGS)
 	# Names and addresses only, for picking one; managers do not otherwise read these.
-	accounts = frappe.get_all(
+	accounts = scoped.get_all(
 		"Email Account",
 		filters={"enable_outgoing": 1},
 		fields=["name", "email_id"],
 		order_by="name asc",
 	)
-	templates = frappe.get_all("Email Template", pluck="name", order_by="name asc")
+	templates = scoped.get_all("Email Template", pluck="name", order_by="name asc")
 	return {
 		"values": {field: settings.get(field) for field in FIELDS},
 		"notice_version": settings.notice_version,
@@ -75,7 +76,7 @@ def save(values: dict) -> dict:
 	unknown = sorted(set(values) - set(FIELDS))
 	if unknown:
 		frappe.throw(_("The app cannot change {0} in the settings.").format(", ".join(unknown)))
-	settings = frappe.get_doc(SETTINGS)
+	settings = scoped.settings(for_update=True)
 	for field, value in values.items():
 		if field in NUMBERS:
 			low, high = NUMBERS[field]

@@ -57,12 +57,17 @@ class TestClientTitles(IntegrationTestCase):
 		choice = next(row for row in clients.client_choices() if row["name"] == self.client.name)
 		self.assertEqual(choice["client_name"], "Titled Group")
 		self.assertEqual(clients.client_detail(self.client.name)["client_name"], "Titled Group")
-		listed = next(row for row in companies.companies_overview()["companies"] if row.company == TEST_COMPANY)
+		listed = next(
+			row for row in companies.companies_overview()["companies"] if row.company == TEST_COMPANY
+		)
 		self.assertEqual(listed.client_name, "Titled Group")
 		self.assertEqual(companies.company_detail(TEST_COMPANY)["client_name"], "Titled Group")
 		self.assertIn(
 			{"name": self.client.name, "client_name": "Titled Group"},
-			[{"name": row.name, "client_name": row.client_name} for row in companies.form_options()["clients"]],
+			[
+				{"name": row.name, "client_name": row.client_name}
+				for row in companies.form_options()["clients"]
+			],
 		)
 
 	def test_messages_say_the_name(self):

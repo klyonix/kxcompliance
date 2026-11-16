@@ -22,11 +22,19 @@
 					label="Name"
 					placeholder="Trade Licence"
 				/>
+				<p v-if="shared" class="text-base text-ink-gray-5">
+					{{
+						settings.set_by_firm
+							? "Shared with other firms. These are your own settings for it; the type itself stays as it is."
+							: "Shared with other firms. Saving keeps your own settings for it; the type itself stays as it is."
+					}}
+				</p>
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<FormControl
 						v-model="form.category"
 						type="select"
 						label="Category"
+						:disabled="shared"
 						:options="CATEGORIES.map((value) => ({ label: value, value }))"
 					/>
 					<FormControl
@@ -52,7 +60,20 @@
 					label="A certificate is needed before an item counts as active"
 				/>
 				<FormControl v-model="form.is_active" type="checkbox" label="In use" />
-				<FormControl v-model="form.description" type="textarea" label="Notes" :rows="3" />
+				<FormControl
+					v-model="form.description"
+					type="textarea"
+					label="Notes"
+					:rows="3"
+					:disabled="shared"
+				/>
+				<div v-if="shared && settings.set_by_firm">
+					<Button
+						label="Use the shared settings"
+						:loading="restoring"
+						@click="useShared"
+					/>
+				</div>
 			</template>
 		</div>
 	</RecordFrame>
@@ -80,10 +101,10 @@
 
 <script setup>
 // A register item type: how its items renew and when they are reminded.
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
-import { createDoc, getDoc, updateDoc } from "@/api";
+import { call, createDoc, getDoc, updateDoc } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import { CATEGORIES, daysText, parseDays } from "@/lib/itemTypes";
@@ -97,6 +118,11 @@ const ready = ref(false);
 const error = ref("");
 const saveError = ref("");
 const saving = ref(false);
+const restoring = ref(false);
+// The type's settings as the firm uses them (kxcompliance.api.item_type_settings_of).
+const settings = ref({ values: {}, reminders: [], set_by_firm: false, may_edit_type: true });
+// A type shared with other firms: the firm keeps its own settings for it.
+const shared = computed(() => Boolean(props.name) && !settings.value.may_edit_type);
 const form = reactive({
 	type_name: "",
 	category: "Licence",
@@ -125,6 +151,20 @@ async function save() {
 		description: form.description,
 	};
 	try {
+		if (shared.value) {
+			const { category: _category, description: _description, reminders, ...own } = values;
+			settings.value = await call(
+				"kxcompliance.api.save_item_type_settings",
+				{
+					item_type: props.name,
+					values: own,
+					reminders: reminders.map((row) => row.days_before),
+				},
+				{ httpMethod: "POST" }
+			);
+			toast.success("Your settings for this type are saved");
+			return;
+		}
 		const saved = props.name
 			? await updateDoc("Compliance Item Type", props.name, values)
 			: await createDoc("Compliance Item Type", {
@@ -142,19 +182,49 @@ async function save() {
 	}
 }
 
+// The settings the form shows, from the type or the firm's own.
+function fillSettings() {
+	const values = settings.value.values;
+	Object.assign(form, {
+		renewal_cycle_months: values.renewal_cycle_months || 0,
+		grace_days: values.grace_days || 0,
+		requires_document: Boolean(values.requires_document),
+		is_active: Boolean(values.is_active),
+		reminder_days: daysText(settings.value.reminders.map((days) => ({ days_before: days }))),
+	});
+}
+
+async function useShared() {
+	restoring.value = true;
+	saveError.value = "";
+	try {
+		settings.value = await call(
+			"kxcompliance.api.use_shared_item_type_settings",
+			{ item_type: props.name },
+			{ httpMethod: "POST" }
+		);
+		fillSettings();
+		toast.success("Back to the shared settings");
+	} catch (err) {
+		saveError.value = err.message;
+	} finally {
+		restoring.value = false;
+	}
+}
+
 onMounted(async () => {
 	try {
 		if (props.name) {
-			const type = await getDoc("Compliance Item Type", props.name);
+			const [type, inUse] = await Promise.all([
+				getDoc("Compliance Item Type", props.name),
+				call("kxcompliance.api.item_type_settings_of", { item_type: props.name }),
+			]);
+			settings.value = inUse;
 			Object.assign(form, {
 				category: type.category,
-				renewal_cycle_months: type.renewal_cycle_months || 0,
-				grace_days: type.grace_days || 0,
-				requires_document: Boolean(type.requires_document),
-				is_active: Boolean(type.is_active),
-				reminder_days: daysText(type.reminders),
 				description: type.description || "",
 			});
+			fillSettings();
 		}
 		ready.value = true;
 	} catch (err) {

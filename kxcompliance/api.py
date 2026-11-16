@@ -21,6 +21,7 @@ from kxcompliance.kx_compliance import (
 	companies,
 	document_requests,
 	getting_started,
+	item_type_settings,
 	month_calendar,
 	onboarding,
 	penalty_figures,
@@ -1363,12 +1364,16 @@ def item_form_options() -> dict:
 	check_app_access()
 	meta = frappe.get_meta("Compliance Item")
 	return {
-		"item_types": frappe.get_list(
-			"Compliance Item Type",
-			filters={"is_active": 1},
-			fields=["name", "category", "renewal_cycle_months", "requires_document"],
-			order_by="name asc",
-		),
+		"item_types": [
+			frappe._dict(
+				{
+					field: row[field]
+					for field in ("name", "category", "renewal_cycle_months", "requires_document")
+				}
+			)
+			for row in item_type_settings.overview()
+			if row.is_active
+		],
 		"states": [state for state in meta.get_field("state").options.split("\n") if state],
 		"billing_cycles": [cycle for cycle in meta.get_field("billing_cycle").options.split("\n") if cycle],
 		"people": onboarding.firm_people(),
@@ -1668,12 +1673,38 @@ def licence_rule_options() -> dict:
 		)
 	}
 	return {
-		"item_types": frappe.get_list(
-			"Compliance Item Type", filters={"is_active": 1}, pluck="name", order_by="name asc"
-		),
+		"item_types": item_type_settings.types_in_use(),
 		**groups,
 		"documents": documents,
 	}
+
+
+@frappe.whitelist(methods=["GET"])
+def item_types() -> list[dict]:
+	"""The register item types as the firm uses them, for the item types list."""
+	check_app_access()
+	return item_type_settings.overview()
+
+
+@frappe.whitelist(methods=["GET"])
+def item_type_settings_of(item_type: str) -> dict:
+	"""An item type's settings as the firm uses them, and whether the type itself may be changed."""
+	check_app_access()
+	return item_type_settings.settings_of(item_type)
+
+
+@frappe.whitelist(methods=["POST"])
+def save_item_type_settings(item_type: str, values: dict, reminders: list) -> dict:
+	"""Keep the firm's own settings for an item type it shares with others."""
+	check_manager_access(_("Only a Compliance Manager can change item types."))
+	return item_type_settings.save_settings(item_type, values, reminders)
+
+
+@frappe.whitelist(methods=["POST"])
+def use_shared_item_type_settings(item_type: str) -> dict:
+	"""Go back to a shared item type's own settings."""
+	check_manager_access(_("Only a Compliance Manager can change item types."))
+	return item_type_settings.use_shared_settings(item_type)
 
 
 @frappe.whitelist(methods=["GET"])

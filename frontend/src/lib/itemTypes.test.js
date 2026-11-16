@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysText, parseDays, typeSummary } from "./itemTypes";
+import { daysText, parseDays, typeRow, typeSummary, typesShown } from "./itemTypes";
 
 describe("item types", () => {
 	it("reads reminder days as people type them", () => {
@@ -18,5 +18,17 @@ describe("item types", () => {
 		expect(typeSummary({ category: "Registration", renewal_cycle_months: 0 })).toBe(
 			"Registration · does not expire"
 		);
+	});
+
+	it("lists a tab's types by the name typed, as the firm uses them", () => {
+		const types = [
+			{ name: "Trade Licence", category: "Licence", is_active: 1, renewal_cycle_months: 12 },
+			{ name: "Fire NOC", category: "Licence", is_active: 0, set_by_firm: true },
+		];
+		expect(typesShown(types, "active").map((type) => type.name)).toEqual(["Trade Licence"]);
+		expect(typesShown(types, "off").map((type) => type.name)).toEqual(["Fire NOC"]);
+		expect(typesShown(types, "all", "fire").map((type) => type.name)).toEqual(["Fire NOC"]);
+		expect(typeRow(types[1]).detail).toContain("your own settings");
+		expect(typeRow(types[0]).cells).toEqual(["Licence", "Every 12 months"]);
 	});
 });

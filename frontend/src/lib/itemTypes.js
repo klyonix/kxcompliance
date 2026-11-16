@@ -36,28 +36,36 @@ export function typeSummary(type) {
 	return parts.join(" · ");
 }
 
-export const TYPE_FIELDS = [
-	"name",
-	"category",
-	"renewal_cycle_months",
-	"requires_document",
-	"is_active",
-];
-
 export const TYPE_VIEWS = [
-	{ label: "In use", value: "active", filters: [["is_active", "=", 1]], orderBy: "name asc" },
-	{ label: "Off", value: "off", filters: [["is_active", "=", 0]], orderBy: "name asc" },
-	{ label: "All", value: "all", filters: [], orderBy: "name asc" },
+	{ label: "In use", value: "active" },
+	{ label: "Off", value: "off" },
+	{ label: "All", value: "all" },
 ];
 
-// The item types list's columns (RecordList); a type has no date of its own.
-export const TYPE_LIST = {
-	columns: [
-		{ label: "Category", field: "category" },
-		{ label: "Renews", value: (type) => renewsText(type) },
-	],
-	dateLabel: null,
-};
+// The item types list's columns (RowList cells); a type has no date of its own.
+export const TYPE_COLUMNS = [{ label: "Category" }, { label: "Renews" }];
+
+// The types in a tab whose names have every word typed.
+export function typesShown(types, view, search = "") {
+	const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+	return (types || []).filter((type) => {
+		if (view === "active" && !type.is_active) return false;
+		if (view === "off" && type.is_active) return false;
+		const name = type.name.toLowerCase();
+		return words.every((word) => name.includes(word));
+	});
+}
+
+export function typeEmpty(view, searching) {
+	if (searching) return { title: "No matches", detail: "Try another name, or look under All." };
+	if (view === "off")
+		return { title: "No type is switched off", detail: "Types you stop using appear here." };
+	return {
+		title: "No item types yet",
+		detail: "Add the kinds of licence, registration and certificate you keep.",
+		action: "Add a type",
+	};
+}
 
 export const renewsText = (type) =>
 	type.renewal_cycle_months ? `Every ${type.renewal_cycle_months} months` : "Does not expire";
@@ -67,9 +75,10 @@ export function typeRow(type) {
 		key: type.name,
 		kind: "item-type",
 		title: type.name,
-		detail: typeSummary(type),
+		detail: type.set_by_firm ? `${typeSummary(type)} · your own settings` : typeSummary(type),
 		status: type.is_active ? "In use" : "Off",
 		theme: type.is_active ? "green" : "gray",
+		cells: [type.category, renewsText(type)],
 		due: { text: "", late: false },
 		to: { name: "ItemType", params: { name: type.name } },
 	};

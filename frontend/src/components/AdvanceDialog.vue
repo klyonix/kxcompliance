@@ -58,6 +58,7 @@ import { call } from "@/api";
 import { advanceProblem, modeForReference } from "@/lib/billing";
 import { pickerFormat } from "@/lib/format";
 import { isoDate } from "@/lib/obligations";
+import { clientLabel } from "@/lib/clients";
 import { clientFilter } from "@/stores/clientFilter";
 
 const props = defineProps({ modes: { type: Array, required: true } });
@@ -89,7 +90,7 @@ async function save(args) {
 const checking = ref(false);
 
 const clientOptions = computed(() =>
-	clientFilter.clients.map((row) => ({ label: row.name, value: row.name }))
+	clientFilter.clients.map((row) => ({ label: clientLabel(row), value: row.name }))
 );
 // The chosen client's companies, any of which may have paid.
 const companies = computed(

@@ -27,6 +27,7 @@ from kxcompliance.kx_compliance.onboarding import (
 	select_options,
 	set_up_company,
 )
+from kxcompliance.kx_compliance.register import client_named
 
 MAX_ROWS = 500
 # The sheet's columns, in order: (heading, key).
@@ -218,7 +219,9 @@ def check_rows(rows: list[dict], account_type: str) -> list[dict]:
 	)
 	clients = {row.get("client") for row in rows if row.get("client")}
 	known_clients = set(
-		scoped.get_all("Compliance Client", filters={"name": ("in", list(clients) or [""])}, pluck="name")
+		scoped.get_all(
+			"Compliance Client", filters={"client_name": ("in", list(clients) or [""])}, pluck="client_name"
+		)
 	)
 	can_create = frappe.has_permission("Company", "create")
 	may_create = bool(can_create) and bool(frappe.is_setup_complete())
@@ -331,17 +334,22 @@ def plan(values: dict) -> str:
 
 def set_up(values: dict) -> int:
 	"""Make what a ready row describes; returns the number of filings made."""
-	client = values["client"] or None
-	if client and not scoped.exists("Compliance Client", client):
-		frappe.get_doc(
-			{
-				"doctype": "Compliance Client",
-				"client_name": client,
-				"client_kind": values["client_kind"],
-				"relationship_manager": values["relationship_manager"] or frappe.session.user,
-				"team": [{"user": user} for user in values["team"]],
-			}
-		).insert()
+	client = None
+	if values["client"]:
+		client = (
+			client_named(values["client"])
+			or frappe.get_doc(
+				{
+					"doctype": "Compliance Client",
+					"client_name": values["client"],
+					"client_kind": values["client_kind"],
+					"relationship_manager": values["relationship_manager"] or frappe.session.user,
+					"team": [{"user": user} for user in values["team"]],
+				}
+			)
+			.insert()
+			.name
+		)
 	company = values["company"]
 	if not scoped.exists("Company", company):
 		make_company(company)

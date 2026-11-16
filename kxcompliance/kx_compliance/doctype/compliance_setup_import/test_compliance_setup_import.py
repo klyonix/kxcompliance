@@ -14,12 +14,15 @@ from kxcompliance.kx_compliance.test_utils import (
 	TEST_COMPANY,
 	make_company,
 	make_users,
+	named_by_id,
 )
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User"]
 
 NEW_COMPANY = "Bulk Setup Test Foods Private Limited"
+# Made by the hidden-ID test, so the other tests still find NEW_COMPANY new.
+ID_COMPANY = "Bulk Setup Hidden Id Private Limited"
 HEADINGS = "client,company,company kind,responsible,reviewer,team,gstin,tan,pt,pt state"
 
 
@@ -58,7 +61,10 @@ class TestComplianceSetupImport(IntegrationTestCase):
 		for company_name in (NEW_COMPANY, TEST_COMPANY):
 			if frappe.db.exists("Company Compliance Profile", company_name):
 				frappe.delete_doc("Company Compliance Profile", company_name, force=True)
-		frappe.db.delete("Compliance Client", {"name": "Bulk Test Group"})
+		# By the name people use: a client may be named by a hidden ID (see named_by_id).
+		frappe.db.delete(
+			"Compliance Client", {"client_name": ("in", ["Bulk Test Group", "Bulk Other Group"])}
+		)
 
 	def test_the_template_reads_back_as_its_example(self):
 		rows = read_sheet(template(), "template.xlsx")
@@ -136,6 +142,37 @@ class TestComplianceSetupImport(IntegrationTestCase):
 		self.assertTrue(frappe.db.exists("Compliance Task", {"company": NEW_COMPANY}))
 		with self.assertRaises(frappe.ValidationError):
 			setup.check_sheet()
+
+	def test_a_client_named_by_id_is_found_by_its_name_and_linked_by_its_id(self):
+		with named_by_id("Compliance Client"):
+			known = frappe.get_doc(
+				{"doctype": "Compliance Client", "client_name": "Bulk Test Group"}
+			).insert()
+			self.assertNotEqual(known.name, "Bulk Test Group")
+			setup = frappe.get_doc({"doctype": "Compliance Setup Import"}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "File",
+					"file_name": "companies.csv",
+					"attached_to_doctype": setup.doctype,
+					"attached_to_name": setup.name,
+					"is_private": 1,
+					"content": sheet(row(ID_COMPANY), row(TEST_COMPANY, client="Bulk Other Group", gstin="")),
+				}
+			).insert()
+			setup.check_sheet()
+			with patch("frappe.enqueue"):
+				setup.start_import()
+			with patch.object(frappe.db, "commit"):
+				setup.run_import()
+			self.assertEqual(
+				frappe.db.get_value("Company Compliance Profile", ID_COMPANY, "client"), known.name
+			)
+			other = frappe.db.get_value("Company Compliance Profile", TEST_COMPANY, "client")
+			self.assertEqual(
+				frappe.db.get_value("Compliance Client", other, "client_name"), "Bulk Other Group"
+			)
+			self.assertNotEqual(other, "Bulk Other Group")
 
 	def test_only_managers_import(self):
 		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):

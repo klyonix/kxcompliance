@@ -294,8 +294,8 @@ def clients_overview() -> list[dict]:
 	clients = frappe.get_list(
 		"Compliance Client",
 		filters={"status": ("!=", "Left")},
-		fields=["name", "client_kind", "status", "relationship_manager"],
-		order_by="name asc",
+		fields=["name", "client_name", "client_kind", "status", "relationship_manager"],
+		order_by="client_name asc",
 		limit=500,
 	)
 	if not clients:
@@ -315,7 +315,7 @@ def clients_overview() -> list[dict]:
 		row.companies = sorted(companies_of.get(row.name, []))
 		row.update(add_up(counts, row.companies))
 		row.lowest_score = worst(scores, row.companies)
-	return sorted(clients, key=lambda row: (-row.overdue, -row.due_this_week, row.name))
+	return sorted(clients, key=lambda row: (-row.overdue, -row.due_this_week, row.client_name))
 
 
 def currency_of(companies: list[str]) -> str:
@@ -327,9 +327,14 @@ def currency_of(companies: list[str]) -> str:
 
 def client_choices() -> list[dict]:
 	"""Clients still with the firm that the person may read, with the companies each owns."""
-	names = frappe.get_list(
-		"Compliance Client", filters={"status": ("!=", "Left")}, pluck="name", order_by="name asc", limit=1000
+	clients = frappe.get_list(
+		"Compliance Client",
+		filters={"status": ("!=", "Left")},
+		fields=["name", "client_name"],
+		order_by="client_name asc",
+		limit=1000,
 	)
+	names = [row.name for row in clients]
 	companies_of: dict[str, list[str]] = {name: [] for name in names}
 	# Only the link, for clients just read with get_list.
 	for row in scoped.get_all(
@@ -339,7 +344,10 @@ def client_choices() -> list[dict]:
 		order_by="company asc",
 	):
 		companies_of[row.client].append(row.company)
-	return [{"name": name, "companies": companies_of[name]} for name in names]
+	return [
+		{"name": row.name, "client_name": row.client_name, "companies": companies_of[row.name]}
+		for row in clients
+	]
 
 
 def client_detail(name: str) -> dict:
@@ -401,6 +409,7 @@ def client_detail(name: str) -> dict:
 	year = summarise([name], from_date, to_date)[name]
 	return {
 		"name": client.name,
+		"client_name": client.client_name,
 		"client_kind": client.client_kind,
 		"logo": client.logo,
 		"status": client.status,

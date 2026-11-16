@@ -20,7 +20,7 @@
 				<p class="text-sm text-ink-gray-5">
 					{{ formatDate(summary.year.from_date) }} to
 					{{ formatDate(summary.year.to_date) }} ·
-					{{ clientFilter.client || "every client" }}
+					{{ chosenClientName || "every client" }}
 				</p>
 			</div>
 			<dl class="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -125,7 +125,9 @@
 				class="flex items-baseline gap-3 border-b border-outline-gray-1 py-2 last:border-b-0 hover:bg-surface-gray-1"
 			>
 				<span class="flex min-w-0 flex-1 flex-col">
-					<span class="truncate text-base text-ink-gray-8">{{ line.client }}</span>
+					<span class="truncate text-base text-ink-gray-8">{{
+						line.client_name || line.client
+					}}</span>
 					<span
 						class="text-sm"
 						:class="lateOf(line) > 0 ? 'text-ink-red-4' : 'text-ink-gray-5'"
@@ -161,7 +163,9 @@
 				class="flex items-center gap-3 border-b border-outline-gray-1 py-2 last:border-b-0"
 			>
 				<span class="flex min-w-0 flex-1 flex-col">
-					<span class="truncate text-base text-ink-gray-8">{{ line.client }}</span>
+					<span class="truncate text-base text-ink-gray-8">{{
+						line.client_name || line.client
+					}}</span>
 					<span class="text-sm text-ink-gray-5"
 						>{{ line.count }} {{ line.count === 1 ? "return" : "returns" }}</span
 					>
@@ -186,7 +190,7 @@ import { call } from "@/api";
 import { ageingRows, barWidth, money, summaryFacts } from "@/lib/billing";
 import { formatDate } from "@/lib/format";
 import { notLoaded } from "@/offline/reachability";
-import { clientFilter } from "@/stores/clientFilter";
+import { chosenClientName, clientFilter } from "@/stores/clientFilter";
 
 const summary = ref(null);
 const error = ref("");

@@ -23,6 +23,12 @@ export const chosenCompanies = computed(() =>
 	filterOffered() ? companiesOf(clientFilter.clients, clientFilter.client) : null
 );
 
+// The chosen client's name as people know it, for saying which client a page shows.
+export const chosenClientName = computed(() => {
+	const chosen = clientFilter.clients.find((row) => row.name === clientFilter.client);
+	return chosen ? chosen.client_name || chosen.name : clientFilter.client;
+});
+
 export function chooseClient(name) {
 	clientFilter.client = name || "";
 	if (clientFilter.client) localStorage.setItem(KEY, clientFilter.client);

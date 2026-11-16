@@ -53,7 +53,7 @@ class ComplianceClient(Document):
 		if scoped.exists("Company Compliance Profile", {"client": self.name}):
 			frappe.throw(
 				_("{0} still owns companies; move them to another client or mark the client Left.").format(
-					self.name
+					self.client_name
 				)
 			)
 

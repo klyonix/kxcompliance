@@ -18,7 +18,7 @@ from frappe.utils import escape_html
 from kxcompliance import scoped
 from kxcompliance.kx_compliance.document_requests import OPEN_STATUSES as OPEN_REQUEST_STATUSES
 from kxcompliance.kx_compliance.legal import CLOSED_CASE_STATUSES, ENDED_MARK_STATUSES
-from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
+from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, client_title
 
 # The records that move: (what they are called, doctype, which are still open, the people fields).
 RECORDS = (
@@ -114,7 +114,7 @@ def run(from_user: str, to_user: str, by: str):
 			failed.append(f"{_('Company')} {name}")
 	for name in clients_of(from_user):
 		if not move_on_client(name, from_user, to_user):
-			failed.append(f"{_('Client')} {name}")
+			failed.append(f"{_('Client')} {client_title(name)}")
 	# The work is done; the notice below goes out whatever happens to it.
 	frappe.db.commit()  # nosemgrep
 	tell_manager(by, from_user, to_user, moved, failed)

@@ -39,7 +39,12 @@ from kxcompliance.kx_compliance.party_licences import (
 	party_licence_items,
 	requirements_for_party,
 )
-from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, compliance_companies, is_approver
+from kxcompliance.kx_compliance.register import (
+	CLOSED_TASK_STATUSES,
+	client_title,
+	compliance_companies,
+	is_approver,
+)
 from kxcompliance.kx_compliance.search import CANDIDATES as SEARCH_CANDIDATES
 from kxcompliance.kx_compliance.search import MIN_LENGTH as SEARCH_MIN_LENGTH
 from kxcompliance.kx_compliance.search import counts as search_record_counts
@@ -737,7 +742,7 @@ def statement_pdf(client: str, from_date: str | None = None, to_date: str | None
 	own = check_client_account(client)
 	year_from, year_to = financial_year()
 	html = billing.statement_html(client, from_date or year_from, to_date or year_to, own)
-	frappe.local.response.filename = f"Statement-{client}.pdf".replace("/", "-")
+	frappe.local.response.filename = f"Statement-{client_title(client)}.pdf".replace("/", "-")
 	# Printed as bills are, through Chrome (their print formats' generator), not wkhtmltopdf.
 	frappe.local.response.filecontent = get_chrome_pdf(None, html, {}, None, pdf_generator="chrome")
 	frappe.local.response.type = "pdf"

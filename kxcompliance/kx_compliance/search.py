@@ -12,6 +12,7 @@ from frappe.query_builder import Case, Criterion, Order
 from frappe.query_builder.functions import Lower
 
 from kxcompliance import scoped
+from kxcompliance.kx_compliance.register import client_titles
 
 MIN_LENGTH = 2
 # How many of each kind are looked at and returned; the screens show "30+" past that.
@@ -195,7 +196,12 @@ def search(
 	chosen = [kind for kind in (kinds or KINDS) if kind in KINDS]
 	if len(" ".join(words)) < MIN_LENGTH:
 		return {kind: [] for kind in chosen}
-	return {kind: search_kind(kind, words, start, limit) for kind in chosen}
+	found = {kind: search_kind(kind, words, start, limit) for kind in chosen}
+	if found.get("companies"):
+		titles = client_titles(row.client for row in found["companies"])
+		for row in found["companies"]:
+			row.client_name = titles.get(row.client, "")
+	return found
 
 
 def counts(text: str, kinds: list[str] | None = None) -> dict[str, int]:

@@ -200,6 +200,7 @@ import RecordFrame from "@/components/RecordFrame.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { formatDate } from "@/lib/format";
+import { useLinkTitle } from "@/lib/linkTitle";
 import { t } from "@/lib/i18n";
 import { OPEN_REQUEST_STATUSES, requestRow, requestState } from "@/lib/requests";
 import { recordWidth } from "@/lib/records";
@@ -239,12 +240,13 @@ const mayCheck = computed(
 	() => !clientLogin && mayRecord() && request.value?.status === "Uploaded"
 );
 
+const clientName = useLinkTitle("Compliance Client", () => request.value?.client);
 // A request belongs to its client's page; a client's own login goes back to Home.
 const parent = computed(() => {
 	if (clientLogin) return { label: "Home", route: { name: "ClientHome" } };
 	if (!request.value?.client) return { label: "Clients", route: { name: "Clients" } };
 	return {
-		label: request.value.client,
+		label: clientName.value,
 		route: { name: "Client", params: { name: request.value.client } },
 	};
 });

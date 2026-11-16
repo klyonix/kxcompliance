@@ -8,7 +8,9 @@ export function companyGroups(overview) {
 		key: company.company,
 		kind: "company",
 		title: company.company,
-		detail: [company.company_type, company.client].filter(Boolean).join(" · "),
+		detail: [company.company_type, company.client_name || company.client]
+			.filter(Boolean)
+			.join(" · "),
 		status: "Set up",
 		theme: "green",
 		due: none,

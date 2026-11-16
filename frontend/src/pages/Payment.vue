@@ -123,7 +123,7 @@ const busy = ref("");
 const parent = computed(() =>
 	payment.value?.client
 		? {
-				label: payment.value.client,
+				label: payment.value.client_name || payment.value.client,
 				route: {
 					name: "Client",
 					params: { name: payment.value.client },
@@ -134,7 +134,7 @@ const parent = computed(() =>
 );
 const received = computed(() =>
 	[
-		payment.value.client || payment.value.party_name,
+		payment.value.client_name || payment.value.client || payment.value.party_name,
 		`received ${formatDate(payment.value.posting_date)}`,
 	].join(" · ")
 );

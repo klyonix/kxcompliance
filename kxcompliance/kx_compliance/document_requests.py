@@ -16,7 +16,7 @@ from frappe import _
 from frappe.utils import add_days, date_diff, escape_html, formatdate, get_url, getdate, now_datetime, nowdate
 
 from kxcompliance import scoped
-from kxcompliance.kx_compliance.register import get_settings
+from kxcompliance.kx_compliance.register import client_title, get_settings
 from kxcompliance.kx_compliance.reminders import (
 	already_sent,
 	notify,
@@ -114,7 +114,7 @@ def asked(request):
 		frappe.msgprint(
 			_(
 				"{0} has no login that is on and no contact email the app can write to, so nobody there was told. Send them the request yourself."
-			).format(request.client),
+			).format(client_title(request.client)),
 			indicator="orange",
 		)
 
@@ -335,7 +335,7 @@ def tell_requester_overdue(request, key: str):
 		document_request=request.name,
 		due_date=request.due_date,
 	)
-	subject = _("{0} has not sent {1}").format(request.client, request.title)
+	subject = _("{0} has not sent {1}").format(client_title(request.client), request.title)
 	body = escape_html(
 		_("It was due on {0}. The client is reminded weekly until it arrives.").format(
 			formatdate(request.due_date)

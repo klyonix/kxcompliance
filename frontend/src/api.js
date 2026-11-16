@@ -35,7 +35,12 @@ function plain(html) {
 	return element.textContent || "";
 }
 
-export async function call(method, params = {}, { httpMethod = "GET", fetcher = fetch } = {}) {
+// With `full`, the answer's message and the titles Frappe sends for Link values ("Doctype::name").
+export async function call(
+	method,
+	params = {},
+	{ httpMethod = "GET", fetcher = fetch, full = false } = {}
+) {
 	const headers = { Accept: "application/json", "X-Frappe-CSRF-Token": window.csrf_token || "" };
 	let url = `/api/method/${method}`;
 	const init = { method: httpMethod, headers, credentials: "same-origin" };
@@ -54,7 +59,8 @@ export async function call(method, params = {}, { httpMethod = "GET", fetcher = 
 		headers["Content-Type"] = "application/json";
 		init.body = JSON.stringify(params);
 	}
-	return (await send(url, init, fetcher)).message;
+	const body = await send(url, init, fetcher);
+	return full ? { message: body.message, linkTitles: body._link_titles || {} } : body.message;
 }
 
 // Files are private unless asked otherwise (an app logo has to be public, for instance).

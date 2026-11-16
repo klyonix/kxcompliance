@@ -242,7 +242,7 @@ def client_login_link(client: str, email: str) -> dict:
 	doc.check_permission("write")
 	row = next((row for row in doc.logins if row.user and row.user == email), None)
 	if not row:
-		frappe.throw(_("{0} is not a saved login of {1}.").format(email, client))
+		frappe.throw(_("{0} is not a saved login of {1}.").format(email, doc.client_name))
 	if not row.enabled or doc.status == "Left":
 		frappe.throw(_("{0}'s login is turned off; turn it on and save first.").format(email))
 	roles = set(frappe.get_roles(row.user))

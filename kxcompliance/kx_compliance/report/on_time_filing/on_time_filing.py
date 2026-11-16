@@ -39,9 +39,11 @@ def get_data(filters: frappe._dict, group_by: str):
 		clients = frappe.get_list(
 			"Compliance Client",
 			filters={"name": filters.client} if filters.get("client") else {},
-			pluck="name",
+			fields=["name", "client_name"],
 		)
-		client_of = companies_by_client(clients)
+		titles = {row.name: row.client_name or row.name for row in clients}
+		# Each company's client as people see it: the group shown is the client's title.
+		client_of = {company: titles[client] for company, client in companies_by_client(list(titles)).items()}
 	if filters.get("client"):
 		companies = list(client_of)
 		if filters.get("company"):

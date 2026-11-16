@@ -388,7 +388,13 @@ class TestComplianceClient(IntegrationTestCase):
 		with self.set_user(HOLDER):
 			self.assertEqual(
 				client_choices(),
-				[{"name": "Sunrise Group", "companies": sorted([TEST_COMPANY, SECOND_COMPANY])}],
+				[
+					{
+						"name": "Sunrise Group",
+						"client_name": "Sunrise Group",
+						"companies": sorted([TEST_COMPANY, SECOND_COMPANY]),
+					}
+				],
 			)
 		with self.set_user(MANAGER):
 			self.assertEqual(

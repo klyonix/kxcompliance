@@ -22,7 +22,7 @@ from kxcompliance.kx_compliance.onboarding import (
 	select_options,
 	set_up_company,
 )
-from kxcompliance.kx_compliance.register import compliance_companies, is_approver
+from kxcompliance.kx_compliance.register import client_title, client_titles, compliance_companies, is_approver
 from kxcompliance.kx_compliance.score import company_scores
 from kxcompliance.kx_compliance.statutory import generate_tasks
 
@@ -44,9 +44,11 @@ def companies_overview() -> dict:
 	names = [row.company for row in profiles] or [""]
 	registrations = counts_by_parent("Compliance Registration", names)
 	obligations = counts_by_parent("Company Obligation", names, {"is_active": 1})
+	titles = client_titles(row.client for row in profiles)
 	for row in profiles:
 		row.registrations = registrations.get(row.company, 0)
 		row.obligations = obligations.get(row.company, 0)
+		row.client_name = titles.get(row.client, "")
 	set_up = {row.company for row in profiles}
 	return {
 		"companies": profiles,
@@ -75,7 +77,12 @@ def form_options() -> dict:
 		"states": select_options("Compliance Registration", "state"),
 		"not_set_up": [name for name in compliance_companies() if name not in set_up],
 		"people": firm_people(),
-		"clients": frappe.get_list("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name"),
+		"clients": frappe.get_list(
+			"Compliance Client",
+			filters={"status": ("!=", "Left")},
+			fields=["name", "client_name"],
+			order_by="client_name asc",
+		),
 		"can_create_company": bool(frappe.has_permission("Company", "create"))
 		and bool(frappe.is_setup_complete()),
 	}
@@ -102,6 +109,7 @@ def company_detail(company: str) -> dict:
 		"company": profile.company,
 		"company_type": profile.company_type,
 		"client": profile.client,
+		"client_name": client_title(profile.client),
 		"default_responsible": profile.default_responsible,
 		"default_reviewer": profile.default_reviewer,
 		"billing": {field: profile.get(field) for field in COMPANY_BILLING},
@@ -167,7 +175,7 @@ def save_company(company: str, values: dict, new_company: bool = False) -> dict:
 	check_person(values.get("default_reviewer"), _("Reviewer"))
 	client = values.get("client") or None
 	if client and not frappe.has_permission("Compliance Client", "read", doc=client):
-		frappe.throw(_("You cannot choose the client {0}.").format(client), frappe.PermissionError)
+		frappe.throw(_("You cannot choose that client."), frappe.PermissionError)
 	registrations = clean_registrations(values.get("registrations"))
 
 	if not scoped.exists(PROFILE, company):

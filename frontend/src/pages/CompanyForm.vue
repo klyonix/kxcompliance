@@ -139,7 +139,13 @@
 									v-model="form.client"
 									type="select"
 									label="Client"
-									:options="choices(options.clients, 'No client')"
+									:options="[
+										{ label: 'No client', value: '' },
+										...options.clients.map((row) => ({
+											label: row.client_name || row.name,
+											value: row.name,
+										})),
+									]"
 								/>
 								<FormControl
 									v-model="form.default_responsible"

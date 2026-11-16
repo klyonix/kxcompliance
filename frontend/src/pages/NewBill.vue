@@ -20,7 +20,7 @@
 			label="Client"
 			:options="[
 				{ label: 'Choose a client', value: '' },
-				...clients.map((name) => ({ label: name, value: name })),
+				...clients.map((row) => ({ label: clientLabel(row), value: row.name })),
 			]"
 		/>
 
@@ -46,8 +46,8 @@
 					Returns filed, not billed yet
 				</h2>
 				<p v-if="!options.filings.length" class="text-base text-ink-gray-5">
-					None: every priced return filed for {{ options.company || client }} is billed
-					or on a draft.
+					None: every priced return filed for {{ options.company || clientName }} is
+					billed or on a draft.
 				</p>
 				<label
 					v-for="filing in options.filings"
@@ -222,6 +222,8 @@ import { useRoute, useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
 import { call } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import { clientLabel } from "@/lib/clients";
+import { useLinkTitle } from "@/lib/linkTitle";
 import {
 	billSubtotal,
 	linesProblem,
@@ -236,6 +238,7 @@ const router = useRouter();
 
 const fromClient = Boolean(route.query.client);
 const client = ref(String(route.query.client || ""));
+const clientName = useLinkTitle("Compliance Client", () => client.value);
 const clients = ref([]);
 const options = ref(null);
 
@@ -252,7 +255,7 @@ const saving = ref(false);
 
 const parent = computed(() =>
 	fromClient
-		? { label: client.value, route: { name: "Client", params: { name: client.value } } }
+		? { label: clientName.value, route: { name: "Client", params: { name: client.value } } }
 		: { label: "Clients", route: { name: "Clients" } }
 );
 const subtotal = computed(() =>
@@ -325,9 +328,7 @@ async function save() {
 watch(client, () => loadOptions());
 onMounted(async () => {
 	if (!fromClient) {
-		clients.value = (await call("kxcompliance.api.client_choices").catch(() => [])).map(
-			(row) => row.name
-		);
+		clients.value = await call("kxcompliance.api.client_choices").catch(() => []);
 	}
 	loadOptions();
 });

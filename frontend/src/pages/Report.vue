@@ -235,6 +235,8 @@ const sorted = computed(() =>
 	sortBy.value ? sortRows(rows.value, sortBy.value, descending.value) : rows.value
 );
 const total = ref(null);
+// Frappe's titles for the Link values in the result, such as a client's name for its ID.
+const linkTitles = ref({});
 
 const NUMBERS = ["Int", "Float", "Currency", "Percent"];
 const isNumber = (column) => NUMBERS.includes(column.fieldtype);
@@ -254,6 +256,8 @@ function cellText(column, row) {
 		case "Int":
 		case "Float":
 			return Number(value).toLocaleString("en-IN");
+		case "Link":
+			return linkTitles.value[`${column.options}::${value}`] || String(value);
 		default:
 			return String(value);
 	}
@@ -273,7 +277,7 @@ const LOADERS = {
 	company: async () => boot.companies.map((name) => ({ label: name, value: name })),
 	client: async () =>
 		(await call("kxcompliance.api.client_choices")).map((row) => ({
-			label: row.name,
+			label: row.client_name || row.name,
 			value: row.name,
 		})),
 	user: async () => personOptions(await call("kxcompliance.api.people_options")),
@@ -307,11 +311,16 @@ async function run() {
 	loading.value = true;
 	error.value = "";
 	try {
-		const answer = await call("frappe.desk.query_report.run", {
-			report_name: report.value.name,
-			filters: JSON.stringify(filledFilters(values)),
-		});
+		const { message: answer, linkTitles: titles } = await call(
+			"frappe.desk.query_report.run",
+			{
+				report_name: report.value.name,
+				filters: JSON.stringify(filledFilters(values)),
+			},
+			{ full: true }
+		);
 		if (ticket !== latest) return;
+		linkTitles.value = titles;
 		columns.value = (answer.columns || []).filter((column) => typeof column === "object");
 		const split = splitTotal(rowsOf(answer.result, columns.value), report.value.totals);
 		rows.value = split.rows;

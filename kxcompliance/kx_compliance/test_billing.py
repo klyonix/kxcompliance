@@ -206,6 +206,15 @@ class TestBillingSetup(IntegrationTestCase):
 				with change_app_settings(billing_company=None):
 					set_up_billing(DETAILS)
 
+	def test_client_billing_opens_before_setup_but_bills_wait_for_it(self):
+		with change_app_settings(account_type="CA/CS Firm", billing_company=None):
+			self.assertEqual(bills("all"), {"rows": [], "total": 0})
+			self.assertEqual({view["count"] for view in bill_counts().values()}, {0})
+			self.assertEqual(payments()["rows"], [])
+			self.assertIn("activity", billing_summary())
+			with self.assertRaisesRegex(frappe.ValidationError, "Billing setup"):
+				bill_options(client("Billing Before Setup Client").name)
+
 	def test_a_gstin_says_its_state_and_a_wrong_one_is_refused(self):
 		self.assertEqual(state_of("27AAACA1234F1Z5"), "Maharashtra")
 		self.assertEqual(state_of("", "Goa"), "Goa")

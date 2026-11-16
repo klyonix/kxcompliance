@@ -26,6 +26,12 @@ Hooks another app may declare in its hooks.py:
         Called before a company, staff user or client is added (kind "Company", "User" or
         "Compliance Client"); throws to refuse.
 
+    kxcompliance_boot = "my_app.module.boot"
+        boot() -> dict | None
+        Notices shown at the top of the app, as {"notices": [{"text", "theme", "link_label",
+        "link_url"}]}, and links on the Account page, as {"account_links": [{"label", "url",
+        "icon"}]}. Each app's are added to the others'.
+
     kxcompliance_run_job = "my_app.module.run_job"
         run_job(job: Callable[[], None]) -> bool
         Called by each scheduled job with the module-level function that does the work.
@@ -151,6 +157,16 @@ def settings_record() -> dict:
 def check_limit(kind: str, **context):
 	for path in frappe.get_hooks("kxcompliance_check_limit"):
 		frappe.get_attr(path)(kind, **context)
+
+
+def boot_extras() -> dict:
+	"""The notices and Account links other apps add to the app (kxcompliance_boot)."""
+	extras = {"notices": [], "account_links": []}
+	for path in frappe.get_hooks("kxcompliance_boot"):
+		given = frappe.get_attr(path)() or {}
+		for key in extras:
+			extras[key].extend(given.get(key) or [])
+	return extras
 
 
 def run_job(job: Callable[[], None]):

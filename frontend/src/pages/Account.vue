@@ -134,6 +134,14 @@
 				:route="{ name: 'Settings' }"
 			/>
 			<Button
+				v-for="link in boot.accountLinks"
+				:key="link.url"
+				:label="link.label"
+				:icon-left="link.icon || 'lucide-external-link'"
+				class="justify-start"
+				:link="link.url"
+			/>
+			<Button
 				v-if="mayUseDesk()"
 				:label="t('Open the Desk')"
 				icon-left="lucide-app-window"

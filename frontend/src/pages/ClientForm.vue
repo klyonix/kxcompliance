@@ -1,5 +1,5 @@
 <template>
-	<AppPageHeader :title="name ? `Edit ${name}` : 'New client'" :parent="parent" />
+	<AppPageHeader :title="name ? `Edit ${shownName}` : 'New client'" :parent="parent" />
 
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
 		<p
@@ -45,7 +45,7 @@
 							v-if="name"
 							v-model="form.logo"
 							label="The client's logo, on its page and statements"
-							:alt="`${name}'s logo`"
+							:alt="`${shownName}'s logo`"
 							doctype="Compliance Client"
 							:docname="name"
 						/>
@@ -458,9 +458,11 @@ const form = reactive({
 	notes: "",
 });
 
+// The client's name as people know it; the record's ID until the record is read.
+const shownName = computed(() => form.client_name || props.name);
 const parent = computed(() =>
 	props.name
-		? { label: props.name, route: { name: "Client", params: { name: props.name } } }
+		? { label: shownName.value, route: { name: "Client", params: { name: props.name } } }
 		: { label: "Clients", route: { name: "Clients" } }
 );
 const peopleOptions = computed(() => personOptions(people.value));
@@ -589,6 +591,7 @@ onMounted(async () => {
 		if (props.name) {
 			const client = await getDoc("Compliance Client", props.name);
 			Object.assign(form, {
+				client_name: client.client_name || "",
 				client_kind: client.client_kind || "Business Group",
 				status: client.status || "Active",
 				relationship_manager: client.relationship_manager || "",

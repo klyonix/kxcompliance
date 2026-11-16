@@ -13,7 +13,7 @@ from frappe import _
 from frappe.utils import formatdate, getdate, nowdate
 
 from kxcompliance import scoped
-from kxcompliance.kx_compliance.register import APPROVER_ROLES, compliance_companies
+from kxcompliance.kx_compliance.register import APPROVER_ROLES, client_named, compliance_companies
 from kxcompliance.kx_compliance.statutory import generate_tasks
 
 SETTINGS = "KX Compliance Settings"
@@ -240,9 +240,8 @@ def complete(setup: dict) -> dict:
 	client = None
 	if account_type == "CA/CS Firm":
 		client = (
-			client_name
-			if scoped.exists("Compliance Client", client_name)
-			else frappe.get_doc(
+			client_named(client_name)
+			or frappe.get_doc(
 				{
 					"doctype": "Compliance Client",
 					"client_name": client_name,

@@ -81,5 +81,6 @@
    "role": "Compliance User",
    "read": 1
   }
- ]
+ ],
+ "show_title_field_in_link": 1
 }

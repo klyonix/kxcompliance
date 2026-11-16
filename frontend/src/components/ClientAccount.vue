@@ -203,7 +203,9 @@
 					<p class="text-sm text-ink-gray-5">
 						{{
 							summary.rate_card
-								? `${summary.rate_card} card, with any of the client's own rates`
+								? `${
+										summary.rate_card_title || summary.rate_card
+								  } card, with any of the client's own rates`
 								: "The client's own rates"
 						}}
 					</p>

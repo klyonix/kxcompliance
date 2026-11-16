@@ -299,7 +299,7 @@ const state = computed(() => billState(bill.value));
 const parent = computed(() =>
 	bill.value?.compliance_client
 		? {
-				label: bill.value.compliance_client,
+				label: bill.value.client_name || bill.value.compliance_client,
 				route: { name: "Client", params: { name: bill.value.compliance_client } },
 		  }
 		: { label: "Clients", route: { name: "Clients" } }

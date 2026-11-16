@@ -21,7 +21,13 @@ from frappe.utils.caching import request_cache
 
 from kxcompliance import scoped
 from kxcompliance.kx_compliance.onboarding import make_company
-from kxcompliance.kx_compliance.register import get_settings, is_approver
+from kxcompliance.kx_compliance.register import (
+	client_title,
+	client_titles,
+	get_settings,
+	is_approver,
+	rate_card_title,
+)
 from kxcompliance.kx_compliance.setup_import import GST_STATE_CODES, GSTIN_PATTERN
 
 FIRM = "CA/CS Firm"
@@ -519,9 +525,11 @@ def unbilled_for(clients: list[str]) -> list[dict]:
 		order_by="filed_on asc, name asc",
 	)
 	drafted = on_drafts([row.name for row in rows])
+	titles = client_titles(owner.values())
 	found = []
 	for row in rows:
 		row.client = owner[row.company]
+		row.client_name = titles.get(row.client, row.client)
 		rate = rates[row.client].get(("Return", row.obligation_template)) or {}
 		row.fee = rate.get("amount")
 		row.sac_code = rate.get("sac_code")
@@ -559,7 +567,8 @@ def check_client_allowed(client: str | None):
 	allowed = billable_clients()
 	if allowed is not None and client not in allowed:
 		frappe.throw(
-			_("You do not work on {0}, so cannot see its bills.").format(client), frappe.PermissionError
+			_("You do not work on {0}, so cannot see its bills.").format(client_title(client)),
+			frappe.PermissionError,
 		)
 
 
@@ -635,10 +644,10 @@ def bill_company(client: str, company: str | None) -> str | None:
 	companies = client_companies(client)
 	if company:
 		if company not in companies:
-			frappe.throw(_("{0} is not one of {1}'s companies.").format(company, client))
+			frappe.throw(_("{0} is not one of {1}'s companies.").format(company, client_title(client)))
 		return company
 	if len(companies) > 1:
-		frappe.throw(_("Choose which of {0}'s companies the bill is for.").format(client))
+		frappe.throw(_("Choose which of {0}'s companies the bill is for.").format(client_title(client)))
 	return companies[0] if companies else None
 
 
@@ -854,7 +863,7 @@ def make_bill(
 		if month_billed(key):
 			frappe.throw(
 				_("{0}'s recurring charges for {1} are already on a bill.").format(
-					company or client, format_date(month, "MMM yyyy")
+					company or client_title(client), format_date(month, "MMM yyyy")
 				)
 			)
 	for charge in charges:
@@ -875,7 +884,7 @@ def make_bill(
 		frappe.throw(
 			_(
 				"Nothing to bill {0} for: choose filings, recurring charges or services, or add a line."
-			).format(client)
+			).format(client_title(client))
 		)
 	today = getdate(nowdate())
 	# Only a firm registered for GST charges it.
@@ -1153,7 +1162,7 @@ def bill_options(client: str, company: str | None = None) -> dict:
 	companies = client_companies(client)
 	company = company or (companies[0] if companies else None)
 	if company and company not in companies:
-		frappe.throw(_("{0} is not one of {1}'s companies.").format(company, client))
+		frappe.throw(_("{0} is not one of {1}'s companies.").format(company, client_title(client)))
 	month = get_first_day(nowdate())
 	rates = rates_for([client])[client]
 	start = scoped.get_value("Compliance Client", client, "billing_from")
@@ -1205,6 +1214,7 @@ def bill_detail(name: str) -> dict:
 	credited = credited_lines(bill.name) if bill.docstatus == 1 and not bill.is_return else None
 	return {
 		**{field: bill.get(field) for field in BILL_FIELDS},
+		"client_name": client_title(bill.compliance_client),
 		"items": [
 			{
 				"name": row.name,
@@ -1230,7 +1240,7 @@ def bill_detail(name: str) -> dict:
 def payer(client: str, paid_by: str | None) -> str | None:
 	"""Which of the client's companies the money came from, when the firm notes it."""
 	if paid_by and paid_by not in client_companies(client):
-		frappe.throw(_("Paid by: {0} is not one of {1}'s companies.").format(paid_by, client))
+		frappe.throw(_("Paid by: {0} is not one of {1}'s companies.").format(paid_by, client_title(client)))
 	return paid_by or None
 
 
@@ -1391,6 +1401,7 @@ def payment_detail(name: str) -> dict:
 		"name": entry.name,
 		"docstatus": entry.docstatus,
 		"client": client,
+		"client_name": client_title(client),
 		"party_name": entry.party_name,
 		"paid_by_company": entry.paid_by_company,
 		"posting_date": entry.posting_date,
@@ -1437,7 +1448,9 @@ def email_receipt(name: str) -> str:
 	to = address and (address.billing_email or address.contact_email)
 	if not to:
 		frappe.throw(
-			_("{0} has no billing or contact email; give it one on the client's form.").format(client)
+			_("{0} has no billing or contact email; give it one on the client's form.").format(
+				client_title(client)
+			)
 		)
 	sender = sender_address()
 	if not sender:
@@ -1533,6 +1546,9 @@ def bills(view: str, client: str | None, text: str | None, start: int, limit: in
 		page_length=limit,
 	)
 	total = frappe.get_list("Sales Invoice", filters=filters, or_filters=matching, fields=TOTALS)
+	titles = client_titles(row.compliance_client for row in rows)
+	for row in rows:
+		row.client_name = titles.get(row.compliance_client, row.compliance_client)
 	return {"rows": rows, "total": total[0]["count"] if total else 0}
 
 
@@ -1608,6 +1624,7 @@ def client_summary(client: str) -> dict:
 		"unbilled_count": len(unbilled),
 		"unbilled_total": sum(row.fee for row in unbilled),
 		"rate_card": values.rate_card or default_card(),
+		"rate_card_title": rate_card_title(values.rate_card or default_card()),
 		"rates": list(rates.values()),
 		"payments": payments(client, None, 0, 5)["rows"],
 		"by_company": [
@@ -1782,7 +1799,9 @@ def billing_summary(client: str | None = None) -> dict:
 	unbilled = unbilled_for_clients(client)
 	unbilled_by_client: dict[str, dict] = {}
 	for row in unbilled:
-		line = unbilled_by_client.setdefault(row.client, {"client": row.client, "count": 0, "total": 0})
+		line = unbilled_by_client.setdefault(
+			row.client, {"client": row.client, "client_name": row.client_name, "count": 0, "total": 0}
+		)
 		line["count"] += 1
 		line["total"] = flt(line["total"] + flt(row.fee), 2)
 	return {
@@ -2221,6 +2240,9 @@ def outstanding_by_client(client: str | None, today) -> list[dict]:
 		line["outstanding"] += flt(row.outstanding_amount)
 		line[ageing_bucket(row.due_date, today)] += flt(row.outstanding_amount)
 		line["oldest_due"] = min(getdate(line["oldest_due"]), getdate(row.due_date))
+	titles = client_titles(clients)
+	for line in clients.values():
+		line["client_name"] = titles.get(line["client"], line["client"])
 	return sorted(clients.values(), key=lambda line: (-line["late_more"], -line["outstanding"]))
 
 
@@ -2281,7 +2303,7 @@ def unbilled_for_clients(client: str | None) -> list[dict]:
 		if client
 		else scoped.get_all("Compliance Client", filters={"status": ("!=", "Left")}, pluck="name")
 	)
-	return sorted(unbilled_for(clients), key=lambda row: (row.client, str(row.filed_on or ""), row.name))
+	return sorted(unbilled_for(clients), key=lambda row: (row.client_name, str(row.filed_on or ""), row.name))
 
 
 def state_with_code(state: str | None) -> str:
@@ -2620,7 +2642,7 @@ def record_advance(
 			"mode_of_payment": mode,
 			"reference_no": (reference or "").strip() or mode,
 			"reference_date": getdate(paid_on),
-			"remarks": _("Advance from {0}").format(paid_by or client),
+			"remarks": _("Advance from {0}").format(paid_by or client_title(client)),
 			"paid_by_company": paid_by,
 		}
 	)
@@ -2705,14 +2727,14 @@ def payments(client: str | None, text: str | None, start: int, limit: int) -> di
 		fields=[{"COUNT": "*", "as": "count"}, {"SUM": "paid_amount", "as": "received"}],
 	)
 	names = [row.name for row in rows]
-	client_of = dict(
-		scoped.get_all(
+	client_of = {
+		row.customer: row
+		for row in scoped.get_all(
 			"Compliance Client",
 			filters={"customer": ("in", [row.party for row in rows] or [""])},
-			fields=["customer", "name"],
-			as_list=True,
+			fields=["customer", "name", "client_name"],
 		)
-	)
+	}
 	bills: dict[str, list[str]] = {}
 	for ref in scoped.get_all(
 		"Payment Entry Reference",
@@ -2721,7 +2743,9 @@ def payments(client: str | None, text: str | None, start: int, limit: int) -> di
 	):
 		bills.setdefault(ref.parent, []).append(ref.reference_name)
 	for row in rows:
-		row.client = client_of.get(row.party)
+		owner = client_of.get(row.party)
+		row.client = owner.name if owner else None
+		row.client_name = owner.client_name if owner else None
 		row.bills = bills.get(row.name, [])
 		row.tds = flt(row.total_allocated_amount - (row.paid_amount - row.unallocated_amount), 2)
 	return {

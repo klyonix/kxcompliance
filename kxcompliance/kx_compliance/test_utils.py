@@ -3,6 +3,9 @@
 
 """Records the compliance tests build for themselves."""
 
+from contextlib import ExitStack, contextmanager
+from unittest.mock import patch
+
 import frappe
 from frappe.utils import add_days, nowdate
 
@@ -112,3 +115,25 @@ def make_file(name: str = "certificate.txt") -> str:
 		.insert()
 		.file_url
 	)
+
+
+@contextmanager
+def named_by_id(*doctypes: str):
+	"""These doctypes named by a hidden ID rather than their title, as a site hosting many firms
+	names clients and rate cards, so a test can check nothing takes the ID for the title. Frappe
+	asks a controller's own autoname first; nothing is saved, so a commit leaves nothing behind."""
+	from frappe.model.base_document import get_controller
+	from frappe.model.naming import make_autoname
+
+	def by_id(doc):
+		doc.name = make_autoname("hash", doc.doctype)
+
+	def keep_title(doc):
+		"""Named by ID, the title is not copied from the name as a field-named record's is."""
+
+	with ExitStack() as stack:
+		for doctype in doctypes:
+			controller = get_controller(doctype)
+			stack.enter_context(patch.object(controller, "autoname", by_id, create=True))
+			stack.enter_context(patch.object(controller, "_sync_autoname_field", keep_title))
+		yield

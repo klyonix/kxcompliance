@@ -32,7 +32,9 @@ const companyRow = (profile) => ({
 	key: profile.name,
 	kind: "company",
 	title: profile.company,
-	detail: [profile.company_type, profile.client].filter(Boolean).join(" · "),
+	detail: [profile.company_type, profile.client_name || profile.client]
+		.filter(Boolean)
+		.join(" · "),
 	status: "",
 	due: none,
 	to: { name: "Company", params: { company: profile.company } },

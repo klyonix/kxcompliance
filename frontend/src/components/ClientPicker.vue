@@ -27,6 +27,7 @@
 // many clients, typing finds one by its name or by one of its companies.
 import { computed, onMounted, ref } from "vue";
 import { Button, Combobox } from "frappe-ui";
+import { clientLabel } from "@/lib/clients";
 import { chooseClient, clientFilter, filterOffered, loadClients } from "@/stores/clientFilter";
 
 const query = ref("");
@@ -36,15 +37,15 @@ const options = computed(() => {
 	const words = query.value.toLowerCase().split(/\s+/).filter(Boolean);
 	const chosen = clientFilter.clients.find((row) => row.name === clientFilter.client);
 	// While the box shows the chosen client's own name, every client is offered.
-	const searching = words.length && query.value !== chosen?.name;
+	const searching = words.length && query.value !== clientLabel(chosen);
 	return clientFilter.clients
 		.filter((row) => {
 			if (!searching) return true;
-			const text = [row.name, ...(row.companies || [])].join(" ").toLowerCase();
+			const text = [clientLabel(row), ...(row.companies || [])].join(" ").toLowerCase();
 			return words.every((word) => text.includes(word));
 		})
 		.map((row) => ({
-			label: row.name,
+			label: clientLabel(row),
 			value: row.name,
 			description: (row.companies || []).join(", "),
 		}));

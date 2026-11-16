@@ -68,7 +68,10 @@ def get_data(filters: frappe._dict) -> list[dict]:
 	if filters.relationship_manager:
 		conditions["relationship_manager"] = filters.relationship_manager
 	clients = frappe.get_list(
-		"Compliance Client", filters=conditions, fields=["name", "relationship_manager"], order_by="name asc"
+		"Compliance Client",
+		filters=conditions,
+		fields=["name", "client_name", "relationship_manager"],
+		order_by="client_name asc",
 	)
 	totals = summarise([row.name for row in clients], filters.from_date, filters.to_date)
 	client_of = companies_by_client([row.name for row in clients])
@@ -80,6 +83,7 @@ def get_data(filters: frappe._dict) -> list[dict]:
 		rows.append(
 			{
 				"client": row.name,
+				"client_name": row.client_name,
 				"relationship_manager": row.relationship_manager,
 				**totals[row.name],
 				"lowest_score": lowest["score"] if lowest else None,
@@ -92,6 +96,6 @@ def get_data(filters: frappe._dict) -> list[dict]:
 		key=lambda row: (
 			-row["overdue"],
 			row["on_time_percent"] if row["on_time_percent"] is not None else 101,
-			row["client"],
+			row["client_name"],
 		),
 	)

@@ -17,13 +17,16 @@ export function clientTheme(client) {
 }
 
 // How a client shows in the clients list (RowList).
+// A client as people know it: its name, which on some sites is not the record's ID.
+export const clientLabel = (client) => client?.client_name || client?.name || "";
+
 export function clientRow(client) {
 	const theme = clientTheme(client);
 	const score = client.lowest_score;
 	return {
 		key: client.name,
 		kind: "client",
-		title: client.name,
+		title: clientLabel(client),
 		detail: companiesLine(client.companies),
 		status: { red: "Overdue", amber: "Due soon", green: "On track" }[theme],
 		theme,

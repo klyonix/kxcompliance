@@ -1,6 +1,6 @@
 <template>
 	<AppPageHeader
-		:title="client?.name || 'Client'"
+		:title="clientLabel(client) || 'Client'"
 		:parent="clientLogin ? null : { label: 'Clients', route: { name: 'Clients' } }"
 	>
 		<template #actions>
@@ -42,7 +42,7 @@
 				<img
 					v-if="client.logo"
 					:src="client.logo"
-					:alt="t('{0} logo', client.name)"
+					:alt="t('{0} logo', clientLabel(client))"
 					class="size-14 shrink-0 rounded-lg bg-surface-gray-1 object-contain p-1"
 				/>
 				<div class="flex min-w-0 flex-col gap-2">
@@ -319,7 +319,7 @@ import WorkRow from "@/components/WorkRow.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { useTabQuery } from "@/composables/useTabQuery";
-import { clientAttention, clientTheme, yearFacts } from "@/lib/clients";
+import { clientAttention, clientLabel, clientTheme, yearFacts } from "@/lib/clients";
 import { formatDate } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import { taskRow } from "@/lib/filings";

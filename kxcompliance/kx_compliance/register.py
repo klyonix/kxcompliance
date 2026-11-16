@@ -95,6 +95,33 @@ def open_renewal_statuses(items: list[str]) -> dict[str, str]:
 	return {row.compliance_item: row.status for row in rows}
 
 
+def client_titles(names) -> dict[str, str]:
+	"""Each client's name as people see it, by record name. A client's record name is its title
+	on a site that names clients by title, and a hidden ID on one that does not."""
+	names = sorted({name for name in names if name})
+	if not names:
+		return {}
+	rows = scoped.get_all(
+		"Compliance Client", filters={"name": ("in", names)}, fields=["name", "client_name"]
+	)
+	return {row.name: row.client_name or row.name for row in rows}
+
+
+def client_title(name: str | None) -> str:
+	return client_titles([name]).get(name, name or "") if name else ""
+
+
+def client_named(title: str) -> str | None:
+	"""The record name of the client people call `title`, if there is one."""
+	return scoped.get_value("Compliance Client", {"client_name": title}, "name")
+
+
+def rate_card_title(name: str | None) -> str:
+	if not name:
+		return ""
+	return scoped.get_value("Rate Card", name, "title") or name
+
+
 def is_approver(user: str | None = None) -> bool:
 	return bool(APPROVER_ROLES & set(frappe.get_roles(user)))
 

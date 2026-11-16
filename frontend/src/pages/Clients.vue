@@ -90,7 +90,7 @@ import { isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RowList from "@/components/RowList.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
-import { clientRow } from "@/lib/clients";
+import { clientLabel, clientRow } from "@/lib/clients";
 import { notLoaded } from "@/offline/reachability";
 
 const isMobile = useIsMobile();
@@ -104,7 +104,7 @@ const rows = computed(() => {
 	const words = search.value.toLowerCase().split(/\s+/).filter(Boolean);
 	return clients.value
 		.filter((client) => {
-			const text = [client.name, ...client.companies].join(" ").toLowerCase();
+			const text = [clientLabel(client), ...client.companies].join(" ").toLowerCase();
 			return words.every((word) => text.includes(word));
 		})
 		.map(clientRow);

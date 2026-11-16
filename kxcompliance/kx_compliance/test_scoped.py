@@ -203,9 +203,15 @@ class TestScopedReads(IntegrationTestCase):
 				self.assertRaises(frappe.ValidationError, scoped.check_limit, "Company", name="X")
 			hook.assert_called_once_with("Company", name="X")
 
-	def test_other_apps_add_notices_and_account_links(self):
-		self.assertEqual(scoped.boot_extras(), {"notices": [], "account_links": []})
-		given = {"notices": [{"text": "Trial ends soon"}], "account_links": [{"label": "Plan", "url": "/p"}]}
+	def test_other_apps_add_notices_links_plugins_and_hide_the_desk(self):
+		nothing = {"notices": [], "account_links": [], "plugins": [], "hide_desk": False}
+		self.assertEqual(scoped.boot_extras(), nothing)
+		given = {
+			"notices": [{"text": "Trial ends soon"}],
+			"account_links": [{"label": "Plan", "url": "/p"}],
+			"plugins": [{"script": "/assets/other/plugin.js"}],
+			"hide_desk": True,
+		}
 		with patch(f"{__name__}.boot_hook", return_value=given):
 			with self.hooked("kxcompliance_boot", f"{__name__}.boot_hook"):
 				self.assertEqual(scoped.boot_extras(), given)

@@ -159,13 +159,21 @@ def check_limit(kind: str, **context):
 		frappe.get_attr(path)(kind, **context)
 
 
+BOOT_LISTS = ("notices", "account_links", "plugins")
+
+
 def boot_extras() -> dict:
-	"""The notices and Account links other apps add to the app (kxcompliance_boot)."""
-	extras = {"notices": [], "account_links": []}
+	"""What other apps add to the app (kxcompliance_boot).
+
+	Lists are joined: notices at the top of the app, links on Account, and front-end plug-ins
+	({script, style}) loaded before the app starts. hide_desk from any app hides the Desk link.
+	"""
+	extras = {key: [] for key in BOOT_LISTS} | {"hide_desk": False}
 	for path in frappe.get_hooks("kxcompliance_boot"):
 		given = frappe.get_attr(path)() or {}
-		for key in extras:
+		for key in BOOT_LISTS:
 			extras[key].extend(given.get(key) or [])
+		extras["hide_desk"] = extras["hide_desk"] or bool(given.get("hide_desk"))
 	return extras
 
 

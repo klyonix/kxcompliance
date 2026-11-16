@@ -92,6 +92,19 @@ export function sectionsFor({ checks, client }) {
 
 export const sections = sectionsFor({ checks: checksOnly(), client: isClientLogin() });
 
+// A page another app adds (plugins.js): in the side bar before Settings, or in the Settings group.
+export function addMenuPage(place, page) {
+	if (place === "settings") {
+		SETTINGS_PAGES.push(page);
+		return;
+	}
+	const settings = sections.findIndex((section) => section.route === "Settings");
+	sections.splice(settings === -1 ? sections.length : settings, 0, {
+		desktopOnly: true,
+		...page,
+	});
+}
+
 // The pages under Settings: a group in the side bar, and buttons on the Settings page on phones.
 // `also` lists the routes opened from a page, so its row stays marked while one is open.
 const SETTINGS_PAGES = [

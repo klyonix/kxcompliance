@@ -9,6 +9,7 @@ import { getSocket } from "./socket";
 import { applyAppearance, readAppearance } from "./lib/appearance";
 import { setLanguage, t } from "./lib/i18n";
 import router from "./router";
+import { loadPlugins } from "./plugins";
 import { watchConnection } from "./offline/outbox";
 import { watchForUpdates } from "./offline/updates";
 
@@ -25,8 +26,11 @@ app.config.globalProperties.$socket = socket;
 // Every template may write t("...") for the reader's language (lib/i18n.js).
 app.config.globalProperties.t = t;
 setLanguage(window.lang);
-app.provide("socket", socket).use(router).use(FrappeUI).mount("#app");
-watchConnection();
+// Other apps' pages are added before the router reads the address, so a link to one opens it.
+loadPlugins(router).finally(() => {
+	app.provide("socket", socket).use(router).use(FrappeUI).mount("#app");
+	watchConnection();
+});
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
 	watchForUpdates();

@@ -21,7 +21,7 @@ from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client
 	company,
 	profile,
 )
-from kxcompliance.kx_compliance.move_old_trackers import (
+from kxcompliance.kx_compliance.move_customer_licences import (
 	CUSTOMER_LICENCE_TABLES,
 	move_customer_licence_row,
 )

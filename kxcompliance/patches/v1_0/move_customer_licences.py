@@ -1,7 +1,7 @@
 import click
 import frappe
 
-from kxcompliance.kx_compliance.move_old_trackers import move_customer_licences
+from kxcompliance.kx_compliance.move_customer_licences import move_customer_licences
 
 
 def execute():

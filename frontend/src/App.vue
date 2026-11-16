@@ -22,6 +22,7 @@
 				<MobileNavItem :label="t('Account')" :route="{ name: 'Account' }">
 					<template #default="{ active }">
 						<Avatar
+							:image="profile.image || undefined"
 							:label="boot.userFullname || boot.user"
 							size="sm"
 							:class="active ? 'ring-2 ring-outline-gray-4' : ''"
@@ -56,7 +57,7 @@ import {
 } from "frappe-ui";
 import { onBeforeUnmount, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { boot, checksOnly } from "./boot";
+import { boot, checksOnly, profile } from "./boot";
 import AppSidebar from "./components/AppSidebar.vue";
 import NotificationsDrawer from "./components/NotificationsDrawer.vue";
 import SearchPalette from "./components/SearchPalette.vue";

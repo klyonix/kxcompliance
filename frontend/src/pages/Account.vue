@@ -2,15 +2,18 @@
 	<AppPageHeader title="Account" />
 
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-6">
-		<div class="flex items-center gap-3">
-			<Avatar :label="boot.userFullname || boot.user" size="2xl" />
+		<PersonPhoto
+			v-model="profile.image"
+			:user="boot.user"
+			:name="boot.userFullname || boot.user"
+		>
 			<div class="flex min-w-0 flex-col">
 				<p class="truncate text-lg font-semibold text-ink-gray-9">
 					{{ boot.userFullname || boot.user }}
 				</p>
 				<p class="truncate text-base text-ink-gray-5">{{ boot.user }}</p>
 			</div>
-		</div>
+		</PersonPhoto>
 
 		<section class="flex flex-col gap-3" aria-labelledby="appearance-heading">
 			<h2 id="appearance-heading" class="text-base font-semibold text-ink-gray-8">
@@ -160,12 +163,13 @@
 
 <script setup>
 import { computed, reactive } from "vue";
-import { Avatar, Button, FormControl, TabButtons, useColorScheme } from "frappe-ui";
+import { Button, FormControl, TabButtons, useColorScheme } from "frappe-ui";
 import { call } from "@/api";
-import { boot, checksOnly, isClientLogin, isManager, mayUseDesk } from "@/boot";
+import { boot, checksOnly, isClientLogin, isManager, mayUseDesk, profile } from "@/boot";
 import { LANGUAGES, language } from "@/lib/i18n";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import CalendarFeed from "@/components/CalendarFeed.vue";
+import PersonPhoto from "@/components/PersonPhoto.vue";
 import PrivacySection from "@/components/PrivacySection.vue";
 import SyncStatus from "@/components/SyncStatus.vue";
 import { ACCENTS, DENSITIES, readAppearance, saveAppearance } from "@/lib/appearance";

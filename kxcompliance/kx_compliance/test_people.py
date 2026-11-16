@@ -20,7 +20,7 @@ from kxcompliance.api import (
 	switch_person,
 	team,
 )
-from kxcompliance.kx_compliance import handover
+from kxcompliance.kx_compliance import handover, people
 from kxcompliance.kx_compliance.test_bulk_filing import filing
 from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
@@ -231,3 +231,21 @@ class TestPeople(IntegrationTestCase):
 				self.assertFalse(getting_started_checklist()["show"])
 			with self.set_user(HOLDER):
 				self.assertEqual(getting_started_checklist(), {"show": False, "steps": []})
+
+	def test_a_photo_is_ones_own_or_a_managers_to_change(self):
+		png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+		with self.set_user(HOLDER):
+			first = people.set_photo(HOLDER, "me.png", png)["user_image"]
+			second = people.set_photo(HOLDER, "me-again.png", png + b"\x01")["user_image"]
+			with self.assertRaises(frappe.PermissionError):
+				people.set_photo(MANAGER, "not-mine.png", png)
+			with self.assertRaisesRegex(frappe.ValidationError, "JPG, PNG"):
+				people.set_photo(HOLDER, "me.pdf", b"%PDF")
+		self.assertEqual(frappe.db.get_value("User", HOLDER, "user_image"), second)
+		# The photo replaced is gone; the new one is public, as the whole team sees it.
+		self.assertFalse(frappe.db.exists("File", {"attached_to_name": HOLDER, "file_url": first}))
+		self.assertEqual(frappe.db.get_value("File", {"file_url": second}, "is_private"), 0)
+		with self.set_user(MANAGER):
+			people.remove_photo(HOLDER)
+			self.assertIsNone(next(row for row in team() if row["user"] == HOLDER)["user_image"])
+		self.assertFalse(frappe.db.exists("File", {"attached_to_name": HOLDER, "file_url": second}))

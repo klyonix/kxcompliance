@@ -30,6 +30,16 @@ export function roleChoices(firm) {
 	];
 }
 
+// The signed-in person's role, as the profile popup names it.
+export function roleLabel(roles) {
+	if (roles.includes("Compliance Manager")) return "Manager";
+	if (roles.includes("Compliance User")) return "Staff";
+	if (roles.includes("Compliance Auditor")) return "Auditor";
+	if (roles.includes("System Manager")) return "Administrator";
+	if (roles.includes("Compliance Client")) return "Client";
+	return "Licence checks";
+}
+
 // What switching someone's sign-in off or back on says, before and after. Nobody is deleted: the
 // records they worked on keep their name.
 export function switchWords(person, on) {
@@ -43,7 +53,7 @@ export function switchWords(person, on) {
 		  }
 		: {
 				title: "Switch off",
-				message: `${name} can no longer sign in. Their role, the records they worked on and their history stay; switch them on again any time. Hand over the work they hold from their page.`,
+				message: `${name} can no longer sign in. Their role, the records they worked on and their history stay; switch them on again any time. Hand over any open work they hold, so it does not wait for them.`,
 				confirmLabel: "Switch off",
 				done: `${name} is switched off`,
 		  };
@@ -63,6 +73,8 @@ export function personRow(person) {
 		key: person.user,
 		kind: "person",
 		title: person.is_me ? `${person.full_name} (you)` : person.full_name,
+		// Their photo, or their initials, in place of the row's icon.
+		avatar: { image: person.user_image || "", label: person.full_name },
 		detail: person.user,
 		status,
 		theme,

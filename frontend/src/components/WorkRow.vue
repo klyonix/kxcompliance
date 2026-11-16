@@ -8,7 +8,15 @@
 			:href="row.href"
 			class="flex min-w-0 flex-1 items-start gap-3 rounded-lg px-3 py-[var(--row-pad)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-4 sm:items-center"
 		>
+			<Avatar
+				v-if="row.avatar"
+				:image="row.avatar.image || undefined"
+				:label="row.avatar.label"
+				size="xl"
+				class="shrink-0"
+			/>
 			<span
+				v-else
 				class="flex size-8 shrink-0 items-center justify-center rounded-full"
 				:class="kindTint(row.kind).tile"
 			>
@@ -90,7 +98,7 @@
 // `status` shows no badge.
 import { computed } from "vue";
 import { RouterLink } from "vue-router";
-import { Badge } from "frappe-ui";
+import { Avatar, Badge } from "frappe-ui";
 import { kindTint } from "@/lib/areas";
 import { STATUS_ICONS } from "@/lib/status";
 import { KINDS } from "@/pages/myWork";

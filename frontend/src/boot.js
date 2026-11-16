@@ -29,6 +29,10 @@ export const boot = {
 	mayBill: Boolean(window.may_bill),
 	// Whether the firm has set billing up; until then its managers open the setup from Billing.
 	billingSetUp: Boolean(window.billing_set_up),
+	// Added by other apps on the site (kxcompliance_boot): notices shown at the top of the app,
+	// [{ text, theme, link_label, link_url }], and links on Account, [{ label, url, icon }].
+	notices: window.notices || [],
+	accountLinks: window.account_links || [],
 };
 
 const COMPLIANCE_ROLES = [

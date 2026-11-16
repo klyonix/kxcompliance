@@ -1831,4 +1831,5 @@ def boot() -> dict:
 		"socketio_port": frappe.conf.socketio_port or 9000,
 		# Everyone reads and accepts the privacy notice before using the app.
 		"privacy_notice_due": can_open_app() and privacy.notice_due(),
+		**scoped.boot_extras(),
 	}

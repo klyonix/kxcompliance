@@ -24,7 +24,13 @@ DIRECT_READS = {
 	("qb", "get_query"),
 }
 SETTINGS_READS = {"get_doc", "get_cached_doc", "get_single", "get_single_value"}
-HOOKS = ("kxcompliance_scope", "kxcompliance_settings", "kxcompliance_check_limit", "kxcompliance_run_job")
+HOOKS = (
+	"kxcompliance_scope",
+	"kxcompliance_settings",
+	"kxcompliance_check_limit",
+	"kxcompliance_run_job",
+	"kxcompliance_boot",
+)
 QUERY_TABLE_METHODS = {"from_", "update", "join", "left_join", "inner_join", "right_join"}
 
 
@@ -197,6 +203,13 @@ class TestScopedReads(IntegrationTestCase):
 				self.assertRaises(frappe.ValidationError, scoped.check_limit, "Company", name="X")
 			hook.assert_called_once_with("Company", name="X")
 
+	def test_other_apps_add_notices_and_account_links(self):
+		self.assertEqual(scoped.boot_extras(), {"notices": [], "account_links": []})
+		given = {"notices": [{"text": "Trial ends soon"}], "account_links": [{"label": "Plan", "url": "/p"}]}
+		with patch(f"{__name__}.boot_hook", return_value=given):
+			with self.hooked("kxcompliance_boot", f"{__name__}.boot_hook"):
+				self.assertEqual(scoped.boot_extras(), given)
+
 	def test_a_job_hook_takes_the_job_or_lets_it_run(self):
 		ran = []
 
@@ -222,3 +235,7 @@ def limit_hook(kind: str, **context):
 
 def job_hook(job):
 	return False
+
+
+def boot_hook():
+	return None

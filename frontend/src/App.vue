@@ -8,6 +8,7 @@
 		<NotificationsDrawer />
 		<UpdatePrompt />
 		<ConnectionBanner />
+		<NoticeBanner />
 		<RouterView />
 		<template #nav>
 			<MobileNav data-tour="nav">
@@ -39,6 +40,7 @@
 		<SearchPalette />
 		<UpdatePrompt />
 		<ConnectionBanner />
+		<NoticeBanner />
 		<RouterView />
 	</DesktopShell>
 </template>
@@ -59,6 +61,7 @@ import AppSidebar from "./components/AppSidebar.vue";
 import NotificationsDrawer from "./components/NotificationsDrawer.vue";
 import SearchPalette from "./components/SearchPalette.vue";
 import ConnectionBanner from "./components/ConnectionBanner.vue";
+import NoticeBanner from "./components/NoticeBanner.vue";
 import UpdatePrompt from "./components/UpdatePrompt.vue";
 import { useIsMobile } from "./composables/useIsMobile";
 import { sections } from "./navigation";

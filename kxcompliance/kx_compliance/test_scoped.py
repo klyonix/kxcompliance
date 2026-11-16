@@ -3,6 +3,7 @@
 
 import ast
 from pathlib import Path
+from unittest import SkipTest
 from unittest.mock import patch
 
 import frappe
@@ -23,6 +24,7 @@ DIRECT_READS = {
 	("qb", "get_query"),
 }
 SETTINGS_READS = {"get_doc", "get_cached_doc", "get_single", "get_single_value"}
+HOOKS = ("kxcompliance_scope", "kxcompliance_settings", "kxcompliance_check_limit", "kxcompliance_run_job")
 QUERY_TABLE_METHODS = {"from_", "update", "join", "left_join", "inner_join", "right_join"}
 
 
@@ -114,8 +116,15 @@ class TestMerge(UnitTestCase):
 			[["status", "=", "Open"], ["owner", "in", ["a", "b"]]],
 		)
 
-	def test_the_extra_wins_over_a_given_value_for_the_same_field(self):
-		self.assertEqual(scoped.merge({"owner": "b"}, {"owner": "a"}), {"owner": "a"})
+	def test_both_apply_when_they_name_the_same_field(self):
+		self.assertEqual(
+			scoped.merge("x@example.com", {"name": ("in", ["x@example.com", "y@example.com"])}),
+			[["name", "=", "x@example.com"], ["name", "in", ["x@example.com", "y@example.com"]]],
+		)
+		self.assertEqual(
+			scoped.merge({"owner": ("!=", "b"), "status": "Open"}, {"owner": "a"}),
+			[["owner", "!=", "b"], ["status", "=", "Open"], ["owner", "=", "a"]],
+		)
 
 
 def only_mine(doctype: str):
@@ -123,9 +132,13 @@ def only_mine(doctype: str):
 
 
 class TestScopedReads(IntegrationTestCase):
+	"""How `scoped` behaves on its own: run on a site where no app uses its hooks."""
+
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
+		if any(frappe.get_hooks(hook) for hook in HOOKS):
+			raise SkipTest("another app on this site uses the kxcompliance hooks")
 		make_company()
 
 	def hooked(self, name: str, path: str):

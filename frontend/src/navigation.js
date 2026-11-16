@@ -17,9 +17,10 @@ const ALL_SECTIONS = [
 	{ label: "Home", route: "ClientHome", icon: "lucide-house", clientLogin: true },
 	// CA/CS firms only.
 	{ label: "Clients", route: "Clients", icon: "lucide-users", firm: true },
-	// A firm's bills, for those who may bill; on phones it opens from a client's page.
+	// A firm's bills to its clients, for those who may bill: under Clients in the side bar
+	// (sectionsFor); on phones it opens from a client's page.
 	{
-		label: "Billing",
+		label: "Client billing",
 		route: "Billing",
 		icon: "lucide-receipt",
 		billing: true,
@@ -44,6 +45,8 @@ const ALL_SECTIONS = [
 		label: "Settings",
 		route: "Settings",
 		icon: "lucide-settings",
+		// What the tours point at in the side bar (data-tour).
+		tour: "settings-nav",
 		managers: true,
 		desktopOnly: true,
 	},
@@ -79,7 +82,7 @@ export function sectionsFor({ checks, client }) {
 	const firm = boot.accountType === "CA/CS Firm";
 	// A firm's manager finds Billing before it is set up; it opens the setup.
 	const setUpBilling = firm && isManager() && !boot.billingSetUp;
-	return ALL_SECTIONS.filter((section) => {
+	const shown = ALL_SECTIONS.filter((section) => {
 		if (section.managers && !isManager()) return false;
 		if (section.firm && !firm) return false;
 		if (section.clientLogin) return false;
@@ -88,6 +91,34 @@ export function sectionsFor({ checks, client }) {
 	}).map((section) =>
 		section.billing && !boot.mayBill ? { ...section, route: "BillingSettings" } : section
 	);
+	return withClientBilling(shown);
+}
+
+// What opens from Clients and from Client billing, so each row stays marked on those pages.
+const CLIENT_PAGES = ["ClientNew", "ClientEdit", "BulkSetup", "Client", "DocumentRequest"];
+const BILLING_PAGES = ["NewBill", "Payment", "Bill"];
+
+// Client billing sits under Clients (RK, 17 Nov 2026): Clients becomes a group of the two.
+function withClientBilling(shown) {
+	const billing = shown.find((section) => section.billing);
+	const clients = shown.find((section) => section.route === "Clients");
+	if (!billing || !clients) return shown;
+	const group = {
+		...clients,
+		pages: [
+			{ label: "Clients", route: "Clients", also: CLIENT_PAGES },
+			{
+				label: billing.label,
+				route: billing.route,
+				also: BILLING_PAGES,
+				// Before billing is set up the row opens Billing setup, whose own row is marked there.
+				marksOwnRoute: billing.route === "Billing",
+			},
+		],
+	};
+	return shown
+		.filter((section) => section !== billing)
+		.map((section) => (section === clients ? group : section));
 }
 
 export const sections = sectionsFor({ checks: checksOnly(), client: isClientLogin() });
@@ -129,7 +160,7 @@ const SETTINGS_PAGES = [
 		also: ["LicenceRuleNew", "LicenceRule", "LicenceBlocks"],
 		licenceCheck: true,
 	},
-	{ label: "Billing", route: "BillingSettings", icon: "lucide-receipt", firm: true },
+	{ label: "Billing setup", route: "BillingSettings", icon: "lucide-receipt", firm: true },
 	{ label: "Reminder log", route: "ReminderLog", icon: "lucide-bell" },
 	{
 		label: "Obligation library",
@@ -167,7 +198,8 @@ export const settingsPagesFor = ({
 
 // Whether a settings page's row is the one open, counting the pages opened from it.
 export const isSettingsPageOpen = (page, routeName) =>
-	page.route === routeName || (page.also || []).includes(routeName);
+	(page.route === routeName && page.marksOwnRoute !== false) ||
+	(page.also || []).includes(routeName);
 
 // Back to where the person came from in the app, with that list's tab and search as they left
 // them; to the record's list when the page was opened directly (a link, a reload).

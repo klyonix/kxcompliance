@@ -41,7 +41,7 @@ TAX_ACCOUNTS = ("Output CGST", "Output SGST", "Output IGST")
 WITHIN_STATE = "GST within state"
 OUTSIDE_STATE = "GST outside state"
 GST_RATE = 18
-# What the firm sets about itself for its bills, from Settings → Billing.
+# What the firm sets about itself for its bills, from Settings → Billing setup.
 FIRM_FIELDS = (
 	"gst_status",
 	"billing_gstin",
@@ -580,7 +580,7 @@ def check_biller():
 	if get_settings().account_type != FIRM:
 		frappe.throw(_("Billing clients is for CA/CS firms."), frappe.PermissionError)
 	if not get_settings().billing_company:
-		frappe.throw(_("Set billing up first, in Settings → Billing."))
+		frappe.throw(_("Set billing up first, in Settings → Billing setup."))
 	if not frappe.has_permission("Sales Invoice", "create"):
 		frappe.throw(
 			_("Billing clients needs the Accounts User role; ask a System Manager to give it to you."),

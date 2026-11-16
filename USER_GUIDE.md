@@ -290,7 +290,7 @@ When you are working on one client.
 
 Once, before the firm's first bill.
 
-1. Open Settings, then Billing in its list (or Settings on the Billing page).
+1. Open Settings, then Billing setup in its list (or Billing setup on the Client billing page).
 2. On the Firm tab give the firm's name, GST status, GSTIN, address, bank details, UPI ID, bill prefix and logo, and save.
 3. On the Rate cards tab, make the firm's rate cards: a rate for filing each return, and services by the hour or item or every month, quarter or year. Give a client its card, and any own rates, on the client's form.
 
@@ -395,7 +395,7 @@ When a client asks what it owes, or at the year's end.
 
 Once, when the firm wants late bills chased by email.
 
-1. Open Billing settings, then the Reminders tab.
+1. Open Billing setup, then the Reminders tab.
 2. Tick "Remind clients of overdue bills" and give the days late to remind on, such as 3, 15, 30.
 3. Each day, a client whose bill has reached a step is emailed it again, once per step, until it is paid.
 

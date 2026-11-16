@@ -1,16 +1,16 @@
 <template>
-	<AppPageHeader title="Billing">
+	<AppPageHeader title="Client billing">
 		<template #actions>
 			<Button
 				v-if="isManager() && isMobile"
 				icon="lucide-settings"
-				aria-label="Billing settings"
+				aria-label="Billing setup"
 				:route="{ name: 'BillingSettings' }"
 			/>
 			<Button
 				v-else-if="isManager()"
 				icon-left="lucide-settings"
-				label="Settings"
+				label="Billing setup"
 				:route="{ name: 'BillingSettings' }"
 			/>
 			<Button

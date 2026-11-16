@@ -304,7 +304,7 @@ export const ARTICLES = [
 		title: "How do I set up billing my clients?",
 		when: "Once, before the firm's first bill.",
 		steps: [
-			"Open Settings, then Billing in its list (or Settings on the Billing page).",
+			"Open Settings, then Billing setup in its list (or Billing setup on the Client billing page).",
 			"On the Firm tab give the firm's name, GST status, GSTIN, address, bank details, UPI ID, bill prefix and logo, and save.",
 			"On the Rate cards tab, make the firm's rate cards: a rate for filing each return, and services by the hour or item or every month, quarter or year. Give a client its card, and any own rates, on the client's form.",
 		],
@@ -429,7 +429,7 @@ export const ARTICLES = [
 		title: "How do clients get reminded of overdue bills?",
 		when: "Once, when the firm wants late bills chased by email.",
 		steps: [
-			"Open Billing settings, then the Reminders tab.",
+			"Open Billing setup, then the Reminders tab.",
 			'Tick "Remind clients of overdue bills" and give the days late to remind on, such as 3, 15, 30.',
 			"Each day, a client whose bill has reached a step is emailed it again, once per step, until it is paid.",
 		],

@@ -19,43 +19,59 @@
 		>
 			<NotificationBell v-if="!checksOnly()" in-sidebar />
 			<template v-for="section in sections" :key="section.route">
-				<template v-if="section.route === 'Settings'">
-					<!-- Collapsed to icons, the group has no room to open: the icon opens Settings. -->
+				<!-- A group (Settings, and Clients with Client billing) opens to choose a page. -->
+				<template v-if="pagesOf(section)">
+					<!-- Collapsed to icons, the group has no room to open: the icon opens its first page. -->
 					<SidebarItem
 						v-if="collapsed"
 						:label="t(section.label)"
-						:icon="section.icon"
-						:route="{ name: 'Settings' }"
-						:active="settingsOpen"
-					/>
+						:route="{ name: section.route }"
+						:active="isOpenIn(section)"
+					>
+						<template #prefix>
+							<span
+								:class="[section.icon, sectionTint(section.route).icon]"
+								class="size-4"
+								aria-hidden="true"
+							/>
+						</template>
+					</SidebarItem>
 					<template v-else>
 						<SidebarItem
 							:label="t(section.label)"
-							:icon="section.icon"
-							:aria-expanded="groupOpen"
-							aria-controls="settings-pages"
-							data-tour="settings-nav"
-							@click="groupOpen = !groupOpen"
+							:aria-expanded="Boolean(openGroups[section.route])"
+							:aria-controls="`${section.route}-pages`"
+							:data-tour="section.tour"
+							@click="openGroups[section.route] = !openGroups[section.route]"
 						>
+							<template #prefix>
+								<span
+									:class="[section.icon, sectionTint(section.route).icon]"
+									class="size-4"
+									aria-hidden="true"
+								/>
+							</template>
 							<template #suffix>
 								<span
 									class="mr-2 size-4 text-ink-gray-5"
 									:class="
-										groupOpen ? 'lucide-chevron-down' : 'lucide-chevron-right'
+										openGroups[section.route]
+											? 'lucide-chevron-down'
+											: 'lucide-chevron-right'
 									"
 									aria-hidden="true"
 								/>
 							</template>
 						</SidebarItem>
 						<div
-							v-show="groupOpen"
-							id="settings-pages"
+							v-show="openGroups[section.route]"
+							:id="`${section.route}-pages`"
 							role="group"
 							:aria-label="t(section.label)"
 							class="ml-4 flex flex-col gap-0.5 border-l border-outline-gray-2 pl-2"
 						>
 							<SidebarItem
-								v-for="page in settingsPages"
+								v-for="page in pagesOf(section)"
 								:key="page.route"
 								:label="t(page.label)"
 								:route="{ name: page.route }"
@@ -109,7 +125,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import { reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { Sidebar, SidebarCollapseToggle, SidebarHeader, SidebarItem } from "frappe-ui";
 import { boot, checksOnly, mayUseDesk } from "@/boot";
@@ -128,17 +144,26 @@ const settingsPages = settingsPagesFor();
 // Search opens quick search, with its keyboard shortcut beside it.
 const shortcut = shortcutLabel();
 const openSearch = () => (paletteOpen.value = true);
-const settingsOpen = computed(() =>
-	settingsPages.some((page) => isSettingsPageOpen(page, route.name))
-);
 
 // The side bar's width is kept on this device, so it looks the same after a reload.
 const collapsed = ref(localStorage.getItem(COLLAPSED_KEY) === "1");
 watch(collapsed, (value) => localStorage.setItem(COLLAPSED_KEY, value ? "1" : "0"));
-// The Settings group (RK, 15 Nov 2026): open while a settings page is, a reload included, and
-// closed again on leaving Settings. Its heading still opens it to choose a page.
-const groupOpen = ref(settingsOpen.value);
-watch(settingsOpen, (open) => (groupOpen.value = open));
+// A group's pages: Settings', and those a section carries (Clients with Client billing).
+const pagesOf = (section) => (section.route === "Settings" ? settingsPages : section.pages);
+const isOpenIn = (section) =>
+	(pagesOf(section) || []).some((page) => isSettingsPageOpen(page, route.name));
+// Each group (RK, 15 Nov 2026, for Settings): open while one of its pages is, a reload included,
+// and closed again on leaving it. Its heading still opens it to choose a page.
+const openGroups = reactive({});
+watch(
+	() => route.name,
+	() => {
+		for (const section of sections) {
+			if (pagesOf(section)) openGroups[section.route] = isOpenIn(section);
+		}
+	},
+	{ immediate: true }
+);
 
 const menu = [
 	mayUseDesk() && {

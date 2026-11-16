@@ -10,7 +10,12 @@ import {
 	settingsPagesFor,
 } from "./navigation";
 
-const routes = (options) => sectionsFor(options).map((section) => section.route);
+// Every page the side bar opens, a group's pages included.
+const routes = (options) =>
+	sectionsFor(options).flatMap((section) => [
+		section.route,
+		...(section.pages || []).map((page) => page.route),
+	]);
 
 describe("sectionsFor", () => {
 	it("keeps a client's login to its home and its companies' records", () => {
@@ -50,6 +55,42 @@ describe("sectionsFor", () => {
 			expect(routes({ checks: false, client: false })).not.toContain("BillingSettings");
 			Object.assign(boot, { roles: ["Compliance Manager"], billingSetUp: true });
 			expect(routes({ checks: false, client: false })).not.toContain("BillingSettings");
+		} finally {
+			Object.assign(boot, saved);
+		}
+	});
+
+	it("puts Client billing under Clients for a firm that bills", () => {
+		const saved = { ...boot };
+		Object.assign(boot, {
+			accountType: "CA/CS Firm",
+			roles: ["Compliance Manager"],
+			mayBill: true,
+			billingSetUp: true,
+		});
+		try {
+			const shown = sectionsFor({ checks: false, client: false });
+			expect(shown.map((section) => section.route)).not.toContain("Billing");
+			const clients = shown.find((section) => section.route === "Clients");
+			expect(clients.pages.map((page) => [page.label, page.route])).toEqual([
+				["Clients", "Clients"],
+				["Client billing", "Billing"],
+			]);
+			expect(isSettingsPageOpen(clients.pages[1], "Bill")).toBe(true);
+			expect(settingsPagesFor({ firm: true }).map((page) => page.label)).toContain(
+				"Billing setup"
+			);
+			// Before billing is set up the row opens the setup, and only Billing setup is marked there.
+			Object.assign(boot, { mayBill: false, billingSetUp: false });
+			const early = sectionsFor({ checks: false, client: false }).find(
+				(section) => section.route === "Clients"
+			).pages[1];
+			expect(early.route).toBe("BillingSettings");
+			expect(isSettingsPageOpen(early, "BillingSettings")).toBe(false);
+			// Someone who may not bill sees Clients as a plain row.
+			Object.assign(boot, { roles: ["Compliance User"], mayBill: false });
+			const plain = sectionsFor({ checks: false, client: false });
+			expect(plain.find((section) => section.route === "Clients").pages).toBeUndefined();
 		} finally {
 			Object.assign(boot, saved);
 		}

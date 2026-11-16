@@ -14,7 +14,8 @@ const files = (dir) =>
 		if (statSync(full).isDirectory()) return files(full);
 		return /\.vue$/.test(name) ? [full] : [];
 	});
-const source = files(SRC)
+// The pages, and the side bar's sections, which name the tour targets of its groups.
+const source = [...files(SRC), path.join(SRC, "navigation.js")]
 	.map((file) => readFileSync(file, "utf8"))
 	.join("\n");
 const router = readFileSync(path.join(SRC, "router.js"), "utf8");
@@ -67,7 +68,9 @@ describe("tours", () => {
 				for (const name of step.target || []) {
 					const found = name.startsWith("section:")
 						? source.includes(`id="${name.slice("section:".length)}"`)
-						: source.includes(`data-tour="${name}"`);
+						: source.includes(`data-tour="${name}"`) ||
+						  // A side bar group's target is named on its section (navigation.js).
+						  source.includes(`tour: "${name}"`);
 					if (!found) missing.push(`${tour.id}: ${name}`);
 				}
 			}

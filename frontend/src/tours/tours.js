@@ -588,7 +588,7 @@ export const TOURS = [
 	},
 	{
 		id: "billing",
-		title: "Billing",
+		title: "Client billing",
 		route: "Billing",
 		firm: true,
 		billing: true,
@@ -600,7 +600,7 @@ export const TOURS = [
 			{
 				target: ["page-actions"],
 				title: "New bill and settings",
-				text: "Make a bill for any client, or open Billing settings for the firm's details, rate cards and reminders.",
+				text: "Make a bill for any client, or open Billing setup for the firm's details, rate cards and reminders.",
 			},
 			{
 				target: ["client-filter"],
@@ -681,7 +681,7 @@ export const TOURS = [
 	},
 	{
 		id: "billing-settings",
-		title: "Billing settings",
+		title: "Billing setup",
 		route: "BillingSettings",
 		managers: true,
 		firm: true,

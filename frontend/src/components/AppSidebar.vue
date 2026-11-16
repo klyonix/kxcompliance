@@ -118,7 +118,8 @@
 			</template>
 		</div>
 		<SyncStatus v-if="!collapsed" class="px-2 pb-2" />
-		<div class="px-2 pb-2">
+		<div class="flex flex-col gap-1 border-t border-outline-gray-1 px-2 py-2">
+			<ProfileButton :collapsed="collapsed" />
 			<SidebarCollapseToggle />
 		</div>
 	</Sidebar>
@@ -130,6 +131,7 @@ import { useRoute } from "vue-router";
 import { Sidebar, SidebarCollapseToggle, SidebarHeader, SidebarItem } from "frappe-ui";
 import { boot, checksOnly, mayUseDesk } from "@/boot";
 import NotificationBell from "@/components/NotificationBell.vue";
+import ProfileButton from "@/components/ProfileButton.vue";
 import { deskPath, isSettingsPageOpen, sections, settingsPagesFor, signOut } from "@/navigation";
 import { clearOutbox, outbox } from "@/offline/outbox";
 import { sectionTint } from "@/lib/areas";

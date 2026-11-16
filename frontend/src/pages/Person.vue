@@ -18,6 +18,12 @@
 		</div>
 
 		<template v-else>
+			<PersonPhoto
+				v-model="data.user_image"
+				:user="data.user"
+				:name="data.full_name"
+				:editable="!data.locked || data.is_me"
+			/>
 			<p
 				v-if="!data.on_team"
 				class="rounded-lg bg-surface-amber-1 px-3 py-2 text-base text-ink-amber-7"
@@ -146,7 +152,7 @@
 			</section>
 
 			<section
-				v-if="changeable"
+				v-if="changeable && data.enabled"
 				class="flex flex-col gap-3"
 				aria-labelledby="sign-in-heading"
 			>
@@ -258,6 +264,7 @@ import { Button, Dialog, FormControl, Skeleton, dialog, toast } from "frappe-ui"
 import { call } from "@/api";
 import { boot } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import PersonPhoto from "@/components/PersonPhoto.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import { formatDate } from "@/lib/format";
 import { listRoute } from "@/lib/listFilters";

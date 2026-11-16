@@ -42,6 +42,9 @@ export const boot = {
 	hideDesk: Boolean(window.hide_desk),
 };
 
+// The signed-in person's photo, changed from the profile popup or Account without a reload.
+export const profile = reactive({ image: window.user_image || "" });
+
 // A company just made or set up here joins the pickers without a reload, in name order.
 export function addCompany(name) {
 	if (!name || boot.companies.includes(name)) return;

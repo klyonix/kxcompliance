@@ -8,6 +8,8 @@ Only the app's own three roles are given or taken here. Someone with System Mana
 the Desk, so a manager can neither make an administrator nor lock one out.
 """
 
+from mimetypes import guess_type
+
 import frappe
 from frappe import _
 from frappe.utils import validate_email_address
@@ -30,6 +32,8 @@ ROLE_LABELS = {
 }
 BY_LABEL = {label: role for role, label in ROLE_LABELS.items()}
 PROTECTED = ("Administrator", "Guest")
+PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp", "image/gif")
+PHOTO_MAX_MB = 5
 
 
 def check_manager():
@@ -66,7 +70,7 @@ def team() -> list[dict]:
 	users = scoped.get_all(
 		"User",
 		filters={"name": ("in", names)},
-		fields=["name", "full_name", "enabled", "last_login"],
+		fields=["name", "full_name", "enabled", "last_login", "user_image"],
 	)
 	order = list(ROLE_LABELS)
 	people = [person_row(user, roles[user.name], user.name in admins) for user in users]
@@ -74,7 +78,8 @@ def team() -> list[dict]:
 
 
 def person_row(user, roles: set[str], admin: bool) -> dict:
-	"""One person as the People screen shows them; `user` has name, full_name, enabled, last_login."""
+	"""One person as the People screen shows them; `user` has name, full_name, enabled, last_login
+	and user_image."""
 	role = next((role for role in ROLE_LABELS if role in roles), None)
 	return {
 		"user": user.name,
@@ -82,6 +87,7 @@ def person_row(user, roles: set[str], admin: bool) -> dict:
 		# None for someone taken off the team who still holds work.
 		"role": ROLE_LABELS[role] if role else None,
 		"enabled": bool(user.enabled),
+		"user_image": user.get("user_image") or None,
 		"last_login": str(user.last_login) if user.last_login else None,
 		"is_me": user.name == frappe.session.user,
 		# An administrator's access is managed in the Desk, not here.
@@ -98,7 +104,9 @@ def person(user: str) -> dict:
 	roles = set(frappe.get_roles(user))
 	# Taken off the team, someone with no Desk role left becomes a Website User in Frappe, so the
 	# type is not asked for; a client's login never holds the firm's work.
-	row = scoped.get_value("User", user, ["name", "full_name", "enabled", "last_login"], as_dict=True)
+	row = scoped.get_value(
+		"User", user, ["name", "full_name", "enabled", "last_login", "user_image"], as_dict=True
+	)
 	if CLIENT_ROLE in roles:
 		row = None
 	handing_over = preview(user) if row and user not in PROTECTED else []
@@ -228,6 +236,65 @@ def switch(user: str, enabled: bool) -> dict:
 	return {"user": user, "enabled": enabled}
 
 
+def check_photo_access(user: str):
+	"""Everyone changes their own photo; a manager changes the photo of anyone on the team."""
+	if user == frappe.session.user:
+		return
+	check_manager()
+	if user in PROTECTED or not set(frappe.get_roles(user)) & set(ROLES):
+		frappe.throw(_("{0} is not on the team.").format(user))
+
+
+def set_photo(user: str, file_name: str, content: bytes) -> dict:
+	"""Someone's photo, shown beside their name. A public file, as everyone on the team sees it."""
+	check_photo_access(user)
+	if guess_type(file_name or "")[0] not in PHOTO_TYPES:
+		frappe.throw(_("A photo is a JPG, PNG, WEBP or GIF image, not {0}.").format(file_name))
+	if len(content) > PHOTO_MAX_MB * 1024 * 1024:
+		frappe.throw(_("Choose a photo under {0} MB.").format(PHOTO_MAX_MB))
+	old = scoped.get_all(
+		"File",
+		filters={"attached_to_doctype": "User", "attached_to_name": user, "attached_to_field": "user_image"},
+		pluck="name",
+	)
+	photo = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": file_name,
+			"attached_to_doctype": "User",
+			"attached_to_name": user,
+			"attached_to_field": "user_image",
+			"is_private": 0,
+			"content": content,
+		}
+	)
+	# Checked above: their own photo, or a manager's for the team; not a right to edit the User.
+	photo.insert(ignore_permissions=True)
+	save_photo(user, photo.file_url)
+	for name in old:
+		frappe.delete_doc("File", name, ignore_permissions=True)  # the photo it replaces
+	return {"user": user, "user_image": photo.file_url}
+
+
+def remove_photo(user: str) -> dict:
+	check_photo_access(user)
+	for name in scoped.get_all(
+		"File",
+		filters={"attached_to_doctype": "User", "attached_to_name": user, "attached_to_field": "user_image"},
+		pluck="name",
+	):
+		frappe.delete_doc("File", name, ignore_permissions=True)  # checked above, as for set_photo
+	save_photo(user, None)
+	return {"user": user, "user_image": None}
+
+
+def save_photo(user: str, url: str | None):
+	doc = frappe.get_doc("User", user)
+	doc.user_image = url
+	doc.flags.ignore_permissions = True  # checked by the caller: only the photo changes
+	doc.save()
+
+
 def new_sign_in_link(user: str) -> dict:
 	"""A fresh link to set a password, for someone added who has never signed in.
 
@@ -349,6 +416,8 @@ def former_holders() -> list[dict]:
 	if not former:
 		return []
 	users = scoped.get_all(
-		"User", filters={"name": ("in", former)}, fields=["name", "full_name", "enabled", "last_login"]
+		"User",
+		filters={"name": ("in", former)},
+		fields=["name", "full_name", "enabled", "last_login", "user_image"],
 	)
 	return [{**person_row(user, set(), False), "on_team": False} for user in users]

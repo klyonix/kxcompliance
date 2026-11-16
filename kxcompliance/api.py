@@ -1473,6 +1473,22 @@ def set_person_role(user: str, role: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+def set_person_photo(user: str) -> dict:
+	"""Someone's photo, the image in this request: one's own, or a manager's for the team (checked
+	in people.set_photo; anyone signed in has their own)."""
+	upload = frappe.request.files.get("file") if frappe.request else None
+	if not upload or not upload.filename:
+		frappe.throw(_("Choose a photo to upload."))
+	return people.set_photo(user, upload.filename, upload.stream.read())
+
+
+@frappe.whitelist(methods=["POST"])
+def remove_person_photo(user: str) -> dict:
+	"""Take someone's photo away, so their initials show again (checked as for a new photo)."""
+	return people.remove_photo(user)
+
+
+@frappe.whitelist(methods=["POST"])
 def switch_person(user: str, enabled: bool) -> dict:
 	"""Switch someone's sign-in off or back on; nobody is deleted (managers only)."""
 	check_app_access()
@@ -1802,6 +1818,7 @@ def boot() -> dict:
 	return {
 		"user": frappe.session.user,
 		"user_fullname": frappe.utils.get_fullname(frappe.session.user),
+		"user_image": frappe.db.get_value("User", frappe.session.user, "user_image") or "",
 		"roles": sorted((APP_ROLES | set(CHECK_ROLES) | {CLIENT_ROLE}) & set(frappe.get_roles())),
 		"party_types": party_types_to_check(),
 		"app_name": settings.app_name or "KlyONIX Compliance",

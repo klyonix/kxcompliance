@@ -5,6 +5,7 @@ import {
 	personOptions,
 	personRow,
 	roleChoices,
+	roleLabel,
 	switchWords,
 } from "./people";
 
@@ -78,5 +79,14 @@ describe("switchWords", () => {
 		);
 		const on = switchWords({ full_name: "Neha Joshi" }, true);
 		expect([on.confirmLabel, on.done]).toEqual(["Switch on", "Neha Joshi can sign in again"]);
+	});
+});
+
+describe("roleLabel", () => {
+	it("names the app's role first, then an administrator's or a client's", () => {
+		expect(roleLabel(["System Manager", "Compliance User"])).toBe("Staff");
+		expect(roleLabel(["System Manager"])).toBe("Administrator");
+		expect(roleLabel(["Compliance Client"])).toBe("Client");
+		expect(roleLabel([])).toBe("Licence checks");
 	});
 });

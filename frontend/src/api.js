@@ -124,6 +124,10 @@ export const uploadClientDocument = (file, task, { fetcher = fetch } = {}) =>
 export const uploadRequestDocument = (file, request, { fetcher = fetch } = {}) =>
 	uploadTo("kxcompliance.api.add_request_document", { request }, file, fetcher);
 
+// Someone's photo: one's own, or a manager's for anyone on the team (checked by the server).
+export const uploadPersonPhoto = (file, user, { fetcher = fetch } = {}) =>
+	uploadTo("kxcompliance.api.set_person_photo", { user }, file, fetcher);
+
 const SERVER_FAILED = "The server could not complete this. Try again, or tell your administrator.";
 
 async function send(url, init, fetcher) {

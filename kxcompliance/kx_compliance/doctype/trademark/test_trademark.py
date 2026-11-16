@@ -4,7 +4,6 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from kxcompliance.kx_compliance.move_old_trackers import move_trademarks
 from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
 	MANAGER,
@@ -125,34 +124,6 @@ class TestTrademark(IntegrationTestCase):
 			visible = set(frappe.get_list("Trademark", pluck="name"))
 		self.assertIn(mine, visible)
 		self.assertNotIn(theirs, visible)
-
-	def test_trademark_tracker_rows_move_to_trademarks(self):
-		row = frappe.get_doc(
-			{
-				"doctype": "Trademark Tracker",
-				"document_name": "OLDMARK",
-				"issue_date": "2016-02-01",
-				"expiry_date": "2026-02-01",
-				"status": "Registered",
-				"class": "Class 9 and 35",
-				"application_number": "3200001",
-				"vendor": "Sample IP Agents",
-				"activity": "File renewal",
-				"activity_deadline": "2030-01-15",
-			}
-		).insert(ignore_permissions=True)
-		move_trademarks()
-		self.assertEqual(move_trademarks()["moved"], 0)
-		trademark = frappe.get_doc(
-			"Trademark", {"source_doctype": "Trademark Tracker", "source_name": row.name}
-		)
-		self.assertEqual(trademark.status, "Registered")
-		self.assertEqual([entry.class_number for entry in trademark.classes], [9, 35])
-		self.assertIn("Sample IP Agents", trademark.notes)
-		self.assertEqual(
-			str(frappe.db.get_value("Compliance Item", trademark.renewal_item, "valid_until")), "2026-02-01"
-		)
-		self.assertEqual([str(day) for day in dates(trademark.name, "Other")], ["2030-01-15"])
 
 	def test_moving_a_mark_on_records_what_the_registry_sent_and_its_deadline(self):
 		mark = make_trademark()

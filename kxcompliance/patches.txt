@@ -6,9 +6,6 @@ kxcompliance.patches.v1_0.create_client_role
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 kxcompliance.patches.v1_0.set_up_compliance_register
-kxcompliance.patches.v1_0.move_old_trackers
-kxcompliance.patches.v1_0.move_hearing_tracker
-kxcompliance.patches.v1_0.move_trademark_tracker
 kxcompliance.patches.v1_0.move_customer_licences
 kxcompliance.patches.v1_0.reword_trademark_deadlines
 kxcompliance.patches.v1_0.mark_existing_sites_set_up
@@ -26,3 +23,4 @@ kxcompliance.patches.v1_0.set_billed_company
 kxcompliance.patches.v1_0.clear_self_review
 kxcompliance.patches.v1_0.set_branding
 kxcompliance.patches.v1_0.keep_client_role_off_desk
+kxcompliance.patches.v1_0.remove_old_trackers

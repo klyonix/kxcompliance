@@ -5,7 +5,6 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance.legal import check_status_change, run_daily
-from kxcompliance.kx_compliance.move_old_trackers import move_hearings
 from kxcompliance.kx_compliance.report.case_register.case_register import execute as case_register
 from kxcompliance.kx_compliance.report.contingent_liabilities.contingent_liabilities import (
 	execute as contingent_report,
@@ -235,28 +234,6 @@ class TestLegalCase(IntegrationTestCase):
 		self.assertIn(closed.name, before)
 		self.assertEqual(before[open_case.name].not_provided, 800000)
 		self.assertNotIn(closed.name, names("2026-09-30"))
-
-	def test_hearing_tracker_rows_move_to_cases(self):
-		past = frappe.get_doc(
-			{
-				"doctype": "Hearing Tracker",
-				"document_name": "Old labour matter",
-				"issuer_supplier": "Labour Court, Pune",
-				"issue_date": "2025-06-01",
-				"expiry_date": "2025-09-01",
-				"status": "Active",
-				"agent_name": "A. Advocate",
-			}
-		).insert(ignore_permissions=True)
-		first = move_hearings()
-		again = move_hearings()
-		self.assertEqual(again["moved"], 0)
-		self.assertGreaterEqual(first["moved"], 1)
-		case = frappe.get_doc("Legal Case", {"source_doctype": "Hearing Tracker", "source_name": past.name})
-		self.assertEqual(case.forum_name, "Labour Court, Pune")
-		self.assertIn("A. Advocate", case.summary)
-		hearing = frappe.get_doc("Legal Date", {"reference_name": case.name})
-		self.assertEqual(hearing.status, "Done")
 
 
 class TestLegalCaseAmounts(IntegrationTestCase):

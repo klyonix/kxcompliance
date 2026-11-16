@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 """The team, as the app's People screen shows it: who works in the app and in which role, inviting
-someone new, changing a role and taking someone off the team. Compliance Managers only.
+someone new, changing a role and switching someone's sign-in off or on. Compliance Managers only.
 
 Only the app's own three roles are given or taken here. Someone with System Manager is left to
 the Desk, so a manager can neither make an administrator nor lock one out.
@@ -194,7 +194,7 @@ def sign_in_link(user) -> str:
 
 def check_changeable(user: str):
 	if user in PROTECTED or user == frappe.session.user:
-		frappe.throw(_("You cannot change your own role or remove yourself; ask another manager."))
+		frappe.throw(_("You cannot change your own role or switch yourself off; ask another manager."))
 	if "System Manager" in frappe.get_roles(user):
 		frappe.throw(_("{0} is an administrator; their access is changed in the Desk.").format(user))
 	if not set(frappe.get_roles(user)) & set(ROLES):
@@ -212,14 +212,20 @@ def set_role(user: str, role: str) -> dict:
 	return {"user": user, "role": ROLE_LABELS[role]}
 
 
-def remove(user: str) -> dict:
-	"""Take someone off the team: they lose the app's roles. Their work stays as it is."""
+def switch(user: str, enabled: bool) -> dict:
+	"""Switch someone's sign-in off, or back on as they were. Nobody is deleted: the filings, items
+	and cases they worked on keep their name, and their role stays for when they come back."""
 	check_manager()
 	check_changeable(user)
 	doc = frappe.get_doc("User", user)
-	doc.flags.ignore_permissions = True  # the manager was checked; only the app's roles are taken
-	doc.remove_roles(*ROLES)
-	return {"user": user}
+	if bool(doc.enabled) != enabled:
+		if enabled:
+			role = next(role for role in ROLE_LABELS if role in frappe.get_roles(user))
+			scoped.check_limit("User", email=user, role=role)
+		doc.enabled = int(enabled)
+		doc.flags.ignore_permissions = True  # the manager was checked; only sign-in changes
+		doc.save()
+	return {"user": user, "enabled": enabled}
 
 
 def new_sign_in_link(user: str) -> dict:

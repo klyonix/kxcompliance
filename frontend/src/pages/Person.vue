@@ -208,17 +208,28 @@
 
 			<section v-if="changeable" class="flex flex-col gap-3">
 				<div
-					class="flex flex-col gap-2 rounded-lg border border-outline-red-1 px-3 py-3 sm:flex-row sm:items-center"
+					class="flex flex-col gap-2 rounded-lg border px-3 py-3 sm:flex-row sm:items-center"
+					:class="data.enabled ? 'border-outline-red-1' : 'border-outline-gray-2'"
 				>
 					<div class="flex flex-1 flex-col gap-0.5">
-						<span class="text-base font-medium text-ink-gray-8"
-							>Remove from the team</span
-						>
+						<span class="text-base font-medium text-ink-gray-8">
+							{{ data.enabled ? "Switch off" : "Switched off" }}
+						</span>
 						<span class="text-sm text-ink-gray-5">
-							They can no longer open the app. Their user and their work stay.
+							{{
+								data.enabled
+									? "They can no longer sign in. Their role, records and history stay; switch them on again any time."
+									: "They cannot sign in. Switch them on to let them back, with the role they had."
+							}}
 						</span>
 					</div>
-					<Button theme="red" label="Remove" @click="remove" />
+					<Button
+						:theme="data.enabled ? 'red' : 'gray'"
+						:variant="data.enabled ? 'subtle' : 'solid'"
+						:label="data.enabled ? 'Switch off' : 'Switch on'"
+						:loading="switching"
+						@click="switchSignIn(!data.enabled)"
+					/>
 				</div>
 			</section>
 		</template>
@@ -242,7 +253,7 @@
 // One person on the team: their role, the open work they hold, and how they sign in. Managers
 // change the role, email a password reset or set a temporary password, and take them off the team.
 import { computed, onMounted, ref, watch } from "vue";
-import { RouterLink, useRouter } from "vue-router";
+import { RouterLink } from "vue-router";
 import { Button, Dialog, FormControl, Skeleton, dialog, toast } from "frappe-ui";
 import { call } from "@/api";
 import { boot } from "@/boot";
@@ -250,13 +261,12 @@ import AppPageHeader from "@/components/AppPageHeader.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import { formatDate } from "@/lib/format";
 import { listRoute } from "@/lib/listFilters";
-import { roleChoices, personOptions, personRow } from "@/lib/people";
+import { personOptions, personRow, roleChoices, switchWords } from "@/lib/people";
 import { notLoaded } from "@/offline/reachability";
 
 const ROLES = roleChoices(boot.accountType === "CA/CS Firm");
 
 const props = defineProps({ user: { type: String, required: true } });
-const router = useRouter();
 
 const data = ref(null);
 const error = ref("");
@@ -415,23 +425,28 @@ function askPassword() {
 	});
 }
 
-function remove() {
+const switching = ref(false);
+function switchSignIn(on) {
+	const words = switchWords(data.value, on);
 	dialog.confirm({
-		title: "Remove from the team",
-		message: `${data.value.full_name} can no longer open the app. Work they hold stays with them until you hand it over, here or later from People.`,
-		confirmLabel: "Remove",
-		theme: "red",
+		title: words.title,
+		message: words.message,
+		confirmLabel: words.confirmLabel,
+		theme: on ? "gray" : "red",
 		onConfirm: async () => {
+			switching.value = true;
 			try {
 				await call(
-					"kxcompliance.api.remove_person",
-					{ user: props.user },
+					"kxcompliance.api.switch_person",
+					{ user: props.user, enabled: on },
 					{ httpMethod: "POST" }
 				);
-				toast.success(`${data.value.full_name} is off the team`);
-				router.push({ name: "People" });
+				data.value.enabled = on;
+				toast.success(words.done);
 			} catch (err) {
 				toast.error(err.message);
+			} finally {
+				switching.value = false;
 			}
 		},
 	});

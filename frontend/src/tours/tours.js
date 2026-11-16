@@ -48,7 +48,7 @@ export const TOURS = [
 			{
 				target: ["client-filter"],
 				title: "One client at a time",
-				text: "Choose a client to see only their work, here and on every list. Choose All clients to see everything again.",
+				text: "Choose a client to see only their work, here and on every list. Choose All companies to see everything again.",
 			},
 			{
 				target: ["company-filter"],

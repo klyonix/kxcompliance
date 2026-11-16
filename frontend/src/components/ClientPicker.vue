@@ -8,7 +8,7 @@
 			:options="options"
 			:filterable="false"
 			:disabled="!clientFilter.loaded"
-			placeholder="All clients"
+			placeholder="All companies"
 			aria-label="Show one client"
 			@update:model-value="(value) => chooseClient(value || '')"
 		/>
@@ -16,7 +16,7 @@
 			v-if="clientFilter.client"
 			variant="ghost"
 			icon="lucide-x"
-			label="Show all clients"
+			label="Show all companies"
 			@click="chooseClient('')"
 		/>
 	</div>

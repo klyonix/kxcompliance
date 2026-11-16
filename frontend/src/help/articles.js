@@ -293,7 +293,7 @@ export const ARTICLES = [
 		when: "When you are working on one client.",
 		steps: [
 			"Choose the client in the box at the top of My Work, Filings or the Register.",
-			"Every list then shows only that client's companies, until you choose All clients.",
+			"Every list then shows only that client's companies, until you choose All companies.",
 		],
 		page: "Clients",
 		firm: true,

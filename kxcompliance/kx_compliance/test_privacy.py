@@ -21,8 +21,10 @@ from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
 	MANAGER,
 	OTHER_HOLDER,
+	app_settings,
 	make_company,
 	make_users,
+	set_app_settings,
 )
 
 SETTINGS = "KX Compliance Settings"
@@ -51,8 +53,7 @@ class TestPrivacy(IntegrationTestCase):
 		frappe.db.delete("Privacy Consent")
 		frappe.db.delete("Privacy Request")
 		frappe.db.delete("Personal Data Breach")
-		frappe.db.set_single_value(SETTINGS, {"privacy_notice": "", "notice_version": 1})
-		frappe.clear_document_cache(SETTINGS, SETTINGS)
+		set_app_settings({"privacy_notice": "", "notice_version": 1})
 
 	def test_everyone_accepts_the_notice_once_until_it_changes(self):
 		with self.set_user(HOLDER):
@@ -65,7 +66,7 @@ class TestPrivacy(IntegrationTestCase):
 			accept_privacy_notice(notice["version"])
 		self.assertEqual(frappe.db.count("Privacy Consent", {"user": HOLDER}), 1)
 
-		settings = frappe.get_doc(SETTINGS)
+		settings = app_settings()
 		settings.privacy_notice = "<p>Our own notice.</p>"
 		settings.save()
 		self.assertEqual(settings.notice_version, 2)

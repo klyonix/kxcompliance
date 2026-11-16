@@ -73,11 +73,11 @@ class TestClientReports(IntegrationTestCase):
 			{"user": ("in", [HOLDER, OTHER_HOLDER, MANAGER, CLIENT_LOGIN]), "allow": "Company"},
 		)
 		# Sunrise owns two companies; Moonlight one, on another person's team.
-		sunrise = with_login()
-		profile(TEST_COMPANY, sunrise.name)
-		profile(SECOND_COMPANY, sunrise.name)
-		moonlight = client("Moonlight Traders", team=(OTHER_HOLDER,))
-		profile(OTHER_COMPANY, moonlight.name)
+		self.sunrise = with_login().name
+		profile(TEST_COMPANY, self.sunrise)
+		profile(SECOND_COMPANY, self.sunrise)
+		self.moonlight = client("Moonlight Traders", team=(OTHER_HOLDER,)).name
+		profile(OTHER_COMPANY, self.moonlight)
 
 		filing(TEST_COMPANY, "Filed")
 		filing(SECOND_COMPANY, "Filed")
@@ -98,7 +98,7 @@ class TestClientReports(IntegrationTestCase):
 	def test_the_summary_counts_each_clients_year(self):
 		with self.freeze_time("2026-11-15"):
 			_columns, rows = client_summary(PERIOD)
-		by_client = {row["client"]: row for row in rows}
+		by_client = {row["client_name"]: row for row in rows}
 		sunrise = by_client["Sunrise Group"]
 		self.assertEqual(
 			(sunrise["companies"], sunrise["on_time"], sunrise["late"], sunrise["overdue"]), (2, 2, 1, 0)
@@ -110,7 +110,7 @@ class TestClientReports(IntegrationTestCase):
 			(sunrise["open_cases"], sunrise["waiting_on_client"], sunrise["dscs_expiring"]), (1, 1, 1)
 		)
 		# The client with an overdue filing comes first.
-		self.assertEqual([row["client"] for row in rows], ["Moonlight Traders", "Sunrise Group"])
+		self.assertEqual([row["client_name"] for row in rows], ["Moonlight Traders", "Sunrise Group"])
 		self.assertEqual(by_client["Moonlight Traders"]["on_time_percent"], 50)
 
 	def test_filings_outside_the_period_are_not_counted(self):
@@ -121,25 +121,25 @@ class TestClientReports(IntegrationTestCase):
 	def test_staff_see_only_their_clients(self):
 		with self.set_user(HOLDER):
 			_columns, rows = client_summary(PERIOD)
-		self.assertEqual([row["client"] for row in rows], ["Sunrise Group"])
+		self.assertEqual([row["client"] for row in rows], [self.sunrise])
 
 	def test_on_time_filing_by_client(self):
 		_columns, rows = on_time_filing({**PERIOD, "group_by": "Client"})
 		by_client = {row.group: row for row in rows}
 		self.assertEqual((by_client["Sunrise Group"].on_time, by_client["Sunrise Group"].late), (2, 1))
-		_columns, rows = on_time_filing({**PERIOD, "client": "Moonlight Traders"})
+		_columns, rows = on_time_filing({**PERIOD, "client": self.moonlight})
 		self.assertEqual([row.group for row in rows], [OTHER_COMPANY])
 
 	def test_the_client_page_shows_the_year(self):
 		with self.set_user(CLIENT_LOGIN), self.freeze_time("2026-11-15"):
-			year = client_detail("Sunrise Group")["year"]
+			year = client_detail(self.sunrise)["year"]
 		self.assertEqual((year["on_time"], year["late"], year["late_fee"]), (2, 1, 1000))
 		self.assertEqual(year["currency"], "INR")
 
 	def test_the_client_page_counts_every_open_filing_beyond_those_it_lists(self):
 		from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 
-		detail = client_detail("Sunrise Group")
+		detail = client_detail(self.sunrise)
 		open_filings = frappe.get_all(
 			"Compliance Task",
 			filters={

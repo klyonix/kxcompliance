@@ -11,6 +11,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	OTHER_HOLDER,
 	REVIEWER,
 	TEST_COMPANY,
+	change_app_settings,
 	make_company,
 	make_file,
 	make_users,
@@ -154,7 +155,7 @@ class TestComplianceTask(IntegrationTestCase):
 
 	def test_tasks_are_made_up_to_the_horizon_and_never_twice(self):
 		make_profile(obligations=[obligation("GSTR-3B (Monthly)", registration_number="29GST")])
-		with self.change_settings(SETTINGS, generation_horizon_days=45):
+		with change_app_settings(generation_horizon_days=45):
 			made = generate_tasks(company=TEST_COMPANY, today="2026-11-20")
 			again = generate_tasks(company=TEST_COMPANY, today="2026-11-20")
 		self.assertEqual(made, 3)
@@ -172,7 +173,7 @@ class TestComplianceTask(IntegrationTestCase):
 				obligation("GSTR-9 (Annual Return)", registration_number="29GST", start_from="2026-11-01"),
 			]
 		)
-		with self.change_settings(SETTINGS, generation_horizon_days=45):
+		with change_app_settings(generation_horizon_days=45):
 			generate_tasks(company=TEST_COMPANY, today="2026-11-20")
 		self.assertEqual(
 			[row.period_label for row in tasks("GSTR-3B (Monthly)")], ["Oct 2026", "Nov 2026", "Dec 2026"]
@@ -184,7 +185,7 @@ class TestComplianceTask(IntegrationTestCase):
 	def test_a_payment_due_before_its_period_ends_is_made_in_time(self):
 		# Advance tax for Oct-Dec is due on 15 Dec, inside the horizon, though the quarter ends after it.
 		make_profile(obligations=[obligation("Advance Tax", start_from="2026-11-01")])
-		with self.change_settings(SETTINGS, generation_horizon_days=30):
+		with change_app_settings(generation_horizon_days=30):
 			generate_tasks(company=TEST_COMPANY, today="2026-11-20")
 		rows = tasks("Advance Tax")
 		self.assertEqual([str(row.due_date) for row in rows], ["2026-12-15"])
@@ -208,7 +209,7 @@ class TestComplianceTask(IntegrationTestCase):
 
 	def make_task(self, template="GSTR-3B (Monthly)", today="2026-11-05"):
 		make_profile(obligations=[obligation(template, registration_number="29GST")])
-		with self.change_settings(SETTINGS, generation_horizon_days=0):
+		with change_app_settings(generation_horizon_days=0):
 			generate_tasks(company=TEST_COMPANY, today=today)
 		return frappe.get_doc("Compliance Task", tasks(template)[0].name)
 
@@ -297,7 +298,7 @@ class TestComplianceTask(IntegrationTestCase):
 				obligation("GSTR-3B (Monthly)", registration_number="29GST", start_from="2026-09-21")
 			]
 		)
-		with self.change_settings(SETTINGS, generation_horizon_days=0):
+		with change_app_settings(generation_horizon_days=0):
 			generate_tasks(company=TEST_COMPANY, today="2026-11-05")
 		september, october = (
 			frappe.get_doc("Compliance Task", row.name) for row in tasks("GSTR-3B (Monthly)")
@@ -351,7 +352,7 @@ class TestComplianceTask(IntegrationTestCase):
 			)
 
 		frappe.db.delete("Compliance Reminder Log")
-		with self.change_settings(SETTINGS, enabled=1, generation_horizon_days=0, escalate_after_days=3):
+		with change_app_settings(enabled=1, generation_horizon_days=0, escalate_after_days=3):
 			for day in ("2026-11-18", "2026-11-18"):
 				with self.freeze_time(day):
 					run_daily()

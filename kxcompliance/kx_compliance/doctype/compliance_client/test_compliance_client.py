@@ -65,8 +65,10 @@ def profile(company_name: str, client: str | None = None):
 
 
 def client(name: str = "Sunrise Group", team=(HOLDER,), **fields):
-	if frappe.db.exists("Compliance Client", name):
-		frappe.delete_doc("Compliance Client", name, force=True)
+	# By the name people use: a site may name clients by a hidden ID (see test_utils.named_by_id).
+	existing = frappe.db.get_value("Compliance Client", {"client_name": name})
+	if existing:
+		frappe.delete_doc("Compliance Client", existing, force=True)
 	return frappe.get_doc(
 		{
 			"doctype": "Compliance Client",
@@ -181,10 +183,10 @@ class TestComplianceClient(IntegrationTestCase):
 		self.assertEqual(company_permissions(HOLDER), set())
 
 	def test_staff_see_only_their_own_clients(self):
-		client("Sunrise Group")
+		sunrise = client("Sunrise Group")
 		client("Moonlight Traders", team=(OTHER_HOLDER,))
 		with self.set_user(HOLDER):
-			self.assertEqual(frappe.get_list("Compliance Client", pluck="name"), ["Sunrise Group"])
+			self.assertEqual(frappe.get_list("Compliance Client", pluck="name"), [sunrise.name])
 		with self.set_user(MANAGER):
 			self.assertEqual(len(frappe.get_list("Compliance Client", pluck="name")), 2)
 
@@ -235,14 +237,14 @@ class TestComplianceClient(IntegrationTestCase):
 		task(TEST_COMPANY)
 		with self.set_user(HOLDER), self.freeze_time("2026-11-15"):
 			overview = clients_overview()
-			self.assertEqual([row.name for row in overview], ["Moonlight Traders", "Sunrise Group"])
+			self.assertEqual([row.client_name for row in overview], ["Moonlight Traders", "Sunrise Group"])
 			self.assertEqual((overview[0].overdue, overview[0].companies), (1, [SECOND_COMPANY]))
-			detail = client_detail("Sunrise Group")
+			detail = client_detail(sunrise.name)
 		self.assertEqual([row.company for row in detail["companies"]], [TEST_COMPANY])
 		self.assertEqual(len(detail["filings"]), 1)
 		self.assertEqual(detail["due_this_week"], 1)
 		with self.set_user(OTHER_HOLDER), self.assertRaises(frappe.PermissionError):
-			client_detail("Sunrise Group")
+			client_detail(sunrise.name)
 
 	def test_a_login_reads_its_clients_companies_without_the_firms_remarks(self):
 		sunrise = with_login()
@@ -263,10 +265,10 @@ class TestComplianceClient(IntegrationTestCase):
 			filing = frappe.get_doc("Compliance Task", theirs)
 			filing.apply_fieldlevel_read_permissions()
 			self.assertIsNone(filing.get("remarks"))
-			self.assertEqual(frappe.get_list("Compliance Client", pluck="name"), ["Sunrise Group"])
-			self.assertEqual(client_of_login(), "Sunrise Group")
+			self.assertEqual(frappe.get_list("Compliance Client", pluck="name"), [sunrise.name])
+			self.assertEqual(client_of_login(), sunrise.name)
 			self.assertEqual(app_companies(), [TEST_COMPANY])
-			self.assertEqual(client_detail("Sunrise Group")["logins"], ["Asha Rao"])
+			self.assertEqual(client_detail(sunrise.name)["logins"], ["Asha Rao"])
 			with self.assertRaises(frappe.PermissionError):
 				clients_overview()
 
@@ -390,7 +392,7 @@ class TestComplianceClient(IntegrationTestCase):
 				client_choices(),
 				[
 					{
-						"name": "Sunrise Group",
+						"name": sunrise.name,
 						"client_name": "Sunrise Group",
 						"companies": sorted([TEST_COMPANY, SECOND_COMPANY]),
 					}
@@ -398,7 +400,7 @@ class TestComplianceClient(IntegrationTestCase):
 			)
 		with self.set_user(MANAGER):
 			self.assertEqual(
-				[row["name"] for row in client_choices()], ["Moonlight Traders", "Sunrise Group"]
+				[row["client_name"] for row in client_choices()], ["Moonlight Traders", "Sunrise Group"]
 			)
 		with self.set_user(CLIENT_LOGIN), self.assertRaises(frappe.PermissionError):
 			client_choices()
@@ -439,8 +441,8 @@ class TestRelationshipManagerEscalation(IntegrationTestCase):
 		from kxcompliance.kx_compliance.reminders import relationship_managers
 		from kxcompliance.kx_compliance.statutory import send_task_escalations
 
-		client("Sunrise Group", relationship_manager=OTHER_HOLDER)
-		profile(SECOND_COMPANY, "Sunrise Group")
+		sunrise = client("Sunrise Group", relationship_manager=OTHER_HOLDER)
+		profile(SECOND_COMPANY, sunrise.name)
 		left = client("Moonlight Traders", relationship_manager=HOLDER, status="Left")
 		profile(OTHER_COMPANY, left.name)
 		self.assertEqual(

@@ -16,6 +16,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	OTHER_HOLDER,
 	REVIEWER,
 	TEST_COMPANY,
+	change_app_settings,
 	make_company,
 	make_users,
 )
@@ -211,7 +212,7 @@ class TestLegalCase(IntegrationTestCase):
 				"Compliance Reminder Log", filters={"kind": kind, "legal_date": hearing.name}
 			)
 
-		with self.change_settings(SETTINGS, enabled=1):
+		with change_app_settings(enabled=1):
 			for day in ("2026-11-18", "2026-11-18", "2026-11-22", "2026-11-23"):
 				with self.freeze_time(day):
 					run_daily()

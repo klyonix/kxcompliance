@@ -31,9 +31,12 @@ from kxcompliance.kx_compliance.reminders import send_party_reminders
 from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
 	TEST_COMPANY,
+	app_setting,
+	change_app_settings,
 	make_company,
 	make_user,
 	make_users,
+	set_app_settings,
 )
 
 # These tests build their own records; skip ERPNext's generated ones.
@@ -285,8 +288,7 @@ class TestLicenceRequirement(IntegrationTestCase):
 		account.flags.ignore_validate = True
 		account.insert()
 		with (
-			self.change_settings(
-				"KX Compliance Settings",
+			change_app_settings(
 				party_email_template="Licence Test Reminder",
 				email_account=account.name,
 			),
@@ -416,9 +418,8 @@ class TestLicenceCheckForFirms(IntegrationTestCase):
 		frappe.db.delete("Licence Requirement")
 		frappe.db.delete("Licence Check Log")
 		frappe.db.delete("Compliance Item", {"holder_type": ("in", ["Customer", "Supplier"])})
-		self.account_type = frappe.db.get_single_value("KX Compliance Settings", "account_type")
-		frappe.db.set_single_value("KX Compliance Settings", "account_type", "CA/CS Firm")
-		frappe.clear_document_cache("KX Compliance Settings", "KX Compliance Settings")
+		self.account_type = app_setting("account_type")
+		set_app_settings({"account_type": "CA/CS Firm"})
 		# The company leaves the last test's client before that client is made again.
 		if frappe.db.exists("Company Compliance Profile", TEST_COMPANY):
 			frappe.delete_doc("Company Compliance Profile", TEST_COMPANY, force=True)
@@ -426,8 +427,7 @@ class TestLicenceCheckForFirms(IntegrationTestCase):
 		profile(TEST_COMPANY, self.client.name)
 
 	def tearDown(self):
-		frappe.db.set_single_value("KX Compliance Settings", "account_type", self.account_type)
-		frappe.clear_document_cache("KX Compliance Settings", "KX Compliance Settings")
+		set_app_settings({"account_type": self.account_type})
 
 	def order(self):
 		doc = sales_order()

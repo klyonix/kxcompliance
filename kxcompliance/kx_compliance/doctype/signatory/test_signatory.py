@@ -122,7 +122,7 @@ class TestSignatory(IntegrationTestCase):
 		item = dsc(signatory().name)
 		item.hand_over("With the Firm")
 		with self.set_user(CLIENT_LOGIN):
-			signatures = client_detail("Sunrise Group")["signatures"]
+			signatures = client_detail(sunrise.name)["signatures"]
 			self.assertEqual(
 				[(row.name, row.holder_name, row.custody) for row in signatures],
 				[(item.name, "Ravi Rao", "With the Firm")],
@@ -137,5 +137,5 @@ class TestSignatory(IntegrationTestCase):
 		signatory()
 		signatory("Former Director", is_active=0)
 		signatory("Other Company Person", OTHER_COMPANY)
-		people = [row.full_name for row in client_detail("Sunrise Group")["signatories"]]
+		people = [row.full_name for row in client_detail(sunrise.name)["signatories"]]
 		self.assertEqual(people, ["Ravi Rao"])

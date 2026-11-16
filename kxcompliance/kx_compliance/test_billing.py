@@ -59,9 +59,12 @@ from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
 	MANAGER,
 	TEST_COMPANY,
+	app_setting,
+	change_app_settings,
 	make_company,
 	make_user,
 	make_users,
+	set_app_settings,
 )
 
 SETTINGS = "KX Compliance Settings"
@@ -147,7 +150,7 @@ class TestBillingSetup(IntegrationTestCase):
 		make_users()
 
 	def test_a_firm_sets_up_its_own_company_to_bill_from_once(self):
-		with self.change_settings(SETTINGS, account_type="CA/CS Firm", billing_company=None):
+		with change_app_settings(account_type="CA/CS Firm", billing_company=None):
 			state = set_up_billing(DETAILS, name=FIRM)
 			company = state["company"]
 			# The GSTIN is kept as written in capitals, and says the firm is in Karnataka.
@@ -181,26 +184,26 @@ class TestBillingSetup(IntegrationTestCase):
 					"country": "India",
 				}
 			).insert()
-		with self.change_settings(SETTINGS, account_type="CA/CS Firm", billing_company=None):
+		with change_app_settings(account_type="CA/CS Firm", billing_company=None):
 			self.assertIn(own, firms_own_companies())
 			self.assertEqual(set_up_billing(DETAILS, name=own)["company"], own)
 
 	def test_a_clients_company_is_not_taken_as_the_firms(self):
 		profile(TEST_COMPANY, client("Billing Setup Client").name)
-		with self.change_settings(SETTINGS, account_type="CA/CS Firm", billing_company=None):
+		with change_app_settings(account_type="CA/CS Firm", billing_company=None):
 			self.assertNotIn(TEST_COMPANY, firms_own_companies())
 			with self.assertRaisesRegex(frappe.ValidationError, "client Billing Setup Client"):
 				set_up_billing(DETAILS, name=TEST_COMPANY)
 
 	def test_billing_is_for_a_firms_managers_and_takes_only_its_details(self):
-		with self.change_settings(SETTINGS, account_type="Organisation"):
+		with change_app_settings(account_type="Organisation"):
 			with self.assertRaisesRegex(frappe.PermissionError, "CA/CS firms"):
 				billing_setup()
-		with self.change_settings(SETTINGS, account_type="CA/CS Firm"):
+		with change_app_settings(account_type="CA/CS Firm"):
 			with self.set_user(HOLDER), self.assertRaisesRegex(frappe.PermissionError, "Compliance Manager"):
 				billing_setup()
 			with self.assertRaisesRegex(frappe.ValidationError, "firm's name"):
-				with self.change_settings(SETTINGS, billing_company=None):
+				with change_app_settings(billing_company=None):
 					set_up_billing(DETAILS)
 
 	def test_a_gstin_says_its_state_and_a_wrong_one_is_refused(self):
@@ -211,8 +214,10 @@ class TestBillingSetup(IntegrationTestCase):
 
 
 def card(title: str, lines: list[dict], default: bool = True) -> str:
-	if frappe.db.exists("Rate Card", title):
-		frappe.delete_doc("Rate Card", title, force=True)
+	# By its title: a site may name rate cards by a hidden ID (see test_utils.named_by_id).
+	existing = frappe.db.get_value("Rate Card", {"title": title})
+	if existing:
+		frappe.delete_doc("Rate Card", existing, force=True)
 	return (
 		frappe.get_doc({"doctype": "Rate Card", "title": title, "is_default": int(default), "lines": lines})
 		.insert()
@@ -248,8 +253,8 @@ class TestRates(IntegrationTestCase):
 		card(
 			"Billing Standard", [per_filing("GSTR-3B (Monthly)", 1500), per_filing("GSTR-1 (Monthly)", 1000)]
 		)
-		card("Billing Small", [per_filing("GSTR-3B (Monthly)", 900)], default=False)
-		sunrise = client("Billing Fee Client", rate_card="Billing Small")
+		small = card("Billing Small", [per_filing("GSTR-3B (Monthly)", 900)], default=False)
+		sunrise = client("Billing Fee Client", rate_card=small)
 		sunrise.append("own_rates", per_filing("GSTR-1 (Monthly)", 800, "998231"))
 		sunrise.save()
 		profile(TEST_COMPANY, sunrise.name)
@@ -258,7 +263,7 @@ class TestRates(IntegrationTestCase):
 		filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20")  # still open: not billed
 		billed = filing("GSTR-1 (Monthly)", "2026-08-31", "2026-09-11", status="Filed")
 		frappe.db.set_value("Compliance Task", billed, "billed_in", "ACC-SINV-TEST")
-		with self.change_settings(SETTINGS, account_type="CA/CS Firm"):
+		with change_app_settings(account_type="CA/CS Firm"):
 			fees = client_fees(sunrise.name)
 		# Its card's price for GSTR-3B, its own for GSTR-1; a billed filing is left out.
 		self.assertEqual(
@@ -269,7 +274,7 @@ class TestRates(IntegrationTestCase):
 		# With no card of its own, the default card prices it.
 		sunrise.rate_card = None
 		sunrise.save()
-		with self.change_settings(SETTINGS, account_type="CA/CS Firm"):
+		with change_app_settings(account_type="CA/CS Firm"):
 			self.assertEqual({row.fee for row in client_fees(sunrise.name)["unbilled"]}, {1500, 800})
 
 	def test_a_rate_prices_a_return_per_filing_or_a_named_service_once(self):
@@ -289,17 +294,15 @@ class TestRates(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Rate Card", second, "is_default"), 1)
 
 	def test_a_recurring_charge_needs_the_date_it_is_billed_from(self):
-		card("Billing Retainer", [service("Retainer", "Per month", 5000)])
+		retainer = card("Billing Retainer", [service("Retainer", "Per month", 5000)])
 		# A recurring line on the default card stops no client from being saved...
 		self.assertTrue(client("Billing Fee Client").name)
 		# ...but one on the card chosen for a client, or its own rates, needs the start date.
 		with self.assertRaisesRegex(frappe.ValidationError, "recurring charges start from"):
-			client("Billing Fee Client", rate_card="Billing Retainer")
+			client("Billing Fee Client", rate_card=retainer)
 		with self.assertRaisesRegex(frappe.ValidationError, "recurring charges start from"):
 			client("Billing Fee Client", own_rates=[service("Retainer", "Per month", 4000)])
-		self.assertTrue(
-			client("Billing Fee Client", rate_card="Billing Retainer", billing_from="2026-04-01").name
-		)
+		self.assertTrue(client("Billing Fee Client", rate_card=retainer, billing_from="2026-04-01").name)
 
 	def test_old_prices_and_fixed_fees_move_onto_rate_cards(self):
 		from kxcompliance.patches.v1_0.move_prices_to_rate_cards import execute as move_prices
@@ -358,8 +361,7 @@ class TestBills(IntegrationTestCase):
 		super().setUpClass()
 		make_company()
 		make_users()
-		frappe.db.set_single_value(SETTINGS, {"account_type": "CA/CS Firm", "billing_company": None})
-		frappe.clear_document_cache(SETTINGS, SETTINGS)
+		set_app_settings({"account_type": "CA/CS Firm", "billing_company": None})
 		set_up_billing(
 			{**DETAILS, "bill_prefix": "TBA", "default_sac": "998221"}, name="Bills Test Associates"
 		)
@@ -549,7 +551,7 @@ class TestBills(IntegrationTestCase):
 		set_up_billing(
 			{**DETAILS, "gst_status": "Not registered", "billing_gstin": "", "billing_state": "Karnataka"}
 		)
-		self.assertFalse(frappe.db.get_single_value(SETTINGS, "billing_gstin"))
+		self.assertFalse(app_setting("billing_gstin"))
 		plain = bill(create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"])
 		self.assertEqual((plain["taxes"], plain["grand_total"]), ([], 1000))
 		with self.assertRaisesRegex(frappe.ValidationError, "composition has a GSTIN"):
@@ -565,7 +567,7 @@ class TestBills(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "public file"):
 			set_up_billing({**DETAILS, "billing_logo": "/private/files/logo.png"})
 		set_up_billing({**DETAILS, "billing_logo": "/files/firm-logo.png"})
-		company = frappe.db.get_single_value(SETTINGS, "billing_company")
+		company = app_setting("billing_company")
 		self.assertEqual(frappe.db.get_value("Company", company, "company_logo"), "/files/firm-logo.png")
 
 	def test_services_are_billed_by_the_hour_and_lines_carry_their_sac_code(self):
@@ -705,9 +707,8 @@ class TestBills(IntegrationTestCase):
 		name = create_bill(self.client, lines=[{"description": "Advisory", "amount": 1000}])["name"]
 		send_bill(name)
 		frappe.db.set_value("Sales Invoice", name, "due_date", "2026-11-01")
-		frappe.db.set_single_value(SETTINGS, {"overdue_reminders": 1, "reminder_steps": "3, 15"})
-		frappe.clear_document_cache(SETTINGS, SETTINGS)
-		self.addCleanup(frappe.db.set_single_value, SETTINGS, "overdue_reminders", 0)
+		set_app_settings({"overdue_reminders": 1, "reminder_steps": "3, 15"})
+		self.addCleanup(set_app_settings, {"overdue_reminders": 0})
 		with patch(
 			"kxcompliance.kx_compliance.billing.email_bill", return_value="accounts@billclient.example.com"
 		) as email:
@@ -768,7 +769,7 @@ class TestBills(IntegrationTestCase):
 			{key: summary["activity"][key] - before[key] for key in before},
 			{"billed": 2950, "credited": 0, "received": 2000, "tds": 250, "written_off": 700},
 		)
-		self.assertEqual(summary["rate_card"], "Billing Standard")
+		self.assertEqual(summary["rate_card_title"], "Billing Standard")
 		with (
 			patch("kxcompliance.api.is_client_login", return_value=True),
 			patch("kxcompliance.api.client_of_login", return_value=self.client),
@@ -845,7 +846,7 @@ class TestBills(IntegrationTestCase):
 		)
 		other = filed_for(second, "2026-09-30")
 		client_doc = frappe.get_doc("Compliance Client", self.client)
-		client_doc.recurring_company = frappe.db.get_single_value(SETTINGS, "billing_company")
+		client_doc.recurring_company = app_setting("billing_company")
 		with self.assertRaisesRegex(frappe.ValidationError, "not one of"):
 			client_doc.save()
 		client_doc = frappe.get_doc("Compliance Client", self.client)
@@ -855,7 +856,7 @@ class TestBills(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "Choose which"):
 			create_bill(self.client, lines=[{"description": "Advisory", "amount": 100}])
 		with self.assertRaisesRegex(frappe.ValidationError, "not one of"):
-			bill_options(self.client, company=frappe.db.get_single_value(SETTINGS, "billing_company"))
+			bill_options(self.client, company=app_setting("billing_company"))
 		options = bill_options(self.client, company=second)
 		self.assertEqual(options["companies"], sorted([TEST_COMPANY, second]))
 		self.assertEqual([row.name for row in options["filings"]], [other])
@@ -884,9 +885,7 @@ class TestBills(IntegrationTestCase):
 		# One company pays the other's bill.
 		today = frappe.utils.nowdate()
 		with self.assertRaisesRegex(frappe.ValidationError, "not one of"):
-			record_payment(
-				theirs, 100, today, "Cash", paid_by=frappe.db.get_single_value(SETTINGS, "billing_company")
-			)
+			record_payment(theirs, 100, today, "Cash", paid_by=app_setting("billing_company"))
 		paid = record_payment(theirs, 1770, today, "UPI", paid_by=TEST_COMPANY)["payment"]
 		self.assertEqual(payment(paid)["paid_by_company"], TEST_COMPANY)
 

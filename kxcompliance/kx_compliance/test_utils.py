@@ -9,6 +9,8 @@ from unittest.mock import patch
 import frappe
 from frappe.utils import add_days, nowdate
 
+from kxcompliance import scoped
+
 TEST_COMPANY = "Compliance Test Company"
 MANAGER = "compliance-manager@example.com"
 HOLDER = "compliance-holder@example.com"
@@ -137,3 +139,42 @@ def named_by_id(*doctypes: str):
 			stack.enter_context(patch.object(controller, "autoname", by_id, create=True))
 			stack.enter_context(patch.object(controller, "_sync_autoname_field", keep_title))
 		yield
+
+
+# The app's settings, wherever this site keeps them: KX Compliance Settings, or the record another
+# app supplies (kxcompliance_settings), so the tests run on both kinds of site.
+def app_settings():
+	"""The settings as saved, read fresh."""
+	return scoped.settings(for_update=True)
+
+
+def app_setting(fieldname: str):
+	return app_settings().get(fieldname)
+
+
+def set_app_settings(values: dict | None = None, /, **more):
+	"""Write settings straight to the database, without the settings' own checks."""
+	values = {**(values or {}), **more}
+	record = scoped.settings_record()
+	if record["doctype"] == record["name"]:
+		frappe.db.set_single_value(record["doctype"], values)
+	else:
+		frappe.db.set_value(record["doctype"], record["name"], values)
+	frappe.clear_document_cache(record["doctype"], record["name"])
+
+
+@contextmanager
+def change_app_settings(values: dict | None = None, /, **more):
+	"""Saved through the settings' own checks for the length of the block, as Frappe's
+	change_settings does for a single doctype."""
+	values = {**(values or {}), **more}
+	settings = app_settings()
+	before = {fieldname: settings.get(fieldname) for fieldname in values}
+	settings.update(values)
+	settings.save(ignore_permissions=True)
+	try:
+		yield
+	finally:
+		settings = app_settings()
+		settings.update(before)
+		settings.save(ignore_permissions=True)

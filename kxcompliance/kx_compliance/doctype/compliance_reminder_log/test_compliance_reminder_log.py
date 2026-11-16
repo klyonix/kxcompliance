@@ -12,6 +12,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	MANAGER,
 	OTHER_HOLDER,
 	REVIEWER,
+	change_app_settings,
 	make_company,
 	make_item,
 	make_item_type,
@@ -46,7 +47,7 @@ class TestReminderJob(IntegrationTestCase):
 		return frappe.get_all("Compliance Reminder Log", filters=filters, fields=["rule_days", "sent_to"])
 
 	def run_on(self, day):
-		with self.freeze_time(day), self.change_settings(SETTINGS, enabled=1, digest_day="Monday"):
+		with self.freeze_time(day), change_app_settings(enabled=1, digest_day="Monday"):
 			run_daily()
 
 	def test_one_reminder_for_the_nearest_rule_and_never_twice(self):
@@ -66,7 +67,7 @@ class TestReminderJob(IntegrationTestCase):
 	def test_nothing_is_sent_while_reminders_are_off_but_statuses_still_move(self):
 		with self.freeze_time("2026-01-01"):
 			item = make_item("Test Reminded Licence", valid_until="2026-06-20").name
-		with self.freeze_time("2026-06-01"), self.change_settings(SETTINGS, enabled=0):
+		with self.freeze_time("2026-06-01"), change_app_settings(enabled=0):
 			run_daily()
 		self.assertEqual(self.logs(item), [])
 		self.assertEqual(frappe.db.get_value("Compliance Item", item, "status"), "Due for Renewal")

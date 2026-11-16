@@ -280,7 +280,7 @@ When you take on a new client.
 When you are working on one client.
 
 1. Choose the client in the box at the top of My Work, Filings or the Register.
-2. Every list then shows only that client's companies, until you choose All clients.
+2. Every list then shows only that client's companies, until you choose All companies.
 
 ## Billing
 

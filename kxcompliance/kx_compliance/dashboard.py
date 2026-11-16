@@ -13,6 +13,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, get_first_day, getdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 
 COUNT = {"COUNT": "*", "as": "count"}
@@ -227,7 +228,7 @@ def recent_activity(companies: list[str] | None = None) -> list[dict]:
 	who made them. Only what the person may read: each record's title is read with get_list."""
 	# Only System Managers read Version, so the who-and-when is read here; what is shown is limited
 	# to records the person may read, as each title below is read with get_list.
-	versions = frappe.get_all(
+	versions = scoped.get_all(
 		"Version",
 		filters={"ref_doctype": ("in", list(FEED_TITLES))},
 		fields=["ref_doctype", "docname", "owner", "creation"],

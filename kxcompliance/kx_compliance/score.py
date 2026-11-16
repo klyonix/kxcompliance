@@ -21,6 +21,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_months, date_diff, flt, getdate, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.overview import OPEN_CASE_STATUSES, PARTY_HOLDERS
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 
@@ -62,7 +63,7 @@ def late_fee(rules, days_late: int, tax: float | None = None) -> float:
 def rules_for(templates: list[str]) -> dict[str, frappe._dict]:
 	if not templates:
 		return {}
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Compliance Obligation Template", filters={"name": ("in", list(set(templates)))}, fields=RULE_FIELDS
 	)
 	return {row.name: row for row in rows}
@@ -99,7 +100,7 @@ def company_scores(companies: list[str], today: str | None = None) -> dict[str, 
 	if not companies:
 		return {}
 
-	overdue = frappe.get_all(
+	overdue = scoped.get_all(
 		"Compliance Task",
 		filters={"company": ("in", companies), "status": ("not in", CLOSED_TASK_STATUSES), "is_overdue": 1},
 		fields=["company", "obligation_template", "effective_due_date", "amount_paid"],
@@ -110,7 +111,7 @@ def company_scores(companies: list[str], today: str | None = None) -> dict[str, 
 		days_late = date_diff(today, getdate(row.effective_due_date))
 		penalty[row.company] += late_fee(rules.get(row.obligation_template), days_late, row.amount_paid)
 
-	for row in frappe.get_all(
+	for row in scoped.get_all(
 		"Compliance Task",
 		filters={
 			"company": ("in", companies),
@@ -122,7 +123,7 @@ def company_scores(companies: list[str], today: str | None = None) -> dict[str, 
 	):
 		counts[row.company]["filed_late"] = row["count"]
 
-	for row in frappe.get_all(
+	for row in scoped.get_all(
 		"Compliance Item",
 		filters={
 			"company": ("in", companies),
@@ -137,7 +138,7 @@ def company_scores(companies: list[str], today: str | None = None) -> dict[str, 
 		key = "due_for_renewal" if row.status in ("Due for Renewal", "Renewal Planned") else "expired"
 		counts[row.company][key] += row["count"]
 
-	for row in frappe.get_all(
+	for row in scoped.get_all(
 		"Legal Case",
 		filters={"company": ("in", companies), "status": ("in", OPEN_CASE_STATUSES)},
 		fields=["company", "risk", COUNT],

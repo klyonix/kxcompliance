@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate, now_datetime, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance import document_requests
 
 
@@ -45,7 +46,7 @@ class DocumentRequest(Document):
 	def set_company_and_client(self):
 		self.filing_label = ""
 		if self.compliance_task:
-			task_company, template, period = frappe.db.get_value(
+			task_company, template, period = scoped.get_value(
 				"Compliance Task", self.compliance_task, ["company", "obligation_template", "period_label"]
 			) or (None, None, None)
 			self.filing_label = f"{template} ({period})" if period else (template or "")
@@ -58,7 +59,7 @@ class DocumentRequest(Document):
 			self.company = task_company or self.company
 		if not self.company:
 			return  # the mandatory check names the missing Company
-		self.client = frappe.db.get_value("Company Compliance Profile", self.company, "client")
+		self.client = scoped.get_value("Company Compliance Profile", self.company, "client")
 		if not self.client:
 			frappe.throw(
 				_(

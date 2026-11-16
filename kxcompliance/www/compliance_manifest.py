@@ -7,6 +7,8 @@ import json
 
 import frappe
 
+from kxcompliance import scoped
+
 base_template_path = "www/compliance_manifest.json"
 no_cache = 1
 
@@ -14,8 +16,9 @@ DEFAULT_ICON = "/assets/kxcompliance/frontend/icon-512.png"
 
 
 def get_context(context):
-	name = frappe.db.get_single_value("KX Compliance Settings", "app_name") or "KlyONIX Compliance"
-	logo = frappe.db.get_single_value("KX Compliance Settings", "app_logo") or DEFAULT_ICON
+	settings = scoped.settings()
+	name = settings.app_name or "KlyONIX Compliance"
+	logo = settings.app_logo or DEFAULT_ICON
 	manifest = {
 		"name": name,
 		"short_name": name,

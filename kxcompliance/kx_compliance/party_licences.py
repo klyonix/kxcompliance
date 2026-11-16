@@ -13,6 +13,8 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, formatdate, getdate, now_datetime, nowdate
 
+from kxcompliance import scoped
+
 # Document: (party type, checkbox on Licence Requirement, field naming the party, date field)
 DOCUMENTS = {
 	"Quotation": ("Customer", "check_quotation", "party_name", "transaction_date"),
@@ -36,12 +38,12 @@ def checked_for_company(company: str | None) -> bool:
 	On an organisation's site, always. On a CA/CS firm's site, only for the companies of a client
 	the firm has switched the Licence Check on for (RK, 15 Nov 2026).
 	"""
-	if frappe.get_cached_value(SETTINGS, SETTINGS, "account_type") != FIRM:
+	if scoped.get_cached_value(SETTINGS, SETTINGS, "account_type") != FIRM:
 		return True
 	if not company:
 		return False
-	client = frappe.db.get_value("Company Compliance Profile", {"company": company}, "client")
-	return bool(client and frappe.db.get_value("Compliance Client", client, "licence_check"))
+	client = scoped.get_value("Company Compliance Profile", {"company": company}, "client")
+	return bool(client and scoped.get_value("Compliance Client", client, "licence_check"))
 
 
 def check_document(doc, method=None):
@@ -114,7 +116,7 @@ def requirements_for_party(party_type: str, party: str, check_field: str | None 
 	filters = {"party_type": party_type, "is_active": 1}
 	if check_field:
 		filters[check_field] = 1
-	requirements = frappe.get_all(
+	requirements = scoped.get_all(
 		"Licence Requirement",
 		filters=filters,
 		fields=["name", "item_type", "action", "grace_days", *CHECK_FIELDS],
@@ -126,7 +128,7 @@ def requirements_for_party(party_type: str, party: str, check_field: str | None 
 	item_groups = rows_by_parent("Licence Requirement Item Group", names, "item_group")
 	companies = rows_by_parent("Licence Requirement Company", names, "company")
 	party_groups = rows_by_parent("Licence Requirement Party Group", names, "party_group")
-	party_group = frappe.get_cached_value(party_type, party, GROUP_FIELDS[party_type])
+	party_group = scoped.get_cached_value(party_type, party, GROUP_FIELDS[party_type])
 
 	applicable = []
 	for requirement in requirements:
@@ -141,7 +143,7 @@ def requirements_for_party(party_type: str, party: str, check_field: str | None 
 
 def rows_by_parent(doctype: str, parents: list[str], fieldname: str) -> dict[str, set[str]]:
 	result: dict[str, set[str]] = {}
-	for row in frappe.get_all(doctype, filters={"parent": ("in", parents)}, fields=["parent", fieldname]):
+	for row in scoped.get_all(doctype, filters={"parent": ("in", parents)}, fields=["parent", fieldname]):
 		result.setdefault(row.parent, set()).add(row.get(fieldname))
 	return result
 
@@ -151,7 +153,7 @@ def party_licence_items(party_type: str, party: str, item_type: str | None = Non
 	filters = {"holder_type": party_type, "holder": party, "is_cancelled": 0}
 	if item_type:
 		filters["item_type"] = item_type
-	return frappe.get_all(
+	return scoped.get_all(
 		"Compliance Item",
 		filters=filters,
 		fields=["name", "item_type", "reference_number", "status", "valid_from", "valid_until"],
@@ -219,7 +221,7 @@ def licence_numbers(party_type: str, party: str, on) -> str:
 
 def has_override(doc) -> bool:
 	return not doc.is_new() and bool(
-		frappe.db.exists("Licence Override", {"override_key": override_key(doc.doctype, doc.name)})
+		scoped.exists("Licence Override", {"override_key": override_key(doc.doctype, doc.name)})
 	)
 
 
@@ -254,7 +256,7 @@ def log_draft_block(doc, party_type: str, party: str, requirement, message: str)
 	"""A draft saved without the licence, logged once per rule so the Blocks list shows it by name."""
 	if not doc.name:
 		return
-	already = frappe.db.exists(
+	already = scoped.exists(
 		"Licence Check Log",
 		{
 			"reference_doctype": doc.doctype,

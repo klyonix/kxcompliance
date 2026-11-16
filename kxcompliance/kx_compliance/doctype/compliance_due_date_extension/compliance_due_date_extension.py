@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 from kxcompliance.kx_compliance.statutory import extensions_for, find_extension
 
@@ -38,7 +39,7 @@ def apply_extension(extension: str):
 	"""
 	doc = frappe.get_doc("Compliance Due Date Extension", extension)
 	still_open = ("not in", CLOSED_TASK_STATUSES)
-	covered = frappe.get_all(
+	covered = scoped.get_all(
 		"Compliance Task",
 		filters={
 			"obligation_template": doc.obligation_template,
@@ -50,7 +51,7 @@ def apply_extension(extension: str):
 	for name in covered:
 		move_task(name, doc.new_due_date, doc.name)
 
-	left = frappe.get_all(
+	left = scoped.get_all(
 		"Compliance Task",
 		filters={"extension": doc.name, "name": ("not in", covered or [""]), "status": still_open},
 		fields=["name", "obligation_template", "period_end"],

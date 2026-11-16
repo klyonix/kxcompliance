@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.billing import check_client_rates, follow_client, state_of
 from kxcompliance.kx_compliance.clients import (
 	sync_client_access,
@@ -15,6 +16,9 @@ from kxcompliance.kx_compliance.clients import (
 
 
 class ComplianceClient(Document):
+	def before_insert(self):
+		scoped.check_limit("Compliance Client", client_name=self.client_name)
+
 	def validate(self):
 		seen = set()
 		for row in self.team:
@@ -30,7 +34,7 @@ class ComplianceClient(Document):
 
 	def check_recurring_company(self):
 		"""Recurring charges go on the bills of one of the client's own companies."""
-		if self.recurring_company and not frappe.db.exists(
+		if self.recurring_company and not scoped.exists(
 			"Company Compliance Profile", {"company": self.recurring_company, "client": self.name}
 		):
 			frappe.throw(
@@ -46,7 +50,7 @@ class ComplianceClient(Document):
 		follow_client(self)
 
 	def on_trash(self):
-		if frappe.db.exists("Company Compliance Profile", {"client": self.name}):
+		if scoped.exists("Company Compliance Profile", {"client": self.name}):
 			frappe.throw(
 				_("{0} still owns companies; move them to another client or mark the client Left.").format(
 					self.name

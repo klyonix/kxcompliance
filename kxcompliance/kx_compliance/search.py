@@ -11,6 +11,8 @@ import frappe
 from frappe.query_builder import Case, Criterion, Order
 from frappe.query_builder.functions import Lower
 
+from kxcompliance import scoped
+
 MIN_LENGTH = 2
 # How many of each kind are looked at and returned; the screens show "30+" past that.
 CANDIDATES = 30
@@ -142,7 +144,7 @@ def matching(kind: str, words: list[str], fields: list):
 	if not frappe.has_permission(doctype, "read"):
 		return None
 	table = frappe.qb.DocType(doctype)
-	query = frappe.qb.get_query(doctype, fields=fields, ignore_permissions=False)
+	query = scoped.get_query(doctype, fields=fields, ignore_permissions=False)
 	for word in words:
 		pattern = like(word)
 		query = query.where(Criterion.any([Lower(table[field]).like(pattern) for field in searched]))

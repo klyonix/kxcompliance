@@ -20,6 +20,7 @@ from frappe import _
 from frappe.query_builder import Order
 from frappe.utils import add_days, cint, get_datetime, now_datetime
 
+from kxcompliance import scoped
 from kxcompliance.install import CLIENT_ROLE, ROLES
 
 SETTINGS = "KX Compliance Settings"
@@ -79,7 +80,7 @@ complain to the Data Protection Board of India.</p>
 
 
 def settings():
-	return frappe.get_cached_doc(SETTINGS)
+	return scoped.settings()
 
 
 def fiduciary() -> str:
@@ -145,6 +146,7 @@ def active_consent(user: str | None = None) -> dict | None:
 			& (consent.notice_version == current_version())
 			& consent.withdrawn_on.isnull()
 		)
+		.where(scoped.where(consent))
 		.orderby(consent.accepted_on, order=Order.desc)
 		.limit(1)
 	).run(as_dict=True)
@@ -176,7 +178,7 @@ def accept(version: int) -> dict:
 
 def withdraw() -> dict:
 	"""This person withdraws consent: every consent of theirs still in force is ended now."""
-	names = frappe.get_all(
+	names = scoped.get_all(
 		CONSENT, filters={"user": frappe.session.user, "withdrawn_on": ("is", "not set")}, pluck="name"
 	)
 	now = now_datetime()
@@ -213,7 +215,7 @@ def raise_request(request_type: str, details: str) -> dict:
 def my_requests() -> list[dict]:
 	"""This person's own requests and the answers, newest first."""
 	# Only rows where they are the requester, so no one else's request is read.
-	return frappe.get_all(
+	return scoped.get_all(
 		REQUEST,
 		filters={"requested_by": frappe.session.user},
 		fields=[
@@ -246,6 +248,7 @@ def erase_old_log_addresses() -> None:
 		frappe.qb.update(log)
 		.set(log.sent_to, "")
 		.where((log.sent_on < cutoff) & log.sent_to.isnotnull() & (log.sent_to != ""))
+		.where(scoped.where(log))
 	).run()
 
 

@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.register import (
 	OPEN_RENEWAL_STATUSES,
 	get_type_rules,
@@ -65,7 +66,7 @@ class ComplianceRenewal(Document):
 		# A friendly message first; the unique open_key column is what actually stops two at once.
 		if self.status not in OPEN_RENEWAL_STATUSES:
 			return
-		other = frappe.db.get_value(
+		other = scoped.get_value(
 			"Compliance Renewal",
 			{
 				"compliance_item": self.compliance_item,

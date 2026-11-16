@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.company_events import event_types_for, make_event_tasks
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, is_approver
 
@@ -22,7 +23,7 @@ class ComplianceEvent(Document):
 					_(self.event_type), frappe.format(self.event_date, "Date")
 				)
 			)
-		profile = frappe.db.get_value(
+		profile = scoped.get_value(
 			"Company Compliance Profile", self.company, ["company_type", "default_responsible"], as_dict=True
 		)
 		if not profile:
@@ -52,7 +53,7 @@ class ComplianceEvent(Document):
 		"""What this event made due, for whoever can read the event, such as the person who recorded it."""
 		self.check_permission("read")
 		# The event's own filings, by form and due date only; the tasks themselves keep their permissions.
-		return frappe.get_all(
+		return scoped.get_all(
 			"Compliance Task",
 			filters={"company_event": self.name},
 			fields=["name", "obligation_template", "effective_due_date", "status"],
@@ -71,7 +72,7 @@ class ComplianceEvent(Document):
 			frappe.throw(_("{0} is already cancelled.").format(self.name))
 		if not (reason or "").strip():
 			frappe.throw(_("Say why {0} is being cancelled.").format(self.name))
-		for name in frappe.get_all(
+		for name in scoped.get_all(
 			"Compliance Task",
 			filters={"company_event": self.name, "status": ("not in", CLOSED_TASK_STATUSES)},
 			pluck="name",

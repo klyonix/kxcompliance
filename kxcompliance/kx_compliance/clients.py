@@ -16,6 +16,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.install import CLIENT_ROLE
 from kxcompliance.kx_compliance.client_reports import financial_year, summarise
 from kxcompliance.kx_compliance.doctype.compliance_item.compliance_item import DSC_TYPE
@@ -29,7 +30,7 @@ HELD = "Compliance Held Access"
 
 
 def client_companies(client: str) -> list[str]:
-	return frappe.get_all("Company Compliance Profile", filters={"client": client}, pluck="company")
+	return scoped.get_all("Company Compliance Profile", filters={"client": client}, pluck="company")
 
 
 def team_of(client) -> set[str]:
@@ -63,7 +64,7 @@ def validate_logins(client):
 		emails.append(row.email)
 	existing = {
 		user.name: user
-		for user in frappe.get_all(
+		for user in scoped.get_all(
 			"User",
 			filters={"name": ("in", emails or [""])},
 			fields=["name", "user_type"],
@@ -89,14 +90,14 @@ def sync_client_logins(client):
 	"""Make a Website User for each new login, and turn logins on and off with the rows."""
 	users = {
 		user.name: user
-		for user in frappe.get_all(
+		for user in scoped.get_all(
 			"User",
 			filters={"name": ("in", [row.email for row in client.logins] or [""])},
 			fields=["name", "enabled"],
 		)
 	}
 	with_role = set(
-		frappe.get_all(
+		scoped.get_all(
 			"Has Role",
 			filters={"parent": ("in", list(users) or [""]), "role": CLIENT_ROLE, "parenttype": "User"},
 			pluck="parent",
@@ -161,6 +162,8 @@ def turn_logins_off(users: set[str], client_name: str):
 			& (other.status != "Left")
 			& (other.name != client_name)
 		)
+		.where(scoped.where(login))
+		.where(scoped.where(other))
 		.run(pluck=True)
 	)
 	for name in users - still_on:
@@ -175,11 +178,11 @@ def sync_client_access(client_name: str):
 	"""Bring a client's access records and User Permissions in line with its team and companies."""
 	client = (
 		frappe.get_doc("Compliance Client", client_name)
-		if frappe.db.exists("Compliance Client", client_name)
+		if scoped.exists("Compliance Client", client_name)
 		else None
 	)
 	wanted = wanted_access(client) if client else set()
-	existing = frappe.get_all(
+	existing = scoped.get_all(
 		ACCESS, filters={"client": client_name}, fields=["name", "user", "company", "made_user_permission"]
 	)
 	have = {(row.user, row.company) for row in existing}
@@ -192,7 +195,7 @@ def sync_client_access(client_name: str):
 
 def add_access(client: str, user: str, company: str):
 	made = False
-	if not frappe.db.exists("User Permission", {"user": user, "allow": "Company", "for_value": company}):
+	if not scoped.exists("User Permission", {"user": user, "allow": "Company", "for_value": company}):
 		permission = frappe.get_doc(
 			{
 				"doctype": "User Permission",
@@ -216,7 +219,7 @@ def remove_access(row):
 	if not row.made_user_permission:
 		return
 	# Another client of the same company may still give this person access to it.
-	still_needed = frappe.db.exists(ACCESS, {"user": row.user, "company": row.company})
+	still_needed = scoped.exists(ACCESS, {"user": row.user, "company": row.company})
 	if still_needed:
 		frappe.db.set_value(ACCESS, still_needed, "made_user_permission", 1)
 		return
@@ -224,7 +227,7 @@ def remove_access(row):
 	if still_holds(row.user, row.company):
 		note_held(row.user, row.company)
 		return
-	permission = frappe.db.get_value(
+	permission = scoped.get_value(
 		"User Permission", {"user": row.user, "allow": "Company", "for_value": row.company}
 	)
 	if permission:
@@ -298,7 +301,7 @@ def clients_overview() -> list[dict]:
 	if not clients:
 		return []
 	# Which companies each client owns; the names only, for clients the person may already read.
-	profiles = frappe.get_all(
+	profiles = scoped.get_all(
 		"Company Compliance Profile",
 		filters={"client": ("in", [row.name for row in clients])},
 		fields=["company", "client"],
@@ -319,7 +322,7 @@ def currency_of(companies: list[str]) -> str:
 	"""The currency late fees are shown in: the first company's, as a client's companies share one."""
 	if not companies:
 		return ""
-	return frappe.get_cached_value("Company", companies[0], "default_currency") or ""
+	return scoped.get_cached_value("Company", companies[0], "default_currency") or ""
 
 
 def client_choices() -> list[dict]:
@@ -329,7 +332,7 @@ def client_choices() -> list[dict]:
 	)
 	companies_of: dict[str, list[str]] = {name: [] for name in names}
 	# Only the link, for clients just read with get_list.
-	for row in frappe.get_all(
+	for row in scoped.get_all(
 		"Company Compliance Profile",
 		filters={"client": ("in", names or [""])},
 		fields=["company", "client"],
@@ -342,7 +345,7 @@ def client_choices() -> list[dict]:
 def client_detail(name: str) -> dict:
 	client = frappe.get_doc("Compliance Client", name)
 	client.check_permission("read")
-	companies = frappe.get_all(
+	companies = scoped.get_all(
 		"Company Compliance Profile",
 		filters={"client": name},
 		fields=["company", "company_type"],
@@ -449,7 +452,7 @@ def allow_company(user: str, company: str):
 	"""Let a person kept to some companies see one more; nothing for anyone not kept to any."""
 	if not is_restricted(user) or CLIENT_ROLE in frappe.get_roles(user):
 		return
-	kept_to = frappe.get_all("User Permission", filters={"user": user, "allow": "Company"}, pluck="for_value")
+	kept_to = scoped.get_all("User Permission", filters={"user": user, "allow": "Company"}, pluck="for_value")
 	if not kept_to or company in kept_to:
 		return
 	# Made by the app for the work the person holds, not by the person assigning it.
@@ -467,7 +470,7 @@ def allow_company(user: str, company: str):
 
 def note_held(user: str, company: str):
 	"""The app's own note that it let this person see the company for the work they hold."""
-	if not frappe.db.exists(HELD, {"user": user, "company": company}):
+	if not scoped.exists(HELD, {"user": user, "company": company}):
 		frappe.get_doc({"doctype": HELD, "user": user, "company": company, "made_user_permission": 1}).insert(
 			ignore_permissions=True
 		)
@@ -487,15 +490,15 @@ def let_go_of_holders(doc, method=None):
 
 
 def release_company(user: str, company: str):
-	held = frappe.db.get_value(
+	held = scoped.get_value(
 		HELD, {"user": user, "company": company}, ["name", "made_user_permission"], as_dict=True
 	)
 	if not held or still_holds(user, company):
 		return
 	frappe.delete_doc(HELD, held.name, ignore_permissions=True)  # the app's own record
 	# The team may give them the company after all; only a permission the app made is removed.
-	if held.made_user_permission and not frappe.db.exists(ACCESS, {"user": user, "company": company}):
-		permission = frappe.db.get_value(
+	if held.made_user_permission and not scoped.exists(ACCESS, {"user": user, "company": company}):
+		permission = scoped.get_value(
 			"User Permission", {"user": user, "allow": "Company", "for_value": company}
 		)
 		if permission:
@@ -512,6 +515,6 @@ def still_holds(user: str, company: str) -> bool:
 		if not company_field:
 			continue
 		for field in fields:
-			if frappe.db.exists(doctype, {**open_filters, company_field: company, field: user}):
+			if scoped.exists(doctype, {**open_filters, company_field: company, field: user}):
 				return True
 	return False

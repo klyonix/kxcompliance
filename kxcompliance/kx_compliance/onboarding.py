@@ -12,6 +12,7 @@ import frappe
 from frappe import _
 from frappe.utils import formatdate, getdate, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.register import APPROVER_ROLES, compliance_companies
 from kxcompliance.kx_compliance.statutory import generate_tasks
 
@@ -40,13 +41,13 @@ def firm_people() -> list[dict]:
 	Names and IDs only: compliance roles do not otherwise read User."""
 	users = sorted(
 		set(
-			frappe.get_all(
+			scoped.get_all(
 				"Has Role", filters={"role": ("in", PEOPLE_ROLES), "parenttype": "User"}, pluck="parent"
 			)
 		)
 		- {"Guest"}
 	)
-	return frappe.get_all(
+	return scoped.get_all(
 		"User",
 		filters={"name": ("in", users or [""]), "enabled": 1, "user_type": "System User"},
 		fields=["name", "full_name"],
@@ -57,7 +58,7 @@ def firm_people() -> list[dict]:
 def options() -> dict:
 	"""What the onboarding screens offer to choose from."""
 	check_can_onboard()
-	with_profile = set(frappe.get_all("Company Compliance Profile", pluck="company"))
+	with_profile = set(scoped.get_all("Company Compliance Profile", pluck="company"))
 	people = firm_people()
 	return {
 		"companies": [{"name": name, "set_up": name in with_profile} for name in compliance_companies()],
@@ -77,7 +78,7 @@ def options() -> dict:
 
 def agm_company_types() -> list[str]:
 	"""Kinds of company with filings that fall due after the AGM (AOC-4, MGT-7, ADT-1)."""
-	templates = frappe.get_all(
+	templates = scoped.get_all(
 		"Compliance Obligation Template",
 		filters={"due_after_event": 1, "event_type": ("is", "not set"), "is_active": 1},
 		pluck="name",
@@ -121,7 +122,7 @@ def company_abbr(name: str) -> str:
 	"""Initials for a new company's abbreviation, numbered if another company has them."""
 	initials = "".join(word[0] for word in re.findall(r"[A-Za-z0-9]+", name)).upper()[:5] or "CO"
 	abbr, number = initials, 1
-	while frappe.db.exists("Company", {"abbr": abbr}):
+	while scoped.exists("Company", {"abbr": abbr}):
 		number += 1
 		abbr = f"{initials}{number}"
 	return abbr
@@ -138,8 +139,9 @@ def make_company(name: str) -> str:
 			frappe.PermissionError,
 		)
 	name = name.strip()
-	if frappe.db.exists("Company", name):
+	if scoped.exists("Company", name):
 		frappe.throw(_("A company named {0} already exists; choose it instead.").format(name))
+	scoped.check_limit("Company", company_name=name)
 	company = frappe.get_doc(
 		{
 			"doctype": "Company",
@@ -201,7 +203,7 @@ def set_up_company(
 def complete(setup: dict) -> dict:
 	"""Set the site up from the onboarding answers; returns what was made."""
 	check_can_onboard()
-	settings = frappe.get_doc(SETTINGS)
+	settings = scoped.settings(for_update=True)
 	if settings.setup_complete:
 		frappe.throw(_("The app is already set up; change these details in the Desk."))
 	account_type = setup.get("account_type")
@@ -211,10 +213,10 @@ def complete(setup: dict) -> dict:
 	if company_type not in select_options("Company Compliance Profile", "company_type"):
 		frappe.throw(_("Choose what kind of company {0} is.").format(setup.get("company") or _("this")))
 	responsible = setup.get("responsible")
-	if not responsible or not frappe.db.exists("User", responsible):
+	if not responsible or not scoped.exists("User", responsible):
 		frappe.throw(_("Choose who is responsible for the filings."))
 	reviewer = setup.get("reviewer") or None
-	if reviewer and not frappe.db.exists("User", reviewer):
+	if reviewer and not scoped.exists("User", reviewer):
 		frappe.throw(_("{0} is not a user on this site.").format(reviewer))
 	registrations = clean_registrations(setup.get("registrations"))
 	agm_dates = (
@@ -230,16 +232,16 @@ def complete(setup: dict) -> dict:
 		company = make_company(setup["new_company"])
 	else:
 		company = setup.get("company")
-		if not company or not frappe.db.exists("Company", company):
+		if not company or not scoped.exists("Company", company):
 			frappe.throw(_("Choose the company, or give the name of a new one."))
-		if frappe.db.exists("Company Compliance Profile", company):
+		if scoped.exists("Company Compliance Profile", company):
 			frappe.throw(_("{0} is already set up for compliance.").format(company))
 
 	client = None
 	if account_type == "CA/CS Firm":
 		client = (
 			client_name
-			if frappe.db.exists("Compliance Client", client_name)
+			if scoped.exists("Compliance Client", client_name)
 			else frappe.get_doc(
 				{
 					"doctype": "Compliance Client",
@@ -262,7 +264,7 @@ def complete(setup: dict) -> dict:
 	# set the app up answers, as a manager does the requests.
 	if not settings.grievance_officer and not settings.grievance_email:
 		settings.grievance_officer = frappe.utils.get_fullname(frappe.session.user)
-		settings.grievance_email = frappe.db.get_value("User", frappe.session.user, "email")
+		settings.grievance_email = scoped.get_value("User", frappe.session.user, "email")
 	settings.setup_complete = 1
 	settings.save()
 	return {"company": company, "client": client, "obligations": obligations, "tasks": tasks}

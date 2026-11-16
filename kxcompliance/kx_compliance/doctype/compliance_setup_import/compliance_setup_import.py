@@ -8,6 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cstr
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.register import get_settings
 from kxcompliance.kx_compliance.setup_import import check_rows, read_sheet, set_up
 
@@ -29,7 +30,7 @@ class ComplianceSetupImport(Document):
 			frappe.throw(
 				_("This import is {0}; start a new one to check another sheet.").format(_(self.status))
 			)
-		files = frappe.get_all(
+		files = scoped.get_all(
 			"File",
 			filters={"attached_to_doctype": self.doctype, "attached_to_name": self.name},
 			fields=["name", "file_name", "file_url"],

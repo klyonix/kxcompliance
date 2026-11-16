@@ -10,6 +10,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, date_diff, escape_html, formatdate, getdate, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, escalate_after_days, get_settings
 from kxcompliance.kx_compliance.reminders import (
 	already_sent,
@@ -83,7 +84,7 @@ def task_key(template: str, company: str, registration: str | None, period_end: 
 def extensions_for(templates: list[str]) -> list[frappe._dict]:
 	if not templates:
 		return []
-	return frappe.get_all(
+	return scoped.get_all(
 		"Compliance Due Date Extension",
 		filters={"obligation_template": ("in", list(set(templates)))},
 		fields=["name", "obligation_template", "periods_ending_from", "periods_ending_to", "new_due_date"],
@@ -171,7 +172,7 @@ def generate_tasks(company: str | None = None, today: date | None = None) -> int
 	filters = {"company": company} if company else {}
 	return sum(
 		generate_for_profile(name, today)
-		for name in frappe.get_all("Company Compliance Profile", filters=filters, pluck="name")
+		for name in scoped.get_all("Company Compliance Profile", filters=filters, pluck="name")
 	)
 
 
@@ -181,7 +182,7 @@ def generate_for_profile(profile_name: str, today: date) -> int:
 	if not candidates:
 		return 0
 	existing = set(
-		frappe.get_all(
+		scoped.get_all(
 			"Compliance Task",
 			filters={"task_key": ("in", [values["task_key"] for values in candidates])},
 			pluck="task_key",
@@ -205,7 +206,7 @@ def generate_for_profile(profile_name: str, today: date) -> int:
 
 def run_daily():
 	today = getdate(nowdate())
-	for name in frappe.get_all("Company Compliance Profile", pluck="name"):
+	for name in scoped.get_all("Company Compliance Profile", pluck="name"):
 		run_for_item(name, lambda name=name: generate_for_profile(name, today))
 	refresh_overdue(today)
 	if not get_settings().enabled:
@@ -215,7 +216,7 @@ def run_daily():
 
 
 def refresh_overdue(today: date):
-	open_tasks = frappe.get_all(
+	open_tasks = scoped.get_all(
 		"Compliance Task",
 		filters={"status": ("not in", CLOSED_TASK_STATUSES)},
 		fields=["name", "is_overdue", "effective_due_date"],
@@ -238,7 +239,7 @@ TASK_FIELDS = [
 
 
 def send_task_reminders(today: date):
-	tasks = frappe.get_all(
+	tasks = scoped.get_all(
 		"Compliance Task",
 		filters={"status": ("not in", CLOSED_TASK_STATUSES), "effective_due_date": (">=", today)},
 		fields=TASK_FIELDS,
@@ -271,7 +272,7 @@ def remind_task(task, days: int, key: str):
 
 def send_task_escalations(today: date):
 	cut_off = add_days(today, -escalate_after_days())
-	tasks = frappe.get_all(
+	tasks = scoped.get_all(
 		"Compliance Task",
 		filters={"status": ("not in", CLOSED_TASK_STATUSES), "effective_due_date": ("<=", cut_off)},
 		fields=TASK_FIELDS,

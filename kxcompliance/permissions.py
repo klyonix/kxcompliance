@@ -15,6 +15,8 @@ the firm's remarks and notes, which are at permission level 1.
 import frappe
 from frappe.utils.caching import request_cache
 
+from kxcompliance import scoped
+
 UNRESTRICTED_ROLES = frozenset(
 	{"Administrator", "System Manager", "Compliance Manager", "Compliance Auditor"}
 )
@@ -28,7 +30,7 @@ def is_restricted(user: str) -> bool:
 def client_companies_of(user: str) -> tuple[str, ...]:
 	"""The companies a person sees in full because they are on the client's team."""
 	return tuple(
-		sorted(set(frappe.get_all("Compliance Client Access", filters={"user": user}, pluck="company")))
+		sorted(set(scoped.get_all("Compliance Client Access", filters={"user": user}, pluck="company")))
 	)
 
 
@@ -124,7 +126,7 @@ def has_legal_date_permission(doc, ptype: str | None = None, user: str | None = 
 	if not (doc.reference_doctype and doc.reference_name):
 		return True
 	company_field = "applicant" if doc.reference_doctype == "Trademark" else "company"
-	holders = frappe.db.get_value(
+	holders = scoped.get_value(
 		doc.reference_doctype,
 		doc.reference_name,
 		["responsible", "reviewer", f"{company_field} as company"],
@@ -139,7 +141,7 @@ def has_renewal_permission(doc, ptype: str | None = None, user: str | None = Non
 		return True
 	if not doc.compliance_item:
 		return True
-	holders = frappe.db.get_value(
+	holders = scoped.get_value(
 		"Compliance Item", doc.compliance_item, ["responsible", "reviewer", "company"], as_dict=True
 	)
 	return bool(holders) and holds_or_serves(holders, user, holders.company)

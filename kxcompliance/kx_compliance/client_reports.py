@@ -12,6 +12,7 @@ and records they may read, in a handful of queries however many clients there ar
 import frappe
 from frappe.utils import add_days, add_months, flt, getdate, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.doctype.compliance_item.compliance_item import DSC_TYPE
 from kxcompliance.kx_compliance.overview import OPEN_CASE_STATUSES
 
@@ -47,7 +48,7 @@ def companies_by_client(clients: list[str]) -> dict[str, str]:
 	if not clients:
 		return {}
 	# Only the link, for clients the caller has already read with get_list.
-	rows = frappe.get_all(
+	rows = scoped.get_all(
 		"Company Compliance Profile", filters={"client": ("in", clients)}, fields=["company", "client"]
 	)
 	return {row.company: row.client for row in rows}

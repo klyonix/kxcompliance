@@ -20,6 +20,7 @@ from frappe.rate_limiter import rate_limit
 from frappe.utils import add_days, get_datetime, get_url, getdate, nowdate
 from frappe.utils.password import get_decrypted_password
 
+from kxcompliance import scoped
 from kxcompliance.api import can_open_app, has_app_access, is_client_login
 from kxcompliance.kx_compliance.ical import calendar
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, get_settings, is_approver
@@ -45,7 +46,7 @@ def check_may_have_feed():
 
 def own_feed():
 	"""The signed-in person's feed record, if they have one."""
-	name = frappe.db.exists(FEED, {"user": frappe.session.user})
+	name = scoped.exists(FEED, {"user": frappe.session.user})
 	return frappe.get_doc(FEED, name) if name else None
 
 
@@ -101,8 +102,8 @@ def feed(token: str):
 	"""The calendar itself, for a calendar app holding the secret link."""
 	if not isinstance(token, str) or len(token) < 32:
 		raise frappe.PermissionError
-	record = frappe.db.get_value(FEED, {"token_hash": digest(token)}, ["user", "scope"], as_dict=True)
-	if not record or not frappe.db.get_value("User", record.user, "enabled"):
+	record = scoped.get_value(FEED, {"token_hash": digest(token)}, ["user", "scope"], as_dict=True)
+	if not record or not scoped.get_value("User", record.user, "enabled"):
 		raise frappe.PermissionError
 	previous = frappe.session.user
 	try:

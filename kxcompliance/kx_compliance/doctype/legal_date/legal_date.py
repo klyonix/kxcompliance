@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.kx_compliance.legal import REFERENCE_COMPANIES, REFERENCE_TITLES, refresh_next_date
 
 OUTCOME_STATUSES = ("Done", "Adjourned")
@@ -22,7 +23,7 @@ class LegalDate(Document):
 					", ".join(REFERENCE_TITLES), self.reference_doctype
 				)
 			)
-		reference = frappe.db.get_value(
+		reference = scoped.get_value(
 			self.reference_doctype,
 			self.reference_name,
 			[

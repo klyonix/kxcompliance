@@ -12,6 +12,7 @@ from frappe.handler import ALLOWED_MIMETYPES
 from frappe.query_builder.functions import Count
 from frappe.utils import add_days, cint, get_datetime, getdate, now_datetime, nowdate
 
+from kxcompliance import scoped
 from kxcompliance.install import CLIENT_ROLE
 from kxcompliance.kx_compliance import (
 	app_settings,
@@ -744,7 +745,7 @@ def statement_pdf(client: str, from_date: str | None = None, to_date: str | None
 
 def check_billed_client(client: str):
 	"""The app's people bill only clients they may read; accounts staff bill any of the firm's."""
-	if not frappe.db.exists("Compliance Client", client):
+	if not scoped.exists("Compliance Client", client):
 		frappe.throw(_("Client {0} does not exist.").format(client), frappe.DoesNotExistError)
 	if has_app_access():
 		frappe.get_doc("Compliance Client", client).check_permission("read")
@@ -755,7 +756,7 @@ def receipt_pdf(name: str):
 	"""A payment's receipt: for those who bill (an advance's too), and for the client who paid."""
 	own = is_client_login()
 	if own:
-		entry = frappe.get_doc("Payment Entry", name) if frappe.db.exists("Payment Entry", name) else None
+		entry = frappe.get_doc("Payment Entry", name) if scoped.exists("Payment Entry", name) else None
 		bills = [
 			row.reference_name
 			for row in (entry.references if entry else [])
@@ -797,7 +798,7 @@ def billing_bill(name: str):
 def own_bill(name: str):
 	"""A bill sent to the client whose login this is; its login reads it here, as it may not read
 	ERPNext's invoices."""
-	bill = frappe.get_doc("Sales Invoice", name) if frappe.db.exists("Sales Invoice", name) else None
+	bill = frappe.get_doc("Sales Invoice", name) if scoped.exists("Sales Invoice", name) else None
 	if (
 		not bill
 		or bill.docstatus != 1
@@ -817,7 +818,7 @@ def check_app_access_or_accounts():
 
 
 def billing_company_set() -> bool:
-	return bool(frappe.get_cached_doc("KX Compliance Settings").billing_company)
+	return bool(scoped.settings().billing_company)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -832,7 +833,7 @@ def add_one_off_filing(filing: dict) -> dict:
 	company, template = values.get("company"), values.get("obligation_template")
 	if company not in app_companies():
 		frappe.throw(_("You cannot add filings for {0}.").format(company), frappe.PermissionError)
-	if not template or not frappe.db.get_value("Compliance Obligation Template", template, "is_active"):
+	if not template or not scoped.get_value("Compliance Obligation Template", template, "is_active"):
 		frappe.throw(
 			_("Choose a return from the obligation library, not {0}.").format(template or _("nothing"))
 		)
@@ -847,7 +848,7 @@ def add_one_off_filing(filing: dict) -> dict:
 		)
 	companies.check_person(responsible, _("Responsible"))
 	companies.check_person(values.get("reviewer"), _("Reviewer"))
-	reviewer = values.get("reviewer") or frappe.db.get_value(
+	reviewer = values.get("reviewer") or scoped.get_value(
 		"Company Compliance Profile", company, "default_reviewer"
 	)
 	doc = frappe.get_doc(
@@ -940,7 +941,7 @@ def read_parties(party_type: str, **query) -> list[dict]:
 	if frappe.has_permission(party_type, "read"):
 		return frappe.get_list(party_type, **query)
 	# Compliance roles do not read Customer or Supplier; the check gives them names and groups only.
-	return frappe.get_all(party_type, **query)
+	return scoped.get_all(party_type, **query)
 
 
 @frappe.whitelist(methods=["GET"])
@@ -974,7 +975,7 @@ def check_party(party_type: str, party: str) -> dict:
 	check_party_type(party_type)
 	if frappe.has_permission(party_type, "read"):
 		frappe.has_permission(party_type, "read", doc=party, throw=True)
-	details = frappe.db.get_value(
+	details = scoped.get_value(
 		party_type,
 		party,
 		[PARTY_NAME_FIELDS[party_type], GROUP_FIELDS[party_type]],
@@ -1038,7 +1039,7 @@ def full_names(users: str) -> dict[str, str]:
 	if not wanted:
 		return {}
 	# Names only, for people this app already shows by ID; Compliance roles do not read User.
-	rows = frappe.get_all("User", filters={"name": ("in", wanted)}, fields=["name", "full_name"])
+	rows = scoped.get_all("User", filters={"name": ("in", wanted)}, fields=["name", "full_name"])
 	return {row.name: row.full_name or row.name for row in rows}
 
 
@@ -1127,7 +1128,7 @@ def matching_parties(party_type: str, words: list[str], count: bool = False):
 	table = frappe.qb.DocType(party_type)
 	if frappe.has_permission(party_type, "read"):
 		# Someone who reads customers or suppliers sees only those their permissions allow.
-		query = frappe.qb.get_query(
+		query = scoped.get_query(
 			party_type,
 			fields=[{"COUNT": "*", "as": "count"}]
 			if count
@@ -1148,7 +1149,7 @@ def matching_parties(party_type: str, words: list[str], count: bool = False):
 				]
 			)
 		)
-	query = query.where(table.disabled == 0)
+	query = query.where(table.disabled == 0).where(scoped.where(table))
 	for word in words:
 		pattern = search_like(word)
 		query = query.where((table.name.like(pattern)) | (table[name_field].like(pattern)))
@@ -1161,11 +1162,11 @@ def event_types(company: str) -> list[dict]:
 	check_app_access()
 	if company not in app_companies():
 		frappe.throw(_("You cannot record events for {0}.").format(company), frappe.PermissionError)
-	company_type = frappe.db.get_value("Company Compliance Profile", company, "company_type")
+	company_type = scoped.get_value("Company Compliance Profile", company, "company_type")
 	names = event_types_for(company_type) if company_type else []
 	if not names:
 		return []
-	return frappe.get_all(
+	return scoped.get_all(
 		"Compliance Event Type",
 		filters={"name": ("in", names)},
 		fields=["name", "description"],
@@ -1289,7 +1290,7 @@ def documents(doctype: str, name: str) -> list[dict]:
 		frappe.throw(_("Documents are not shown for {0}.").format(doctype), frappe.PermissionError)
 	frappe.get_doc(doctype, name).check_permission("read")
 	# A client's login may list only files it uploaded itself; reading the record is what counts.
-	return frappe.get_all(
+	return scoped.get_all(
 		"File",
 		filters={"attached_to_doctype": doctype, "attached_to_name": name},
 		fields=["name", "file_name", "file_url", "owner", "creation"],
@@ -1653,7 +1654,7 @@ def licence_rule_options() -> dict:
 	# Group names only, to choose from: a Compliance Manager is not given ERPNext's selling and
 	# buying masters, and the rule they save is governed by Licence Requirement's own permissions.
 	groups = {
-		key: frappe.get_all(doctype, pluck="name", order_by="name asc", limit=500)
+		key: scoped.get_all(doctype, pluck="name", order_by="name asc", limit=500)
 		for key, doctype in (
 			("item_groups", "Item Group"),
 			("customer_groups", "Customer Group"),
@@ -1737,7 +1738,7 @@ def app_companies() -> list[str]:
 
 
 def boot() -> dict:
-	settings = frappe.get_cached_doc("KX Compliance Settings")
+	settings = scoped.settings()
 	companies = app_companies() if has_app_access() or is_client_login() else []
 	default = frappe.defaults.get_user_default("Company") or ""
 	return {
@@ -1764,7 +1765,7 @@ def boot() -> dict:
 		"lang": frappe.local.lang or "en",
 		# A firm checks its clients' sales and purchases only for the clients it switches on.
 		"licence_check_on": settings.account_type != "CA/CS Firm"
-		or bool(frappe.db.exists("Compliance Client", {"licence_check": 1})),
+		or bool(scoped.exists("Compliance Client", {"licence_check": 1})),
 		# Managers are taken through onboarding until the site is set up.
 		"setup_needed": not settings.setup_complete and is_approver(),
 		# Where the browser reaches Frappe's realtime server in development; behind a proxy in

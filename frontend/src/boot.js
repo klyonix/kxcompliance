@@ -33,6 +33,10 @@ export const boot = {
 	// [{ text, theme, link_label, link_url }], and links on Account, [{ label, url, icon }].
 	notices: window.notices || [],
 	accountLinks: window.account_links || [],
+	// Front-end plug-ins from other apps, [{ script, style }], loaded before the app starts (plugins.js).
+	plugins: window.plugins || [],
+	// Set by another app that keeps this person off the Desk.
+	hideDesk: Boolean(window.hide_desk),
 };
 
 const COMPLIANCE_ROLES = [
@@ -50,8 +54,8 @@ export const isClientLogin = () => boot.roles.includes("Compliance Client") && !
 // Sales and Purchase Users without a compliance role see only the Licence Check.
 export const checksOnly = () => !isStaff() && !isClientLogin();
 
-// Client logins have no Desk.
-export const mayUseDesk = () => !isClientLogin();
+// Client logins have no Desk, nor anyone another app keeps off it.
+export const mayUseDesk = () => !isClientLogin() && !boot.hideDesk;
 
 export const isManager = () =>
 	boot.roles.includes("Compliance Manager") || boot.roles.includes("System Manager");

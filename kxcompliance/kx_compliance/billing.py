@@ -574,12 +574,15 @@ def check_client_allowed(client: str | None):
 		)
 
 
-def check_biller():
+def check_biller(needs_setup: bool = True):
 	"""Bills are a firm's, made by those ERPNext lets make invoices: its Accounts Users and
-	Managers. ERPNext checks the accounts a bill posts to as well, so no other way is offered."""
+	Managers. ERPNext checks the accounts a bill posts to as well, so no other way is offered.
+
+	Making a bill needs Billing setup done; reading the lists does not (they are empty until then),
+	so Client billing opens before the firm has set billing up."""
 	if get_settings().account_type != FIRM:
 		frappe.throw(_("Billing clients is for CA/CS firms."), frappe.PermissionError)
-	if not get_settings().billing_company:
+	if needs_setup and not get_settings().billing_company:
 		frappe.throw(_("Set billing up first, in Settings → Billing setup."))
 	if not frappe.has_permission("Sales Invoice", "create"):
 		frappe.throw(
@@ -1547,7 +1550,7 @@ def bill_filters(view: str, client: str | None, text: str | None) -> tuple[list,
 
 def bills(view: str, client: str | None, text: str | None, start: int, limit: int) -> dict:
 	"""One page of the firm's bills in a tab, newest first, with how many there are in all."""
-	check_biller()
+	check_biller(needs_setup=False)
 	filters, matching = bill_filters(view, client, text)
 	rows = frappe.get_list(
 		"Sales Invoice",
@@ -1567,7 +1570,7 @@ def bills(view: str, client: str | None, text: str | None, start: int, limit: in
 
 def bill_counts(client: str | None, text: str | None) -> dict:
 	"""Each tab's count and what is still due in it."""
-	check_biller()
+	check_biller(needs_setup=False)
 	counts = {}
 	for view in BILL_VIEWS:
 		filters, matching = bill_filters(view, client, text)
@@ -1800,7 +1803,7 @@ def billing_summary(client: str | None = None) -> dict:
 	most; and what is filed but not billed."""
 	from kxcompliance.kx_compliance.client_reports import financial_year
 
-	check_biller()
+	check_biller(needs_setup=False)
 	if client:
 		check_client_allowed(client)
 	elif billable_clients() is not None:
@@ -2684,7 +2687,7 @@ def advance_held(customer: str | None) -> float:
 def payments(client: str | None, text: str | None, start: int, limit: int) -> dict:
 	"""One page of the payments the firm has received, newest first, with each one's client, TDS
 	and the bills it settled; and how many there are and how much they came to."""
-	check_biller()
+	check_biller(needs_setup=False)
 	filters = [
 		["company", "=", get_settings().billing_company],
 		["payment_type", "=", "Receive"],

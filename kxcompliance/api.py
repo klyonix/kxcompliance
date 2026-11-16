@@ -1818,7 +1818,7 @@ def boot() -> dict:
 	return {
 		"user": frappe.session.user,
 		"user_fullname": frappe.utils.get_fullname(frappe.session.user),
-		"user_image": frappe.db.get_value("User", frappe.session.user, "user_image") or "",
+		"user_image": scoped.get_value("User", frappe.session.user, "user_image") or "",
 		"roles": sorted((APP_ROLES | set(CHECK_ROLES) | {CLIENT_ROLE}) & set(frappe.get_roles())),
 		"party_types": party_types_to_check(),
 		"app_name": settings.app_name or "KlyONIX Compliance",

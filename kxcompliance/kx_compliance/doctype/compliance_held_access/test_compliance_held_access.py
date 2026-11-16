@@ -106,7 +106,7 @@ class TestComplianceHeldAccess(IntegrationTestCase):
 	def test_off_the_team_but_holding_work_keeps_the_company_until_it_is_done(self):
 		name = task_at(TEST_COMPANY, HOLDER)
 		# Taken off the client's team while still holding its filing.
-		ours = frappe.get_doc("Compliance Client", "Held Access Our Client")
+		ours = frappe.get_doc("Compliance Client", {"client_name": "Held Access Our Client"})
 		ours.team = [row for row in ours.team if row.user != HOLDER]
 		ours.append("team", {"user": OTHER_HOLDER})
 		ours.save()

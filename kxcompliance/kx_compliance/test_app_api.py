@@ -30,6 +30,8 @@ from kxcompliance.kx_compliance.test_utils import (
 	OTHER_HOLDER,
 	REVIEWER,
 	TEST_COMPANY,
+	app_settings,
+	change_app_settings,
 	make_company,
 	make_item,
 	make_item_type,
@@ -407,16 +409,14 @@ class TestAppApi(IntegrationTestCase):
 			self.assertNotIn("people", search("compliance"))
 
 	def test_the_manifest_carries_the_sites_name_and_logo(self):
-		with self.change_settings(
-			"KX Compliance Settings", app_name="Acme Compliance", app_logo="/files/acme.png"
-		):
+		with change_app_settings(app_name="Acme Compliance", app_logo="/files/acme.png"):
 			manifest = json.loads(compliance_manifest.get_context(frappe._dict())["manifest"])
 		self.assertEqual(manifest["name"], "Acme Compliance")
 		self.assertEqual(manifest["start_url"], "/compliance")
 		self.assertEqual(manifest["icons"][0]["src"], "/files/acme.png")
 
 	def test_the_app_logo_must_be_public(self):
-		settings = frappe.get_doc("KX Compliance Settings")
+		settings = app_settings()
 		settings.app_logo = "/private/files/logo.png"
 		with self.assertRaisesRegex(frappe.ValidationError, "public file"):
 			settings.save()

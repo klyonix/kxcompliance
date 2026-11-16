@@ -139,7 +139,7 @@ def firm_company(name: str) -> str:
 	if client:
 		frappe.throw(
 			_("{0} is a company of the client {1}; give the firm's own name for its bills.").format(
-				name, client
+				name, client_title(client)
 			)
 		)
 	return name

@@ -130,8 +130,8 @@ class TestCalendarFeed(IntegrationTestCase):
 	def test_a_clients_login_sees_its_filings(self):
 		sunrise = with_login()
 		profile(TEST_COMPANY, sunrise.name)
-		client("Moonlight Traders")
-		profile(OTHER_COMPANY, "Moonlight Traders")
+		moonlight = client("Moonlight Traders").name
+		profile(OTHER_COMPANY, moonlight)
 		outside = task(OTHER_COMPANY)
 		with self.set_user(CLIENT_LOGIN):
 			names = {event["uid"].split("@")[0] for event in events_for(CLIENT_LOGIN, "My Work")}

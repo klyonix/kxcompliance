@@ -10,8 +10,11 @@ from kxcompliance.kx_compliance.test_utils import (
 	MANAGER,
 	REVIEWER,
 	TEST_COMPANY,
+	app_setting,
+	change_app_settings,
 	make_company,
 	make_users,
+	set_app_settings,
 )
 
 # These tests build their own records; skip ERPNext's generated ones.
@@ -46,7 +49,7 @@ class TestOnboarding(IntegrationTestCase):
 
 	def setUp(self):
 		# Each test starts from a site that has not been set up, without the company it makes.
-		frappe.db.set_single_value(SETTINGS, {"setup_complete": 0, "account_type": ""})
+		set_app_settings({"setup_complete": 0, "account_type": ""})
 		if frappe.db.exists("Company Compliance Profile", NEW_COMPANY):
 			frappe.delete_doc("Company Compliance Profile", NEW_COMPANY, force=True)
 		frappe.db.delete("Compliance Task", {"company": NEW_COMPANY})
@@ -74,7 +77,7 @@ class TestOnboarding(IntegrationTestCase):
 	def test_an_organisation_gets_its_company_calendar_and_first_filings(self):
 		# A System Manager may create the company as part of onboarding.
 		with (
-			self.change_settings(SETTINGS, generation_horizon_days=45),
+			change_app_settings(generation_horizon_days=45),
 			self.set_user("Administrator"),
 			self.freeze_time("2026-11-15"),
 		):
@@ -89,7 +92,7 @@ class TestOnboarding(IntegrationTestCase):
 		self.assertEqual((profile.default_responsible, profile.default_reviewer), (HOLDER, REVIEWER))
 		templates = {row.obligation_template for row in profile.obligations}
 		self.assertTrue({"GSTR-3B (Monthly)", "TDS/TCS Payment", "AOC-4 (Financial Statements)"} <= templates)
-		self.assertEqual(frappe.db.get_single_value(SETTINGS, "account_type"), "Organisation")
+		self.assertEqual(app_setting("account_type"), "Organisation")
 		with self.set_user("Administrator"):
 			self.assertFalse(boot()["setup_needed"])
 			with self.assertRaisesRegex(frappe.ValidationError, "already set up"):
@@ -99,7 +102,7 @@ class TestOnboarding(IntegrationTestCase):
 		# Set up in November: the AGM for the year ended March 2026 was on 30 September, so MGT-7
 		# (60 days after) is due on 29 November and made; AOC-4 fell due in October, before setup.
 		with (
-			self.change_settings(SETTINGS, generation_horizon_days=45),
+			change_app_settings(generation_horizon_days=45),
 			self.set_user("Administrator"),
 			self.freeze_time("2026-11-15"),
 		):
@@ -129,11 +132,13 @@ class TestOnboarding(IntegrationTestCase):
 		self.assertEqual(due.get("MGT-7 / MGT-7A (Annual Return)"), "2026-11-29")
 
 	def test_whoever_sets_the_app_up_is_the_grievance_officer_until_one_is_named(self):
-		frappe.db.set_single_value(SETTINGS, {"grievance_officer": None, "grievance_email": None})
+		set_app_settings({"grievance_officer": None, "grievance_email": None})
+		if frappe.db.exists("Company Compliance Profile", TEST_COMPANY):
+			frappe.delete_doc("Company Compliance Profile", TEST_COMPANY, force=True)
 		with self.set_user(MANAGER), self.freeze_time("2026-11-15"):
 			complete_onboarding(answers(new_company=None, company=TEST_COMPANY))
-		self.assertEqual(frappe.db.get_single_value(SETTINGS, "grievance_email"), MANAGER)
-		self.assertTrue(frappe.db.get_single_value(SETTINGS, "grievance_officer"))
+		self.assertEqual(app_setting("grievance_email"), MANAGER)
+		self.assertTrue(app_setting("grievance_officer"))
 		frappe.delete_doc("Company Compliance Profile", TEST_COMPANY, force=True)
 
 	def test_an_agm_date_outside_the_year_is_refused(self):
@@ -141,10 +146,10 @@ class TestOnboarding(IntegrationTestCase):
 			for held in ("2026-03-15", "2026-12-01"):
 				with self.assertRaisesRegex(frappe.ValidationError, "year ended"):
 					complete_onboarding(answers(agm_date=held))
-		self.assertFalse(frappe.db.get_single_value(SETTINGS, "setup_complete"))
+		self.assertFalse(app_setting("setup_complete"))
 
 	def test_a_firm_names_the_app_after_itself(self):
-		frappe.db.set_single_value(SETTINGS, "app_name", "KlyONIX Compliance")
+		set_app_settings({"app_name": "KlyONIX Compliance"})
 		with self.set_user(MANAGER), self.freeze_time("2026-11-15"):
 			complete_onboarding(
 				answers(
@@ -155,11 +160,11 @@ class TestOnboarding(IntegrationTestCase):
 					company="Compliance Test Company",
 				)
 			)
-		self.assertEqual(frappe.db.get_single_value(SETTINGS, "account_type"), "CA/CS Firm")
-		self.assertEqual(frappe.db.get_single_value(SETTINGS, "app_name"), "Rao & Associates")
+		self.assertEqual(app_setting("account_type"), "CA/CS Firm")
+		self.assertEqual(app_setting("app_name"), "Rao & Associates")
+		client = frappe.db.get_value("Company Compliance Profile", "Compliance Test Company", "client")
 		self.assertEqual(
-			frappe.db.get_value("Company Compliance Profile", "Compliance Test Company", "client"),
-			"Onboarding Test Group",
+			frappe.db.get_value("Compliance Client", client, "client_name"), "Onboarding Test Group"
 		)
 		frappe.delete_doc("Company Compliance Profile", "Compliance Test Company", force=True)
 
@@ -177,7 +182,7 @@ class TestOnboarding(IntegrationTestCase):
 				)
 			with self.assertRaisesRegex(frappe.ValidationError, "organisation or a CA/CS firm"):
 				complete_onboarding(answers(account_type="Club"))
-		self.assertFalse(frappe.db.get_single_value(SETTINGS, "setup_complete"))
+		self.assertFalse(app_setting("setup_complete"))
 
 
 APP_COMPANY = "App Test Traders Private Limited"

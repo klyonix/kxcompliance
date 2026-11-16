@@ -5,7 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import save_settings, settings_options
-from kxcompliance.kx_compliance.test_utils import HOLDER, MANAGER, make_company, make_users
+from kxcompliance.kx_compliance.test_utils import HOLDER, MANAGER, app_setting, make_company, make_users
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User", "Email Account", "Email Template"]
@@ -29,7 +29,7 @@ class TestKXComplianceSettings(IntegrationTestCase):
 				{"enabled": 1, "due_soon_days": 45, "digest_day": "Friday", "app_name": "Rao & Associates"}
 			)
 		self.assertEqual((saved["due_soon_days"], saved["digest_day"]), (45, "Friday"))
-		self.assertEqual(frappe.db.get_single_value(SETTINGS, "app_name"), "Rao & Associates")
+		self.assertEqual(app_setting("app_name"), "Rao & Associates")
 
 	def test_only_the_screens_fields_and_sensible_numbers_are_taken(self):
 		with self.set_user(MANAGER):

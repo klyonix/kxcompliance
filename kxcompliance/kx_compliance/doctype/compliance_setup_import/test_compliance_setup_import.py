@@ -135,9 +135,15 @@ class TestComplianceSetupImport(IntegrationTestCase):
 			setup.run_import()
 		self.assertEqual((setup.status, setup.made), ("Done", 2))
 		profile = frappe.get_doc("Company Compliance Profile", NEW_COMPANY)
-		self.assertEqual((profile.client, profile.default_responsible), ("Bulk Test Group", HOLDER))
+		self.assertEqual(
+			(
+				frappe.db.get_value("Compliance Client", profile.client, "client_name"),
+				profile.default_responsible,
+			),
+			("Bulk Test Group", HOLDER),
+		)
 		self.assertEqual(len(profile.registrations), 3)
-		client = frappe.get_doc("Compliance Client", "Bulk Test Group")
+		client = frappe.get_doc("Compliance Client", profile.client)
 		self.assertEqual([member.user for member in client.team], [HOLDER])
 		self.assertTrue(frappe.db.exists("Compliance Task", {"company": NEW_COMPANY}))
 		with self.assertRaises(frappe.ValidationError):

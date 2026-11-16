@@ -28,6 +28,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	OTHER_HOLDER,
 	REVIEWER,
 	TEST_COMPANY,
+	change_app_settings,
 	make_company,
 	make_item,
 	make_item_type,
@@ -202,7 +203,7 @@ class TestPeople(IntegrationTestCase):
 		self.assertIsNone(page["role"])
 
 	def test_the_checklist_ticks_itself_off_and_can_be_hidden(self):
-		with self.change_settings(SETTINGS, enabled=0, email_account=None):
+		with change_app_settings(enabled=0, email_account=None):
 			with self.set_user(MANAGER):
 				result = getting_started_checklist()
 				steps = {step["key"]: step["done"] for step in result["steps"]}

@@ -25,6 +25,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	MANAGER,
 	OTHER_HOLDER,
 	TEST_COMPANY,
+	change_app_settings,
 	make_company,
 	make_users,
 )
@@ -116,8 +117,8 @@ class TestDocumentRequest(IntegrationTestCase):
 			"User Permission",
 			{"user": ("in", [HOLDER, OTHER_HOLDER, MANAGER, CLIENT_LOGIN]), "allow": "Company"},
 		)
-		sunrise = with_login()
-		profile(TEST_COMPANY, sunrise.name)
+		self.sunrise = with_login().name
+		profile(TEST_COMPANY, self.sunrise)
 		self.filing = task(TEST_COMPANY, responsible=HOLDER)
 
 	def test_asking_from_a_filing_tells_the_clients_logins(self):
@@ -125,7 +126,7 @@ class TestDocumentRequest(IntegrationTestCase):
 			request = ask(compliance_task=self.filing)
 		self.assertEqual(
 			(request.company, request.client, request.requested_by, request.status),
-			(TEST_COMPANY, "Sunrise Group", HOLDER, "Requested"),
+			(TEST_COMPANY, self.sunrise, HOLDER, "Requested"),
 		)
 		self.assertTrue(notified(CLIENT_LOGIN, request.name))
 		profile(OTHER_COMPANY)
@@ -136,7 +137,7 @@ class TestDocumentRequest(IntegrationTestCase):
 		# A client without a login, but with a contact email the app can write to.
 		frappe.db.delete("Compliance Client Login")
 		frappe.db.set_value(
-			"Compliance Client", "Sunrise Group", "contact_email", "accounts@sunrise.example.com"
+			"Compliance Client", self.sunrise, "contact_email", "accounts@sunrise.example.com"
 		)
 		frappe.db.delete("User Permission", {"user": CLIENT_LOGIN, "allow": "Company"})
 		with (
@@ -149,7 +150,7 @@ class TestDocumentRequest(IntegrationTestCase):
 			with self.set_user(HOLDER):
 				request = ask(compliance_task=self.filing)
 			asked_by_email = sendmail.call_args.kwargs
-			with self.change_settings(SETTINGS, enabled=1), self.freeze_time("2026-11-08"):
+			with change_app_settings(enabled=1), self.freeze_time("2026-11-08"):
 				send_reminders(frappe.utils.getdate("2026-11-08"))
 		self.assertEqual(asked_by_email["recipients"], ["accounts@sunrise.example.com"])
 		# Filed on the request, so the contact's reply with the file comes back to it.
@@ -197,7 +198,7 @@ class TestDocumentRequest(IntegrationTestCase):
 		self.assertEqual(len(made), 1)
 		self.assertEqual(
 			(made[0].title, made[0].client, made[0].requested_by),
-			("October purchase register", "Sunrise Group", HOLDER),
+			("October purchase register", self.sunrise, HOLDER),
 		)
 		self.assertTrue(
 			notified(
@@ -321,7 +322,7 @@ class TestDocumentRequest(IntegrationTestCase):
 				order_by="creation asc",
 			)
 
-		with self.change_settings(SETTINGS, enabled=1):
+		with change_app_settings(enabled=1):
 			for day in ("2026-11-07", "2026-11-08", "2026-11-08", "2026-11-10", "2026-11-11", "2026-11-17"):
 				with self.freeze_time(day):
 					refresh_overdue(frappe.utils.getdate(day))

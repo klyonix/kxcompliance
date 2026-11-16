@@ -8,7 +8,7 @@ from kxcompliance.api import filing_penalty
 from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import task
 from kxcompliance.kx_compliance.doctype.legal_case.test_legal_case import make_case
 from kxcompliance.kx_compliance.obligation_library import sync_standard_templates
-from kxcompliance.kx_compliance.score import company_scores, late_fee
+from kxcompliance.kx_compliance.score import company_scores, late_fee, rules_for
 from kxcompliance.kx_compliance.test_utils import (
 	TEST_COMPANY,
 	make_company,
@@ -95,11 +95,18 @@ class TestComplianceScore(IntegrationTestCase):
 			frappe.db.set_value("Compliance Task", task(TEST_COMPANY), "is_overdue", 1)
 		self.assertEqual(company_scores([TEST_COMPANY])[TEST_COMPANY]["score"], 0)
 
-	def test_the_library_keeps_a_firms_own_figures(self):
-		frappe.db.set_value(TEMPLATE, "DIR-3 KYC", {"late_fee_flat": 7500, "penalty_set_by_firm": 1})
+	def test_a_firms_own_figures_outlast_library_updates(self):
+		frappe.get_doc(
+			{
+				"doctype": "Compliance Penalty Figures",
+				"obligation_template": "DIR-3 KYC",
+				"late_fee_flat": 7500,
+			}
+		).insert()
 		frappe.db.set_value(TEMPLATE, "AOC-4 (Financial Statements)", "late_fee_per_day", 1)
 		sync_standard_templates()
-		self.assertEqual(frappe.db.get_value(TEMPLATE, "DIR-3 KYC", "late_fee_flat"), 7500)
+		self.assertEqual(rules_for(["DIR-3 KYC"])["DIR-3 KYC"].late_fee_flat, 7500)
+		self.assertTrue(rules_for(["DIR-3 KYC"])["DIR-3 KYC"].penalty_set_by_firm)
 		self.assertEqual(
 			frappe.db.get_value(TEMPLATE, "AOC-4 (Financial Statements)", "late_fee_per_day"), 100
 		)

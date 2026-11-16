@@ -7,11 +7,9 @@ from frappe.model import display_fieldtypes, table_fields
 from frappe.model.document import Document
 from frappe.utils import cint, flt
 
-from kxcompliance.kx_compliance.penalty_library import FIELDS as PENALTY_FIELDS
-from kxcompliance.kx_compliance.penalty_library import penalty_of
-
 # What a firm may change on a standard template; every update brings the rest back to the library.
-FIRM_FIELDS = {"is_active", "penalty_set_by_firm", *PENALTY_FIELDS}
+# Its own late-filing figures are kept apart, in Compliance Penalty Figures (penalty_figures.py).
+FIRM_FIELDS = {"is_active"}
 
 
 class ComplianceObligationTemplate(Document):
@@ -59,8 +57,7 @@ class ComplianceObligationTemplate(Document):
 	def keep_standard_rules(self):
 		"""Refuse changes to a standard template's rules, which the next update would undo anyway.
 
-		Its on/off switch and late-filing figures are the firm's; new figures are marked Set by Us so
-		updates keep them. Only the library itself (flags.from_library) writes the rest.
+		Its on/off switch is the firm's; only the library itself (flags.from_library) writes the rest.
 		"""
 		if self.flags.from_library:
 			return
@@ -80,28 +77,12 @@ class ComplianceObligationTemplate(Document):
 		if changed:
 			frappe.throw(
 				_(
-					"{0} is a standard obligation, so updates keep its rules. Only In Use and the "
-					"late-filing figures can be changed, not {1}. Add your own obligation for a "
-					"different rule."
+					"{0} is a standard obligation, so updates keep its rules. Only In Use can be "
+					"changed, not {1}. Keep your own late-filing figures for it, or add your own "
+					"obligation for a different rule."
 				).format(self.name, ", ".join(changed)),
 				title=_("Standard obligation"),
 			)
-		figures = [self.meta.get_field(field) for field in PENALTY_FIELDS]
-		if not self.flags.library_figures and any(
-			comparable(before, df) != comparable(self, df) for df in figures
-		):
-			self.penalty_set_by_firm = 1
-
-	@frappe.whitelist(methods=["POST"])
-	def use_library_figures(self):
-		"""Go back to the library's late-filing figures for a standard obligation, and follow updates again."""
-		self.check_permission("write")
-		if not self.is_standard:
-			frappe.throw(_("{0} is your own obligation, so it has no library figures.").format(self.name))
-		self.update(penalty_of(self.as_dict()))
-		self.penalty_set_by_firm = 0
-		self.flags.library_figures = True
-		self.save()
 
 
 def comparable(doc, df):

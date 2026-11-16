@@ -279,10 +279,14 @@
 				</template>
 
 				<FormControl
+					v-if="!standard || own.may_edit_obligation"
 					v-model="form.is_active"
 					type="checkbox"
 					label="In use: the calendar makes filings for it"
 				/>
+				<p v-else class="text-sm text-ink-gray-5">
+					To stop filings for it, switch it off for each company on the company's page.
+				</p>
 
 				<section class="flex flex-col gap-4" aria-labelledby="late-heading">
 					<div class="flex flex-col gap-0.5">
@@ -324,7 +328,7 @@
 						label="The rule in words"
 						:rows="3"
 					/>
-					<div v-if="standard && doc.penalty_set_by_firm">
+					<div v-if="standard && own.set_by_firm">
 						<Button
 							label="Use the library's figures"
 							:loading="restoring"
@@ -407,7 +411,7 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import { Button, FormControl, Skeleton, toast } from "frappe-ui";
-import { call, createDoc, getDoc, getList, runMethod, updateDoc } from "@/api";
+import { call, createDoc, getDoc, getList, updateDoc } from "@/api";
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import { formatDate } from "@/lib/format";
@@ -442,6 +446,8 @@ const saving = ref(false);
 const restoring = ref(false);
 const options = ref(null);
 const doc = ref({});
+// A standard obligation's figures as the firm uses them (kxcompliance.api.obligation_figures).
+const own = ref({ figures: {}, set_by_firm: false, may_edit_obligation: true });
 const extensions = ref([]);
 const form = reactive({
 	template_name: "",
@@ -487,7 +493,7 @@ const statesSummary = computed(() => {
 const figuresNote = computed(() => {
 	if (!standard.value)
 		return "Used for the penalty estimate on filings and the compliance score.";
-	if (doc.value.penalty_set_by_firm) return "Your own figures: updates keep them.";
+	if (own.value.set_by_firm) return "Your own figures: updates keep them.";
 	if (!doc.value.penalty_checked_on)
 		return "From the library, not yet checked by a chartered accountant. Changing them makes them yours.";
 	return `From the library, checked on ${formatDate(
@@ -552,11 +558,49 @@ function figures() {
 	};
 }
 
-function values() {
-	const base = { is_active: form.is_active ? 1 : 0, ...figures() };
-	if (standard.value) return base;
+// The figures as the form shows them, from the obligation or the firm's own.
+function figuresForm(source) {
 	return {
-		...base,
+		late_fee_per_day: source.late_fee_per_day || 0,
+		late_fee_flat: source.late_fee_flat || 0,
+		late_fee_cap: source.late_fee_cap || 0,
+		cap_at_tax: Boolean(source.cap_at_tax),
+		interest_percent: source.interest_percent || 0,
+		penalty_rule: source.penalty_rule || "",
+	};
+}
+
+const figuresChanged = () =>
+	JSON.stringify(figures()) !==
+	JSON.stringify({
+		...figuresForm(own.value.figures),
+		cap_at_tax: own.value.figures.cap_at_tax ? 1 : 0,
+		late_fee_per_day: number(own.value.figures.late_fee_per_day),
+		late_fee_flat: number(own.value.figures.late_fee_flat),
+		late_fee_cap: number(own.value.figures.late_fee_cap),
+		interest_percent: number(own.value.figures.interest_percent),
+	});
+
+// A standard obligation's figures are the firm's own record, not the obligation's (which keeps
+// the library's); its In Use switch is on the obligation, for those who may change it.
+async function saveStandard() {
+	if (own.value.may_edit_obligation && form.is_active !== Boolean(doc.value.is_active)) {
+		fill(await updateDoc(DOCTYPE, props.name, { is_active: form.is_active ? 1 : 0 }));
+	}
+	if (figuresChanged()) {
+		own.value = await call(
+			"kxcompliance.api.save_obligation_figures",
+			{ template: props.name, figures: figures() },
+			{ httpMethod: "POST" }
+		);
+	}
+	Object.assign(form, figuresForm(own.value.figures));
+}
+
+function values() {
+	return {
+		is_active: form.is_active ? 1 : 0,
+		...figures(),
 		law: form.law,
 		form: form.form,
 		authority: form.authority,
@@ -595,6 +639,11 @@ async function save() {
 	}
 	saving.value = true;
 	try {
+		if (props.name && standard.value) {
+			await saveStandard();
+			toast.success("Obligation saved");
+			return;
+		}
 		const saved = props.name
 			? await updateDoc(DOCTYPE, props.name, values())
 			: await createDoc(DOCTYPE, { template_name: form.template_name.trim(), ...values() });
@@ -614,8 +663,12 @@ async function useLibraryFigures() {
 	restoring.value = true;
 	saveError.value = "";
 	try {
-		await runMethod(DOCTYPE, props.name, "use_library_figures");
-		fill(await getDoc(DOCTYPE, props.name));
+		own.value = await call(
+			"kxcompliance.api.use_library_figures",
+			{ template: props.name },
+			{ httpMethod: "POST" }
+		);
+		Object.assign(form, figuresForm(own.value.figures));
 		toast.success("Back to the library's figures");
 	} catch (err) {
 		saveError.value = err.message;
@@ -655,12 +708,7 @@ function fill(template) {
 		reminder_days: daysText(template.reminders || []),
 		description: template.description || "",
 		is_active: Boolean(template.is_active),
-		late_fee_per_day: template.late_fee_per_day || 0,
-		late_fee_flat: template.late_fee_flat || 0,
-		late_fee_cap: template.late_fee_cap || 0,
-		cap_at_tax: Boolean(template.cap_at_tax),
-		interest_percent: template.interest_percent || 0,
-		penalty_rule: template.penalty_rule || "",
+		...figuresForm(template.is_standard ? own.value.figures : template),
 	});
 }
 
@@ -668,7 +716,7 @@ onMounted(async () => {
 	try {
 		options.value = await call("kxcompliance.api.obligation_form_options");
 		if (props.name) {
-			const [template, rows] = await Promise.all([
+			const [template, rows, figuresInUse] = await Promise.all([
 				getDoc(DOCTYPE, props.name),
 				getList("Compliance Due Date Extension", {
 					fields: EXTENSION_FIELDS,
@@ -676,7 +724,9 @@ onMounted(async () => {
 					orderBy: "periods_ending_to desc",
 					limit: 50,
 				}),
+				call("kxcompliance.api.obligation_figures", { template: props.name }),
 			]);
+			own.value = figuresInUse;
 			fill(template);
 			extensions.value = rows.rows;
 		}

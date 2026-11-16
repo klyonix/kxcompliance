@@ -23,6 +23,8 @@ from frappe.utils import add_months, date_diff, flt, getdate, nowdate
 
 from kxcompliance import scoped
 from kxcompliance.kx_compliance.overview import OPEN_CASE_STATUSES, PARTY_HOLDERS
+from kxcompliance.kx_compliance.penalty_figures import firm_figures
+from kxcompliance.kx_compliance.penalty_library import FIELDS as PENALTY_FIELDS
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 
 FULL_SCORE = 100
@@ -43,7 +45,6 @@ RULE_FIELDS = [
 	"interest_percent",
 	"penalty_rule",
 	"penalty_checked_on",
-	"penalty_set_by_firm",
 ]
 COUNT = {"COUNT": "*", "as": "count"}
 
@@ -61,11 +62,18 @@ def late_fee(rules, days_late: int, tax: float | None = None) -> float:
 
 
 def rules_for(templates: list[str]) -> dict[str, frappe._dict]:
+	"""Each obligation's late-filing figures: the firm's own where it has set them, else the
+	obligation's (for a standard one, the library's)."""
 	if not templates:
 		return {}
 	rows = scoped.get_all(
 		"Compliance Obligation Template", filters={"name": ("in", list(set(templates)))}, fields=RULE_FIELDS
 	)
+	own = firm_figures(row.name for row in rows)
+	for row in rows:
+		row.penalty_set_by_firm = row.name in own
+		if row.penalty_set_by_firm:
+			row.update({field: own[row.name].get(field) for field in PENALTY_FIELDS})
 	return {row.name: row for row in rows}
 
 

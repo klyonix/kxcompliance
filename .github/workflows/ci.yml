@@ -4,7 +4,14 @@ on:
   push:
     branches:
       - version-16
+    # Skip pushes that only change Markdown, except the user guide, which a test checks against
+    # the in-app Help. Only on push: a pull request always runs, because its checks are required.
+    paths:
+      - "**"
+      - "!**.md"
+      - "USER_GUIDE.md"
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: version-16-kxcompliance-${{ github.event.number || github.ref }}

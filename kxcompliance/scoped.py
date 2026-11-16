@@ -134,6 +134,12 @@ def settings(for_update: bool = False):
 	return frappe.get_doc(SETTINGS) if for_update else frappe.get_cached_doc(SETTINGS)
 
 
+def settings_record() -> dict:
+	"""Which record holds the settings, for attaching a file such as a logo to it."""
+	doc = settings()
+	return {"doctype": doc.doctype, "name": doc.name or doc.doctype}
+
+
 def check_limit(kind: str, **context):
 	for path in frappe.get_hooks("kxcompliance_check_limit"):
 		frappe.get_attr(path)(kind, **context)

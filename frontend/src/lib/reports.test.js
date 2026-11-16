@@ -145,4 +145,11 @@ describe("a report opened with one client chosen", () => {
 		expect(clientDefaults(byClient, { client: "" }, chosen)).toEqual({});
 		expect(clientDefaults(byClient, {}, {})).toEqual({});
 	});
+
+	it("opens on an organisation's chosen company", () => {
+		const company = { companies: ["Sunrise Foods"] };
+		expect(clientDefaults(byCompany, {}, company)).toEqual({ company: "Sunrise Foods" });
+		expect(clientDefaults(byClient, {}, company)).toEqual({ company: "Sunrise Foods" });
+		expect(clientDefaults(byCompany, { company: "" }, company)).toEqual({});
+	});
 });

@@ -152,7 +152,17 @@ def make_company(name: str) -> str:
 		}
 	)
 	company.insert()
+	keep_in_view(company.name)
 	return company.name
+
+
+def keep_in_view(company: str):
+	"""Someone limited to some companies also sees the one they just made; others see all anyway."""
+	user = frappe.session.user
+	if frappe.permissions.get_user_permissions(user).get("Company"):
+		# The maker's own access to the record they created, which Compliance Managers may not
+		# grant themselves through User Permission.
+		frappe.permissions.add_user_permission("Company", company, user, ignore_permissions=True)
 
 
 def clean_registrations(rows: list) -> list[dict]:

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { companiesOf, companyFilters, keepClientWork } from "./clientFilter";
+import { companiesOf, companyChosen, companyFilters, keepClientWork } from "./clientFilter";
 
 const clients = [
 	{ name: "Sunrise Group", companies: ["Sunrise Foods", "Sunrise Mills"] },
@@ -36,5 +36,12 @@ describe("the client filter", () => {
 		const kept = keepClientWork(data, ["Sunrise Foods", "Sunrise Mills"]);
 		expect([kept.items.length, kept.tasks.length, kept.legal_dates.length]).toEqual([1, 1, 0]);
 		expect(keepClientWork(data, null)).toBe(data);
+	});
+
+	it("narrows an organisation to its chosen company while it still has it", () => {
+		const companies = ["Sunrise Foods", "Sunrise Mills"];
+		expect(companyChosen(companies, "Sunrise Mills")).toEqual(["Sunrise Mills"]);
+		expect(companyChosen(companies, "")).toBeNull();
+		expect(companyChosen(companies, "Sold Company")).toBeNull();
 	});
 });

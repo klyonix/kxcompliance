@@ -9,6 +9,11 @@ export function companiesOf(clients, chosen) {
 	return client ? client.companies : null;
 }
 
+// An organisation's chosen company, while it is still one of its companies; else null for all.
+export function companyChosen(companies, chosen) {
+	return chosen && companies.includes(chosen) ? [chosen] : null;
+}
+
 // Filters for a list's query; a view names the field that holds its company.
 export function companyFilters(companies, field = "company") {
 	if (!companies) return [];

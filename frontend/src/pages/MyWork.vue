@@ -115,7 +115,7 @@ import WorkRow from "@/components/WorkRow.vue";
 import { useIsMobile } from "@/composables/useIsMobile";
 import { BUCKETS } from "@/pages/myWork";
 import { counts, loadWork, rows, work } from "@/stores/work";
-import { chosenCompanies, filterOffered } from "@/stores/clientFilter";
+import { chosenCompanies, companyFilterOffered, filterOffered } from "@/stores/clientFilter";
 import { formatDateTime } from "@/lib/format";
 
 const isMobile = useIsMobile();
@@ -177,11 +177,13 @@ const summary = computed(() => {
 
 const asOf = computed(() => formatDateTime(work.data?.as_of));
 // So much is held that only the soonest of it is shown; choosing a client shows all of theirs.
-const limitedLine = computed(() =>
-	filterOffered() && !chosenCompanies.value
-		? "Only the soonest 200 of each kind are shown. Choose a client above to see all of theirs."
-		: "Only the soonest 200 of each kind are shown. Open Filings or Register for the rest."
-);
+const limitedLine = computed(() => {
+	const soonest = "Only the soonest 200 of each kind are shown.";
+	if (chosenCompanies.value) return `${soonest} Open Filings or Register for the rest.`;
+	if (filterOffered()) return `${soonest} Choose a client above to see all of theirs.`;
+	if (companyFilterOffered()) return `${soonest} Choose a company above to see all of its work.`;
+	return `${soonest} Open Filings or Register for the rest.`;
+});
 
 onMounted(loadWork);
 </script>

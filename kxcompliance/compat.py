@@ -141,3 +141,23 @@ def keep_masked_fields_to_their_roles():
 			if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 1}):
 				add_permission(doctype, role, 1)
 			update_permission_property(doctype, role, 1, "write", 1, validate=False)
+
+
+APP_MENU_ITEM = {"item_label": "KlyONIX Compliance", "item_type": "Route", "route": "/compliance"}
+
+
+def add_the_app_to_the_user_menu():
+	"""Frappe 15's Desk has no app switcher, so the app is put first in the user menu instead.
+	Navbar Settings is seeded only when Frappe is installed, so this runs after install and
+	every migrate; it changes nothing on Frappe 16 or when the item is already there."""
+	if FRAPPE_MAJOR >= 16:
+		return
+	navbar = frappe.get_single("Navbar Settings")
+	if any(row.route == APP_MENU_ITEM["route"] for row in navbar.settings_dropdown):
+		return
+	navbar.append("settings_dropdown", APP_MENU_ITEM)
+	rows = navbar.settings_dropdown
+	navbar.settings_dropdown = [rows[-1], *rows[:-1]]
+	for idx, row in enumerate(navbar.settings_dropdown, start=1):
+		row.idx = idx
+	navbar.save()

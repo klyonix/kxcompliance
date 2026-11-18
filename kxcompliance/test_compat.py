@@ -7,7 +7,7 @@ from pathlib import Path
 import frappe
 
 from kxcompliance import compat
-from kxcompliance.testing import UnitTestCase
+from kxcompliance.testing import IntegrationTestCase, UnitTestCase
 
 DOCTYPES = Path(__file__).parent / "kx_compliance" / "doctype"
 
@@ -33,3 +33,20 @@ class TestCompat(UnitTestCase):
 
 	def test_the_desk_is_where_this_frappe_keeps_it(self):
 		self.assertEqual(compat.DESK, "/desk" if compat.FRAPPE_MAJOR >= 16 else "/app")
+
+
+class TestUserMenu(IntegrationTestCase):
+	def test_the_app_is_first_in_the_user_menu_on_15_once(self):
+		navbar = frappe.get_single("Navbar Settings")
+		navbar.settings_dropdown = [
+			row for row in navbar.settings_dropdown if row.route != compat.APP_MENU_ITEM["route"]
+		]
+		navbar.save()
+		compat.add_the_app_to_the_user_menu()
+		compat.add_the_app_to_the_user_menu()
+		routes = [row.route for row in frappe.get_single("Navbar Settings").settings_dropdown]
+		if compat.FRAPPE_MAJOR >= 16:
+			self.assertNotIn("/compliance", routes)
+		else:
+			self.assertEqual(routes[0], "/compliance")
+			self.assertEqual(routes.count("/compliance"), 1)

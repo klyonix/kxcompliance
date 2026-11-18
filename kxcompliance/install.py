@@ -45,6 +45,7 @@ def after_install():
 	setup()
 	sync_standard_templates()
 	compat.keep_masked_fields_to_their_roles()
+	compat.add_the_app_to_the_user_menu()
 
 
 def after_migrate():
@@ -59,6 +60,12 @@ def after_migrate():
 	except Exception as error:
 		raise Exception(
 			f"KlyONIX Compliance could not keep masked fields to their roles on Frappe 15: {error}"
+		) from error
+	try:
+		compat.add_the_app_to_the_user_menu()
+	except Exception as error:
+		raise Exception(
+			f"KlyONIX Compliance could not add itself to the Desk user menu on Frappe 15: {error}"
 		) from error
 
 

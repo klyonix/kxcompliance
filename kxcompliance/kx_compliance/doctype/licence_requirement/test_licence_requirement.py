@@ -4,7 +4,6 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import (
 	can_open_app,
@@ -38,6 +37,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_users,
 	set_app_settings,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = [
@@ -48,6 +48,7 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
 	# A rule may name companies; these tests make their own.
 	"Company",
 ]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 PHARMACY = "Licence Test Pharmacy"
 GROCER = "Licence Test Grocer"
@@ -126,9 +127,11 @@ def make_parties():
 	ensure_tree("Item Group", "All Item Groups", DRUGS, "parent_item_group")
 	ensure_tree("Item Group", "All Item Groups", SNACKS, "parent_item_group")
 	ensure_tree("Customer Group", "All Customer Groups", CHEMISTS, "parent_customer_group")
+	# Its own group, not the site's default, which a fresh site may leave as a group node.
+	ensure_tree("Customer Group", "All Customer Groups", "Licence Test Grocers", "parent_customer_group")
 	ensure_tree("Supplier Group", "All Supplier Groups", "Licence Test Suppliers", "parent_supplier_group")
 	make_party("Customer", PHARMACY, customer_group=CHEMISTS, email_id="pharmacy@example.com")
-	make_party("Customer", GROCER)
+	make_party("Customer", GROCER, customer_group="Licence Test Grocers")
 	make_party("Supplier", WHOLESALER, supplier_group="Licence Test Suppliers")
 
 

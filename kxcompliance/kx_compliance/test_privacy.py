@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, add_to_date, get_datetime, getdate, now_datetime
 
+from kxcompliance import compat
 from kxcompliance.api import (
 	accept_privacy_notice,
 	boot,
@@ -26,6 +26,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_users,
 	set_app_settings,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 SETTINGS = "KX Compliance Settings"
 
@@ -148,13 +149,15 @@ class TestPrivacy(IntegrationTestCase):
 
 	def test_pan_and_mobile_are_masked_to_all_but_managers_and_never_overwritten(self):
 		name = signatory(pan="ABCDE1234F", mobile="9876543210").name
+		# Frappe 15 cannot mask, so there the two are hidden from all but managers instead.
+		shown = ("XXXXXXXX", "987XXXXXX") if compat.FRAPPE_MAJOR >= 16 else (None, None)
 		with self.set_user(HOLDER):
 			# As the app receives it: in a list, and as a record sent to the browser.
-			[row] = frappe.get_list("Signatory", filters={"name": name}, fields=["pan", "mobile"])
-			self.assertEqual((row.pan, row.mobile), ("XXXXXXXX", "987XXXXXX"))
+			[row] = frappe.get_list("Signatory", filters={"name": name}, fields=["name", "pan", "mobile"])
+			self.assertEqual((row.get("pan"), row.get("mobile")), shown)
 			doc = frappe.get_doc("Signatory", name)
 			doc.apply_fieldlevel_read_permissions()
-			self.assertEqual((doc.pan, doc.mobile), ("XXXXXXXX", "987XXXXXX"))
+			self.assertEqual((doc.get("pan"), doc.get("mobile")), shown)
 			doc.designation = "Managing Director"
 			doc.save()
 		with self.set_user(MANAGER):

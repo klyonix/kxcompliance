@@ -4,7 +4,6 @@
 from datetime import UTC, datetime
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance.calendar_feed import (
 	events_for,
@@ -31,9 +30,11 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_company,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase, as_user
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 
 def token_of(url: str) -> str:
@@ -41,7 +42,7 @@ def token_of(url: str) -> str:
 
 
 def fetch(token: str) -> str:
-	with IntegrationTestCase.set_user("Guest"):
+	with as_user("Guest"):
 		feed(token)
 	return frappe.response.filecontent
 

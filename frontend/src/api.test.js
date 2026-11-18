@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiError, call, upload } from "./api";
+import { ApiError, call, getList, upload } from "./api";
 import { noteResponse, server } from "./offline/reachability";
 
 const answer = (status, body) => async () => ({
@@ -19,6 +19,20 @@ describe("the API client", () => {
 		expect(await call("x.y", { a: "b" }, { fetcher })).toEqual([1]);
 		expect(seen.url).toBe("/api/method/x.y?a=b");
 		expect(seen.init.method).toBe("GET");
+	});
+
+	it("asks for one row more than a page, to know if another page follows on any Frappe", async () => {
+		let seen;
+		const rows = (count) => Array.from({ length: count }, (_, index) => ({ name: index }));
+		const fetcher = (count) => async (url) => {
+			seen = url;
+			return answer(200, { data: rows(count) })();
+		};
+		const full = await getList("ToDo", { limit: 2, fetcher: fetcher(3) });
+		expect(seen).toContain("limit=3");
+		expect([full.rows.length, full.hasMore]).toEqual([2, true]);
+		const last = await getList("ToDo", { limit: 2, fetcher: fetcher(2) });
+		expect([last.rows.length, last.hasMore]).toEqual([2, false]);
 	});
 
 	it("leaves a GET parameter that is not set out of the address", async () => {

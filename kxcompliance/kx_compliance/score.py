@@ -21,7 +21,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_months, date_diff, flt, getdate, nowdate
 
-from kxcompliance import scoped
+from kxcompliance import compat, scoped
 from kxcompliance.kx_compliance.overview import OPEN_CASE_STATUSES, PARTY_HOLDERS
 from kxcompliance.kx_compliance.penalty_figures import firm_figures
 from kxcompliance.kx_compliance.penalty_library import FIELDS as PENALTY_FIELDS
@@ -46,7 +46,7 @@ RULE_FIELDS = [
 	"penalty_rule",
 	"penalty_checked_on",
 ]
-COUNT = {"COUNT": "*", "as": "count"}
+COUNT = compat.agg("COUNT", "*", "count")
 
 
 def late_fee(rules, days_late: int, tax: float | None = None) -> float:

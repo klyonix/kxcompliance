@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import month_events
 from kxcompliance.kx_compliance.test_bulk_filing import filing
@@ -16,6 +15,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_item_type,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 NOVEMBER = ("2026-11-01", "2026-11-30")
 

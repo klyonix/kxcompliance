@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import filing_penalty
 from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import task
@@ -16,6 +15,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_item_type,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 TEMPLATE = "Compliance Obligation Template"
 

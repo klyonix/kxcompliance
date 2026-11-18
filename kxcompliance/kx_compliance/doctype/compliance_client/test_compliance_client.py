@@ -5,7 +5,6 @@ from io import BytesIO
 
 import frappe
 from frappe.model import get_permitted_fields
-from frappe.tests import IntegrationTestCase
 from werkzeug.test import EnvironBuilder
 
 from kxcompliance.api import (
@@ -27,9 +26,11 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_company,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User", "Customer"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 SECOND_COMPANY = "Client Test Second Company"
 CLIENT_LOGIN = "asha@sunrise-client.example.com"

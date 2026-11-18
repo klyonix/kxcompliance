@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate
 
 from kxcompliance.kx_compliance.register import compute_status
@@ -22,12 +21,14 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_item_type,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 TODAY = "2026-06-01"
 
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "Branch", "Supplier", "Currency", "Asset", "User"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 
 class TestComplianceItem(IntegrationTestCase):

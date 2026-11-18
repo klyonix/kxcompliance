@@ -16,7 +16,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, nowdate
 
-from kxcompliance import scoped
+from kxcompliance import compat, scoped
 from kxcompliance.install import CLIENT_ROLE
 from kxcompliance.kx_compliance.client_reports import financial_year, summarise
 from kxcompliance.kx_compliance.doctype.compliance_item.compliance_item import DSC_TYPE
@@ -234,7 +234,7 @@ def remove_access(row):
 		frappe.delete_doc("User Permission", permission, ignore_permissions=True)
 
 
-COUNT = {"COUNT": "*", "as": "count"}
+COUNT = compat.agg("COUNT", "*", "count")
 TASK_FIELDS = [
 	"name",
 	"obligation_template",

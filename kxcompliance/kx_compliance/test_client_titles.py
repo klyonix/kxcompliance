@@ -4,11 +4,11 @@
 """Clients and rate cards named by a hidden ID: people still see their names."""
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance import billing, clients, companies
 from kxcompliance.kx_compliance.register import client_named, client_title, client_titles, rate_card_title
 from kxcompliance.kx_compliance.test_utils import TEST_COMPANY, make_company, named_by_id
+from kxcompliance.testing import IntegrationTestCase
 
 
 class TestClientTitles(IntegrationTestCase):

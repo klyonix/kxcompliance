@@ -4,7 +4,6 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import (
 	app_companies,
@@ -66,6 +65,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_users,
 	set_app_settings,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 SETTINGS = "KX Compliance Settings"
 SECOND = "Billing Second Company"

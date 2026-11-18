@@ -38,6 +38,8 @@ export const boot = {
 	accountLinks: window.account_links || [],
 	// Front-end plug-ins from other apps, [{ script, style }], loaded before the app starts (plugins.js).
 	plugins: window.plugins || [],
+	// The Desk's address: /desk from Frappe 16, /app on Frappe 15.
+	deskPath: window.desk_path || "/desk",
 	// Set by another app that keeps this person off the Desk.
 	hideDesk: Boolean(window.hide_desk),
 };

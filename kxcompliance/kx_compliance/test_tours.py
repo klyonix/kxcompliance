@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import tour_opened, tours_seen
 from kxcompliance.kx_compliance.test_utils import HOLDER, MANAGER, make_users
+from kxcompliance.testing import IntegrationTestCase
 
 
 class TestTours(IntegrationTestCase):

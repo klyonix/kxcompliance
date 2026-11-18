@@ -19,7 +19,7 @@ from frappe.query_builder.functions import Sum
 from frappe.utils import add_days, add_months, flt, format_date, get_first_day, getdate, nowdate
 from frappe.utils.caching import request_cache
 
-from kxcompliance import scoped
+from kxcompliance import compat, scoped
 from kxcompliance.kx_compliance.onboarding import make_company
 from kxcompliance.kx_compliance.register import (
 	client_title,
@@ -1526,7 +1526,7 @@ LIST_FIELDS = [
 	"is_return",
 	"currency",
 ]
-TOTALS = [{"COUNT": "*", "as": "count"}, {"SUM": "outstanding_amount", "as": "due"}]
+TOTALS = [compat.agg("COUNT", "*", "count"), compat.agg("SUM", "outstanding_amount", "due")]
 
 
 def bill_filters(view: str, client: str | None, text: str | None) -> tuple[list, list | None]:
@@ -2738,7 +2738,7 @@ def payments(client: str | None, text: str | None, start: int, limit: int) -> di
 		"Payment Entry",
 		filters=filters,
 		or_filters=matching,
-		fields=[{"COUNT": "*", "as": "count"}, {"SUM": "paid_amount", "as": "received"}],
+		fields=[compat.agg("COUNT", "*", "count"), compat.agg("SUM", "paid_amount", "received")],
 	)
 	names = [row.name for row in rows]
 	client_of = {

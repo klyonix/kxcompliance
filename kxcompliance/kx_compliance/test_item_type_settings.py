@@ -4,7 +4,6 @@
 """A firm's own settings for an item type it may not change: used instead of the type's."""
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import (
 	item_type_settings_of,
@@ -22,6 +21,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_item_type,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 
 class TestItemTypeSettings(IntegrationTestCase):

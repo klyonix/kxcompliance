@@ -4,7 +4,6 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import add_request_document, ask_clients_in_bulk, bulk_ask_plan, documents
 from kxcompliance.kx_compliance import document_requests
@@ -29,9 +28,11 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_company,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase, as_user
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User", "Sales Invoice"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 SETTINGS = "KX Compliance Settings"
 
@@ -60,7 +61,7 @@ def notified(user: str, request: str) -> bool:
 def upload_as(user: str, request: str, file_name: str = "october-sales.csv"):
 	previous = getattr(frappe.local, "request", None)
 	try:
-		with IntegrationTestCase.set_user(user):
+		with as_user(user):
 			frappe.local.request = uploading(file_name)
 			return add_request_document(request)
 	finally:

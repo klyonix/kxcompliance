@@ -2,13 +2,14 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import save_settings, settings_options
 from kxcompliance.kx_compliance.test_utils import HOLDER, MANAGER, app_setting, make_company, make_users
+from kxcompliance.testing import IntegrationTestCase
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User", "Email Account", "Email Template"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 SETTINGS = "KX Compliance Settings"
 

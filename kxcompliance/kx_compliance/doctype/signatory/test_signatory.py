@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import client_detail
 from kxcompliance.install import create_standard_item_types
@@ -24,9 +23,11 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_company,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 
 def signatory(name: str = "Ravi Rao", company_name: str = TEST_COMPANY, **fields):

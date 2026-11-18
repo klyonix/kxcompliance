@@ -13,10 +13,10 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, get_first_day, getdate
 
-from kxcompliance import scoped
+from kxcompliance import compat, scoped
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 
-COUNT = {"COUNT": "*", "as": "count"}
+COUNT = compat.agg("COUNT", "*", "count")
 SOON_DAYS = 7
 MONTH_DAYS = 30
 MONTHS_AHEAD = 6

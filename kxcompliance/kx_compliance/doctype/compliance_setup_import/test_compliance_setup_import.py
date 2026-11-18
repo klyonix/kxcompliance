@@ -4,7 +4,6 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance.setup_import import check_rows, read_sheet, template
 from kxcompliance.kx_compliance.test_utils import (
@@ -16,9 +15,11 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_users,
 	named_by_id,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 NEW_COMPANY = "Bulk Setup Test Foods Private Limited"
 # Made by the hidden-ID test, so the other tests still find NEW_COMPANY new.

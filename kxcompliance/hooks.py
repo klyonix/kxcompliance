@@ -373,3 +373,7 @@ fixtures = [
 website_route_rules = [
 	{"from_route": "/compliance/<path:app_path>", "to_route": "compliance"},
 ]
+
+# Frappe 15 has no Chrome printing of its own; the app's bills and receipts print with the
+# server's headless Chrome there (compat.chrome_pdf). Frappe 16 prints them itself.
+pdf_generator = "kxcompliance.compat.chrome_pdf"

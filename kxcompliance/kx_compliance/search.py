@@ -11,7 +11,7 @@ import frappe
 from frappe.query_builder import Case, Criterion, Order
 from frappe.query_builder.functions import Lower
 
-from kxcompliance import scoped
+from kxcompliance import compat, scoped
 from kxcompliance.kx_compliance.register import client_titles
 
 MIN_LENGTH = 2
@@ -184,7 +184,7 @@ def search_kind(kind: str, words: list[str], start: int = 0, limit: int = CANDID
 
 def count_kind(kind: str, words: list[str]) -> int:
 	"""How many records of a kind the words find, as far as the person may read them."""
-	query = matching(kind, words, [{"COUNT": "*", "as": "count"}])
+	query = matching(kind, words, [compat.agg("COUNT", "*", "count")])
 	return query.run(as_dict=True)[0]["count"] if query is not None else 0
 
 

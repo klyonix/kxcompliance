@@ -34,12 +34,16 @@ phone as well as a desk.
 - A mobile-friendly app at `/compliance`, with offline reading, light and dark themes, and English
   and Hindi.
 - Privacy built for India's DPDP Act: a privacy notice, requests from people about their data,
-  breach records, and PAN and mobile numbers masked from all but managers.
+  breach records, and PAN and mobile numbers masked from all but managers (on Frappe 15, which
+  cannot mask a field, hidden from them instead).
 
 ### Requirements
 
-- Frappe Framework 16 and ERPNext 16 (branch `version-16`)
-- Python 3.14, Node 24, MariaDB
+- Frappe Framework 15 and ERPNext 15 (this branch, `version-15`). New features are made on
+  `version-16` first; this branch is a one-time port for sites still on version 15.
+- Python 3.11, Node 18 or later, MariaDB
+- Chrome or Chromium on the server, which prints bills, receipts and statements
+  (`apt install chromium`, or set `chrome_path` in the site config)
 
 ### Installation
 
@@ -49,8 +53,8 @@ On your own server, with [bench](https://github.com/frappe/bench):
 
 ```bash
 cd $PATH_TO_YOUR_BENCH
-bench get-app erpnext --branch version-16
-bench get-app https://github.com/klyonix/kxcompliance --branch version-16
+bench get-app erpnext --branch version-15
+bench get-app https://github.com/klyonix/kxcompliance --branch version-15
 bench --site <your-site> install-app kxcompliance
 ```
 

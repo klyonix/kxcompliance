@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days
 
 from kxcompliance.kx_compliance.dashboard import get_dashboard
@@ -15,6 +14,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_item_type,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 TODAY = "2026-06-01"
 

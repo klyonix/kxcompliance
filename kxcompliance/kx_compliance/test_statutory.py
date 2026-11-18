@@ -6,9 +6,9 @@
 from datetime import date
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance.statutory import due_date, period_label, periods
+from kxcompliance.testing import IntegrationTestCase
 
 
 def due(template: str, period_end: str) -> date:

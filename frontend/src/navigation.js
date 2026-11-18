@@ -199,8 +199,8 @@ export function goBack(router, fallback) {
 	else router.push(fallback);
 }
 
-// The Desk's address in Frappe 16 (/app still redirects there, one step slower).
-export const DESK = "/desk";
+// The Desk's address, from the server: /desk from Frappe 16, /app on Frappe 15.
+export const DESK = boot.deskPath;
 export const deskPath = (path = "") => `${DESK}${path ? `/${path}` : ""}`;
 
 // Where each record opens until it has a screen of its own in the app.

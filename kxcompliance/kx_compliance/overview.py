@@ -15,10 +15,12 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, nowdate
 
+from kxcompliance import compat
+from kxcompliance.compat import DESK
 from kxcompliance.kx_compliance.dashboard import get_dashboard, within
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 
-COUNT = {"COUNT": "*", "as": "count"}
+COUNT = compat.agg("COUNT", "*", "count")
 PARTY_HOLDERS = ["Customer", "Supplier"]
 OPEN_CASE_STATUSES = ["Open", "Stayed", "Reserved for Order"]
 PENDING_MARK_STATUSES = [
@@ -32,7 +34,6 @@ PENDING_MARK_STATUSES = [
 ON_TIME_MONTHS = 12
 ON_TIME_REPORT = "On-time Filing"
 # The Desk's address in Frappe 16; /app still redirects there.
-DESK = "/desk"
 OPEN_REQUEST_STATUSES = ["Open", "In Progress"]
 # A renewal planned or applied for: someone is on it.
 RENEWING = ["Renewal Planned", "Renewal in Progress"]

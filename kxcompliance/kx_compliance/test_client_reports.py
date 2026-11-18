@@ -4,7 +4,6 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import client_detail
 from kxcompliance.install import create_standard_item_types
@@ -31,6 +30,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_company,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 PERIOD = {"from_date": "2026-04-01", "to_date": "2027-03-31"}
 

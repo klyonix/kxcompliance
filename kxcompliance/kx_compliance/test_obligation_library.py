@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import (
 	extension_preview,
@@ -20,6 +19,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_company,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 TEMPLATE = "Compliance Obligation Template"
 GSTR_3B = "GSTR-3B (Monthly)"

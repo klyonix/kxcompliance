@@ -2,7 +2,6 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance.clients import HELD
 from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import client, profile
@@ -13,9 +12,11 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_user,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 ELSEWHERE = "Held Access Test Company"
 # People of their own, so no work another test left behind counts as theirs.

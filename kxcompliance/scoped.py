@@ -43,6 +43,8 @@ from collections.abc import Callable
 import frappe
 from pypika.terms import Criterion
 
+from kxcompliance import compat
+
 SETTINGS = "KX Compliance Settings"
 
 
@@ -114,7 +116,7 @@ def get_query(doctype: str, **kwargs):
 	extra = conditions(doctype)
 	if extra:
 		kwargs["filters"] = merge(kwargs.get("filters"), extra)
-	return frappe.qb.get_query(doctype, **kwargs)
+	return compat.get_query(doctype, **kwargs)
 
 
 def where(table) -> Criterion:

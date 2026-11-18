@@ -6,10 +6,10 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance.app_links import LISTS, PAGES, app_path, app_url
 from kxcompliance.kx_compliance.test_utils import HOLDER, make_users
+from kxcompliance.testing import IntegrationTestCase
 
 ROUTER = Path(__file__).resolve().parents[2] / "frontend" / "src" / "router.js"
 

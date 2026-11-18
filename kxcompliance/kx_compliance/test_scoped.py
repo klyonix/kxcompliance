@@ -7,14 +7,15 @@ from unittest import SkipTest
 from unittest.mock import patch
 
 import frappe
-from frappe.tests import IntegrationTestCase, UnitTestCase
 
 from kxcompliance import scoped
 from kxcompliance.kx_compliance.test_utils import TEST_COMPANY, make_company
+from kxcompliance.testing import IntegrationTestCase, UnitTestCase
 
 APP = Path(__file__).resolve().parents[1]
-# Patches and install run for the whole site; scoped.py is where the reads are allowed.
-EXEMPT = {APP / "scoped.py", APP / "install.py"}
+# Patches and install run for the whole site; scoped.py is where the reads are allowed, and
+# compat.py the query builder it calls on either Frappe version.
+EXEMPT = {APP / "scoped.py", APP / "install.py", APP / "compat.py"}
 DIRECT_READS = {
 	("frappe", "get_all"),
 	("db", "get_value"),

@@ -13,7 +13,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, formatdate, getdate
 
-from kxcompliance import scoped
+from kxcompliance import compat, scoped
 from kxcompliance.kx_compliance.onboarding import (
 	STATE_REGISTRATIONS,
 	clean_registrations,
@@ -27,7 +27,7 @@ from kxcompliance.kx_compliance.score import company_scores
 from kxcompliance.kx_compliance.statutory import generate_tasks
 
 PROFILE = "Company Compliance Profile"
-COUNT = {"COUNT": "*", "as": "count"}
+COUNT = compat.agg("COUNT", "*", "count")
 
 
 def check_manager():

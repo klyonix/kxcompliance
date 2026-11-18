@@ -4,7 +4,6 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import (
 	former_people,
@@ -35,6 +34,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_user,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 NEWCOMER = "newcomer@example.com"
 SETTINGS = "KX Compliance Settings"

@@ -3,6 +3,7 @@
 
 import frappe
 
+from kxcompliance import compat
 from kxcompliance.kx_compliance.obligation_library import sync_standard_templates
 
 ROLES = ("Compliance Manager", "Compliance User", "Compliance Auditor")
@@ -43,6 +44,7 @@ SETTINGS_DEFAULTS = {
 def after_install():
 	setup()
 	sync_standard_templates()
+	compat.keep_masked_fields_to_their_roles()
 
 
 def after_migrate():
@@ -51,6 +53,12 @@ def after_migrate():
 	except Exception as error:
 		raise Exception(
 			f"KlyONIX Compliance could not update its standard obligation library: {error}"
+		) from error
+	try:
+		compat.keep_masked_fields_to_their_roles()
+	except Exception as error:
+		raise Exception(
+			f"KlyONIX Compliance could not keep masked fields to their roles on Frappe 15: {error}"
 		) from error
 
 

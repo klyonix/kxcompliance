@@ -2,11 +2,12 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance.test_utils import HOLDER, MANAGER, OTHER_HOLDER, make_users
+from kxcompliance.testing import IntegrationTestCase
 
 IGNORE_TEST_RECORD_DEPENDENCIES = ["User"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 
 def view(label="Mine", **fields):

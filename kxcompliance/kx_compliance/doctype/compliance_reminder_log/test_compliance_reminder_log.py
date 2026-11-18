@@ -4,7 +4,6 @@
 """Tests for the daily job in kxcompliance.kx_compliance.reminders."""
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance.reminders import run_daily
 from kxcompliance.kx_compliance.test_utils import (
@@ -18,9 +17,11 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_item_type,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Compliance Task", "Legal Date", "Sales Invoice"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 SETTINGS = "KX Compliance Settings"
 

@@ -12,7 +12,7 @@ from frappe.handler import ALLOWED_MIMETYPES
 from frappe.query_builder.functions import Count
 from frappe.utils import add_days, cint, get_datetime, getdate, now_datetime, nowdate
 
-from kxcompliance import scoped
+from kxcompliance import compat, scoped
 from kxcompliance.install import CLIENT_ROLE
 from kxcompliance.kx_compliance import (
 	app_settings,
@@ -737,16 +737,14 @@ def client_summary(client: str) -> dict:
 def statement_pdf(client: str, from_date: str | None = None, to_date: str | None = None):
 	"""A client's statement of account, this financial year unless dates are given: for those who
 	bill, and for the client's own login."""
-	from frappe.utils.pdf import get_chrome_pdf
-
 	from kxcompliance.kx_compliance.client_reports import financial_year
 
 	own = check_client_account(client)
 	year_from, year_to = financial_year()
 	html = billing.statement_html(client, from_date or year_from, to_date or year_to, own)
 	frappe.local.response.filename = f"Statement-{client_title(client)}.pdf".replace("/", "-")
-	# Printed as bills are, through Chrome (their print formats' generator), not wkhtmltopdf.
-	frappe.local.response.filecontent = get_chrome_pdf(None, html, {}, None, pdf_generator="chrome")
+	# Printed as bills are, through Chrome where the site has it (compat.pdf_of).
+	frappe.local.response.filecontent = compat.pdf_of(html)
 	frappe.local.response.type = "pdf"
 
 
@@ -972,7 +970,9 @@ def search_parties(
 @frappe.whitelist(methods=["GET"])
 def count_parties(party_type: str, text: str = "") -> int:
 	"""How many customers or suppliers the Licence Check search finds."""
-	rows = read_parties(party_type, **party_query(party_type, text), fields=[{"COUNT": "*", "as": "count"}])
+	rows = read_parties(
+		party_type, **party_query(party_type, text), fields=[compat.agg("COUNT", "*", "count")]
+	)
 	return rows[0]["count"] if rows else 0
 
 
@@ -1137,7 +1137,7 @@ def matching_parties(party_type: str, words: list[str], count: bool = False):
 		# Someone who reads customers or suppliers sees only those their permissions allow.
 		query = scoped.get_query(
 			party_type,
-			fields=[{"COUNT": "*", "as": "count"}]
+			fields=[compat.agg("COUNT", "*", "count")]
 			if count
 			else ["name", f"{name_field} as party_name", f"{GROUP_FIELDS[party_type]} as party_group"],
 			ignore_permissions=False,
@@ -1592,8 +1592,8 @@ def bulk_filing_choices(companies: str | None = None) -> list[dict]:
 			"obligation_template",
 			"period_end",
 			"period_label",
-			{"MIN": "effective_due_date", "as": "due"},
-			{"COUNT": "*", "as": "filings"},
+			compat.agg("MIN", "effective_due_date", "due"),
+			compat.agg("COUNT", "*", "filings"),
 		],
 		group_by="obligation_template, period_end, period_label",
 		order_by="due asc",
@@ -1819,6 +1819,8 @@ def boot() -> dict:
 		"user": frappe.session.user,
 		"user_fullname": frappe.utils.get_fullname(frappe.session.user),
 		"user_image": scoped.get_value("User", frappe.session.user, "user_image") or "",
+		# /desk from Frappe 16, /app on Frappe 15.
+		"desk_path": compat.DESK,
 		"roles": sorted((APP_ROLES | set(CHECK_ROLES) | {CLIENT_ROLE}) & set(frappe.get_roles())),
 		"party_types": party_types_to_check(),
 		"app_name": settings.app_name or "KlyONIX Compliance",

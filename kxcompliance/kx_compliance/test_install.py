@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.install import APP_LOGO, CLIENT_ROLE, keep_client_role_off_desk, set_branding
+from kxcompliance.testing import IntegrationTestCase
 
 
 class TestBranding(IntegrationTestCase):

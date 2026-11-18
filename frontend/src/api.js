@@ -197,12 +197,14 @@ export async function getList(
 	doctype,
 	{ fields, filters, orderBy, start = 0, limit = 20, fetcher = fetch } = {}
 ) {
-	const query = new URLSearchParams({ start: String(start), limit: String(limit) });
+	// One row more than shown says whether there is a next page: Frappe 15 does not say so itself.
+	const query = new URLSearchParams({ start: String(start), limit: String(limit + 1) });
 	if (fields) query.set("fields", JSON.stringify(fields));
 	if (filters) query.set("filters", JSON.stringify(filters));
 	if (orderBy) query.set("order_by", orderBy);
 	const body = await send(`${documentPath(doctype)}?${query}`, json("GET"), fetcher);
-	return { rows: body.data || [], hasMore: Boolean(body.has_next_page) };
+	const rows = body.data || [];
+	return { rows: rows.slice(0, limit), hasMore: rows.length > limit };
 }
 
 export async function getDoc(doctype, name, { fetcher = fetch } = {}) {

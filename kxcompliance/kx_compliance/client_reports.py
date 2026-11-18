@@ -12,11 +12,11 @@ and records they may read, in a handful of queries however many clients there ar
 import frappe
 from frappe.utils import add_days, add_months, flt, getdate, nowdate
 
-from kxcompliance import scoped
+from kxcompliance import compat, scoped
 from kxcompliance.kx_compliance.doctype.compliance_item.compliance_item import DSC_TYPE
 from kxcompliance.kx_compliance.overview import OPEN_CASE_STATUSES
 
-COUNT = {"COUNT": "*", "as": "count"}
+COUNT = compat.agg("COUNT", "*", "count")
 DSC_WARNING_DAYS = 30
 NUMBERS = (
 	"on_time",
@@ -32,10 +32,14 @@ NUMBERS = (
 
 def financial_year(today: str | None = None) -> tuple[str, str]:
 	"""The fiscal year set up in ERPNext for today, else April to March as in India."""
-	from erpnext.accounts.utils import get_fiscal_year
+	from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
 
 	today = today or nowdate()
-	year = get_fiscal_year(today, as_dict=True, raise_on_missing=False)
+	# Raised on Frappe 15 and 16 alike when no year covers the day; verbose=0 shows no message.
+	try:
+		year = get_fiscal_year(today, as_dict=True, verbose=0)
+	except FiscalYearError:
+		year = None
 	if year:
 		return str(year.year_start_date), str(year.year_end_date)
 	day = getdate(today)
@@ -80,8 +84,8 @@ def add_filings(totals, client_of, companies, from_date, to_date):
 			"status",
 			"is_overdue",
 			COUNT,
-			{"SUM": "late_fee", "as": "late_fee"},
-			{"SUM": "interest", "as": "interest"},
+			compat.agg("SUM", "late_fee", "late_fee"),
+			compat.agg("SUM", "interest", "interest"),
 		],
 		group_by="company, status, is_overdue",
 		order_by=None,

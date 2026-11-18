@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import bulk_filing_choices
 from kxcompliance.kx_compliance.test_utils import (
@@ -13,6 +12,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_company,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 
 def filing(template: str, period_end: str, due_date: str, responsible: str = HOLDER, status: str = "Open"):

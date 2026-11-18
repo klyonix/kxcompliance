@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import boot, complete_onboarding, onboarding_options
 from kxcompliance.kx_compliance.test_utils import (
@@ -16,9 +15,11 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_users,
 	set_app_settings,
 )
+from kxcompliance.testing import IntegrationTestCase
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User"]
+test_ignore = IGNORE_TEST_RECORD_DEPENDENCIES  # the name Frappe 15 reads
 
 SETTINGS = "KX Compliance Settings"
 NEW_COMPANY = "Onboarding Test Traders Private Limited"

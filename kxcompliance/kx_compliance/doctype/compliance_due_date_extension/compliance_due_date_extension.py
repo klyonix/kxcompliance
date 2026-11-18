@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate
 
-from kxcompliance import scoped
+from kxcompliance import compat, scoped
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 from kxcompliance.kx_compliance.statutory import extensions_for, find_extension
 
@@ -26,8 +26,8 @@ class ComplianceDueDateExtension(Document):
 			apply_extension,
 			extension=self.name,
 			queue="long",
-			enqueue_after_commit=not frappe.in_test,
-			now=frappe.in_test,
+			enqueue_after_commit=not compat.in_test(),
+			now=compat.in_test(),
 		)
 
 

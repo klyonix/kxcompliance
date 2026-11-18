@@ -5,7 +5,6 @@ import json
 from urllib.parse import unquote, urlsplit
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from kxcompliance.api import (
 	add_one_off_filing,
@@ -21,6 +20,7 @@ from kxcompliance.api import (
 	search,
 	search_counts,
 )
+from kxcompliance.compat import DESK
 from kxcompliance.kx_compliance.onboarding import keep_in_view
 from kxcompliance.kx_compliance.overview import desk_link, total
 from kxcompliance.kx_compliance.test_bulk_filing import filing
@@ -39,6 +39,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_user,
 	make_users,
 )
+from kxcompliance.testing import IntegrationTestCase
 from kxcompliance.www import compliance_manifest
 
 OUTSIDER = "compliance-outsider@example.com"
@@ -256,7 +257,7 @@ class TestAppApi(IntegrationTestCase):
 		make_item("Test App Licence", days=-30, responsible=HOLDER)
 		after = self.overview_card("Register", "Expired or lapsed")
 		self.assertEqual(after["value"], before + 1)
-		self.assertTrue(after["link"].startswith("/desk/compliance-item?"))
+		self.assertTrue(after["link"].startswith(f"{DESK}/compliance-item?"))
 		with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
 			overview()
 
@@ -288,7 +289,7 @@ class TestAppApi(IntegrationTestCase):
 		)
 		self.assertEqual(
 			link,
-			"/desk/compliance-item?status=%5B%22in%22%2C+%5B%22Expired%22%2C+%22Lapsed%22%5D%5D"
+			f"{DESK}/compliance-item?status=%5B%22in%22%2C+%5B%22Expired%22%2C+%22Lapsed%22%5D%5D"
 			"&holder_type=Company",
 		)
 		rows = [
@@ -303,8 +304,8 @@ class TestAppApi(IntegrationTestCase):
 		with self.set_user(MANAGER):
 			link = overview()["on_time"]["link"]
 		path = unquote(urlsplit(link).path)
-		self.assertTrue(path.startswith("/desk/query-report/"))
-		self.assertTrue(frappe.db.exists("Report", path.removeprefix("/desk/query-report/")))
+		self.assertTrue(path.startswith(f"{DESK}/query-report/"))
+		self.assertTrue(frappe.db.exists("Report", path.removeprefix(f"{DESK}/query-report/")))
 
 	def test_the_app_shows_people_by_name(self):
 		with self.set_user(HOLDER):

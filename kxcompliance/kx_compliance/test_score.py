@@ -8,7 +8,7 @@ from kxcompliance.api import filing_penalty
 from kxcompliance.kx_compliance.doctype.compliance_client.test_compliance_client import task
 from kxcompliance.kx_compliance.doctype.legal_case.test_legal_case import make_case
 from kxcompliance.kx_compliance.obligation_library import sync_standard_templates
-from kxcompliance.kx_compliance.score import company_scores, late_fee, rules_for
+from kxcompliance.kx_compliance.score import company_scores, fee_figures, late_fee, rules_for
 from kxcompliance.kx_compliance.test_utils import (
 	TEST_COMPANY,
 	make_company,
@@ -104,6 +104,15 @@ class TestComplianceScore(IntegrationTestCase):
 		self.assertEqual(result["late_fees_so_far"], 240)
 		with self.freeze_time("2027-06-01"):
 			self.assertEqual(filing_penalty(late)["late_fee"], 500)  # the cap for a NIL return
+
+	def test_maharashtra_professional_tax_charges_its_fee_nil_or_not(self):
+		pt = rules_for(["Professional Tax - Maharashtra"])["Professional Tax - Maharashtra"]
+		self.assertEqual(late_fee(fee_figures(pt), 40), 1000)
+		self.assertEqual(late_fee(fee_figures(pt, is_nil=True), 40), 1000)
+		self.assertEqual(late_fee(fee_figures(pt, is_nil=True), 0), 0)
+		# Elsewhere a state's figures are left to the firm, so a NIL return costs nothing here.
+		karnataka = rules_for(["Professional Tax - Karnataka"])["Professional Tax - Karnataka"]
+		self.assertEqual(late_fee(fee_figures(karnataka, is_nil=True), 40), 0)
 
 	def test_a_clean_company_scores_full_and_never_below_zero(self):
 		self.assertEqual(company_scores([TEST_COMPANY])[TEST_COMPANY]["score"], 100)

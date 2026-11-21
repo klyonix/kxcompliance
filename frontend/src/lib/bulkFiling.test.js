@@ -4,6 +4,7 @@ import {
 	matchFiles,
 	nextStep,
 	nilOrder,
+	nilSeries,
 	rowMissing,
 	rowValues,
 	saveLabel,
@@ -157,5 +158,54 @@ describe("NIL returns", () => {
 		];
 		expect(nilOrder(rows).map((row) => row.name)).toEqual(["a", "b", "c"]);
 		expect(rows[0].name).toBe("c");
+	});
+
+	it("keeps each GSTIN's periods together, oldest first", () => {
+		const rows = [
+			{
+				name: "b-nov",
+				obligation_template: "GSTR-3B (Monthly)",
+				registration_number: "29B",
+				period_end: "2026-11-30",
+			},
+			{
+				name: "a-nov",
+				obligation_template: "GSTR-3B (Monthly)",
+				registration_number: "27A",
+				period_end: "2026-11-30",
+			},
+			{
+				name: "b-oct",
+				obligation_template: "GSTR-3B (Monthly)",
+				registration_number: "29B",
+				period_end: "2026-10-31",
+			},
+			{
+				name: "a-oct",
+				obligation_template: "GSTR-3B (Monthly)",
+				registration_number: "27A",
+				period_end: "2026-10-31",
+			},
+		];
+		expect(nilOrder(rows).map((row) => row.name)).toEqual([
+			"a-oct",
+			"a-nov",
+			"b-oct",
+			"b-nov",
+		]);
+	});
+
+	it("holds back a return's later periods for one GSTIN only", () => {
+		const monthly = { obligation_template: "GSTR-3B (Monthly)", registration_number: "27A" };
+		const quarterly = {
+			obligation_template: "GSTR-3B (QRMP, 22nd)",
+			registration_number: "27A",
+		};
+		const gstr3b = { form: "GSTR-3B" };
+		expect(nilSeries(monthly, gstr3b)).toBe(nilSeries(quarterly, gstr3b));
+		expect(nilSeries(monthly, gstr3b)).not.toBe(
+			nilSeries({ ...monthly, registration_number: "29B" }, gstr3b)
+		);
+		expect(nilSeries(monthly, null)).toBe("GSTR-3B (Monthly)|27A");
 	});
 });

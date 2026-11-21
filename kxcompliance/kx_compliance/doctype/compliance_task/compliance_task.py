@@ -85,7 +85,7 @@ class ComplianceTask(Document):
 		if self.status in ("Ready for Review", *FILED_STATUSES):
 			self.validate_filing_details(rules)
 			if rules.files_in_order:
-				self.check_period_order()
+				self.check_period_order(rules)
 		if self.status in FILED_STATUSES:
 			self.mark_filed(rules)
 		if self.status == "Not Applicable" and not (self.remarks or "").strip():
@@ -109,30 +109,36 @@ class ComplianceTask(Document):
 				)
 			)
 
-	def check_period_order(self):
-		"""Refuse a period while an earlier one of the same return and registration is still to file."""
+	def check_period_order(self, rules):
+		"""Refuse a period while an earlier one of the same return and registration is still to file.
+
+		The same return may be on more than one obligation (GSTR-3B monthly and quarterly, for a
+		company that moved to QRMP): every in-order obligation for that form counts.
+		"""
+		series = return_series(rules)
 		earlier = scoped.get_all(
 			"Compliance Task",
 			filters={
-				"obligation_template": self.obligation_template,
+				"obligation_template": ("in", series),
 				"company": self.company,
 				"registration_number": self.registration_number or ("is", "not set"),
 				"period_end": ("<", self.period_end),
 				"status": ("in", NOT_YET_FILED),
 				"name": ("!=", self.name),
 			},
-			fields=["name", "period_label"],
+			fields=["name", "obligation_template", "period_label"],
 			order_by="period_end asc",
 			limit=1,
 		)
 		if earlier:
 			frappe.throw(
 				_(
-					"{0} for {1} must be filed first: {2} files in period order, so {3} cannot move to {4}."
+					"{0} ({1}, {2}) must be filed first: {3} files in period order, so {4} cannot move to {5}."
 				).format(
 					earlier[0].name,
+					earlier[0].obligation_template,
 					earlier[0].period_label,
-					self.obligation_template,
+					rules.form or self.obligation_template,
 					self.name,
 					_(self.status),
 				),
@@ -166,3 +172,15 @@ class ComplianceTask(Document):
 			self.reviewed_by = user
 		late = getdate(self.filed_on) > getdate(self.effective_due_date)
 		self.status = "Filed Late" if late else "Filed"
+
+
+def return_series(rules) -> list[str]:
+	"""The obligations filed as one series with this one: the in-order ones for the same law and form."""
+	if not rules.form:
+		return [rules.name]
+	names = scoped.get_all(
+		"Compliance Obligation Template",
+		filters={"law": rules.law, "form": rules.form, "files_in_order": 1},
+		pluck="name",
+	)
+	return names or [rules.name]

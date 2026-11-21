@@ -1,6 +1,8 @@
 # Copyright (c) 2026, KlyONIX Tech Consulting Pvt Ltd and contributors
 # For license information, please see license.txt
 
+import re
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -466,7 +468,8 @@ class TestNilReturns(IntegrationTestCase):
 		october = filing_of("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20", is_nil=1)
 		november = filing_of("GSTR-3B (Monthly)", "2026-11-30", "2026-12-20", is_nil=1)
 		with self.assertRaisesRegex(
-			frappe.ValidationError, f"{october.name} for 2026-10 must be filed first"
+			frappe.ValidationError,
+			re.escape(f"{october.name} (GSTR-3B (Monthly), 2026-10) must be filed first"),
 		):
 			self.ready(november)
 		# Another GSTIN's October does not hold this one back.
@@ -475,6 +478,22 @@ class TestNilReturns(IntegrationTestCase):
 		november.reload()
 		self.ready(november)
 		self.assertEqual(november.status, "Ready for Review")
+
+	def test_a_company_moved_to_quarterly_files_its_last_monthly_return_first(self):
+		# Moved to QRMP from October: September's monthly GSTR-3B is still to file.
+		september = filing_of("GSTR-3B (Monthly)", "2026-09-30", "2026-10-20")
+		quarter = filing_of("GSTR-3B (QRMP, 22nd)", "2026-12-31", "2027-01-22", is_nil=1)
+		# GSTR-1 is another return, so its open month does not count.
+		filing_of("GSTR-1 (Monthly)", "2026-09-30", "2026-10-11")
+		with self.assertRaisesRegex(
+			frappe.ValidationError, re.escape(f"{september.name} (GSTR-3B (Monthly), 2026-09)")
+		):
+			self.ready(quarter)
+		september.reload()
+		self.ready(september)
+		quarter.reload()
+		self.ready(quarter)
+		self.assertEqual(quarter.status, "Ready for Review")
 
 	def test_an_earlier_period_set_aside_does_not_block_the_next(self):
 		october = filing_of("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20")

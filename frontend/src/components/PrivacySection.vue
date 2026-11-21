@@ -7,7 +7,7 @@
 			<p class="text-sm text-ink-gray-5">
 				{{
 					t(
-						"Ask to see, correct or erase your data, or raise a grievance. A manager answers within 90 days."
+						"See what the app holds about you, ask to have it corrected or erased, or raise a grievance. A manager answers within 30 days, and never later than 90."
 					)
 				}}
 			</p>
@@ -17,6 +17,11 @@
 				icon-left="lucide-scroll-text"
 				:label="t('Privacy notice')"
 				:route="{ name: 'PrivacyNotice' }"
+			/>
+			<Button
+				icon-left="lucide-file-user"
+				:label="t('See my data')"
+				:route="{ name: 'MyData' }"
 			/>
 			<Button icon-left="lucide-user-lock" :label="t('Ask about my data')" @click="ask" />
 			<Button variant="ghost" theme="red" :label="t('Withdraw consent')" @click="withdraw" />
@@ -82,7 +87,7 @@ function ask() {
 	dialog.prompt({
 		title: t("Ask about my data"),
 		message: t(
-			"A manager answers within 90 days. Records the law requires are kept even when you ask to erase them."
+			"A manager answers within 30 days, and never later than 90. Records the law requires are kept even when you ask to erase them."
 		),
 		confirmLabel: t("Send"),
 		fields: [

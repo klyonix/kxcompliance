@@ -18,7 +18,7 @@ its clients' logins, and signatories' PAN, DIN, mobile and email. The app gives 
 import frappe
 from frappe import _
 from frappe.query_builder import Order
-from frappe.utils import add_days, cint, get_datetime, now_datetime
+from frappe.utils import add_days, cint, date_diff, get_datetime, getdate, now_datetime, nowdate
 
 from kxcompliance import scoped
 from kxcompliance.install import CLIENT_ROLE, ROLES
@@ -28,8 +28,14 @@ CONSENT = "Privacy Consent"
 REQUEST = "Privacy Request"
 REQUEST_TYPES = ("See my data", "Correct my data", "Erase my data", "Grievance")
 DETAILS_MAX = 2000
-# Days a manager has to answer a request (a grievance, under the DPDP Rules).
+# Days a manager has to answer a request (a grievance, under the DPDP Rules), and the days the
+# app aims at (RK, 21 Nov 2026).
 RESPONSE_DAYS = 90
+TARGET_DAYS = 30
+# Reminders: this many days before the target, on it, then weekly; urgent this many days before
+# the law's limit.
+REMIND_BEFORE_DAYS = 7
+URGENT_BEFORE_DAYS = 10
 # Hours after discovery by which a breach is reported to the Data Protection Board.
 BOARD_HOURS = 72
 # Logs are kept at least a year (DPDP Rules, reasonable security safeguards).
@@ -253,12 +259,94 @@ def erase_old_log_addresses() -> None:
 
 
 def run_daily():
-	try:
-		erase_old_log_addresses()
-	except Exception:
-		# A scheduled job: undo the half-done update and record why.
-		frappe.db.rollback()
-		frappe.log_error(title="Erasing old reminder log addresses failed")
+	for step, title in (
+		(erase_old_log_addresses, "Erasing old reminder log addresses failed"),
+		(remind_about_requests, "Reminding managers of privacy requests failed"),
+	):
+		try:
+			step()
+		except Exception:
+			# A scheduled job: undo the half-done step, record why, and go on to the next.
+			frappe.db.rollback()
+			frappe.log_error(title=title)
+
+
+def reminder_due(due_by, latest_by, today) -> str | None:
+	"""Whether a request still open is reminded today: "soon" a week before its target, "due" on
+	it, "late" every week after; any of these is "urgent" once the law's limit is near, and so is
+	the limit's own day. None on other days."""
+	due_by, today = getdate(due_by), getdate(today)
+	kind = None
+	if today == add_days(due_by, -REMIND_BEFORE_DAYS):
+		kind = "soon"
+	elif today == due_by:
+		kind = "due"
+	elif today > due_by and date_diff(today, due_by) % 7 == 0:
+		kind = "late"
+	if latest_by:
+		latest_by = getdate(latest_by)
+		if today == latest_by or (kind and today >= add_days(latest_by, -URGENT_BEFORE_DAYS)):
+			kind = "urgent"
+	return kind
+
+
+def remind_about_requests(today=None):
+	"""Daily: managers, and the grievance officer's address, hear of requests to answer."""
+	from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
+
+	from kxcompliance.kx_compliance.reminders import compliance_managers, send_email, sender_address
+
+	today = getdate(today or nowdate())
+	open_requests = scoped.get_all(
+		REQUEST,
+		filters={"status": ("in", ["Open", "In Progress"]), "due_by": ("is", "set")},
+		fields=["name", "request_type", "requester_name", "requested_by", "due_by", "latest_by"],
+	)
+	managers = compliance_managers()
+	officer = settings().grievance_email
+	for request in open_requests:
+		kind = reminder_due(request.due_by, request.latest_by, today)
+		if not kind:
+			continue
+		subject = reminder_subject(kind, request)
+		recipients = [user for user in managers if user != request.requested_by]
+		if recipients:
+			enqueue_create_notification(
+				recipients,
+				{
+					"type": "Alert",
+					"document_type": REQUEST,
+					"document_name": request.name,
+					"subject": subject,
+				},
+			)
+			send_email(recipients, subject, frappe.utils.escape_html(subject), REQUEST, request.name)
+		sender = sender_address()
+		if officer and sender and officer not in recipients:
+			frappe.sendmail(
+				recipients=[officer],
+				sender=sender,
+				subject=subject,
+				message=frappe.utils.escape_html(subject),
+				reference_doctype=REQUEST,
+				reference_name=request.name,
+			)
+
+
+def reminder_subject(kind: str, request) -> str:
+	who = request.requester_name or request.requested_by
+	what = _(request.request_type)
+	if kind == "urgent":
+		return _("Urgent: answer {0}'s request ({1}) by {2}, the latest the law allows").format(
+			who, what, frappe.utils.formatdate(request.latest_by)
+		)
+	if kind == "late":
+		return _("{0}'s request ({1}) was due on {2} and is still open").format(
+			who, what, frappe.utils.formatdate(request.due_by)
+		)
+	if kind == "due":
+		return _("{0}'s request ({1}) is due today").format(who, what)
+	return _("{0}'s request ({1}) is due on {2}").format(who, what, frappe.utils.formatdate(request.due_by))
 
 
 def board_due_by(discovered_on) -> str:

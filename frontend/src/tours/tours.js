@@ -1026,7 +1026,7 @@ export const TOURS = [
 			{
 				target: ["privacy-actions"],
 				title: "Your privacy",
-				text: "Read the privacy notice again, ask to see, correct or erase your data, or withdraw your consent. The answers to your requests show here.",
+				text: "Read the privacy notice again, see what the app holds about you, ask to have it corrected or erased, or withdraw your consent. The answers to your requests show here.",
 			},
 		],
 	},
@@ -1038,7 +1038,7 @@ export const TOURS = [
 		steps: [
 			{
 				title: "Privacy requests",
-				text: "Anyone using the app can ask from Account to see, correct or erase their data, or raise a grievance. Each comes here, to be answered within 90 days.",
+				text: "Anyone using the app can ask from Account to see, correct or erase their data, or raise a grievance. Each comes here, to be answered within 30 days, and never later than 90.",
 			},
 			{
 				target: ["list-tabs"],

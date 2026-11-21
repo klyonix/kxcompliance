@@ -242,12 +242,12 @@ export default {
 
 	// Privacy
 	"Your privacy": "आपकी गोपनीयता",
-	"Ask to see, correct or erase your data, or raise a grievance. A manager answers within 90 days.":
-		"अपना डेटा देखने, सुधारने या हटाने के लिए कहें, या शिकायत करें। मैनेजर 90 दिन के भीतर जवाब देंगे।",
+	"See what the app holds about you, ask to have it corrected or erased, or raise a grievance. A manager answers within 30 days, and never later than 90.":
+		"देखें कि ऐप में आपके बारे में क्या है, उसे सुधारने या हटाने के लिए कहें, या शिकायत करें। मैनेजर 30 दिन के भीतर जवाब देंगे, और 90 दिन से बाद कभी नहीं।",
 	"Ask about my data": "मेरे डेटा के बारे में पूछें",
 	"Withdraw consent": "सहमति वापस लें",
-	"A manager answers within 90 days. Records the law requires are kept even when you ask to erase them.":
-		"मैनेजर 90 दिन के भीतर जवाब देंगे। क़ानून के अनुसार ज़रूरी रिकॉर्ड, हटाने के अनुरोध पर भी रखे जाते हैं।",
+	"A manager answers within 30 days, and never later than 90. Records the law requires are kept even when you ask to erase them.":
+		"मैनेजर 30 दिन के भीतर जवाब देंगे, और 90 दिन से बाद कभी नहीं। क़ानून के अनुसार ज़रूरी रिकॉर्ड, हटाने के अनुरोध पर भी रखे जाते हैं।",
 	Send: "भेजें",
 	"What do you want?": "आप क्या चाहते हैं?",
 	"See my data": "मेरा डेटा देखें",
@@ -304,10 +304,44 @@ export default {
 	"When you want to know what the app holds about you, or want it changed or removed.":
 		"जब आप जानना चाहें कि ऐप में आपके बारे में क्या है, या उसे बदलवाना या हटवाना हो।",
 	"Open Account.": "'खाता' खोलें।",
-	'Under Your privacy press "Ask about my data", choose what you want and say what it is about.':
-		"'आपकी गोपनीयता' में \"मेरे डेटा के बारे में पूछें\" दबाएँ, चुनें कि आप क्या चाहते हैं और बताएँ किस बारे में है।",
-	"A manager answers within 90 days. The answer shows under Your privacy, and comes by email when the app sends email.":
-		"मैनेजर 90 दिन के भीतर जवाब देंगे। जवाब 'आपकी गोपनीयता' में दिखेगा, और ईमेल चालू होने पर ईमेल से भी आएगा।",
+	"A manager answers within 30 days, and never later than 90. The answer shows under Your privacy, and comes by email when the app sends email.":
+		"मैनेजर 30 दिन के भीतर जवाब देंगे, और 90 दिन से बाद कभी नहीं। जवाब 'आपकी गोपनीयता' में दिखेगा, और ईमेल चालू होने पर ईमेल से भी आएगा।",
+	'To see what the app holds about you, press "See my data". Download it to keep a copy.':
+		'ऐप में आपके बारे में क्या है, यह देखने के लिए "मेरा डेटा देखें" दबाएँ। अपने पास रखने के लिए इसे डाउनलोड करें।',
+	'To have it corrected or erased, press "Ask about my data", choose what you want and say what it is about.':
+		'इसे सुधारने या हटाने के लिए "मेरे डेटा के बारे में पूछें" दबाएँ, चुनें कि आप क्या चाहते हैं और बताएँ किस बारे में है।',
 	'"Withdraw consent" stops you using the app until you accept the privacy notice again.':
 		'"सहमति वापस लें" दबाने पर, गोपनीयता सूचना फिर से स्वीकार करने तक आप ऐप का उपयोग नहीं कर पाएँगे।',
+
+	// Your data (the DPDP right to see one's own data)
+	"Your data": "आपका डेटा",
+	"your data": "आपका डेटा",
+	"Everything the app holds about you. Download it to keep a copy. To have something corrected or erased, ask from Account.":
+		"ऐप में आपके बारे में सब कुछ। अपने पास रखने के लिए इसे डाउनलोड करें। कुछ सुधारना या हटाना हो तो 'खाता' से कहें।",
+	"As of {0}": "{0} तक",
+	Download: "डाउनलोड करें",
+	Login: "लॉगिन",
+	Email: "ईमेल",
+	Mobile: "मोबाइल",
+	Roles: "भूमिकाएँ",
+	Photo: "फ़ोटो",
+	Yes: "हाँ",
+	No: "नहीं",
+	Since: "कब से",
+	"Last signed in": "पिछली बार साइन इन",
+	"Records that name you": "रिकॉर्ड जिनमें आपका नाम है",
+	"Register items": "रजिस्टर आइटम",
+	"Legal cases": "कानूनी मामले",
+	"Hearings and deadlines": "सुनवाई और समय-सीमाएँ",
+	"As a signatory": "हस्ताक्षरकर्ता के रूप में",
+	"Consent, requests and activity": "सहमति, अनुरोध और गतिविधि",
+	"Accepted the privacy notice (version {0}) on {1}, withdrawn on {2}":
+		"गोपनीयता सूचना (संस्करण {0}) {1} को स्वीकार की, {2} को वापस ली",
+	"Accepted the privacy notice (version {0}) on {1}":
+		"गोपनीयता सूचना (संस्करण {0}) {1} को स्वीकार की",
+	"{0}, asked on {1}: {2}": "{0}, {1} को पूछा: {2}",
+	"Reminder emails sent to you: {0}": "आपको भेजे गए रिमाइंडर ईमेल: {0}",
+	"Times you signed in: {0}": "आपने कितनी बार साइन इन किया: {0}",
+	"Client logins: {0}": "क्लाइंट लॉगिन: {0}",
+	Grievance: "शिकायत",
 };

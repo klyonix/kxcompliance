@@ -34,14 +34,72 @@
 					</p>
 					<p class="text-sm text-ink-gray-5">
 						{{ request.requested_by }} · asked
-						{{ formatDateTime(request.received_on) }} · answer due by
+						{{ formatDateTime(request.received_on) }} · answer by
 						{{ formatDate(request.due_by) }}
+						<template v-if="request.latest_by">
+							· latest by law {{ formatDate(request.latest_by) }}</template
+						>
 					</p>
 				</section>
 
 				<p class="rounded-lg bg-surface-gray-1 px-3 py-2 text-sm text-ink-gray-7">
 					{{ GUIDANCE[request.request_type] }}
 				</p>
+
+				<section
+					v-if="editable && request.request_type === 'See my data'"
+					class="flex flex-col gap-3"
+					aria-labelledby="their-data-heading"
+				>
+					<h2 id="their-data-heading" class="text-base font-semibold text-ink-gray-8">
+						What the app holds about them
+					</h2>
+					<div v-if="!theirData">
+						<Button
+							label="Show their data"
+							icon-left="lucide-file-user"
+							:loading="loadingData"
+							@click="showTheirData"
+						/>
+					</div>
+					<PersonalData v-else :data="theirData" />
+				</section>
+
+				<section
+					v-if="editable && request.request_type === 'Erase my data'"
+					class="flex flex-col gap-3"
+					aria-labelledby="erase-heading"
+				>
+					<h2 id="erase-heading" class="text-base font-semibold text-ink-gray-8">
+						Erase this person
+					</h2>
+					<p v-if="request.erased_on" class="text-base text-ink-gray-7">
+						Erased {{ formatDateTime(request.erased_on) }}.
+					</p>
+					<p
+						v-else-if="request.status === 'In Progress' && erasing"
+						class="text-base text-ink-gray-7"
+					>
+						Erasing in the background. You are told when it is done.
+					</p>
+					<template v-else-if="!['Done', 'Declined'].includes(request.status)">
+						<p class="text-base text-ink-gray-7">
+							Their open work goes to the person you choose. Then their login is
+							switched off and renamed, and their name, mobile and photo removed;
+							filings keep the work, as done by an erased person. As a signatory they
+							keep name, designation and DIN; PAN, email and mobile go. They get your
+							answer before their address is removed.
+						</p>
+						<div>
+							<Button
+								theme="red"
+								label="Erase…"
+								icon-left="lucide-user-x"
+								@click="openErase"
+							/>
+						</div>
+					</template>
+				</section>
 
 				<section
 					class="flex flex-col gap-4"
@@ -88,18 +146,49 @@
 			<Button variant="solid" label="Save" :loading="saving" @click="save" />
 		</div>
 	</div>
+
+	<Dialog
+		v-model:open="confirming"
+		title="Erase this person?"
+		:actions="[
+			{
+				label: 'Erase',
+				variant: 'solid',
+				theme: 'red',
+				onClick: ({ close }) => erase(close),
+			},
+		]"
+	>
+		<form class="flex flex-col gap-4" @submit.prevent>
+			<FormControl
+				v-model="eraseForm.handTo"
+				type="select"
+				label="Their open work goes to"
+				:options="handToOptions"
+			/>
+			<FormControl
+				v-model="eraseForm.confirm"
+				:label="`Type ${request?.requested_by} to confirm`"
+				autocomplete="off"
+			/>
+			<p class="text-sm text-ink-gray-5">This cannot be undone.</p>
+			<p v-if="eraseError" role="alert" class="text-sm text-ink-red-4">{{ eraseError }}</p>
+		</form>
+	</Dialog>
 </template>
 
 <script setup>
 // One privacy request: what the person asked, and the manager's answer.
-import { onMounted, reactive, ref } from "vue";
-import { Badge, Button, FormControl, Skeleton, toast } from "frappe-ui";
-import { getDoc, updateDoc } from "@/api";
+import { computed, onMounted, reactive, ref } from "vue";
+import { Badge, Button, Dialog, FormControl, Skeleton, toast } from "frappe-ui";
+import { call, getDoc, updateDoc } from "@/api";
 import { isManager } from "@/boot";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import PersonalData from "@/components/PersonalData.vue";
 import RecordFrame from "@/components/RecordFrame.vue";
 import { learnNames, nameOf } from "@/composables/usePeople";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { personOptions } from "@/lib/people";
 import { REQUEST_STATUS_THEMES } from "@/lib/privacy";
 import { recordWidth } from "@/lib/records";
 import { notLoaded } from "@/offline/reachability";
@@ -112,11 +201,11 @@ const STATUSES = ["Open", "In Progress", "Done", "Declined"].map((value) => ({
 // What answering each kind of request involves.
 const GUIDANCE = {
 	"See my data":
-		"Tell them what the app holds about them: their name, email and role, the records they added or changed, and, as a signatory, their designation, DIN, PAN, email and mobile. A System Manager can email them a full copy from the Desk (Personal Data Download Request).",
+		'Press "Show their data" for what the app holds about them, and send it to them with your answer. They can also see it themselves, any time, from Account.',
 	"Correct my data":
 		"Correct the record (their name in People, or a signatory's details), then say here what changed.",
 	"Erase my data":
-		"Remove them from People. Filings, registers and other records the law requires are kept until that period ends: say which. A System Manager can erase the rest from the Desk (Personal Data Deletion Request).",
+		"Erase them below. Their open work is handed over first, and the records the law requires are kept without their name. Say in the answer what was kept, and why.",
 	Grievance: "Look into it, then say what you found and what was done.",
 };
 
@@ -152,6 +241,57 @@ async function save() {
 			: err.message;
 	} finally {
 		saving.value = false;
+	}
+}
+
+const theirData = ref(null);
+const loadingData = ref(false);
+
+async function showTheirData() {
+	loadingData.value = true;
+	try {
+		theirData.value = await call("kxcompliance.api.privacy_request_data", {
+			request: props.name,
+		});
+	} catch (err) {
+		toast.error(err.message);
+	} finally {
+		loadingData.value = false;
+	}
+}
+
+const confirming = ref(false);
+const erasing = ref(false);
+const eraseError = ref("");
+const eraseForm = reactive({ handTo: "", confirm: "" });
+const people = ref([]);
+const handToOptions = computed(() =>
+	personOptions(people.value.filter((person) => person.name !== request.value?.requested_by))
+);
+
+async function openErase() {
+	eraseError.value = "";
+	confirming.value = true;
+	if (!people.value.length) {
+		people.value = await call("kxcompliance.api.people_options").catch(() => []);
+		eraseForm.handTo = handToOptions.value[0]?.value || "";
+	}
+}
+
+async function erase(close) {
+	eraseError.value = "";
+	try {
+		await call(
+			"kxcompliance.api.erase_privacy_requester",
+			{ request: props.name, hand_to: eraseForm.handTo, confirm: eraseForm.confirm },
+			{ httpMethod: "POST" }
+		);
+		close();
+		erasing.value = true;
+		show(await getDoc(DOCTYPE, props.name));
+		toast.success("Erasing in the background. You are told when it is done.");
+	} catch (err) {
+		eraseError.value = err.message;
 	}
 }
 

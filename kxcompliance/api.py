@@ -26,6 +26,7 @@ from kxcompliance.kx_compliance import (
 	onboarding,
 	penalty_figures,
 	people,
+	personal_data,
 	privacy,
 	qrmp,
 	score,
@@ -1446,6 +1447,28 @@ def my_privacy_requests() -> list[dict]:
 	"""This person's own privacy requests and the answers."""
 	check_can_open_app()
 	return privacy.my_requests()
+
+
+@frappe.whitelist(methods=["GET"])
+def my_personal_data() -> dict:
+	"""What the app holds about the person asking: theirs to read and download any time."""
+	check_can_open_app()
+	return personal_data.summary(frappe.session.user)
+
+
+@frappe.whitelist(methods=["GET"])
+def privacy_request_data(request: str) -> dict:
+	"""For a manager answering a "See my data" request: what the app holds about who asked."""
+	check_manager_access(_("Only a Compliance Manager answers privacy requests."))
+	return personal_data.summary_for_request(request)
+
+
+@frappe.whitelist(methods=["POST"])
+def erase_privacy_requester(request: str, hand_to: str, confirm: str) -> dict:
+	"""For a manager answering an "Erase my data" request: hand over the person's open work and
+	erase them, in the background."""
+	check_manager_access(_("Only a Compliance Manager answers privacy requests."))
+	return personal_data.start_erasing(request, hand_to, confirm)
 
 
 # The languages the app is translated into (frontend/src/locales).

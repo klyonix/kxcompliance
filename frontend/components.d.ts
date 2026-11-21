@@ -50,6 +50,7 @@ declare module 'vue' {
     OutcomeDialog: typeof import('./src/components/OutcomeDialog.vue')['default']
     PaymentDialog: typeof import('./src/components/PaymentDialog.vue')['default']
     PaymentsList: typeof import('./src/components/PaymentsList.vue')['default']
+    PersonalData: typeof import('./src/components/PersonalData.vue')['default']
     PersonPhoto: typeof import('./src/components/PersonPhoto.vue')['default']
     PrivacySection: typeof import('./src/components/PrivacySection.vue')['default']
     ProfileButton: typeof import('./src/components/ProfileButton.vue')['default']

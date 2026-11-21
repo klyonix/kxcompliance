@@ -99,6 +99,14 @@ export function seenTours() {
 	return seen;
 }
 
+// The tour showing now, ended when its page is left: a step may highlight a link to another
+// page, and its popover would otherwise stay over that page.
+let active = null;
+
+export function stopTour() {
+	active?.destroy();
+}
+
 export function resetTours() {
 	seen = null;
 	running = false;
@@ -119,7 +127,7 @@ export async function startTour(id) {
 		import("driver.js"),
 		import("driver.js/dist/driver.css"),
 	]);
-	driver({
+	active = driver({
 		steps,
 		showProgress: steps.length > 1,
 		progressText: "{{current}} of {{total}}",
@@ -133,8 +141,10 @@ export async function startTour(id) {
 		smoothScroll: true,
 		onDestroyed: () => {
 			running = false;
+			active = null;
 		},
-	}).drive();
+	});
+	active.drive();
 	(await seenTours()).add(id);
 	// Every start is counted: replays show where people still have doubts.
 	call("kxcompliance.api.tour_opened", { tour: id }, { httpMethod: "POST" }).catch(() => {

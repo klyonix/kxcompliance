@@ -71,6 +71,7 @@ export const CLIENT_ROUTES = [
 	"LegalCase",
 	"Trademark",
 	"Account",
+	"MyData",
 	"Help",
 	"PrivacyNotice",
 ];

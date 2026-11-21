@@ -589,8 +589,8 @@ const dirty = computed(
 );
 const showAmounts = computed(
 	() =>
-		(Boolean(rules.value?.requires_payment) && !form.is_nil) ||
-		Number(form.late_fee) > 0 ||
+		// A NIL return still shows its late fee: one filed late pays it.
+		Boolean(rules.value?.requires_payment) ||
 		["amount_paid", "interest", "late_fee"].some((field) => Number(task.value?.[field]))
 );
 

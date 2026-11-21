@@ -23,6 +23,16 @@ export const FILING_VIEWS = [
 		group: true,
 	},
 	{
+		label: "NIL to file",
+		value: "nil",
+		filters: [
+			["is_nil", "=", 1],
+			["status", "in", ["Open", "In Progress", "Ready for Review"]],
+		],
+		orderBy: "effective_due_date asc",
+		group: true,
+	},
+	{
 		label: "Done",
 		value: "done",
 		filters: [["status", "in", CLOSED_STATUSES]],
@@ -40,6 +50,7 @@ export const TASK_LIST_FIELDS = [
 	"effective_due_date",
 	"filed_on",
 	"responsible",
+	"is_nil",
 ];
 
 // The filings list's columns, boards and filters (RecordList).
@@ -55,6 +66,7 @@ export const FILING_LIST = {
 
 // The filing details the app can change, in the order the form shows them.
 export const FILING_FIELDS = [
+	"is_nil",
 	"filed_on",
 	"acknowledgement_number",
 	"proof",
@@ -106,7 +118,9 @@ export function taskRow(task, today = new Date()) {
 		key: task.name,
 		kind: "filing",
 		title: task.obligation_template,
-		detail: [task.period_label, task.company].filter(Boolean).join(" · "),
+		detail: [task.period_label, task.company, task.is_nil && "NIL"]
+			.filter(Boolean)
+			.join(" · "),
 		status: task.status,
 		theme: taskTheme(task.status, Boolean(task.is_overdue)),
 		due: dueFor(task, midnight),
@@ -143,22 +157,33 @@ export function taskActions(task, rules, { user, roles }) {
 	};
 }
 
+// A NIL period of a return that gives no acknowledgement for it (a TDS non-filing declaration on
+// TRACES): only the date it was declared is needed. The server makes the same check.
+export const nilDeclared = (values, rules) =>
+	Boolean(Number(values?.is_nil) && rules?.allows_nil && !rules.nil_needs_acknowledgement);
+
 // Filing details still to fill in before a task can go for review or be marked filed.
 export function missingDetails(values, rules, { proofWaiting = false } = {}) {
 	const missing = [];
 	if (!values.filed_on) missing.push("Filed on");
+	if (nilDeclared(values, rules)) return missing;
 	if (!(values.acknowledgement_number || "").trim()) missing.push("Acknowledgement number");
 	if (rules?.requires_proof && !values.proof && !proofWaiting) missing.push("Proof");
 	return missing;
 }
 
 const AMOUNT_FIELDS = ["amount_paid", "interest", "late_fee"];
+// Ticks, sent as 0 or 1.
+const CHECK_FIELDS = ["is_nil"];
+// A NIL return pays no tax and no interest; a late fee may still be paid on one filed late.
+export const NIL_ZERO_FIELDS = ["amount_paid", "interest"];
 
 // What the form shows for a saved task: amounts of zero stay blank.
 export function formValues(task) {
 	return Object.fromEntries(
 		FILING_FIELDS.map((field) => {
 			const value = task[field] ?? "";
+			if (CHECK_FIELDS.includes(field)) return [field, Boolean(Number(value))];
 			return [field, AMOUNT_FIELDS.includes(field) && !Number(value) ? "" : value];
 		})
 	);
@@ -171,7 +196,9 @@ export function changedValues(values, saved) {
 		if (field === "proof") continue;
 		const now = values[field] ?? "";
 		const before = saved[field] ?? "";
-		if (AMOUNT_FIELDS.includes(field)) {
+		if (CHECK_FIELDS.includes(field)) {
+			if (Boolean(Number(now)) !== Boolean(Number(before))) changed[field] = now ? 1 : 0;
+		} else if (AMOUNT_FIELDS.includes(field)) {
 			if (Number(now) !== Number(before)) changed[field] = Number(now);
 		} else if (String(now) !== String(before)) {
 			changed[field] = now === "" ? null : now;

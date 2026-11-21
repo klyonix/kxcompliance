@@ -40,4 +40,10 @@ describe("penaltyLines", () => {
 			"Plus interest at 12% a year on tax paid late.",
 		]);
 	});
+
+	it("says when the fee is the lower one for a NIL return", () => {
+		const lines = penaltyLines({ ...base, nil: true, days_late: 12, late_fee: 240 });
+		expect(lines.at(-1)).toBe("Worked out at the lower late fee for a NIL return.");
+		expect(penaltyLines({ ...base, nil: true, counted: false })).toEqual([]);
+	});
 });

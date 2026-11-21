@@ -181,6 +181,11 @@ export const routes = [
 		component: () => import("./pages/BulkFiling.vue"),
 	},
 	{
+		path: "/filings/nil",
+		name: "NilFiling",
+		component: () => import("./pages/NilFiling.vue"),
+	},
+	{
 		path: "/filings/extensions",
 		name: "Extensions",
 		component: () => import("./pages/Extensions.vue"),

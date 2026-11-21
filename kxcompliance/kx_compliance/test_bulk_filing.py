@@ -4,7 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from kxcompliance.api import bulk_filing_choices
+from kxcompliance.api import bulk_filing_choices, nil_filing_choices
 from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
 	MANAGER,
@@ -70,3 +70,15 @@ class TestBulkFiling(IntegrationTestCase):
 		with self.set_user(HOLDER):
 			choices = bulk_filing_choices()
 		self.assertEqual([row["obligation_template"] for row in choices], ["GSTR-3B (Monthly)"])
+
+	def test_nil_choices_are_the_companies_with_nil_returns_still_to_file(self):
+		for name in (
+			filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20"),
+			filing("GSTR-1 (Monthly)", "2026-10-31", "2026-11-11"),
+			filing("GSTR-3B (Monthly)", "2026-09-30", "2026-10-20", status="Filed"),
+		):
+			frappe.db.set_value("Compliance Task", name, "is_nil", 1)
+		filing("GSTR-3B (Monthly)", "2026-11-30", "2026-12-20")  # not NIL
+		with self.set_user(MANAGER):
+			choices = nil_filing_choices()
+		self.assertEqual(choices, [{"company": TEST_COMPANY, "due": "2026-11-11", "filings": 2}])

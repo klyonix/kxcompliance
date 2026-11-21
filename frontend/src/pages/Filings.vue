@@ -42,6 +42,12 @@
 					label="File in bulk"
 					:route="{ name: 'BulkFiling' }"
 				/>
+				<Button
+					v-if="mayRecord()"
+					icon-left="lucide-circle-dashed"
+					label="File NIL together"
+					:route="{ name: 'NilFiling' }"
+				/>
 			</template>
 			<Button
 				v-if="mayRecord()"
@@ -78,6 +84,11 @@ const moreMenu = computed(() =>
 			icon: "lucide-list-checks",
 			onClick: () => router.push({ name: "BulkFiling" }),
 		},
+		mayRecord() && {
+			label: "File NIL together",
+			icon: "lucide-circle-dashed",
+			onClick: () => router.push({ name: "NilFiling" }),
+		},
 		isManager() && {
 			label: "Due-date extensions",
 			icon: "lucide-calendar-clock",
@@ -94,6 +105,10 @@ const EMPTY = {
 	review: {
 		title: "Nothing waiting for review",
 		detail: "Filings sent for review appear here until a reviewer marks them filed.",
+	},
+	nil: {
+		title: "No NIL returns to file",
+		detail: "Mark a filing NIL from its page when there is nothing to report; it waits here until it is filed.",
 	},
 	done: { title: "Nothing filed yet", detail: "Filed and closed filings are kept here." },
 };

@@ -86,6 +86,7 @@ export const REPORTS = [
 				"Not Applicable",
 				"Cancelled",
 			]),
+			select("nil", "NIL returns", ["NIL only", "Not NIL"]),
 			RESPONSIBLE,
 		],
 		defaults: { month: "today" },

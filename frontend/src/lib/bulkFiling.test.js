@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { askPlanLine, matchFiles, nextStep, rowMissing, rowValues, saveLabel } from "./bulkFiling";
+import {
+	askPlanLine,
+	matchFiles,
+	nextStep,
+	nilOrder,
+	rowMissing,
+	rowValues,
+	saveLabel,
+} from "./bulkFiling";
 
 const PREPARER = { user: "asha@example.com", roles: ["Compliance User"] };
 const REVIEWER = { user: "ravi@example.com", roles: ["Compliance User"] };
@@ -106,5 +114,48 @@ describe("who asking in bulk reaches", () => {
 		expect(askPlanLine({ to_ask: 0, asked_already: 2, no_client: 0 })).toBe(
 			"Nobody is left to ask; 2 companies already have a request open."
 		);
+	});
+});
+
+describe("NIL returns", () => {
+	const gst = { allows_nil: 1, nil_needs_acknowledgement: 1, requires_payment: 1 };
+	const tds = { allows_nil: 1, nil_needs_acknowledgement: 0, requires_proof: 1 };
+
+	it("sends the NIL tick and no amount for a NIL row", () => {
+		expect(
+			rowValues(
+				{ is_nil: true, amount_paid: "1200", acknowledgement_number: "AA1" },
+				"2026-12-18",
+				gst
+			)
+		).toEqual({
+			filed_on: "2026-12-18",
+			acknowledgement_number: "AA1",
+			is_nil: 1,
+			amount_paid: 0,
+		});
+		expect(rowValues({ amount_paid: "1200" }, "2026-12-18", gst)).toMatchObject({
+			is_nil: 0,
+			amount_paid: 1200,
+		});
+		expect(rowValues({}, "2026-12-18", {})).not.toHaveProperty("is_nil");
+	});
+
+	it("needs only the date for a TDS quarter declared NIL", () => {
+		expect(rowMissing({ is_nil: true }, "2026-12-18", tds, false)).toEqual([]);
+		expect(rowMissing({ is_nil: false }, "2026-12-18", tds, false)).toEqual([
+			"Acknowledgement number",
+			"Proof",
+		]);
+	});
+
+	it("saves each return's periods oldest first", () => {
+		const rows = [
+			{ name: "c", obligation_template: "GSTR-3B (Monthly)", period_end: "2026-11-30" },
+			{ name: "a", obligation_template: "GSTR-1 (Monthly)", period_end: "2026-10-31" },
+			{ name: "b", obligation_template: "GSTR-3B (Monthly)", period_end: "2026-10-31" },
+		];
+		expect(nilOrder(rows).map((row) => row.name)).toEqual(["a", "b", "c"]);
+		expect(rows[0].name).toBe("c");
 	});
 });

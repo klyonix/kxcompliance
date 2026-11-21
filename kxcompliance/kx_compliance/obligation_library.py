@@ -14,7 +14,7 @@ Extension on the site, and here in the next release.
 import frappe
 
 from kxcompliance import scoped
-from kxcompliance.kx_compliance.penalty_library import penalty_of
+from kxcompliance.kx_compliance.penalty_library import nil_penalty_of, penalty_of
 
 COMPANIES = ["Private Limited", "Public Limited", "One Person Company"]
 FIRMS = ["LLP", "Partnership"]
@@ -55,6 +55,9 @@ def obligation(name, law, form, frequency, months_after=None, day=None, **extra)
 		"requires_payment": extra.pop("payment", 0),
 		"requires_proof": 1,
 		"requires_review": 1,
+		"allows_nil": extra.pop("nil", 0),
+		"nil_needs_acknowledgement": extra.pop("nil_ack", 1),
+		"files_in_order": extra.pop("in_order", 0),
 		"reminders": [
 			{"days_before": days}
 			for days in extra.pop(
@@ -132,6 +135,7 @@ def state_tax(law, state, frequency, months_after, day, registration, basis="Fin
 		registration=registration,
 		states=[state],
 		payment=1,
+		nil=int(law == "Professional Tax"),
 		source=f"{state} {law} rules; confirm the current due date before release.",
 	)
 
@@ -143,9 +147,17 @@ LISTED = dict(registration="Stock Exchange", authority="Stock Exchanges", compan
 # returns (firms and proprietors) to 31 August; confirm against CBDT before each release.
 INCOME_TAX_2025 = "Income-tax Act, 2025, return of income; Finance Act 2026 for the non-audit date"
 TAN = dict(registration="TAN", authority="Income Tax Department")
+# GST returns are filed NIL with an ARN (on the portal or by SMS to 14409), one period after the
+# other: the portal refuses a period while an earlier one is unfiled (CGST Act s.39(10)).
+NIL_IN_ORDER = dict(nil=1, in_order=1)
+# A quarter with no TDS needs no statement: TRACES takes a "Declaration for non-filing", which
+# gives no acknowledgement number. A month with no TDS has no challan to pay.
+NIL_DECLARED = dict(nil=1, nil_ack=0)
 
 LIBRARY = [
-	obligation("GSTR-1 (Monthly)", "GST", "GSTR-1", "Monthly", 1, 11, source="CGST Act s.37", **GST),
+	obligation(
+		"GSTR-1 (Monthly)", "GST", "GSTR-1", "Monthly", 1, 11, source="CGST Act s.37", **GST, **NIL_IN_ORDER
+	),
 	obligation(
 		"GSTR-1 (QRMP)",
 		"GST",
@@ -156,6 +168,7 @@ LIBRARY = [
 		default=0,
 		source="CGST Act s.37, QRMP scheme",
 		**GST,
+		**NIL_IN_ORDER,
 	),
 	obligation(
 		"GSTR-3B (Monthly)",
@@ -167,6 +180,7 @@ LIBRARY = [
 		payment=1,
 		source="CGST Act s.39, rule 61",
 		**GST,
+		**NIL_IN_ORDER,
 	),
 	obligation(
 		"GSTR-3B (QRMP, 22nd)",
@@ -180,6 +194,7 @@ LIBRARY = [
 		states=QRMP_22_STATES,
 		source="CGST rule 61, QRMP scheme",
 		**GST,
+		**NIL_IN_ORDER,
 	),
 	obligation(
 		"GSTR-3B (QRMP, 24th)",
@@ -193,6 +208,7 @@ LIBRARY = [
 		states=QRMP_24_STATES,
 		source="CGST rule 61, QRMP scheme",
 		**GST,
+		**NIL_IN_ORDER,
 	),
 	obligation("GSTR-9 (Annual Return)", "GST", "GSTR-9", "Yearly", 9, 31, source="CGST Act s.44", **GST),
 	obligation(
@@ -217,6 +233,7 @@ LIBRARY = [
 		payment=1,
 		source="Income-tax Rules, rule 30",
 		**TAN,
+		**NIL_DECLARED,
 	),
 	obligation(
 		"TDS Return 24Q (Salary)",
@@ -228,6 +245,7 @@ LIBRARY = [
 		overrides=[(3, 2, 31)],
 		source="Income-tax Rules, rule 31A",
 		**TAN,
+		**NIL_DECLARED,
 	),
 	obligation(
 		"TDS Return 26Q (Non-salary)",
@@ -239,6 +257,7 @@ LIBRARY = [
 		overrides=[(3, 2, 31)],
 		source="Income-tax Rules, rule 31A",
 		**TAN,
+		**NIL_DECLARED,
 	),
 	obligation(
 		"TCS Return 27EQ",
@@ -251,6 +270,7 @@ LIBRARY = [
 		default=0,
 		source="Income-tax Rules, rule 31AA",
 		**TAN,
+		**NIL_DECLARED,
 	),
 	obligation(
 		"Form 16A",
@@ -309,6 +329,7 @@ LIBRARY = [
 		payment=1,
 		authority="EPFO",
 		source="EPF Scheme, para 38",
+		nil=1,
 	),
 	obligation(
 		"ESI Contribution",
@@ -321,6 +342,7 @@ LIBRARY = [
 		payment=1,
 		authority="ESIC",
 		source="ESI (Central) Regulations, reg. 31",
+		nil=1,
 	),
 	after_agm("AOC-4 (Financial Statements)", "AOC-4", 30, "Companies Act s.137"),
 	after_agm("MGT-7 / MGT-7A (Annual Return)", "MGT-7", 60, "Companies Act s.92"),
@@ -478,6 +500,7 @@ LIBRARY = [
 		default=0,
 		source="Income-tax Rules, quarterly TDS statement for payments to non-residents",
 		**TAN,
+		**NIL_DECLARED,
 	),
 	# GST composition: a taxpayer under the scheme records its GSTIN as "GST Composition", so
 	# GSTR-1, GSTR-3B and GSTR-9 do not apply to it.
@@ -491,6 +514,7 @@ LIBRARY = [
 		payment=1,
 		source="CGST rule 62",
 		**COMPOSITION,
+		nil=1,
 	),
 	obligation(
 		"GSTR-4 (Composition Annual Return)",
@@ -501,6 +525,7 @@ LIBRARY = [
 		30,
 		source="CGST rule 62; due 30 June from FY 2024-25 (Notification 12/2024)",
 		**COMPOSITION,
+		nil=1,
 	),
 	obligation(
 		"ITC-04 (Job Work, turnover above ₹5 crore)",
@@ -690,7 +715,7 @@ def sync_standard_templates():
 	sync_standard_event_types()
 	for values in LIBRARY:
 		name = values["template_name"]
-		values = {**values, **penalty_of(values)}
+		values = {**values, **penalty_of(values), **nil_penalty_of(values)}
 		if scoped.exists("Compliance Obligation Template", name):
 			doc = frappe.get_doc("Compliance Obligation Template", name)
 			for fieldname in CLIENT_OWNED_FIELDS:

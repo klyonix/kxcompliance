@@ -25,11 +25,14 @@ from kxcompliance import scoped
 from kxcompliance.kx_compliance.overview import OPEN_CASE_STATUSES, PARTY_HOLDERS
 from kxcompliance.kx_compliance.penalty_figures import firm_figures
 from kxcompliance.kx_compliance.penalty_library import FIELDS as PENALTY_FIELDS
+from kxcompliance.kx_compliance.penalty_library import NIL_FIELDS
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
 
 FULL_SCORE = 100
 POINTS = {
 	"overdue": 10,
+	# Nothing to report, but still late: the law charges a smaller fee, and so does the score.
+	"overdue_nil": 3,
 	"expired": 10,
 	"filed_late": 2,
 	"due_for_renewal": 3,
@@ -45,12 +48,34 @@ RULE_FIELDS = [
 	"interest_percent",
 	"penalty_rule",
 	"penalty_checked_on",
+	"allows_nil",
+	*NIL_FIELDS,
 ]
 COUNT = {"COUNT": "*", "as": "count"}
 
 
+def nil_figures(rules) -> frappe._dict:
+	"""The template's figures for a late NIL return, in the shape late_fee reads. There is no tax,
+	so no interest either."""
+	return frappe._dict(
+		rules,
+		late_fee_flat=rules.nil_late_fee_flat,
+		late_fee_per_day=rules.nil_late_fee_per_day,
+		late_fee_cap=rules.nil_late_fee_cap,
+		cap_at_tax=0,
+		interest_percent=0,
+	)
+
+
+def fee_figures(rules, is_nil: bool = False):
+	"""The figures a filing's late fee is worked out from: the NIL ones for a NIL return."""
+	if rules and is_nil and rules.allows_nil:
+		return nil_figures(rules)
+	return rules
+
+
 def late_fee(rules, days_late: int, tax: float | None = None) -> float:
-	"""The late fee after `days_late` days, by the template's figures."""
+	"""The late fee after `days_late` days, by the template's figures (see fee_figures)."""
 	if not rules or days_late <= 0:
 		return 0.0
 	fee = flt(rules.late_fee_flat) + flt(rules.late_fee_per_day) * days_late
@@ -80,7 +105,7 @@ def rules_for(templates: list[str]) -> dict[str, frappe._dict]:
 def filing_penalty(task, today: str | None = None) -> dict:
 	"""What a filing's lateness costs, or would cost: so far, in a week, and the rule behind it."""
 	today = getdate(today or nowdate())
-	rules = rules_for([task.obligation_template]).get(task.obligation_template)
+	rules = fee_figures(rules_for([task.obligation_template]).get(task.obligation_template), task.is_nil)
 	due = getdate(task.effective_due_date)
 	filed = task.status in ("Filed", "Filed Late") and task.filed_on
 	days_late = date_diff(task.filed_on if filed else today, due)
@@ -97,6 +122,7 @@ def filing_penalty(task, today: str | None = None) -> dict:
 		"rule": rules.penalty_rule if rules else None,
 		"checked_on": str(rules.penalty_checked_on) if rules and rules.penalty_checked_on else None,
 		"set_by_firm": bool(rules and rules.penalty_set_by_firm),
+		"nil": bool(rules and task.is_nil and rules.allows_nil),
 	}
 
 
@@ -111,13 +137,14 @@ def company_scores(companies: list[str], today: str | None = None) -> dict[str, 
 	overdue = scoped.get_all(
 		"Compliance Task",
 		filters={"company": ("in", companies), "status": ("not in", CLOSED_TASK_STATUSES), "is_overdue": 1},
-		fields=["company", "obligation_template", "effective_due_date", "amount_paid"],
+		fields=["company", "obligation_template", "effective_due_date", "amount_paid", "is_nil"],
 	)
 	rules = rules_for([row.obligation_template for row in overdue])
 	for row in overdue:
-		counts[row.company]["overdue"] += 1
+		counts[row.company]["overdue_nil" if row.is_nil else "overdue"] += 1
 		days_late = date_diff(today, getdate(row.effective_due_date))
-		penalty[row.company] += late_fee(rules.get(row.obligation_template), days_late, row.amount_paid)
+		figures = fee_figures(rules.get(row.obligation_template), row.is_nil)
+		penalty[row.company] += late_fee(figures, days_late, row.amount_paid)
 
 	for row in scoped.get_all(
 		"Compliance Task",
@@ -169,6 +196,7 @@ def reason_label(key: str, count: int) -> str:
 	one = count == 1
 	labels = {
 		"overdue": _("{0} filing overdue") if one else _("{0} filings overdue"),
+		"overdue_nil": _("{0} NIL return overdue") if one else _("{0} NIL returns overdue"),
 		"expired": _("{0} licence or certificate expired")
 		if one
 		else _("{0} licences or certificates expired"),

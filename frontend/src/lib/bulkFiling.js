@@ -18,6 +18,10 @@ export const BULK_FIELDS = [
 	"amount_paid",
 	"effective_due_date",
 	"modified",
+	"is_nil",
+	"obligation_template",
+	"period_label",
+	"period_end",
 ];
 
 export const choiceLabel = (choice) =>
@@ -67,15 +71,30 @@ export function matchFiles(files, rows) {
 }
 
 // The values a row sends: its details, with the shared filing date where it has none, and its
-// next status. Amounts are sent only when the return involves a payment.
+// next status. Amounts are sent only when the return involves a payment, and never for a NIL one.
 export function rowValues(row, sharedDate, rules) {
 	const values = {
 		filed_on: row.filed_on || sharedDate || null,
 		acknowledgement_number: (row.acknowledgement_number || "").trim() || null,
 	};
-	if (rules?.requires_payment) values.amount_paid = Number(row.amount_paid) || 0;
+	if (rules?.allows_nil) values.is_nil = row.is_nil ? 1 : 0;
+	if (rules?.requires_payment)
+		values.amount_paid = row.is_nil ? 0 : Number(row.amount_paid) || 0;
 	return values;
 }
+
+// A company's NIL filings in the order they must be saved: each return's periods oldest first,
+// since GST refuses a period while an earlier one is unfiled.
+export function nilOrder(rows) {
+	return [...rows].sort(
+		(a, b) =>
+			a.obligation_template.localeCompare(b.obligation_template) ||
+			String(a.period_end).localeCompare(String(b.period_end))
+	);
+}
+
+export const nilChoiceLabel = (choice) =>
+	`${choice.company} · ${choice.filings} NIL to file · oldest due ${formatDate(choice.due)}`;
 
 export function rowMissing(row, sharedDate, rules, proofWaiting) {
 	return missingDetails({ ...row, ...rowValues(row, sharedDate, rules) }, rules, {

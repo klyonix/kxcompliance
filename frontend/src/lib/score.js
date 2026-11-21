@@ -28,6 +28,8 @@ export function penaltyLines(penalty, { open = true } = {}) {
 			lines.push("No late fee if it is filed by the due date.");
 		}
 	}
+	if (penalty.nil && lines.length)
+		lines.push("Worked out at the lower late fee for a NIL return.");
 	if (penalty.interest_percent) {
 		lines.push(`Plus interest at ${penalty.interest_percent}% a year on tax paid late.`);
 	}

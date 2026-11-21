@@ -136,18 +136,30 @@
 							v-if="row.step.status && row.result?.state !== 'saved'"
 							class="grid flex-1 grid-cols-1 gap-2"
 							:class="
-								rules?.requires_payment
+								rules?.requires_payment && !row.is_nil
 									? 'sm:grid-cols-[1fr_9rem_auto]'
 									: 'sm:grid-cols-[1fr_auto]'
 							"
 						>
 							<FormControl
-								v-model="row.acknowledgement_number"
-								:aria-label="`Acknowledgement number for ${row.company}`"
-								placeholder="Acknowledgement number"
+								v-if="rules?.allows_nil"
+								v-model="row.is_nil"
+								class="sm:col-span-full"
+								type="checkbox"
+								label="NIL return"
+								:aria-label="`NIL return for ${row.company}`"
 							/>
 							<FormControl
-								v-if="rules?.requires_payment"
+								v-model="row.acknowledgement_number"
+								:aria-label="`Acknowledgement number for ${row.company}`"
+								:placeholder="
+									nilDeclared(row, rules)
+										? 'Reference (optional)'
+										: 'Acknowledgement number'
+								"
+							/>
+							<FormControl
+								v-if="rules?.requires_payment && !row.is_nil"
 								v-model="row.amount_paid"
 								type="number"
 								:aria-label="`Amount paid for ${row.company}`"
@@ -247,6 +259,7 @@ import {
 	rowValues,
 	saveLabel,
 } from "@/lib/bulkFiling";
+import { nilDeclared } from "@/lib/filings";
 import { pickerFormat } from "@/lib/format";
 import { isoDate } from "@/lib/obligations";
 import { SAVED_ON_DEVICE, refresh as refreshOutbox } from "@/offline/outbox";
@@ -295,7 +308,9 @@ function tickAll(value) {
 function proofLabel(row) {
 	if (row.proofFile) return row.proofFile.name;
 	if (row.proof) return decodeURIComponent(row.proof.split("/").pop());
-	return rules.value?.requires_proof ? "Attach proof" : "Proof (optional)";
+	return rules.value?.requires_proof && !nilDeclared(row, rules.value)
+		? "Attach proof"
+		: "Proof (optional)";
 }
 
 function pickFor(row) {
@@ -350,6 +365,7 @@ async function loadRows() {
 				...row,
 				acknowledgement_number: row.acknowledgement_number || "",
 				amount_paid: Number(row.amount_paid) || "",
+				is_nil: Boolean(row.is_nil),
 				proofFile: null,
 				step,
 				ticked: Boolean(step.status),

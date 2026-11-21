@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from kxcompliance.kx_compliance.report.compliance_calendar.compliance_calendar import execute
 from kxcompliance.kx_compliance.statutory import generate_tasks, run_daily
 from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
@@ -385,3 +386,118 @@ class TestComplianceTask(IntegrationTestCase):
 		).insert()
 		task = self.make_task()
 		self.assertEqual(str(task.effective_due_date), "2026-11-27")
+
+
+def filing_of(template: str, period_end: str, due_date: str, registration: str = "29GST", **fields):
+	"""One period's filing, made directly so each test sets out exactly the periods it needs."""
+	return frappe.get_doc(
+		{
+			"doctype": "Compliance Task",
+			"obligation_template": template,
+			"company": TEST_COMPANY,
+			"registration_number": registration,
+			"period_start": period_end[:8] + "01",
+			"period_end": period_end,
+			"period_label": period_end[:7],
+			"due_date": due_date,
+			"status": "Open",
+			"responsible": HOLDER,
+			"reviewer": REVIEWER,
+			"task_key": f"nil-test|{template}|{period_end}|{frappe.generate_hash(length=6)}",
+			**fields,
+		}
+	).insert()
+
+
+class TestNilReturns(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_company()
+		make_users()
+
+	def setUp(self):
+		frappe.db.delete("Compliance Task", {"company": TEST_COMPANY})
+
+	def ready(self, task, acknowledgement="AA2911260000001", proof=True):
+		task.update(
+			{
+				"filed_on": "2026-11-18",
+				"acknowledgement_number": acknowledgement,
+				"proof": make_file("ack.txt") if proof else None,
+				"status": "Ready for Review",
+			}
+		)
+		task.save()
+
+	def test_a_nil_return_pays_nothing(self):
+		task = filing_of("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20", is_nil=1)
+		task.amount_paid = 1200
+		with self.assertRaisesRegex(frappe.ValidationError, "NIL return, so Amount Paid must be 0"):
+			task.save()
+		# A late fee may still be paid on a NIL return filed late.
+		task.reload()
+		task.late_fee = 240
+		task.save()
+		self.assertTrue(task.is_nil)
+
+	def test_only_a_return_that_allows_it_can_be_nil(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot be filed as a NIL return"):
+			filing_of("Form 16A", "2026-09-30", "2026-11-15", registration="BLRA12345B", is_nil=1)
+
+	def test_a_nil_gst_return_still_needs_its_acknowledgement_and_proof(self):
+		task = filing_of("GSTR-1 (Monthly)", "2026-10-31", "2026-11-11", is_nil=1)
+		task.update({"filed_on": "2026-11-10", "status": "Ready for Review"})
+		with self.assertRaisesRegex(frappe.ValidationError, "Acknowledgement Number, Proof"):
+			task.save()
+
+	def test_a_tds_quarter_with_nothing_deducted_needs_only_the_date_declared(self):
+		# TRACES takes a declaration for non-filing, which gives no acknowledgement number.
+		task = filing_of("TDS Return 26Q (Non-salary)", "2026-09-30", "2026-10-31", "BLRA12345B", is_nil=1)
+		self.ready(task, acknowledgement=None, proof=False)
+		self.assertEqual(task.status, "Ready for Review")
+
+		statement = filing_of("TDS Return 26Q (Non-salary)", "2026-06-30", "2026-07-31", "BLRA12345B")
+		statement.update({"filed_on": "2026-07-30", "status": "Ready for Review"})
+		with self.assertRaisesRegex(frappe.ValidationError, "Acknowledgement Number"):
+			statement.save()
+
+	def test_gst_returns_are_filed_in_period_order(self):
+		october = filing_of("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20", is_nil=1)
+		november = filing_of("GSTR-3B (Monthly)", "2026-11-30", "2026-12-20", is_nil=1)
+		with self.assertRaisesRegex(
+			frappe.ValidationError, f"{october.name} for 2026-10 must be filed first"
+		):
+			self.ready(november)
+		# Another GSTIN's October does not hold this one back.
+		filing_of("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20", registration="27GST")
+		self.ready(october)
+		november.reload()
+		self.ready(november)
+		self.assertEqual(november.status, "Ready for Review")
+
+	def test_an_earlier_period_set_aside_does_not_block_the_next(self):
+		october = filing_of("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20")
+		october.update({"status": "Not Applicable", "remarks": "Registration not yet active."})
+		october.save()
+		november = filing_of("GSTR-3B (Monthly)", "2026-11-30", "2026-12-20", is_nil=1)
+		self.ready(november)
+		self.assertEqual(november.status, "Ready for Review")
+
+	def test_returns_without_an_order_rule_file_any_period(self):
+		filing_of("TDS/TCS Payment", "2026-09-30", "2026-10-07", "BLRA12345B", is_nil=1)
+		october = filing_of("TDS/TCS Payment", "2026-10-31", "2026-11-07", "BLRA12345B", is_nil=1)
+		self.ready(october, acknowledgement=None, proof=False)
+		self.assertEqual(october.status, "Ready for Review")
+
+	def test_the_compliance_calendar_shows_and_filters_nil_returns(self):
+		nil = filing_of("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20", is_nil=1)
+		filing_of("GSTR-1 (Monthly)", "2026-10-31", "2026-11-11")
+		month = {"month": "2026-11-01", "company": TEST_COMPANY}
+		with self.set_user(MANAGER):
+			everything = execute(month)[1]
+			only_nil = execute({**month, "nil": "NIL only"})[1]
+			not_nil = execute({**month, "nil": "Not NIL"})[1]
+		self.assertEqual(len(everything), 2)
+		self.assertEqual([(row.name, row.is_nil) for row in only_nil], [(nil.name, 1)])
+		self.assertEqual([row.obligation_template for row in not_nil], ["GSTR-1 (Monthly)"])

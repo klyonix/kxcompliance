@@ -29,6 +29,7 @@
   "column_break_people",
   "reviewer",
   "section_filing",
+  "is_nil",
   "filed_on",
   "acknowledgement_number",
   "proof",
@@ -202,6 +203,13 @@
    "label": "Filing"
   },
   {
+   "fieldname": "is_nil",
+   "fieldtype": "Check",
+   "label": "NIL Return",
+   "in_standard_filter": 1,
+   "description": "Nothing to report or pay for this period. Can be ticked before filing, to file it later."
+  },
+  {
    "fieldname": "filed_on",
    "fieldtype": "Date",
    "label": "Filed On"
@@ -296,7 +304,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-16 11:00:00.000000",
+ "modified": "2026-11-21 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Task",

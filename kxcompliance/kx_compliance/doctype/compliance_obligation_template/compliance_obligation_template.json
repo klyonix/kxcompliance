@@ -35,6 +35,9 @@
   "requires_review",
   "column_break_closing",
   "requires_payment",
+  "allows_nil",
+  "nil_needs_acknowledgement",
+  "files_in_order",
   "section_reminders",
   "reminders",
   "section_penalty",
@@ -46,6 +49,11 @@
   "interest_percent",
   "penalty_rule",
   "penalty_checked_on",
+  "section_nil_penalty",
+  "nil_late_fee_per_day",
+  "nil_late_fee_flat",
+  "column_break_nil_penalty",
+  "nil_late_fee_cap",
   "section_notes",
   "description"
  ],
@@ -234,6 +242,26 @@
    "label": "Involves a Payment"
   },
   {
+   "fieldname": "allows_nil",
+   "fieldtype": "Check",
+   "label": "NIL Return Allowed",
+   "description": "A period with nothing to report can be filed as a NIL return."
+  },
+  {
+   "default": "1",
+   "depends_on": "allows_nil",
+   "fieldname": "nil_needs_acknowledgement",
+   "fieldtype": "Check",
+   "label": "NIL Return Needs an Acknowledgement",
+   "description": "Untick where a NIL period gives no acknowledgement number (as a TDS non-filing declaration on TRACES); its proof is then optional too."
+  },
+  {
+   "fieldname": "files_in_order",
+   "fieldtype": "Check",
+   "label": "Filed in Period Order",
+   "description": "A period cannot be filed while an earlier one for the same registration is still to file (as for GST returns)."
+  },
+  {
    "fieldname": "section_reminders",
    "fieldtype": "Section Break",
    "label": "Reminders"
@@ -297,6 +325,32 @@
    "description": "When a chartered accountant last confirmed these figures. Blank means not yet."
   },
   {
+   "depends_on": "allows_nil",
+   "fieldname": "section_nil_penalty",
+   "fieldtype": "Section Break",
+   "label": "Late NIL Return"
+  },
+  {
+   "fieldname": "nil_late_fee_per_day",
+   "fieldtype": "Currency",
+   "label": "NIL Late Fee per Day"
+  },
+  {
+   "fieldname": "nil_late_fee_flat",
+   "fieldtype": "Currency",
+   "label": "NIL Late Fee (One-off)"
+  },
+  {
+   "fieldname": "column_break_nil_penalty",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "nil_late_fee_cap",
+   "fieldtype": "Currency",
+   "label": "NIL Late Fee Cap",
+   "description": "The most a late NIL return's fee can come to; 0 for no cap."
+  },
+  {
    "collapsible": 1,
    "fieldname": "section_notes",
    "fieldtype": "Section Break",
@@ -318,7 +372,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-16 20:00:00.000000",
+ "modified": "2026-11-21 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Obligation Template",

@@ -24,6 +24,7 @@
   "event_type",
   "days_after_event",
   "overrides",
+  "skip_months",
   "section_applies",
   "company_types",
   "column_break_applies",
@@ -180,6 +181,13 @@
    "fieldtype": "Table",
    "label": "Exceptions",
    "options": "Compliance Due Date Override"
+  },
+  {
+   "depends_on": "eval:doc.frequency=='Monthly'",
+   "fieldname": "skip_months",
+   "fieldtype": "Data",
+   "label": "Skipped Months",
+   "description": "Months with nothing due, as 3, 6, 9, 12 for a payment made only in the first two months of each quarter (PMT-06)."
   },
   {
    "fieldname": "section_applies",
@@ -372,7 +380,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-21 10:00:00.000000",
+ "modified": "2026-11-21 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Obligation Template",

@@ -33,6 +33,7 @@ class ComplianceObligationTemplate(Document):
 			)
 		elif not 1 <= (self.due_day or 0) <= 31:
 			frappe.throw(_("Due Day must be between 1 and 31, not {0}.").format(self.due_day))
+		self.skipped_months()
 		for row in self.overrides:
 			if not 1 <= (row.period_end_month or 0) <= 12:
 				frappe.throw(
@@ -50,6 +51,27 @@ class ComplianceObligationTemplate(Document):
 	def applies_to(self, company_type: str) -> bool:
 		types = {row.company_type for row in self.company_types}
 		return not types or company_type in types
+
+	def skipped_months(self) -> set[int]:
+		"""The months listed in Skipped Months, in which no period of a monthly obligation is due."""
+		months = set()
+		for part in (self.skip_months or "").replace(" ", "").split(","):
+			if not part:
+				continue
+			if not part.isdigit() or not 1 <= int(part) <= 12:
+				frappe.throw(
+					_(
+						"Skipped Months must be month numbers from 1 to 12 with commas between, not {0}."
+					).format(part)
+				)
+			months.add(int(part))
+		if months and self.frequency != "Monthly":
+			frappe.throw(
+				_("Only a monthly obligation can skip months; {0} is {1}.").format(
+					self.template_name, _(self.frequency)
+				)
+			)
+		return months
 
 	def state_list(self) -> set[str]:
 		return {line.strip() for line in (self.states or "").splitlines() if line.strip()}

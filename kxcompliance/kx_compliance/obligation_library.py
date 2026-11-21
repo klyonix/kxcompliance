@@ -51,6 +51,7 @@ def obligation(name, law, form, frequency, months_after=None, day=None, **extra)
 		"company_types": [{"company_type": kind} for kind in extra.pop("companies", ())],
 		"registration_type": extra.pop("registration", None),
 		"states": "\n".join(extra.pop("states", ())),
+		"skip_months": ", ".join(str(month) for month in extra.pop("skip_months", ())),
 		"add_by_default": extra.pop("default", 1),
 		"requires_payment": extra.pop("payment", 0),
 		"requires_proof": 1,
@@ -209,6 +210,22 @@ LIBRARY = [
 		source="CGST rule 61, QRMP scheme",
 		**GST,
 		**NIL_IN_ORDER,
+	),
+	# QRMP: tax for the first two months of a quarter is paid by the 25th of the next month; the
+	# third month's is paid with the quarter's GSTR-3B. A month with nothing to pay needs no challan.
+	obligation(
+		"PMT-06 (QRMP Monthly Payment)",
+		"GST",
+		"PMT-06",
+		"Monthly",
+		1,
+		25,
+		skip_months=(3, 6, 9, 12),
+		payment=1,
+		default=0,
+		source="CGST Act s.39(7) proviso; CGST rule 61(1), QRMP scheme (Notification 85/2020-Central Tax)",
+		**GST,
+		**NIL_DECLARED,
 	),
 	obligation("GSTR-9 (Annual Return)", "GST", "GSTR-9", "Yearly", 9, 31, source="CGST Act s.44", **GST),
 	obligation(

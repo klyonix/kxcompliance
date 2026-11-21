@@ -8,7 +8,7 @@ from datetime import date
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from kxcompliance.kx_compliance.statutory import due_date, period_label, periods
+from kxcompliance.kx_compliance.statutory import due_date, obligation_periods, period_label, periods
 
 
 def due(template: str, period_end: str) -> date:
@@ -51,6 +51,35 @@ class TestStatutoryRules(IntegrationTestCase):
 		self.assertEqual(due("GSTR-3B (Monthly)", "2026-10-31"), date(2026, 11, 20))
 		self.assertEqual(due("GSTR-3B (QRMP, 22nd)", "2026-12-31"), date(2027, 1, 22))
 		self.assertEqual(due("GSTR-9 (Annual Return)", "2027-03-31"), date(2027, 12, 31))
+
+	def test_qrmp_payments_skip_the_last_month_of_each_quarter(self):
+		template = frappe.get_doc("Compliance Obligation Template", "PMT-06 (QRMP Monthly Payment)")
+		made = obligation_periods(template, frappe._dict(start_from="2026-10-01"), date(2027, 4, 30), {})
+		self.assertEqual(
+			[(period_end, due) for _start, period_end, due in made],
+			[
+				(date(2026, 10, 31), date(2026, 11, 25)),
+				(date(2026, 11, 30), date(2026, 12, 25)),
+				(date(2027, 1, 31), date(2027, 2, 25)),
+				(date(2027, 2, 28), date(2027, 3, 25)),
+				(date(2027, 4, 30), date(2027, 5, 25)),
+			],
+		)
+		self.assertTrue(template.allows_nil)
+		self.assertFalse(template.nil_needs_acknowledgement)
+
+	def test_skipped_months_are_month_numbers_on_a_monthly_obligation(self):
+		template = frappe.copy_doc(
+			frappe.get_doc("Compliance Obligation Template", "PMT-06 (QRMP Monthly Payment)")
+		)
+		template.template_name = "Test Skipping Payment"
+		template.skip_months = "3, 13"
+		with self.assertRaisesRegex(frappe.ValidationError, "month numbers from 1 to 12.*not 13"):
+			template.insert()
+		template.skip_months = "6"
+		template.frequency = "Quarterly"
+		with self.assertRaisesRegex(frappe.ValidationError, "Only a monthly obligation can skip months"):
+			template.insert()
 
 	def test_tds_due_dates_including_march(self):
 		self.assertEqual(due("TDS/TCS Payment", "2027-02-28"), date(2027, 3, 7))
@@ -121,7 +150,7 @@ class TestStatutoryRules(IntegrationTestCase):
 		templates = frappe.get_all(
 			"Compliance Obligation Template", filters={"is_standard": 1}, fields=["checked_on"]
 		)
-		self.assertEqual(len(templates), 77)
+		self.assertEqual(len(templates), 78)
 		self.assertTrue(all(row.checked_on is None for row in templates))
 
 	def test_a_template_due_after_the_agm_needs_its_days(self):

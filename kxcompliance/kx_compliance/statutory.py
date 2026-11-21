@@ -154,6 +154,7 @@ def obligation_periods(template, obligation, limit: date, agm_dates: dict) -> li
 			if max(year_end, getdate(add_days(agm_dates[year_end], template.days_after_event))) >= start
 		]
 	found = []
+	skipped = template.skipped_months()
 	window = periods(
 		template.frequency,
 		template.period_basis,
@@ -161,6 +162,8 @@ def obligation_periods(template, obligation, limit: date, agm_dates: dict) -> li
 		getdate(add_months(limit, LOOK_AHEAD_MONTHS)),
 	)
 	for period_start, period_end in window:
+		if period_end.month in skipped:
+			continue
 		due = due_date(template, period_end)
 		if max(period_end, due) >= start and min(period_end, due) <= limit:
 			found.append((period_start, period_end, due))

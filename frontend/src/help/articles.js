@@ -699,8 +699,9 @@ export const ARTICLES = [
 		when: "When you want to know what the app holds about you, or want it changed or removed.",
 		steps: [
 			"Open Account.",
-			'Under Your privacy press "Ask about my data", choose what you want and say what it is about.',
-			"A manager answers within 90 days. The answer shows under Your privacy, and comes by email when the app sends email.",
+			'To see what the app holds about you, press "See my data". Download it to keep a copy.',
+			'To have it corrected or erased, press "Ask about my data", choose what you want and say what it is about.',
+			"A manager answers within 30 days, and never later than 90. The answer shows under Your privacy, and comes by email when the app sends email.",
 			'"Withdraw consent" stops you using the app until you accept the privacy notice again.',
 		],
 		page: "Account",
@@ -714,8 +715,10 @@ export const ARTICLES = [
 		steps: [
 			'Open Settings, then "Privacy requests", and the request.',
 			"Mark it In Progress while you work on it; the page says what each kind of request needs.",
+			'For "See my data", press "Show their data" and send it with your answer.',
+			'For "Erase my data", press "Erase…", choose who takes their open work and type their email. It runs in the background, answers them, then removes what identifies them; filings keep the work, as done by an erased person.',
 			"When it is done or declined, write the response and save. They are told at once.",
-			"Answer within 90 days of the request.",
+			"Answer within 30 days; the law allows 90 at most. Managers are reminded a week before, on the day and every week after.",
 		],
 		page: "PrivacyRequests",
 		managers: true,

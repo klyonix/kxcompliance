@@ -575,9 +575,10 @@ When the calendar makes filings for something you never file.
 When you want to know what the app holds about you, or want it changed or removed.
 
 1. Open Account.
-2. Under Your privacy press "Ask about my data", choose what you want and say what it is about.
-3. A manager answers within 90 days. The answer shows under Your privacy, and comes by email when the app sends email.
-4. "Withdraw consent" stops you using the app until you accept the privacy notice again.
+2. To see what the app holds about you, press "See my data". Download it to keep a copy.
+3. To have it corrected or erased, press "Ask about my data", choose what you want and say what it is about.
+4. A manager answers within 30 days, and never later than 90. The answer shows under Your privacy, and comes by email when the app sends email.
+5. "Withdraw consent" stops you using the app until you accept the privacy notice again.
 
 ### Someone asked about their data. How do I answer?
 
@@ -587,8 +588,10 @@ When the Overview shows privacy requests to answer.
 
 1. Open Settings, then "Privacy requests", and the request.
 2. Mark it In Progress while you work on it; the page says what each kind of request needs.
-3. When it is done or declined, write the response and save. They are told at once.
-4. Answer within 90 days of the request.
+3. For "See my data", press "Show their data" and send it with your answer.
+4. For "Erase my data", press "Erase…", choose who takes their open work and type their email. It runs in the background, answers them, then removes what identifies them; filings keep the work, as done by an erased person.
+5. When it is done or declined, write the response and save. They are told at once.
+6. Answer within 30 days; the law allows 90 at most. Managers are reminded a week before, on the day and every week after.
 
 ### Personal data leaked. What do I do?
 

@@ -87,10 +87,12 @@ class TestPrivacy(IntegrationTestCase):
 		consent = frappe.get_all("Privacy Consent", filters={"user": HOLDER}, fields=["withdrawn_on"])
 		self.assertTrue(consent[0].withdrawn_on)
 
-	def test_a_request_is_due_in_ninety_days_and_seen_only_by_its_requester_and_managers(self):
+	def test_a_request_is_due_in_thirty_days_and_seen_only_by_its_requester_and_managers(self):
 		with self.set_user(HOLDER):
 			made = raise_privacy_request("See my data", "Please send me what you hold about me.")
-			self.assertEqual(getdate(made["due_by"]), getdate(add_days(now_datetime(), 90)))
+			self.assertEqual(getdate(made["due_by"]), getdate(add_days(now_datetime(), 30)))
+			latest = frappe.db.get_value("Privacy Request", made["name"], "latest_by")
+			self.assertEqual(getdate(latest), getdate(add_days(now_datetime(), 90)))
 			self.assertEqual([row.name for row in my_privacy_requests()], [made["name"]])
 			with self.assertRaises(frappe.PermissionError):
 				frappe.get_doc("Privacy Request", made["name"]).check_permission("read")

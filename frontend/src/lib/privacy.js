@@ -25,10 +25,11 @@ export const REQUEST_FIELDS = [
 	"details",
 	"status",
 	"due_by",
+	"latest_by",
 	"closed_on",
 ];
 
-// The oldest first while waiting, as each is due 90 days after it came in.
+// The oldest first while waiting: each is to be answered 30 days after it came in, 90 at most.
 export const REQUEST_VIEWS = [
 	{
 		label: "To answer",

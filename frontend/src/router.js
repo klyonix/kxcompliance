@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { boot, checksOnly, isClientLogin, isManager } from "./boot";
 import { CLIENT_ROUTES, firstRunRoute } from "./navigation";
 import { noteNoResponse } from "./offline/reachability";
+import { stopTour } from "./tours/useTours";
 
 export const routes = [
 	{ path: "/", name: "MyWork", component: () => import("./pages/MyWork.vue") },
@@ -9,6 +10,7 @@ export const routes = [
 	{ path: "/search", name: "Search", component: () => import("./pages/Search.vue") },
 	{ path: "/overview", name: "Overview", component: () => import("./pages/Overview.vue") },
 	{ path: "/account", name: "Account", component: () => import("./pages/Account.vue") },
+	{ path: "/account/my-data", name: "MyData", component: () => import("./pages/MyData.vue") },
 	{ path: "/settings", name: "Settings", component: () => import("./pages/Settings.vue") },
 	{ path: "/help", name: "Help", component: () => import("./pages/Help.vue") },
 	{ path: "/reports", name: "Reports", component: () => import("./pages/Reports.vue") },
@@ -330,6 +332,12 @@ const MANAGER_ROUTES = [
 
 const router = createRouter({ history: createWebHistory("/compliance"), routes });
 
+// A tour belongs to its page: one of its steps may highlight a link elsewhere, and its popover
+// would otherwise stay over the next page.
+router.afterEach((to, from) => {
+	if (to.name !== from.name) stopTour();
+});
+
 // Someone here only for the Licence Check is kept to it (the server refuses the rest anyway).
 router.beforeEach((to) => {
 	// The privacy notice first, then a new site's setup (navigation.firstRunRoute).
@@ -340,7 +348,10 @@ router.beforeEach((to) => {
 		return;
 	}
 	if (to.name === "ClientHome") return { name: "MyWork" };
-	if (checksOnly() && !["LicenceCheck", "Account", "Help", "PrivacyNotice"].includes(to.name)) {
+	if (
+		checksOnly() &&
+		!["LicenceCheck", "Account", "MyData", "Help", "PrivacyNotice"].includes(to.name)
+	) {
 		return { name: "LicenceCheck" };
 	}
 	// The reminder log is for managers and auditors, who check what was sent.

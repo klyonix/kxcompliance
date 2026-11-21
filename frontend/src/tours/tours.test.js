@@ -28,6 +28,7 @@ const serverTours = readFileSync(
 const NO_TOUR = {
 	Onboarding: "the setup wizard explains each step itself",
 	Search: "one search box",
+	MyData: "a read-only summary; its text says what it is",
 	ItemNew: "a form; each field is labelled",
 	ItemEdit: "a form; each field is labelled",
 	CompanyNew: "the company tour plays on the same page",

@@ -14,6 +14,7 @@ const CLIENT_FILES = [
 	"components/RecordList.vue",
 	"components/WorkRow.vue",
 	"components/PrivacySection.vue",
+	"components/PersonalData.vue",
 	"components/BillingCard.vue",
 	"components/StatementDialog.vue",
 	"components/ThemeToggle.vue",
@@ -24,6 +25,7 @@ const CLIENT_FILES = [
 	"pages/DocumentRequest.vue",
 	"pages/Account.vue",
 	"pages/PrivacyNotice.vue",
+	"pages/MyData.vue",
 	"pages/Help.vue",
 ];
 const PHRASE = /\bt\(\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g;

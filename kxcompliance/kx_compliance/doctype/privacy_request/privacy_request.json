@@ -12,10 +12,13 @@
   "status",
   "received_on",
   "due_by",
+  "latest_by",
   "section_response",
   "response",
   "closed_on",
-  "closed_by"
+  "closed_by",
+  "erased_on",
+  "erasure_record"
  ],
  "fields": [
   {
@@ -75,9 +78,17 @@
   {
    "fieldname": "due_by",
    "fieldtype": "Date",
-   "label": "Due By",
+   "label": "Answer By",
    "read_only": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "description": "The app aims to answer within 30 days."
+  },
+  {
+   "fieldname": "latest_by",
+   "fieldtype": "Date",
+   "label": "Latest By Law",
+   "read_only": 1,
+   "description": "The law allows at most 90 days."
   },
   {
    "fieldname": "section_response",
@@ -102,11 +113,24 @@
    "label": "Closed By",
    "options": "User",
    "read_only": 1
+  },
+  {
+   "fieldname": "erased_on",
+   "fieldtype": "Datetime",
+   "label": "Erased On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erasure_record",
+   "fieldtype": "Code",
+   "label": "What Was Erased",
+   "read_only": 1,
+   "options": "JSON"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-15 13:00:00.000000",
+ "modified": "2026-11-21 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Privacy Request",

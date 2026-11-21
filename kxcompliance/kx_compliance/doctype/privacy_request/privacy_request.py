@@ -7,7 +7,7 @@ from frappe.desk.doctype.notification_log.notification_log import enqueue_create
 from frappe.model.document import Document
 from frappe.utils import add_days, getdate, now_datetime
 
-from kxcompliance.kx_compliance.privacy import RESPONSE_DAYS
+from kxcompliance.kx_compliance.privacy import RESPONSE_DAYS, TARGET_DAYS
 from kxcompliance.kx_compliance.reminders import compliance_managers, send_email
 
 CLOSED = ("Done", "Declined")
@@ -17,7 +17,8 @@ class PrivacyRequest(Document):
 	def before_insert(self):
 		self.status = "Open"
 		self.received_on = now_datetime()
-		self.due_by = add_days(getdate(self.received_on), RESPONSE_DAYS)
+		self.due_by = add_days(getdate(self.received_on), TARGET_DAYS)
+		self.latest_by = add_days(getdate(self.received_on), RESPONSE_DAYS)
 
 	def validate(self):
 		if self.status in CLOSED:

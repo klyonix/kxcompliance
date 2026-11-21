@@ -182,3 +182,14 @@ def run_job(job: Callable[[], None]):
 		if frappe.get_attr(path)(job):
 			return
 	job()
+
+
+def may_anonymise_login(user: str) -> bool:
+	"""Erasing a person (personal_data.py): whether their login itself may be switched off and
+	renamed. An app where the same login also serves someone else (kxcompliance_erase_login)
+	removes it from this organisation instead and answers False."""
+	allowed = True
+	for path in frappe.get_hooks("kxcompliance_erase_login"):
+		if frappe.get_attr(path)(user) is False:
+			allowed = False
+	return allowed

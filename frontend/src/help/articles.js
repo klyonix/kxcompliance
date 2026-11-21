@@ -208,6 +208,19 @@ export const ARTICLES = [
 		page: "Filings",
 	},
 	{
+		id: "pmt-06-fixed-sum",
+		area: "Filings",
+		title: "How much does a quarterly GST company pay by PMT-06?",
+		when: "For a company in the QRMP scheme, paying tax for the first or second month of a quarter.",
+		steps: [
+			"Open the month's PMT-06 filing. It shows the fixed sum: 35% of the tax paid in cash with last quarter's GSTR-3B, or all of the last month's if the company then filed monthly.",
+			'Pay either the fixed sum or the tax actually due. For the fixed sum, press "Use this amount".',
+			"Record the payment like any other filing.",
+		],
+		tip: "The fixed sum is worked out from the GSTR-3B recorded here, so record last quarter's amount paid. With nothing to pay, mark the month NIL.",
+		page: "Filings",
+	},
+	{
 		id: "ask-the-client",
 		area: "Filings",
 		title: "How do I ask a client for a document?",

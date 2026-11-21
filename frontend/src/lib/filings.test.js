@@ -3,6 +3,7 @@ import {
 	returnGroups,
 	changedValues,
 	filingSteps,
+	fixedSumLines,
 	formValues,
 	hasFilingDetails,
 	missingDetails,
@@ -237,5 +238,28 @@ describe("the library as a choice of return", () => {
 			},
 			{ group: "Other", options: [{ label: "Shop licence", value: "Shop licence" }] },
 		]);
+	});
+});
+
+describe("the QRMP fixed sum", () => {
+	it("says what it is and where it comes from", () => {
+		const lines = fixedSumLines({
+			amount: 35000,
+			percent: 35,
+			paid: 100001,
+			from_label: "GSTR-3B (QRMP, 22nd), Q2 2026-27",
+			previous_period: "Sep 2026",
+		});
+		expect(lines[0]).toMatch(
+			/^Fixed sum: .*35,000.*, 35% of the .*1,?00,?001.* paid with GSTR-3B \(QRMP, 22nd\), Q2 2026-27\.$/
+		);
+		expect(lines[1]).toMatch(/tax actually due/);
+	});
+
+	it("says so when it cannot be worked out, and nothing for other filings", () => {
+		expect(fixedSumLines({ amount: null, previous_period: "Sep 2026" })[0]).toMatch(
+			/quarter ending Sep 2026/
+		);
+		expect(fixedSumLines(null)).toEqual([]);
 	});
 });

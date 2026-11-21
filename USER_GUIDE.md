@@ -205,6 +205,16 @@ When marking a GST return filed is refused because an earlier period of the same
 
 > **Tip.** The GST portal refuses a period while an earlier one is unfiled, so the app does too. Monthly and quarterly GSTR-1 count as one return, and so do monthly and quarterly GSTR-3B.
 
+### How much does a quarterly GST company pay by PMT-06?
+
+For a company in the QRMP scheme, paying tax for the first or second month of a quarter.
+
+1. Open the month's PMT-06 filing. It shows the fixed sum: 35% of the tax paid in cash with last quarter's GSTR-3B, or all of the last month's if the company then filed monthly.
+2. Pay either the fixed sum or the tax actually due. For the fixed sum, press "Use this amount".
+3. Record the payment like any other filing.
+
+> **Tip.** The fixed sum is worked out from the GSTR-3B recorded here, so record last quarter's amount paid. With nothing to pay, mark the month NIL.
+
 ### How do I ask a client for a document?
 
 *For: CA/CS firms.*

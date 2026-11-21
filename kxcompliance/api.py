@@ -27,6 +27,7 @@ from kxcompliance.kx_compliance import (
 	penalty_figures,
 	people,
 	privacy,
+	qrmp,
 	score,
 	setup_import,
 	tours,
@@ -1322,6 +1323,15 @@ def filing_penalty(task: str) -> dict:
 	doc = frappe.get_doc("Compliance Task", task)
 	doc.check_permission("read")
 	return score.filing_penalty(doc)
+
+
+@frappe.whitelist(methods=["GET"])
+def fixed_sum(task: str) -> dict | None:
+	"""For a PMT-06 filing the person may read: the QRMP fixed sum and the GSTR-3B it comes from."""
+	check_reader_access()
+	doc = frappe.get_doc("Compliance Task", task)
+	doc.check_permission("read")
+	return qrmp.fixed_sum(doc)
 
 
 @frappe.whitelist(methods=["GET"])

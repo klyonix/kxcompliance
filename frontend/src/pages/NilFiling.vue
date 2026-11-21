@@ -82,6 +82,11 @@
 									>{{ row.obligation_template }}</RouterLink
 								>
 								<span
+									v-if="row.registration_number"
+									class="truncate text-sm text-ink-gray-6"
+									>{{ row.registration_number }}</span
+								>
+								<span
 									class="truncate text-sm"
 									:class="row.late ? 'text-ink-red-4' : 'text-ink-gray-5'"
 									>{{ rowLine(row) }}</span
@@ -180,6 +185,7 @@ import {
 	nextStep,
 	nilChoiceLabel,
 	nilOrder,
+	nilSeries,
 	rowMissing,
 	rowValues,
 	saveLabel,
@@ -328,14 +334,16 @@ async function saveAll() {
 	const held = new Set();
 	for (const [index, row] of batch.entries()) {
 		progress.value = `Saving ${index + 1} of ${batch.length}…`;
-		if (held.has(row.obligation_template)) {
+		if (held.has(nilSeries(row, rulesOf(row)))) {
 			row.result = { state: "error", message: "File the earlier period first." };
 			counts.error += 1;
 			continue;
 		}
 		const outcome = await saveRow(row);
 		counts[outcome] += 1;
-		if (outcome === "error" && rulesOf(row)?.files_in_order) held.add(row.obligation_template);
+		if (outcome === "error" && rulesOf(row)?.files_in_order) {
+			held.add(nilSeries(row, rulesOf(row)));
+		}
 	}
 	saving.value = false;
 	await refreshOutbox();

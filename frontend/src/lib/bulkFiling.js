@@ -83,15 +83,23 @@ export function rowValues(row, sharedDate, rules) {
 	return values;
 }
 
-// A company's NIL filings in the order they must be saved: each return's periods oldest first,
-// since GST refuses a period while an earlier one is unfiled.
+// A company's NIL filings in the order they must be saved: each return's periods oldest first for
+// each registration (GSTIN, TAN), since GST refuses a period while an earlier one is unfiled.
 export function nilOrder(rows) {
 	return [...rows].sort(
 		(a, b) =>
 			a.obligation_template.localeCompare(b.obligation_template) ||
+			String(a.registration_number || "").localeCompare(
+				String(b.registration_number || "")
+			) ||
 			String(a.period_end).localeCompare(String(b.period_end))
 	);
 }
+
+// The periods filed one after another: one return (by its form, so monthly and quarterly GSTR-3B
+// are one) for one registration. Once one fails, the later ones of the same series wait.
+export const nilSeries = (row, rules) =>
+	`${rules?.form || row.obligation_template}|${row.registration_number || ""}`;
 
 export const nilChoiceLabel = (choice) =>
 	`${choice.company} · ${choice.filings} NIL to file · oldest due ${formatDate(choice.due)}`;

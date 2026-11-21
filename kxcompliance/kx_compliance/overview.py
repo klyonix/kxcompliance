@@ -16,7 +16,7 @@ from frappe import _
 from frappe.utils import add_days, add_months, nowdate
 
 from kxcompliance.kx_compliance.dashboard import get_dashboard, within
-from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
+from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, TIME_BARRED
 
 COUNT = {"COUNT": "*", "as": "count"}
 PARTY_HOLDERS = ["Customer", "Supplier"]
@@ -356,7 +356,8 @@ def on_time_rate(today: str, companies: list[str] | None = None) -> dict:
 	)
 	on_time = total(rows, status="Filed")
 	late = total(rows, status="Filed Late")
-	overdue = total(rows, is_overdue=1)
+	# Closed as time-barred: never filed, so missed like an overdue one.
+	overdue = total(rows, is_overdue=1) + total(rows, status=TIME_BARRED)
 	counted = on_time + late + overdue
 	return {
 		"from_date": str(since),

@@ -6,6 +6,7 @@ from frappe import _
 from frappe.utils import flt
 
 from kxcompliance.kx_compliance.client_reports import companies_by_client
+from kxcompliance.kx_compliance.register import TIME_BARRED
 
 # A CA/CS firm also sees it per client, through the client's companies.
 GROUPINGS = {"Company": "company", "Client": "company", "Law": "law", "Responsible": "responsible"}
@@ -70,7 +71,8 @@ def get_data(filters: frappe._dict, group_by: str):
 			row.on_time += 1
 		elif task.status == "Filed Late":
 			row.late += 1
-		elif task.is_overdue:
+		elif task.is_overdue or task.status == TIME_BARRED:
+			# A filing closed as time-barred was never filed: it counts with the overdue ones.
 			row.overdue += 1
 		row.late_fee += flt(task.late_fee)
 		row.interest += flt(task.interest)

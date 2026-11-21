@@ -7,6 +7,7 @@ const COMPLIANCE_TASK_COLOURS = {
 	"Ready for Review": "purple",
 	Filed: "green",
 	"Filed Late": "yellow",
+	"Time-barred": "red",
 	"Not Applicable": "gray",
 	Cancelled: "gray",
 };

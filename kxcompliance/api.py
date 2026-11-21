@@ -267,6 +267,8 @@ def my_work(companies: str | None = None) -> dict:
 				"status",
 				"is_overdue",
 				"effective_due_date",
+				"is_time_barred",
+				"last_filing_date",
 				"responsible",
 				"reviewer",
 			],

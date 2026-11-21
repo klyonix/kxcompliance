@@ -11,6 +11,10 @@ from frappe import _
 from frappe.utils import add_days, add_months, date_diff, escape_html, formatdate, getdate, nowdate
 
 from kxcompliance import scoped
+from kxcompliance.kx_compliance.doctype.compliance_task.compliance_task import (
+	NOT_YET_FILED,
+	is_time_barred,
+)
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, escalate_after_days, get_settings
 from kxcompliance.kx_compliance.reminders import (
 	already_sent,
@@ -216,17 +220,28 @@ def run_daily():
 		return
 	send_task_reminders(today)
 	send_task_escalations(today)
+	send_time_bar_warnings(today)
 
 
 def refresh_overdue(today: date):
+	"""Save each open filing whose overdue or time-barred flag has changed since yesterday."""
 	open_tasks = scoped.get_all(
 		"Compliance Task",
 		filters={"status": ("not in", CLOSED_TASK_STATUSES)},
-		fields=["name", "is_overdue", "effective_due_date"],
+		fields=[
+			"name",
+			"status",
+			"is_overdue",
+			"effective_due_date",
+			"is_time_barred",
+			"last_filing_date",
+			"filed_on",
+		],
 	)
 	for task in open_tasks:
 		overdue = int(getdate(task.effective_due_date) < today)
-		if overdue != task.is_overdue:
+		barred = int(is_time_barred(task.last_filing_date, task.status, task.filed_on, today))
+		if overdue != task.is_overdue or barred != task.is_time_barred:
 			run_for_item(task.name, lambda name=task.name: frappe.get_doc("Compliance Task", name).save())
 
 
@@ -236,9 +251,12 @@ TASK_FIELDS = [
 	"period_label",
 	"company",
 	"effective_due_date",
+	"last_filing_date",
 	"responsible",
 	"reviewer",
 ]
+# How long before a return's last day to file the managers are warned (RK, 21 Nov 2026).
+TIME_BAR_WARNING_DAYS = 90
 
 
 def send_task_reminders(today: date):
@@ -302,4 +320,43 @@ def escalate_task(task, key: str, managers: list[str]):
 		escape_html(task.responsible),
 	)
 	write_log("Escalation", key, recipients, task=task.name, due_date=task.effective_due_date)
+	notify(recipients, subject, message, "Compliance Task", task.name)
+
+
+def send_time_bar_warnings(today: date):
+	"""Warn once, from 90 days before, that a return still to file will soon no longer be accepted."""
+	tasks = scoped.get_all(
+		"Compliance Task",
+		filters={
+			# Sent for review means filed on the portal, so only those still to file are warned about.
+			"status": ("in", NOT_YET_FILED),
+			"last_filing_date": ("between", [today, add_days(today, TIME_BAR_WARNING_DAYS)]),
+		},
+		fields=TASK_FIELDS,
+	)
+	due = [(task, f"{task.name}|time-bar|{task.last_filing_date}") for task in tasks]
+	sent = already_sent([key for _task, key in due])
+	managers = compliance_managers()
+	looking_after = relationship_managers(task.company for task, _key in due)
+	for task, key in due:
+		if key not in sent:
+			to = [task.responsible, *managers, looking_after.get(task.company)]
+			run_for_item(task.name, lambda task=task, key=key, to=to: warn_time_bar(task, key, to))
+
+
+def warn_time_bar(task, key: str, people: list[str]):
+	"""`people`: who prepares it, the compliance managers, and the client's relationship manager."""
+	recipients = list(dict.fromkeys(user for user in [task.reviewer, *people] if user))
+	title = f"{task.obligation_template} ({task.period_label})"
+	subject = _("Last day to file {0}: {1}").format(title, formatdate(task.last_filing_date))
+	message = _(
+		"{0} for {1} was due on {2} and is not filed. The portal accepts it only until {3}; after "
+		"that it can no longer be filed."
+	).format(
+		escape_html(title),
+		escape_html(task.company),
+		formatdate(task.effective_due_date),
+		formatdate(task.last_filing_date),
+	)
+	write_log("Escalation", key, recipients, task=task.name, due_date=task.last_filing_date)
 	notify(recipients, subject, message, "Compliance Task", task.name)

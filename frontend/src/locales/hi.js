@@ -90,6 +90,8 @@ export default {
 	"For review": "जाँच के लिए",
 	Done: "हो गया",
 	"Needs attention": "ध्यान चाहिए",
+	"Time-barred": "समय-सीमा बीत गई",
+	"Last day to file {0}": "दाखिल करने का अंतिम दिन {0}",
 	Active: "सक्रिय",
 	"No certificate": "प्रमाणपत्र नहीं",
 	"Digital signatures": "डिजिटल हस्ताक्षर",

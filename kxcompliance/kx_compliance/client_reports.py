@@ -15,6 +15,7 @@ from frappe.utils import add_days, add_months, flt, getdate, nowdate
 from kxcompliance import scoped
 from kxcompliance.kx_compliance.doctype.compliance_item.compliance_item import DSC_TYPE
 from kxcompliance.kx_compliance.overview import OPEN_CASE_STATUSES
+from kxcompliance.kx_compliance.register import TIME_BARRED
 
 COUNT = {"COUNT": "*", "as": "count"}
 DSC_WARNING_DAYS = 30
@@ -92,7 +93,7 @@ def add_filings(totals, client_of, companies, from_date, to_date):
 			total.on_time += row["count"]
 		elif row.status == "Filed Late":
 			total.late += row["count"]
-		elif row.is_overdue:
+		elif row.is_overdue or row.status == TIME_BARRED:
 			total.overdue += row["count"]
 		total.late_fee += flt(row.late_fee)
 		total.interest += flt(row.interest)

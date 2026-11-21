@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	CLOSED_STATUSES,
 	returnGroups,
 	changedValues,
 	filingSteps,
@@ -170,6 +171,43 @@ describe("filings in the app", () => {
 			amount_paid: 1250.5,
 		});
 		expect(changedValues({ ...saved, filed_on: "" }, saved)).toEqual({ filed_on: null });
+	});
+});
+
+describe("a time-barred filing in the list", () => {
+	it("says so in place of how late it is, until it is closed", () => {
+		const task = {
+			name: "CT-OLD",
+			obligation_template: "GSTR-1 (Monthly)",
+			period_label: "Oct 2023",
+			company: "Demo Industries",
+			status: "Open",
+			is_overdue: 1,
+			effective_due_date: "2023-11-11",
+			is_time_barred: 1,
+			last_filing_date: "2026-11-11",
+		};
+		expect(taskRow(task, new Date(2026, 10, 21)).due).toEqual({
+			text: "Time-barred",
+			late: true,
+		});
+		expect(taskRow({ ...task, status: "Not Applicable", is_time_barred: 0 }).due.text).toBe(
+			""
+		);
+	});
+
+	it("shows one closed as time-barred in red, as done", () => {
+		const closed = taskRow({
+			name: "CT-OLD",
+			obligation_template: "GSTR-1 (Monthly)",
+			status: "Time-barred",
+			is_overdue: 0,
+			is_time_barred: 0,
+			effective_due_date: "2023-11-11",
+		});
+		expect(closed.theme).toBe("red");
+		expect(closed.due.text).toBe("");
+		expect(CLOSED_STATUSES).toContain("Time-barred");
 	});
 });
 

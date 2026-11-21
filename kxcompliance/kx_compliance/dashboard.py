@@ -14,7 +14,7 @@ from frappe import _
 from frappe.utils import add_days, add_months, get_first_day, getdate
 
 from kxcompliance import scoped
-from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
+from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, TIME_BARRED
 
 COUNT = {"COUNT": "*", "as": "count"}
 SOON_DAYS = 7
@@ -217,7 +217,7 @@ def filed_by_month(today, companies: list[str] | None = None) -> list[dict]:
 				"month": start.strftime("%b %Y"),
 				_("On time"): counted(("Filed",)),
 				_("Late"): counted(("Filed Late",)),
-				_("Not filed"): counted(("Open", "In Progress", "Ready for Review")),
+				_("Not filed"): counted(("Open", "In Progress", "Ready for Review", TIME_BARRED)),
 			}
 		)
 	return months

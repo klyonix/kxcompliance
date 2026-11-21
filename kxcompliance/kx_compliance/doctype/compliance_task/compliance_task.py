@@ -4,10 +4,15 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, getdate, nowdate
+from frappe.utils import add_years, cint, flt, getdate, nowdate
 
 from kxcompliance import scoped
-from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, check_reassignment, is_approver
+from kxcompliance.kx_compliance.register import (
+	CLOSED_TASK_STATUSES,
+	TIME_BARRED,
+	check_reassignment,
+	is_approver,
+)
 
 FILED_STATUSES = ("Filed", "Filed Late")
 # Statuses of a filing not yet made on the portal: an earlier one blocks filing in period order.
@@ -32,6 +37,7 @@ class ComplianceTask(Document):
 	def validate(self):
 		check_reassignment(self)
 		self.effective_due_date = self.extended_due_date or self.due_date
+		self.set_time_bar()
 		before = self.get_doc_before_save()
 		previous = before.status if before else None
 		if before:
@@ -55,6 +61,52 @@ class ComplianceTask(Document):
 					),
 					frappe.PermissionError,
 				)
+
+	def set_time_bar(self):
+		"""The last day the return can be filed, and whether that has passed for one still to file."""
+		rules = frappe.get_cached_doc("Compliance Obligation Template", self.obligation_template)
+		years = cint(rules.time_bar_years)
+		self.last_filing_date = (
+			add_years(self.effective_due_date, years) if years and self.effective_due_date else None
+		)
+		self.is_time_barred = int(
+			is_time_barred(self.last_filing_date, self.status, self.filed_on, getdate(nowdate()))
+		)
+
+	def check_closing_as_time_barred(self, previous: str | None):
+		"""A manager closes a filing the portal no longer accepts, saying why; only one past its last day."""
+		if not is_approver():
+			frappe.throw(
+				_("Only a Compliance Manager can close {0} as time-barred.").format(self.name),
+				frappe.PermissionError,
+			)
+		if not is_time_barred(self.last_filing_date, previous or "Open", self.filed_on, getdate(nowdate())):
+			frappe.throw(
+				_("{0} is not time-barred: it can still be filed until {1}.").format(
+					self.name,
+					frappe.format(self.last_filing_date, "Date") if self.last_filing_date else _("any time"),
+				)
+			)
+		if not (self.remarks or "").strip():
+			frappe.throw(_("Say in Remarks why {0} was not filed in time.").format(self.name))
+
+	def check_time_bar(self):
+		if (
+			self.last_filing_date
+			and self.filed_on
+			and getdate(self.filed_on) > getdate(self.last_filing_date)
+		):
+			frappe.throw(
+				_(
+					"{0} is time-barred: it could be filed only until {1}, so it cannot be recorded as "
+					"filed on {2}. If it was filed by then, correct Filed On."
+				).format(
+					self.name,
+					frappe.format(self.last_filing_date, "Date"),
+					frappe.format(self.filed_on, "Date"),
+				),
+				title=_("Time-barred return"),
+			)
 
 	def validate_nil(self):
 		rules = frappe.get_cached_doc("Compliance Obligation Template", self.obligation_template)
@@ -84,12 +136,15 @@ class ComplianceTask(Document):
 		rules = frappe.get_cached_doc("Compliance Obligation Template", self.obligation_template)
 		if self.status in ("Ready for Review", *FILED_STATUSES):
 			self.validate_filing_details(rules)
+			self.check_time_bar()
 			if rules.files_in_order:
 				self.check_period_order(rules)
 			if rules.filed_after_form:
 				self.check_filed_after(rules)
 		if self.status in FILED_STATUSES:
 			self.mark_filed(rules)
+		if self.status == TIME_BARRED:
+			self.check_closing_as_time_barred(previous)
 		if self.status == "Not Applicable" and not (self.remarks or "").strip():
 			frappe.throw(_("Say in Remarks why {0} does not apply.").format(self.name))
 		if self.status == "Cancelled" and not is_approver():
@@ -231,3 +286,12 @@ def return_series(rules) -> list[str]:
 		pluck="name",
 	)
 	return names or [rules.name]
+
+
+def is_time_barred(last_filing_date, status: str, filed_on, today) -> bool:
+	"""Past its last day to file, still open, and not recorded as filed by that day."""
+	if not last_filing_date or status in CLOSED_TASK_STATUSES:
+		return False
+	if filed_on and getdate(filed_on) <= getdate(last_filing_date):
+		return False
+	return getdate(last_filing_date) < getdate(today)

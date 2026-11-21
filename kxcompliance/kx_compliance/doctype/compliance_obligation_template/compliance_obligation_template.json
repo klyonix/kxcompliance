@@ -40,6 +40,7 @@
   "nil_needs_acknowledgement",
   "files_in_order",
   "filed_after_form",
+  "time_bar_years",
   "section_reminders",
   "reminders",
   "section_penalty",
@@ -278,6 +279,12 @@
    "description": "A form under the same law that must be filed first for the same period and registration, as GSTR-1 before GSTR-3B (CGST Act s.39(10))."
   },
   {
+   "fieldname": "time_bar_years",
+   "fieldtype": "Int",
+   "label": "Cannot Be Filed After (Years)",
+   "description": "Years after the due date when the portal stops accepting the return, as 3 for GST returns (CGST Act ss.37, 39, 44 and 52, as amended by the Finance Act 2023). 0 for no limit."
+  },
+  {
    "fieldname": "section_reminders",
    "fieldtype": "Section Break",
    "label": "Reminders"
@@ -388,7 +395,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-21 14:00:00.000000",
+ "modified": "2026-11-21 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Obligation Template",

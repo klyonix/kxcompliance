@@ -43,7 +43,9 @@ TAX_AUDIT = (
 )
 PF = (
 	"Damages of 5% to 25% a year by length of delay (s.14B of the EPF Act), and interest at "
-	"12% a year (s.7Q). The estimate counts the interest only."
+	"12% a year (s.7Q). The estimate counts the interest only. A month with no contributory "
+	"member still owes ₹75 of administration charges, paid by direct challan (EPFO "
+	"contribution rates)."
 )
 ESI = (
 	"Interest at 12% a year on contributions paid late (Regulation 31A), and damages of 5% "
@@ -53,10 +55,27 @@ STATE_RULE = (
 	"Interest and penalties under the state's own Act differ by state; the estimate does not "
 	"count them. Add the state's figures and tick Set by Us."
 )
+PT_KARNATAKA = (
+	"Penalty of ₹250 for each monthly or quarterly statement not furnished in time, a nil one "
+	"included (s.6A(4) of the Karnataka Tax on Professions, Trades, Callings and Employments Act, "
+	"1976)."
+)
+PT_ASSAM = (
+	"Penalty of ₹100 a day of delay, at most ₹5,000, a nil return included (Assam Professions, "
+	"Trades, Callings and Employments Taxation Act, as amended in 2021)."
+)
+PT_UP_TO = (
+	"Penalty of up to {0} a day of delay, which the authority may levy ({1}). The estimate does not count it."
+)
+PT_WEST_BENGAL = (
+	"Late fee of up to ₹200 a month of delay (s.6(2) of the West Bengal State Tax on Professions, "
+	"Trades, Callings and Employments Act, 1979). The estimate does not count it."
+)
 PT_MAHARASHTRA = (
 	"Late fee under s.6(3) of the Maharashtra State Tax on Professions, Trades, Callings and "
-	"Employments Act, 1975: ₹1,000 a return filed late, a nil return included (Trade Circular 2T "
-	"of 2026). Interest on tax paid late under the Act is not counted."
+	"Employments Act, 1975: ₹200 a return filed up to 30 days late and ₹1,000 after that, a nil "
+	"return included (Trade Circular 2T of 2026). The estimate uses ₹1,000. Interest on tax paid "
+	"late under the Act is not counted."
 )
 LODR = (
 	"Fine under SEBI's standard operating procedure for listing regulations (circular of "
@@ -88,6 +107,14 @@ PENALTIES = {
 	),
 	"PMT-06 (QRMP Monthly Payment)": dict(interest_percent=18, penalty_rule="No late fee. " + GST_INTEREST),
 	"Professional Tax - Maharashtra": dict(late_fee_flat=1000, penalty_rule=PT_MAHARASHTRA),
+	"Professional Tax - Karnataka": dict(late_fee_flat=250, penalty_rule=PT_KARNATAKA),
+	"Professional Tax - Assam": dict(late_fee_per_day=100, late_fee_cap=5000, penalty_rule=PT_ASSAM),
+	"Professional Tax - Telangana": dict(penalty_rule=PT_UP_TO.format("₹100", "s.7(3) of the Telangana Act")),
+	"Professional Tax - Andhra Pradesh": dict(
+		penalty_rule=PT_UP_TO.format("₹100", "s.7(3) of the Andhra Pradesh Act")
+	),
+	"Professional Tax - Gujarat": dict(penalty_rule=PT_UP_TO.format("₹10", "s.6(3) of the Gujarat Act")),
+	"Professional Tax - West Bengal": dict(penalty_rule=PT_WEST_BENGAL),
 	"CMP-08 (Composition Payment)": dict(interest_percent=18, penalty_rule="No late fee. " + GST_INTEREST),
 	"GSTR-4 (Composition Annual Return)": dict(
 		late_fee_per_day=50,
@@ -168,7 +195,7 @@ PENALTIES = {
 }
 # A late NIL return: ₹20 a day (₹10 CGST and ₹10 SGST, Notification 76/2018-Central Tax), at most
 # ₹500 a return (Notifications 19/2021, 20/2021 and 21/2021-Central Tax). Maharashtra's Professional
-# Tax charges its usual ₹1,000 a return. Returns not listed cost
+# Tax charges its usual ₹1,000 a return, Karnataka's ₹250 and Assam's ₹100 a day. Returns not listed cost
 # nothing when NIL: no fee is set for them, or it is capped at the tax, which is nil.
 NIL_GST = dict(nil_late_fee_per_day=20, nil_late_fee_cap=500)
 NIL_PENALTIES = {
@@ -180,6 +207,8 @@ NIL_PENALTIES = {
 	"GSTR-4 (Composition Annual Return)": NIL_GST,
 	# The same ₹1,000 a return whether or not there was tax to pay.
 	"Professional Tax - Maharashtra": dict(nil_late_fee_flat=1000),
+	"Professional Tax - Karnataka": dict(nil_late_fee_flat=250),
+	"Professional Tax - Assam": dict(nil_late_fee_per_day=100, nil_late_fee_cap=5000),
 }
 NIL_FIELDS = ("nil_late_fee_flat", "nil_late_fee_per_day", "nil_late_fee_cap")
 # Event forms, state taxes and the rest share these words when they have no figures of their own.

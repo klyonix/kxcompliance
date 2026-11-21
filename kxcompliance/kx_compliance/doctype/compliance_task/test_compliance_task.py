@@ -539,6 +539,12 @@ class TestNilReturns(IntegrationTestCase):
 		self.ready(november)
 		self.assertEqual(november.status, "Ready for Review")
 
+	def test_pf_returns_are_filed_in_month_order(self):
+		october = filing_of("PF ECR and Payment", "2026-10-31", "2026-11-15", "MHBAN0012345000", is_nil=1)
+		november = filing_of("PF ECR and Payment", "2026-11-30", "2026-12-15", "MHBAN0012345000", is_nil=1)
+		with self.assertRaisesRegex(frappe.ValidationError, f"{october.name} .* must be filed first"):
+			self.ready(november)
+
 	def test_returns_without_an_order_rule_file_any_period(self):
 		filing_of("TDS/TCS Payment", "2026-09-30", "2026-10-07", "BLRA12345B", is_nil=1)
 		october = filing_of("TDS/TCS Payment", "2026-10-31", "2026-11-07", "BLRA12345B", is_nil=1)

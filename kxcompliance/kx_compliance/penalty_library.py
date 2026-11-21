@@ -81,6 +81,7 @@ PENALTIES = {
 	"GSTR-9C (Reconciliation)": dict(
 		penalty_rule="Filed with GSTR-9; its late fee is counted on GSTR-9 (Notification 30/2021-Central Tax)."
 	),
+	"PMT-06 (QRMP Monthly Payment)": dict(interest_percent=18, penalty_rule="No late fee. " + GST_INTEREST),
 	"CMP-08 (Composition Payment)": dict(interest_percent=18, penalty_rule="No late fee. " + GST_INTEREST),
 	"GSTR-4 (Composition Annual Return)": dict(
 		late_fee_per_day=50,

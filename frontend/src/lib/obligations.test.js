@@ -37,6 +37,14 @@ describe("obligation rules in words", () => {
 		expect(ruleSummary({ frequency: "Monthly", months_after_period: 1, due_day: 20 })).toBe(
 			"Monthly · due the 20th of the next month"
 		);
+		expect(
+			ruleSummary({
+				frequency: "Monthly",
+				months_after_period: 1,
+				due_day: 25,
+				skip_months: "3, 6, 9, 12",
+			})
+		).toBe("Monthly except Mar, Jun, Sep, Dec · due the 25th of the next month");
 		expect(ruleSummary({ due_after_event: 1, days_after_event: 30 })).toBe(
 			"30 days after the AGM"
 		);

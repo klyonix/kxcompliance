@@ -21,10 +21,36 @@ export function ruleSummary(template) {
 		const days = Number(template.days_after_event) || 0;
 		return `${days} days after ${template.event_type || "the AGM"}`;
 	}
-	return `${template.frequency} · due ${dueText(
+	return `${frequencyText(template)} · due ${dueText(
 		template.months_after_period,
 		template.due_day
 	)}`;
+}
+
+const MONTHS = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+];
+
+// "Monthly", or "Monthly except Mar, Jun, Sep, Dec" for one that skips months (PMT-06).
+function frequencyText(template) {
+	const skipped = String(template.skip_months || "")
+		.split(",")
+		.map((part) => MONTHS[Number(part.trim()) - 1])
+		.filter(Boolean);
+	return skipped.length
+		? `${template.frequency} except ${skipped.join(", ")}`
+		: template.frequency;
 }
 
 export const OBLIGATION_FIELDS = [
@@ -34,6 +60,7 @@ export const OBLIGATION_FIELDS = [
 	"frequency",
 	"months_after_period",
 	"due_day",
+	"skip_months",
 	"due_after_event",
 	"days_after_event",
 	"event_type",

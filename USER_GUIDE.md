@@ -165,6 +165,46 @@ When a company had nothing to file for a period.
 2. Open the menu at the top right and choose "Does not apply".
 3. Say why. The filing is closed with your reason.
 
+### Nothing to report this period. How do I file a NIL return?
+
+When a company had no sales, no tax or no TDS for a period. GST returns, TDS, PF, ESI and Professional Tax can be filed NIL.
+
+1. Open the filing and press "Record the filing".
+2. Tick NIL return. There is no tax or interest to enter; where the return has amounts, a late fee paid can still be entered.
+3. Add the date and the acknowledgement number (the ARN for GST), attach the proof, and send it on as usual.
+
+> **Tip.** For a TDS quarter with nothing deducted, file the declaration for non-filing on TRACES. Only the date is needed, as TRACES gives no acknowledgement number.
+
+### We will file a NIL return later. How do I keep track of it?
+
+When there is nothing to report this period, but the return will be filed later, alone or with others.
+
+1. Open the filing, open the menu at the top right and choose "Mark NIL, file later".
+2. It stays open with its due date. Its late fee is worked out at the lower NIL rate: for GST, ₹20 a day and at most ₹500 a return.
+3. Find every NIL return still to file under Filings, "NIL to file".
+
+> **Tip.** An overdue NIL return takes 3 points off the compliance score, not 10. The late fee still runs, so file it soon.
+
+### How do I file several NIL returns together?
+
+When a company's NIL returns for several periods are filed in one sitting.
+
+1. Open Filings and press "File NIL together".
+2. Pick the company. Its NIL returns are listed by return and GSTIN, oldest period first.
+3. Check the date, add each acknowledgement number and proof, then save them together.
+
+> **Tip.** GST returns are saved in period order, as the portal files them. If one period cannot be saved, the later periods of that return and GSTIN wait.
+
+### An earlier period must be filed first. Why?
+
+When marking a GST return filed is refused because an earlier period of the same return and GSTIN is still open.
+
+1. The message names the earlier filing. Open it.
+2. File it, or, if it never applied (say the company moved to quarterly filing), choose "Does not apply" and say why.
+3. Then file the later period.
+
+> **Tip.** The GST portal refuses a period while an earlier one is unfiled, so the app does too. Monthly and quarterly GSTR-1 count as one return, and so do monthly and quarterly GSTR-3B.
+
 ### How do I ask a client for a document?
 
 *For: CA/CS firms.*
@@ -484,6 +524,19 @@ For each company whose compliance you track.
 2. Open a company under In ERPNext, not set up yet.
 3. Choose its kind, add its registrations, and the people who handle and review its work.
 4. The returns it needs are added, and the calendar starts making its filings.
+
+### A company files GST every quarter. How do I set it up?
+
+*For: Managers.*
+
+For a company in the QRMP scheme: GSTR-1 and GSTR-3B every quarter, with tax paid by PMT-06 in the first two months of each quarter.
+
+1. Open Settings, press "Companies" and open the company.
+2. Untick GSTR-1 (Monthly) and GSTR-3B (Monthly).
+3. Tick GSTR-1 (QRMP), the GSTR-3B (QRMP) for the company's state (due the 22nd or the 24th), and PMT-06 (QRMP Monthly Payment).
+4. PMT-06 falls due on the 25th after each of a quarter's first two months; the third month's tax is paid with GSTR-3B.
+
+> **Tip.** A month with nothing to pay needs no PMT-06: mark it NIL, which needs only the date. An open monthly GSTR-3B from before the move must be filed, or marked as not applying, before the first quarter can be.
 
 ### A return never applies to us. How do I stop it?
 

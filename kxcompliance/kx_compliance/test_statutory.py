@@ -69,9 +69,13 @@ class TestStatutoryRules(IntegrationTestCase):
 		self.assertFalse(template.nil_needs_acknowledgement)
 
 	def test_skipped_months_are_month_numbers_on_a_monthly_obligation(self):
+		# A firm's own obligation, made from a standard one: without the fields a copy must not
+		# take, and not standard, or it would still be the shared library's.
 		template = frappe.copy_doc(
-			frappe.get_doc("Compliance Obligation Template", "PMT-06 (QRMP Monthly Payment)")
+			frappe.get_doc("Compliance Obligation Template", "PMT-06 (QRMP Monthly Payment)"),
+			ignore_no_copy=False,
 		)
+		template.is_standard = 0
 		template.template_name = "Test Skipping Payment"
 		template.skip_months = "3, 13"
 		with self.assertRaisesRegex(frappe.ValidationError, "month numbers from 1 to 12.*not 13"):

@@ -96,6 +96,25 @@
 			</p>
 
 			<section
+				v-if="fixedSumText.length"
+				class="flex flex-col gap-2 rounded-lg bg-surface-gray-2 px-4 py-3"
+				aria-labelledby="fixed-sum-heading"
+			>
+				<h2 id="fixed-sum-heading" class="text-base font-semibold text-ink-gray-8">
+					QRMP payment
+				</h2>
+				<p v-for="line in fixedSumText" :key="line" class="text-base text-ink-gray-8">
+					{{ line }}
+				</p>
+				<Button
+					v-if="fixedSum?.amount && editable"
+					class="self-start"
+					label="Use this amount"
+					@click="useFixedSum"
+				/>
+			</section>
+
+			<section
 				v-if="penaltyText.length"
 				class="flex flex-col gap-1 rounded-lg px-4 py-3"
 				:class="penalty.days_late ? 'bg-surface-red-1' : 'bg-surface-amber-1'"
@@ -436,6 +455,7 @@ import {
 	filingSteps,
 	formValues,
 	NIL_ZERO_FIELDS,
+	fixedSumLines,
 	missingDetails,
 	nilDeclared,
 	showFilingForm,
@@ -783,6 +803,26 @@ async function loadDocuments() {
 	}
 }
 
+// The QRMP fixed sum, for a PMT-06 filing still to pay.
+const fixedSum = ref(null);
+const fixedSumText = computed(() =>
+	task.value && !CLOSED_STATUSES.includes(task.value.status) ? fixedSumLines(fixedSum.value) : []
+);
+async function loadFixedSum() {
+	fixedSum.value = null;
+	if (rules.value?.form !== "PMT-06") return;
+	try {
+		fixedSum.value = await call("kxcompliance.api.fixed_sum", { task: props.name });
+	} catch {
+		// The fixed sum is a help; the filing is still useful without it, offline included.
+		fixedSum.value = null;
+	}
+}
+function useFixedSum() {
+	startRecording();
+	form.amount_paid = fixedSum.value.amount;
+}
+
 async function loadPenalty() {
 	try {
 		penalty.value = await call("kxcompliance.api.filing_penalty", { task: props.name });
@@ -841,6 +881,7 @@ async function load() {
 			task.value.obligation_template
 		);
 		fillForm();
+		loadFixedSum();
 	} catch (err) {
 		error.value = err.isNetwork ? notLoaded("this filing", "opened") : err.message;
 	}

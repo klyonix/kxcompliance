@@ -1,6 +1,6 @@
 // Rules for showing a Compliance Task and what each person may do with it, kept apart from
 // the screens so they can be tested. They mirror the checks the server makes on save.
-import { formatDate } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { relativeDue, timeBarDue } from "@/pages/myWork";
 
 export const CLOSED_STATUSES = [
@@ -242,4 +242,22 @@ export function showFilingForm(task, { editable, opened }) {
 	if (!editable || CLOSED_STATUSES.includes(task.status)) return false;
 	if (task.status === "Ready for Review") return opened;
 	return opened || hasFilingDetails(task);
+}
+
+// The QRMP fixed sum for a PMT-06 filing, in words (kxcompliance.kx_compliance.qrmp).
+export function fixedSumLines(fixed) {
+	if (!fixed) return [];
+	if (fixed.amount === null || fixed.amount === undefined) {
+		return [
+			`No filed GSTR-3B for the quarter ending ${fixed.previous_period} is recorded, so the fixed sum cannot be worked out here. Pay the tax actually due, or the fixed sum the portal shows.`,
+		];
+	}
+	const share =
+		fixed.percent === 100
+			? `all of the ${formatMoney(fixed.paid)} paid with ${fixed.from_label}`
+			: `${fixed.percent}% of the ${formatMoney(fixed.paid)} paid with ${fixed.from_label}`;
+	return [
+		`Fixed sum: ${formatMoney(fixed.amount)}, ${share}.`,
+		"Pay either this, with no interest if it is paid by the due date, or the tax actually due for the month.",
+	];
 }

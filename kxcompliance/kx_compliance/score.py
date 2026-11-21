@@ -23,8 +23,7 @@ from frappe.utils import add_months, date_diff, flt, getdate, nowdate
 
 from kxcompliance import scoped
 from kxcompliance.kx_compliance.overview import OPEN_CASE_STATUSES, PARTY_HOLDERS
-from kxcompliance.kx_compliance.penalty_figures import firm_figures
-from kxcompliance.kx_compliance.penalty_library import FIELDS as PENALTY_FIELDS
+from kxcompliance.kx_compliance.penalty_figures import FIGURE_FIELDS, firm_figures
 from kxcompliance.kx_compliance.penalty_library import NIL_FIELDS
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, TIME_BARRED
 
@@ -100,7 +99,7 @@ def rules_for(templates: list[str]) -> dict[str, frappe._dict]:
 	for row in rows:
 		row.penalty_set_by_firm = row.name in own
 		if row.penalty_set_by_firm:
-			row.update({field: own[row.name].get(field) for field in PENALTY_FIELDS})
+			row.update({field: own[row.name].get(field) for field in FIGURE_FIELDS})
 	return {row.name: row for row in rows}
 
 

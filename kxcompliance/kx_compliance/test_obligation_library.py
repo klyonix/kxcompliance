@@ -12,7 +12,7 @@ from kxcompliance.api import (
 )
 from kxcompliance.kx_compliance.obligation_library import sync_standard_templates
 from kxcompliance.kx_compliance.penalty_library import FIELDS as PENALTY_FIELDS
-from kxcompliance.kx_compliance.score import rules_for
+from kxcompliance.kx_compliance.score import fee_figures, late_fee, rules_for
 from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
 	MANAGER,
@@ -20,6 +20,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_company,
 	make_users,
 )
+from kxcompliance.patches.v1_0.set_firm_nil_figures import execute as set_firm_nil_figures
 
 TEMPLATE = "Compliance Obligation Template"
 GSTR_3B = "GSTR-3B (Monthly)"
@@ -110,6 +111,38 @@ class TestObligationLibrary(IntegrationTestCase):
 		doc.late_fee_per_day = 30
 		with self.assertRaisesRegex(frappe.ValidationError, "Only In Use"):
 			doc.save()
+
+	def test_a_firms_own_figures_keep_the_library_nil_figures_until_it_sets_its_own(self):
+		with self.set_user(MANAGER):
+			shown = save_obligation_figures(GSTR_3B, {**library_figures(GSTR_3B), "late_fee_per_day": 30})
+		self.assertEqual(
+			(shown["figures"]["nil_late_fee_per_day"], shown["figures"]["nil_late_fee_cap"]), (20, 500)
+		)
+		with self.set_user(MANAGER):
+			save_obligation_figures(GSTR_3B, {"nil_late_fee_per_day": 25, "nil_late_fee_cap": 400})
+		rules = rules_for([GSTR_3B])[GSTR_3B]
+		self.assertEqual(rules.late_fee_per_day, 30)  # left out, so kept
+		self.assertEqual(late_fee(fee_figures(rules, is_nil=True), 30), 400)
+		self.assertEqual(late_fee(fee_figures(rules, is_nil=True), 10), 250)
+
+	def test_figures_kept_before_nil_figures_take_the_librarys(self):
+		with self.set_user(MANAGER):
+			save_obligation_figures(GSTR_3B, library_figures(GSTR_3B))
+		name = frappe.db.get_value("Compliance Penalty Figures", {"obligation_template": GSTR_3B})
+		frappe.db.set_value(
+			"Compliance Penalty Figures", name, {"nil_late_fee_per_day": 0, "nil_late_fee_cap": 0}
+		)
+		set_firm_nil_figures()
+		self.assertEqual(
+			frappe.db.get_value(
+				"Compliance Penalty Figures", name, ["nil_late_fee_per_day", "nil_late_fee_cap"]
+			),
+			(20, 500),
+		)
+		# A firm's own NIL figures are never overwritten.
+		frappe.db.set_value("Compliance Penalty Figures", name, "nil_late_fee_cap", 300)
+		set_firm_nil_figures()
+		self.assertEqual(frappe.db.get_value("Compliance Penalty Figures", name, "nil_late_fee_cap"), 300)
 
 	def test_going_back_to_the_library_figures(self):
 		with self.set_user(MANAGER):

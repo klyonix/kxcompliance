@@ -25,3 +25,4 @@ kxcompliance.patches.v1_0.set_branding
 kxcompliance.patches.v1_0.keep_client_role_off_desk
 kxcompliance.patches.v1_0.remove_old_trackers
 kxcompliance.patches.v1_0.move_firm_penalty_figures
+kxcompliance.patches.v1_0.set_firm_nil_figures

@@ -14,10 +14,12 @@ from frappe import _
 from frappe.utils import cint, flt
 
 from kxcompliance import scoped
-from kxcompliance.kx_compliance.penalty_library import FIELDS
+from kxcompliance.kx_compliance.penalty_library import FIELDS, NIL_FIELDS
 
 DOCTYPE = "Compliance Penalty Figures"
 TEMPLATE = "Compliance Obligation Template"
+# Every figure a firm may keep: a late return's, and a late NIL return's.
+FIGURE_FIELDS = (*FIELDS, *NIL_FIELDS)
 
 
 def firm_figures(templates) -> dict[str, frappe._dict]:
@@ -28,7 +30,7 @@ def firm_figures(templates) -> dict[str, frappe._dict]:
 	rows = scoped.get_all(
 		DOCTYPE,
 		filters={"obligation_template": ("in", templates)},
-		fields=["name", "obligation_template", *FIELDS],
+		fields=["name", "obligation_template", *FIGURE_FIELDS],
 	)
 	return {row.obligation_template: row for row in rows}
 
@@ -41,21 +43,26 @@ def figures_of(template: str) -> dict:
 	own = firm_figures([template]).get(template)
 	source = own or doc
 	return {
-		"figures": {field: source.get(field) for field in FIELDS},
+		"figures": {field: source.get(field) for field in FIGURE_FIELDS},
 		"set_by_firm": bool(own),
 		"may_edit_obligation": bool(frappe.has_permission(TEMPLATE, "write", doc=doc)),
 	}
 
 
 def save_figures(template: str, figures: dict) -> dict:
-	"""Keep the firm's own figures for a standard obligation."""
-	if not isinstance(figures, dict) or set(figures) - set(FIELDS):
-		frappe.throw(_("Only the late-filing figures can be set: {0}.").format(", ".join(FIELDS)))
+	"""Keep the firm's own figures for a standard obligation.
+
+	A figure left out keeps its value: the firm's own if it has one, else the library's, so saving
+	only the usual figures does not wipe out the NIL ones.
+	"""
+	if not isinstance(figures, dict) or set(figures) - set(FIGURE_FIELDS):
+		frappe.throw(_("Only the late-filing figures can be set: {0}.").format(", ".join(FIGURE_FIELDS)))
 	name = firm_figures([template]).get(template, {}).get("name")
 	doc = frappe.get_doc(DOCTYPE, name) if name else frappe.new_doc(DOCTYPE)
+	current = doc if name else frappe.get_doc(TEMPLATE, template)
 	doc.obligation_template = template
-	for field in FIELDS:
-		value = figures.get(field)
+	for field in FIGURE_FIELDS:
+		value = figures[field] if field in figures else current.get(field)
 		if field == "penalty_rule":
 			doc.set(field, (value or "").strip() or None)
 		elif field == "cap_at_tax":

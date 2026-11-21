@@ -259,6 +259,17 @@
 								label="Involves a payment"
 							/>
 							<FormControl
+								v-model="form.allows_nil"
+								type="checkbox"
+								label="Can be filed NIL"
+							/>
+							<FormControl
+								v-if="form.allows_nil"
+								v-model="form.nil_needs_acknowledgement"
+								type="checkbox"
+								label="A NIL return gets an acknowledgement number"
+							/>
+							<FormControl
 								v-model="form.add_by_default"
 								type="checkbox"
 								label="Ticked for matching companies at setup"
@@ -322,6 +333,26 @@
 						type="checkbox"
 						label="The late fee cannot exceed the tax"
 					/>
+					<template v-if="nilAllowed">
+						<h3 class="text-sm font-medium text-ink-gray-7">A late NIL return</h3>
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+							<FormControl
+								v-model="form.nil_late_fee_per_day"
+								type="number"
+								label="Late fee a day (₹)"
+							/>
+							<FormControl
+								v-model="form.nil_late_fee_flat"
+								type="number"
+								label="One-off late fee (₹)"
+							/>
+							<FormControl
+								v-model="form.nil_late_fee_cap"
+								type="number"
+								label="At most (₹; 0 for no cap)"
+							/>
+						</div>
+					</template>
 					<FormControl
 						v-model="form.penalty_rule"
 						type="textarea"
@@ -469,6 +500,8 @@ const form = reactive({
 	requires_proof: true,
 	requires_review: false,
 	requires_payment: false,
+	allows_nil: false,
+	nil_needs_acknowledgement: true,
 	add_by_default: true,
 	reminder_days: "7, 2, 0",
 	description: "",
@@ -479,7 +512,15 @@ const form = reactive({
 	cap_at_tax: false,
 	interest_percent: 0,
 	penalty_rule: "",
+	nil_late_fee_per_day: 0,
+	nil_late_fee_flat: 0,
+	nil_late_fee_cap: 0,
 });
+
+// A standard obligation's NIL rule is the library's; the firm's own obligation's is on its form.
+const nilAllowed = computed(() =>
+	doc.value.is_standard ? Boolean(doc.value.allows_nil) : form.allows_nil
+);
 
 const standard = computed(() => Boolean(doc.value.is_standard));
 const choices = (values) => values.map((value) => ({ label: value, value }));
@@ -510,6 +551,11 @@ const facts = computed(() => {
 		rules.requires_review && "a second person's review",
 		rules.requires_payment && "a payment",
 	].filter(Boolean);
+	const nil = rules.allows_nil
+		? rules.nil_needs_acknowledgement
+			? "Allowed, with an acknowledgement number"
+			: "Allowed; only the date is needed"
+		: "Not allowed";
 	const states = stateList(rules.states);
 	return [
 		{ label: "Law", value: rules.law },
@@ -529,6 +575,7 @@ const facts = computed(() => {
 			: []),
 		{ label: "States", value: states.length ? states.join(", ") : "Every state" },
 		{ label: "Needs", value: needs.length ? sentence(needs.join(", ")) : "Nothing extra" },
+		{ label: "NIL return", value: nil },
 		{
 			label: "Reminders",
 			value: rules.reminders?.length ? `${daysText(rules.reminders)} days before` : "None",
@@ -555,6 +602,9 @@ function figures() {
 		cap_at_tax: form.cap_at_tax ? 1 : 0,
 		interest_percent: number(form.interest_percent),
 		penalty_rule: form.penalty_rule,
+		nil_late_fee_per_day: number(form.nil_late_fee_per_day),
+		nil_late_fee_flat: number(form.nil_late_fee_flat),
+		nil_late_fee_cap: number(form.nil_late_fee_cap),
 	};
 }
 
@@ -567,6 +617,9 @@ function figuresForm(source) {
 		cap_at_tax: Boolean(source.cap_at_tax),
 		interest_percent: source.interest_percent || 0,
 		penalty_rule: source.penalty_rule || "",
+		nil_late_fee_per_day: source.nil_late_fee_per_day || 0,
+		nil_late_fee_flat: source.nil_late_fee_flat || 0,
+		nil_late_fee_cap: source.nil_late_fee_cap || 0,
 	};
 }
 
@@ -579,6 +632,9 @@ const figuresChanged = () =>
 		late_fee_flat: number(own.value.figures.late_fee_flat),
 		late_fee_cap: number(own.value.figures.late_fee_cap),
 		interest_percent: number(own.value.figures.interest_percent),
+		nil_late_fee_per_day: number(own.value.figures.nil_late_fee_per_day),
+		nil_late_fee_flat: number(own.value.figures.nil_late_fee_flat),
+		nil_late_fee_cap: number(own.value.figures.nil_late_fee_cap),
 	});
 
 // A standard obligation's figures are the firm's own record, not the obligation's (which keeps
@@ -625,6 +681,8 @@ function values() {
 		requires_proof: form.requires_proof ? 1 : 0,
 		requires_review: form.requires_review ? 1 : 0,
 		requires_payment: form.requires_payment ? 1 : 0,
+		allows_nil: form.allows_nil ? 1 : 0,
+		nil_needs_acknowledgement: form.nil_needs_acknowledgement ? 1 : 0,
 		add_by_default: form.add_by_default ? 1 : 0,
 		reminders: parseDays(form.reminder_days).map((days) => ({ days_before: days })),
 		description: form.description,
@@ -704,6 +762,8 @@ function fill(template) {
 		requires_proof: Boolean(template.requires_proof),
 		requires_review: Boolean(template.requires_review),
 		requires_payment: Boolean(template.requires_payment),
+		allows_nil: Boolean(template.allows_nil),
+		nil_needs_acknowledgement: Boolean(template.nil_needs_acknowledgement),
 		add_by_default: Boolean(template.add_by_default),
 		reminder_days: daysText(template.reminders || []),
 		description: template.description || "",

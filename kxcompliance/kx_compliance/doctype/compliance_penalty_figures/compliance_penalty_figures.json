@@ -2,7 +2,7 @@
  "actions": [],
  "autoname": "hash",
  "creation": "2026-11-16 20:00:00.000000",
- "modified": "2026-11-16 20:00:00.000000",
+ "modified": "2026-11-21 20:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
  "description": "A firm's own late-filing figures for a standard obligation, used instead of the library's.",
@@ -15,7 +15,12 @@
   "cap_at_tax",
   "column_break_figures",
   "interest_percent",
-  "penalty_rule"
+  "penalty_rule",
+  "section_nil",
+  "nil_late_fee_per_day",
+  "nil_late_fee_flat",
+  "column_break_nil",
+  "nil_late_fee_cap"
  ],
  "fields": [
   {
@@ -71,6 +76,31 @@
    "fieldtype": "Small Text",
    "label": "The Rule",
    "description": "The rule in words, with its section, including fines the estimate cannot count."
+  },
+  {
+   "fieldname": "section_nil",
+   "fieldtype": "Section Break",
+   "label": "Late NIL Return"
+  },
+  {
+   "fieldname": "nil_late_fee_per_day",
+   "fieldtype": "Currency",
+   "label": "NIL Late Fee per Day"
+  },
+  {
+   "fieldname": "nil_late_fee_flat",
+   "fieldtype": "Currency",
+   "label": "NIL Late Fee (One-off)"
+  },
+  {
+   "fieldname": "column_break_nil",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "nil_late_fee_cap",
+   "fieldtype": "Currency",
+   "label": "NIL Late Fee Cap",
+   "description": "The most a late NIL return's fee can come to; 0 for no cap."
   }
  ],
  "links": [],

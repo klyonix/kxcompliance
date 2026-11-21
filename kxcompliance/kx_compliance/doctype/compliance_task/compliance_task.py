@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, getdate, nowdate
+from frappe.utils import add_years, cint, flt, getdate, nowdate
 
 from kxcompliance import scoped
 from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, check_reassignment, is_approver
@@ -32,6 +32,7 @@ class ComplianceTask(Document):
 	def validate(self):
 		check_reassignment(self)
 		self.effective_due_date = self.extended_due_date or self.due_date
+		self.set_time_bar()
 		before = self.get_doc_before_save()
 		previous = before.status if before else None
 		if before:
@@ -55,6 +56,35 @@ class ComplianceTask(Document):
 					),
 					frappe.PermissionError,
 				)
+
+	def set_time_bar(self):
+		"""The last day the return can be filed, and whether that has passed for one still to file."""
+		rules = frappe.get_cached_doc("Compliance Obligation Template", self.obligation_template)
+		years = cint(rules.time_bar_years)
+		self.last_filing_date = (
+			add_years(self.effective_due_date, years) if years and self.effective_due_date else None
+		)
+		self.is_time_barred = int(
+			is_time_barred(self.last_filing_date, self.status, self.filed_on, getdate(nowdate()))
+		)
+
+	def check_time_bar(self):
+		if (
+			self.last_filing_date
+			and self.filed_on
+			and getdate(self.filed_on) > getdate(self.last_filing_date)
+		):
+			frappe.throw(
+				_(
+					"{0} is time-barred: it could be filed only until {1}, so it cannot be recorded as "
+					"filed on {2}. If it was filed by then, correct Filed On."
+				).format(
+					self.name,
+					frappe.format(self.last_filing_date, "Date"),
+					frappe.format(self.filed_on, "Date"),
+				),
+				title=_("Time-barred return"),
+			)
 
 	def validate_nil(self):
 		rules = frappe.get_cached_doc("Compliance Obligation Template", self.obligation_template)
@@ -84,6 +114,7 @@ class ComplianceTask(Document):
 		rules = frappe.get_cached_doc("Compliance Obligation Template", self.obligation_template)
 		if self.status in ("Ready for Review", *FILED_STATUSES):
 			self.validate_filing_details(rules)
+			self.check_time_bar()
 			if rules.files_in_order:
 				self.check_period_order(rules)
 		if self.status in FILED_STATUSES:
@@ -184,3 +215,12 @@ def return_series(rules) -> list[str]:
 		pluck="name",
 	)
 	return names or [rules.name]
+
+
+def is_time_barred(last_filing_date, status: str, filed_on, today) -> bool:
+	"""Past its last day to file, still open, and not recorded as filed by that day."""
+	if not last_filing_date or status in CLOSED_TASK_STATUSES:
+		return False
+	if filed_on and getdate(filed_on) <= getdate(last_filing_date):
+		return False
+	return getdate(last_filing_date) < getdate(today)

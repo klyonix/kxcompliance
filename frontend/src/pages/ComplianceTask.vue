@@ -35,6 +35,7 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<Badge :label="task.status" :theme="row.theme" size="md" />
 					<Badge v-if="task.is_nil" label="NIL" theme="gray" size="md" />
+					<Badge v-if="task.is_time_barred" label="Time-barred" theme="red" size="md" />
 					<span
 						class="text-base"
 						:class="row.due.late ? 'font-medium text-ink-red-4' : 'text-ink-gray-6'"
@@ -84,6 +85,15 @@
 					{{ reviewNote }}
 				</p>
 			</section>
+
+			<p
+				v-if="timeBarNote"
+				role="alert"
+				class="flex items-start gap-2 rounded-lg bg-surface-red-1 px-4 py-3 text-base text-ink-red-4"
+			>
+				<span class="lucide-calendar-x mt-0.5 size-4 shrink-0" aria-hidden="true" />
+				{{ timeBarNote }}
+			</p>
 
 			<section
 				v-if="penaltyText.length"
@@ -433,6 +443,7 @@ import {
 	taskRow,
 } from "@/lib/filings";
 import { isoDate } from "@/lib/obligations";
+import { TIME_BAR_WARNING_DAYS, daysBetween } from "@/pages/myWork";
 import { deskActions } from "@/navigation";
 import { SAVED_ON_DEVICE, isWaiting, refresh as refreshOutbox } from "@/offline/outbox";
 import { submit } from "@/offline/queue";
@@ -518,6 +529,22 @@ const isMobile = useIsMobile();
 const buttonSize = computed(() => (isMobile.value ? "md" : "sm"));
 
 const row = computed(() => taskRow(task.value));
+// The last day the portal accepts the return: said once it has passed, and in the 90 days before.
+const timeBarNote = computed(() => {
+	const current = task.value;
+	if (!current?.last_filing_date || CLOSED_STATUSES.includes(current.status)) return "";
+	if (current.status === "Ready for Review" && !current.is_time_barred) return "";
+	const lastDay = formatDate(current.last_filing_date);
+	if (current.is_time_barred) {
+		return `Time-barred: the portal accepted this return only until ${lastDay}, and no longer does.`;
+	}
+	const today = new Date();
+	const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+	const days = daysBetween(midnight, new Date(`${current.last_filing_date}T00:00:00`));
+	if (days < 0 || days > TIME_BAR_WARNING_DAYS) return "";
+	const when = days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`;
+	return `Last day to file: ${lastDay}, ${when}. After that the portal no longer accepts this return.`;
+});
 // The badge already says NIL on this page.
 const pageDetail = computed(() =>
 	[task.value.period_label, task.value.company].filter(Boolean).join(" · ")
@@ -611,10 +638,12 @@ const formatAmount = (value) =>
 		  })
 		: "";
 
+// "Last day to file 15 Jan 2027" reads on after "Due …" without lower-casing the month.
+const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 const dueLine = computed(() => {
 	const due = `Due ${formatDate(task.value.effective_due_date)}`;
 	return row.value.due.text && !row.value.due.text.startsWith("Filed")
-		? `${due} · ${row.value.due.text.toLowerCase()}`
+		? `${due} · ${lowerFirst(row.value.due.text)}`
 		: due;
 });
 

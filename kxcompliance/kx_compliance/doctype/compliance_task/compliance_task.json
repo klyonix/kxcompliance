@@ -23,6 +23,8 @@
   "extended_due_date",
   "column_break_due",
   "effective_due_date",
+  "last_filing_date",
+  "is_time_barred",
   "extension",
   "section_people",
   "responsible",
@@ -167,6 +169,21 @@
    "search_index": 1
   },
   {
+   "fieldname": "last_filing_date",
+   "fieldtype": "Date",
+   "label": "Last Day to File",
+   "read_only": 1,
+   "description": "After this the portal no longer accepts the return."
+  },
+  {
+   "default": "0",
+   "fieldname": "is_time_barred",
+   "fieldtype": "Check",
+   "label": "Time-barred",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
    "fieldname": "extension",
    "fieldtype": "Link",
    "label": "Extension",
@@ -304,7 +321,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-21 10:00:00.000000",
+ "modified": "2026-11-21 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Task",

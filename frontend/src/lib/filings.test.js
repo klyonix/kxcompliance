@@ -173,6 +173,29 @@ describe("filings in the app", () => {
 	});
 });
 
+describe("a time-barred filing in the list", () => {
+	it("says so in place of how late it is, until it is closed", () => {
+		const task = {
+			name: "CT-OLD",
+			obligation_template: "GSTR-1 (Monthly)",
+			period_label: "Oct 2023",
+			company: "Demo Industries",
+			status: "Open",
+			is_overdue: 1,
+			effective_due_date: "2023-11-11",
+			is_time_barred: 1,
+			last_filing_date: "2026-11-11",
+		};
+		expect(taskRow(task, new Date(2026, 10, 21)).due).toEqual({
+			text: "Time-barred",
+			late: true,
+		});
+		expect(taskRow({ ...task, status: "Not Applicable", is_time_barred: 0 }).due.text).toBe(
+			""
+		);
+	});
+});
+
 describe("the filing page's steps", () => {
 	const reviewed = { requires_review: 1 };
 

@@ -114,6 +114,14 @@ class TestComplianceScore(IntegrationTestCase):
 		karnataka = rules_for(["Professional Tax - Karnataka"])["Professional Tax - Karnataka"]
 		self.assertEqual(late_fee(fee_figures(karnataka, is_nil=True), 40), 0)
 
+	def test_a_time_barred_filing_costs_15_points(self):
+		late = task(TEST_COMPANY)
+		frappe.db.set_value("Compliance Task", late, {"is_overdue": 1, "is_time_barred": 1, "is_nil": 1})
+		with self.freeze_time("2026-12-02"):
+			result = company_scores([TEST_COMPANY])[TEST_COMPANY]
+		self.assertEqual(result["score"], 85)
+		self.assertEqual([reason["key"] for reason in result["reasons"]], ["time_barred"])
+
 	def test_a_clean_company_scores_full_and_never_below_zero(self):
 		self.assertEqual(company_scores([TEST_COMPANY])[TEST_COMPANY]["score"], 100)
 		for _number in range(12):

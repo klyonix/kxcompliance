@@ -205,6 +205,16 @@ When marking a GST return filed is refused because an earlier period of the same
 
 > **Tip.** The GST portal refuses a period while an earlier one is unfiled, so the app does too. Monthly and quarterly GSTR-1 count as one return, and so do monthly and quarterly GSTR-3B.
 
+### A GST return is nearly three years late. What happens?
+
+When a filing shows its last day to file, or is marked Time-barred.
+
+1. A GST return can be filed only within three years of its due date. From 90 days before that last day the filing says so in red, and its preparer, reviewer and the managers are told once.
+2. File it on the portal before that day, and record it as usual.
+3. Once the day has passed the filing is marked Time-barred: the portal no longer accepts it, and the app will not take a filing date after that day. Note what was done in Remarks.
+
+> **Tip.** This applies to GSTR-1, GSTR-3B, GSTR-4, GSTR-9 and GSTR-9C. A time-barred filing takes 15 points off the compliance score.
+
 ### How do I ask a client for a document?
 
 *For: CA/CS firms.*

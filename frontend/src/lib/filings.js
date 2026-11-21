@@ -1,7 +1,7 @@
 // Rules for showing a Compliance Task and what each person may do with it, kept apart from
 // the screens so they can be tested. They mirror the checks the server makes on save.
 import { formatDate } from "@/lib/format";
-import { relativeDue } from "@/pages/myWork";
+import { relativeDue, timeBarDue } from "@/pages/myWork";
 
 export const CLOSED_STATUSES = ["Filed", "Filed Late", "Not Applicable", "Cancelled"];
 const FILED_STATUSES = ["Filed", "Filed Late"];
@@ -51,6 +51,8 @@ export const TASK_LIST_FIELDS = [
 	"filed_on",
 	"responsible",
 	"is_nil",
+	"is_time_barred",
+	"last_filing_date",
 ];
 
 // The filings list's columns, boards and filters (RecordList).
@@ -89,7 +91,10 @@ function dueFor(task, midnight) {
 		return { text: `Filed ${formatDate(task.filed_on, { year: false })}`, late: false };
 	}
 	if (CLOSED_STATUSES.includes(task.status)) return { text: "", late: false };
-	return relativeDue(task.effective_due_date, midnight, { overdue: Boolean(task.is_overdue) });
+	return (
+		timeBarDue(task, midnight) ||
+		relativeDue(task.effective_due_date, midnight, { overdue: Boolean(task.is_overdue) })
+	);
 }
 
 // The obligation library as a searchable choice, grouped by law (a return with none under Other).

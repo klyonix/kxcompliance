@@ -2,12 +2,18 @@
 # For license information, please see license.txt
 
 import re
+from datetime import date
 
 import frappe
 from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance.report.compliance_calendar.compliance_calendar import execute
-from kxcompliance.kx_compliance.statutory import generate_tasks, run_daily
+from kxcompliance.kx_compliance.statutory import (
+	generate_tasks,
+	refresh_overdue,
+	run_daily,
+	send_time_bar_warnings,
+)
 from kxcompliance.kx_compliance.test_utils import (
 	HOLDER,
 	MANAGER,
@@ -19,6 +25,7 @@ from kxcompliance.kx_compliance.test_utils import (
 	make_file,
 	make_users,
 )
+from kxcompliance.patches.v1_0.set_gst_time_bar import execute as set_gst_time_bar
 
 # These tests build their own records; skip ERPNext's generated ones.
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "User", "Sales Invoice"]
@@ -520,3 +527,95 @@ class TestNilReturns(IntegrationTestCase):
 		self.assertEqual(len(everything), 2)
 		self.assertEqual([(row.name, row.is_nil) for row in only_nil], [(nil.name, 1)])
 		self.assertEqual([row.obligation_template for row in not_nil], ["GSTR-1 (Monthly)"])
+
+
+class TestGstTimeBar(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_company()
+		make_users()
+
+	def setUp(self):
+		frappe.db.delete("Compliance Task", {"company": TEST_COMPANY})
+		frappe.db.delete("Compliance Reminder Log")
+
+	def test_a_gst_return_can_be_filed_for_three_years_from_its_due_date(self):
+		with self.freeze_time("2026-11-21"):
+			task = filing_of("GSTR-3B (Monthly)", "2023-10-31", "2023-11-20")
+			recent = filing_of("GSTR-3B (Monthly)", "2023-11-30", "2023-12-20")
+			tds = filing_of("TDS Return 26Q (Non-salary)", "2023-09-30", "2023-10-31", "BLRA12345B")
+		self.assertEqual(str(task.last_filing_date), "2026-11-20")
+		self.assertTrue(task.is_time_barred)
+		self.assertEqual(str(recent.last_filing_date), "2026-12-20")
+		self.assertFalse(recent.is_time_barred)
+		# TDS statements have no such limit.
+		self.assertIsNone(tds.last_filing_date)
+		self.assertFalse(tds.is_time_barred)
+
+	def test_a_filing_date_after_the_last_day_is_refused(self):
+		with self.freeze_time("2026-11-21"):
+			task = filing_of("GSTR-3B (Monthly)", "2023-10-31", "2023-11-20")
+			task.update(
+				{
+					"filed_on": "2026-11-21",
+					"acknowledgement_number": "AA2911260000001",
+					"proof": make_file("ack.txt"),
+					"status": "Ready for Review",
+				}
+			)
+			with self.assertRaisesRegex(frappe.ValidationError, "time-barred"):
+				task.save()
+			# Filed in time but recorded late: that is allowed, and it is no longer barred.
+			task.reload()
+			task.update(
+				{
+					"filed_on": "2026-11-20",
+					"acknowledgement_number": "AA2911260000001",
+					"proof": make_file("ack.txt"),
+					"status": "Ready for Review",
+				}
+			)
+			task.save()
+		self.assertEqual(task.status, "Ready for Review")
+		self.assertFalse(task.is_time_barred)
+
+	def test_the_daily_run_marks_a_filing_time_barred_when_its_last_day_passes(self):
+		with self.freeze_time("2026-11-20"):
+			task = filing_of("GSTR-1 (Monthly)", "2023-10-31", "2023-11-20")
+		self.assertFalse(task.is_time_barred)
+		refresh_overdue(date(2026, 11, 21))
+		self.assertTrue(frappe.db.get_value("Compliance Task", task.name, "is_time_barred"))
+
+	def test_managers_are_warned_once_in_the_90_days_before_the_last_day(self):
+		with self.freeze_time("2026-11-21"):
+			soon = filing_of("GSTR-3B (Monthly)", "2024-01-31", "2024-02-20")
+			filing_of("GSTR-3B (Monthly)", "2024-03-31", "2024-04-20")  # 150 days away: not yet
+
+		def warnings():
+			return frappe.get_all(
+				"Compliance Reminder Log",
+				filters={"log_key": ("like", "%|time-bar|%")},
+				fields=["compliance_task", "sent_to"],
+			)
+
+		send_time_bar_warnings(date(2026, 11, 21))
+		send_time_bar_warnings(date(2026, 11, 22))
+		sent = warnings()
+		self.assertEqual([row.compliance_task for row in sent], [soon.name])
+		self.assertIn(MANAGER, sent[0].sent_to)
+
+	def test_the_patch_sets_the_last_day_on_existing_filings(self):
+		with self.freeze_time("2026-11-21"):
+			task = filing_of("GSTR-3B (Monthly)", "2023-10-31", "2023-11-20")
+		frappe.db.set_value(
+			"Compliance Task",
+			task.name,
+			{"last_filing_date": None, "is_time_barred": 0},
+			update_modified=False,
+		)
+		with self.freeze_time("2026-11-21"):
+			set_gst_time_bar()
+			set_gst_time_bar()
+		values = frappe.db.get_value("Compliance Task", task.name, ["last_filing_date", "is_time_barred"])
+		self.assertEqual((str(values[0]), values[1]), ("2026-11-20", 1))

@@ -33,6 +33,8 @@ POINTS = {
 	"overdue": 10,
 	# Nothing to report, but still late: the law charges a smaller fee, and so does the score.
 	"overdue_nil": 3,
+	# Past its last day to file: filing can no longer put it right (RK, 21 Nov 2026).
+	"time_barred": 15,
 	"expired": 10,
 	"filed_late": 2,
 	"due_for_renewal": 3,
@@ -137,11 +139,18 @@ def company_scores(companies: list[str], today: str | None = None) -> dict[str, 
 	overdue = scoped.get_all(
 		"Compliance Task",
 		filters={"company": ("in", companies), "status": ("not in", CLOSED_TASK_STATUSES), "is_overdue": 1},
-		fields=["company", "obligation_template", "effective_due_date", "amount_paid", "is_nil"],
+		fields=[
+			"company",
+			"obligation_template",
+			"effective_due_date",
+			"amount_paid",
+			"is_nil",
+			"is_time_barred",
+		],
 	)
 	rules = rules_for([row.obligation_template for row in overdue])
 	for row in overdue:
-		counts[row.company]["overdue_nil" if row.is_nil else "overdue"] += 1
+		counts[row.company][overdue_kind(row)] += 1
 		days_late = date_diff(today, getdate(row.effective_due_date))
 		figures = fee_figures(rules.get(row.obligation_template), row.is_nil)
 		penalty[row.company] += late_fee(figures, days_late, row.amount_paid)
@@ -192,11 +201,19 @@ def company_scores(companies: list[str], today: str | None = None) -> dict[str, 
 	}
 
 
+def overdue_kind(row) -> str:
+	"""Which of the score's reasons an overdue filing counts under."""
+	if row.is_time_barred:
+		return "time_barred"
+	return "overdue_nil" if row.is_nil else "overdue"
+
+
 def reason_label(key: str, count: int) -> str:
 	one = count == 1
 	labels = {
 		"overdue": _("{0} filing overdue") if one else _("{0} filings overdue"),
 		"overdue_nil": _("{0} NIL return overdue") if one else _("{0} NIL returns overdue"),
+		"time_barred": _("{0} filing time-barred") if one else _("{0} filings time-barred"),
 		"expired": _("{0} licence or certificate expired")
 		if one
 		else _("{0} licences or certificates expired"),

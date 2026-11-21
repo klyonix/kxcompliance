@@ -59,6 +59,7 @@ def obligation(name, law, form, frequency, months_after=None, day=None, **extra)
 		"allows_nil": extra.pop("nil", 0),
 		"nil_needs_acknowledgement": extra.pop("nil_ack", 1),
 		"files_in_order": extra.pop("in_order", 0),
+		"time_bar_years": extra.pop("bar_years", 0),
 		"reminders": [
 			{"days_before": days}
 			for days in extra.pop(
@@ -151,13 +152,25 @@ TAN = dict(registration="TAN", authority="Income Tax Department")
 # GST returns are filed NIL with an ARN (on the portal or by SMS to 14409), one period after the
 # other: the portal refuses a period while an earlier one is unfiled (CGST Act s.39(10)).
 NIL_IN_ORDER = dict(nil=1, in_order=1)
+# A GST return cannot be filed more than three years after its due date (CGST Act ss.37, 39, 44
+# and 52, as amended by the Finance Act 2023); the portal enforces it from the November 2025 period.
+TIME_BARRED = dict(bar_years=3)
 # A quarter with no TDS needs no statement: TRACES takes a "Declaration for non-filing", which
 # gives no acknowledgement number. A month with no TDS has no challan to pay.
 NIL_DECLARED = dict(nil=1, nil_ack=0)
 
 LIBRARY = [
 	obligation(
-		"GSTR-1 (Monthly)", "GST", "GSTR-1", "Monthly", 1, 11, source="CGST Act s.37", **GST, **NIL_IN_ORDER
+		"GSTR-1 (Monthly)",
+		"GST",
+		"GSTR-1",
+		"Monthly",
+		1,
+		11,
+		source="CGST Act s.37",
+		**GST,
+		**NIL_IN_ORDER,
+		**TIME_BARRED,
 	),
 	obligation(
 		"GSTR-1 (QRMP)",
@@ -170,6 +183,7 @@ LIBRARY = [
 		source="CGST Act s.37, QRMP scheme",
 		**GST,
 		**NIL_IN_ORDER,
+		**TIME_BARRED,
 	),
 	obligation(
 		"GSTR-3B (Monthly)",
@@ -182,6 +196,7 @@ LIBRARY = [
 		source="CGST Act s.39, rule 61",
 		**GST,
 		**NIL_IN_ORDER,
+		**TIME_BARRED,
 	),
 	obligation(
 		"GSTR-3B (QRMP, 22nd)",
@@ -196,6 +211,7 @@ LIBRARY = [
 		source="CGST rule 61, QRMP scheme",
 		**GST,
 		**NIL_IN_ORDER,
+		**TIME_BARRED,
 	),
 	obligation(
 		"GSTR-3B (QRMP, 24th)",
@@ -210,6 +226,7 @@ LIBRARY = [
 		source="CGST rule 61, QRMP scheme",
 		**GST,
 		**NIL_IN_ORDER,
+		**TIME_BARRED,
 	),
 	# QRMP: tax for the first two months of a quarter is paid by the 25th of the next month; the
 	# third month's is paid with the quarter's GSTR-3B. A month with nothing to pay needs no challan.
@@ -227,7 +244,17 @@ LIBRARY = [
 		**GST,
 		**NIL_DECLARED,
 	),
-	obligation("GSTR-9 (Annual Return)", "GST", "GSTR-9", "Yearly", 9, 31, source="CGST Act s.44", **GST),
+	obligation(
+		"GSTR-9 (Annual Return)",
+		"GST",
+		"GSTR-9",
+		"Yearly",
+		9,
+		31,
+		source="CGST Act s.44",
+		**GST,
+		**TIME_BARRED,
+	),
 	obligation(
 		"GSTR-9C (Reconciliation)",
 		"GST",
@@ -238,6 +265,7 @@ LIBRARY = [
 		default=0,
 		source="CGST Act s.44, rule 80(3)",
 		**GST,
+		**TIME_BARRED,
 	),
 	obligation(
 		"TDS/TCS Payment",
@@ -543,6 +571,7 @@ LIBRARY = [
 		source="CGST rule 62; due 30 June from FY 2024-25 (Notification 12/2024)",
 		**COMPOSITION,
 		nil=1,
+		**TIME_BARRED,
 	),
 	obligation(
 		"ITC-04 (Job Work, turnover above ₹5 crore)",

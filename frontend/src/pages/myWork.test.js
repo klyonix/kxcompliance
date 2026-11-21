@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { relativeDue, summarise, workRows } from "./myWork";
+import { relativeDue, summarise, timeBarDue, workRows } from "./myWork";
 
 const today = new Date(2026, 10, 14);
 
@@ -94,5 +94,48 @@ describe("relative due dates", () => {
 		expect(relativeDue("2026-11-15", today).text).toBe("Tomorrow");
 		expect(relativeDue("2026-11-13", today).text).toBe("1 day late");
 		expect(relativeDue(null, today).text).toBe("No date");
+	});
+});
+
+describe("the GST time-bar", () => {
+	const late = { status: "Open", is_overdue: 1, effective_due_date: "2023-12-20" };
+
+	it("says a filing is time-barred once its last day to file has passed", () => {
+		expect(
+			timeBarDue({ ...late, is_time_barred: 1, last_filing_date: "2026-11-01" }, today)
+		).toEqual({ text: "Time-barred", late: true });
+	});
+
+	it("names the last day to file in the 90 days before it, and not earlier", () => {
+		const near = timeBarDue({ ...late, last_filing_date: "2027-02-11" }, today);
+		expect(near.late).toBe(true);
+		expect(near.text).toMatch(/^Last day to file .*2027/);
+		expect(timeBarDue({ ...late, last_filing_date: "2027-02-13" }, today)).toBeNull();
+		const inReview = { ...late, status: "Ready for Review", last_filing_date: "2027-02-11" };
+		expect(timeBarDue(inReview, today)).toBeNull();
+		expect(timeBarDue({ is_overdue: 0, effective_due_date: "2026-12-20" }, today)).toBeNull();
+	});
+
+	it("shows it in My Work in place of how late the filing is", () => {
+		const [row] = workRows(
+			{
+				items: [],
+				tasks: [
+					{
+						name: "CT-OLD",
+						obligation_template: "GSTR-3B (Monthly)",
+						period_label: "Nov 2023",
+						company: "Demo Industries",
+						...late,
+						is_time_barred: 1,
+						last_filing_date: "2026-11-01",
+					},
+				],
+				legal_dates: [],
+			},
+			{ today }
+		);
+		expect(row.due).toEqual({ text: "Time-barred", late: true });
+		expect(row.bucket).toBe("overdue");
 	});
 });

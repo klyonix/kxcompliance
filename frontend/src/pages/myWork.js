@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/format";
 import { t } from "@/lib/i18n";
 // Turn the my_work answer into rows: what each thing is, when it is due, and how pressing it is.
 
@@ -48,6 +49,21 @@ export function relativeDue(date, today, { overdue = false } = {}) {
 	return { text: t("In {0} days", days), late: false };
 }
 
+// How long before a return's last day to file it is flagged (RK, 21 Nov 2026).
+export const TIME_BAR_WARNING_DAYS = 90;
+
+// For a filing still to file: "Time-barred" once its last day to file has passed, or that day
+// within 90 days of it; otherwise nothing, and the due date speaks for it.
+export function timeBarDue(task, today) {
+	if (task.is_time_barred) return { text: t("Time-barred"), late: true };
+	const lastDay = toDate(task.last_filing_date);
+	// Sent for review means filed on the portal: nothing to warn about.
+	if (!lastDay || !["Open", "In Progress"].includes(task.status)) return null;
+	const days = daysBetween(today, lastDay);
+	if (days < 0 || days > TIME_BAR_WARNING_DAYS) return null;
+	return { text: t("Last day to file {0}", formatDate(task.last_filing_date)), late: true };
+}
+
 export function bucketFor(row, today) {
 	if (row.overdue) return "overdue";
 	const date = toDate(row.date);
@@ -83,6 +99,7 @@ export function workRows(work, { today = new Date() } = {}) {
 			status: task.status,
 			date: task.effective_due_date,
 			overdue: Boolean(task.is_overdue),
+			timeBar: timeBarDue(task, midnight),
 			to: { name: "ComplianceTask", params: { name: task.name } },
 		})),
 		...work.legal_dates.map((legalDate) => ({
@@ -101,7 +118,7 @@ export function workRows(work, { today = new Date() } = {}) {
 	];
 	for (const row of rows) {
 		row.theme = themeFor(row.status, row.overdue);
-		row.due = relativeDue(row.date, midnight, { overdue: row.overdue });
+		row.due = row.timeBar || relativeDue(row.date, midnight, { overdue: row.overdue });
 		row.bucket = bucketFor(row, midnight);
 	}
 	return rows.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));

@@ -53,6 +53,11 @@ STATE_RULE = (
 	"Interest and penalties under the state's own Act differ by state; the estimate does not "
 	"count them. Add the state's figures and tick Set by Us."
 )
+PT_MAHARASHTRA = (
+	"Late fee under s.6(3) of the Maharashtra State Tax on Professions, Trades, Callings and "
+	"Employments Act, 1975: ₹1,000 a return filed late, a nil return included (Trade Circular 2T "
+	"of 2026). Interest on tax paid late under the Act is not counted."
+)
 LODR = (
 	"Fine under SEBI's standard operating procedure for listing regulations (circular of "
 	"22 January 2020, as amended): {0} a day of delay. The exchange may levy more for repeated "
@@ -81,6 +86,7 @@ PENALTIES = {
 	"GSTR-9C (Reconciliation)": dict(
 		penalty_rule="Filed with GSTR-9; its late fee is counted on GSTR-9 (Notification 30/2021-Central Tax)."
 	),
+	"Professional Tax - Maharashtra": dict(late_fee_flat=1000, penalty_rule=PT_MAHARASHTRA),
 	"CMP-08 (Composition Payment)": dict(interest_percent=18, penalty_rule="No late fee. " + GST_INTEREST),
 	"GSTR-4 (Composition Annual Return)": dict(
 		late_fee_per_day=50,
@@ -160,7 +166,8 @@ PENALTIES = {
 	"Annual Secretarial Compliance Report": dict(late_fee_per_day=2000, penalty_rule=LODR.format("₹2,000")),
 }
 # A late NIL return: ₹20 a day (₹10 CGST and ₹10 SGST, Notification 76/2018-Central Tax), at most
-# ₹500 a return (Notifications 19/2021, 20/2021 and 21/2021-Central Tax). Returns not listed cost
+# ₹500 a return (Notifications 19/2021, 20/2021 and 21/2021-Central Tax). Maharashtra's Professional
+# Tax charges its usual ₹1,000 a return. Returns not listed cost
 # nothing when NIL: no fee is set for them, or it is capped at the tax, which is nil.
 NIL_GST = dict(nil_late_fee_per_day=20, nil_late_fee_cap=500)
 NIL_PENALTIES = {
@@ -170,6 +177,8 @@ NIL_PENALTIES = {
 	"GSTR-3B (QRMP, 22nd)": NIL_GST,
 	"GSTR-3B (QRMP, 24th)": NIL_GST,
 	"GSTR-4 (Composition Annual Return)": NIL_GST,
+	# The same ₹1,000 a return whether or not there was tax to pay.
+	"Professional Tax - Maharashtra": dict(nil_late_fee_flat=1000),
 }
 NIL_FIELDS = ("nil_late_fee_flat", "nil_late_fee_per_day", "nil_late_fee_cap")
 # Event forms, state taxes and the rest share these words when they have no figures of their own.

@@ -195,15 +195,15 @@ When a company's NIL returns for several periods are filed in one sitting.
 
 > **Tip.** GST returns are saved in period order, as the portal files them. If one period cannot be saved, the later periods of that return and GSTIN wait.
 
-### An earlier period must be filed first. Why?
+### Another GST filing must be filed first. Why?
 
-When marking a GST return filed is refused because an earlier period of the same return and GSTIN is still open.
+When marking a GST return filed is refused: an earlier period of the same return and GSTIN is still open, or, for GSTR-3B, the same period's GSTR-1 is.
 
-1. The message names the earlier filing. Open it.
+1. The message names the filing that must go first. Open it.
 2. File it, or, if it never applied (say the company moved to quarterly filing), choose "Does not apply" and say why.
-3. Then file the later period.
+3. Then file the one you started with.
 
-> **Tip.** The GST portal refuses a period while an earlier one is unfiled, so the app does too. Monthly and quarterly GSTR-1 count as one return, and so do monthly and quarterly GSTR-3B.
+> **Tip.** The GST portal refuses a period while an earlier one is unfiled, and GSTR-3B until that period's GSTR-1 is filed, so the app does too. Monthly and quarterly GSTR-1 count as one return, and so do monthly and quarterly GSTR-3B.
 
 ### How do I ask a client for a document?
 

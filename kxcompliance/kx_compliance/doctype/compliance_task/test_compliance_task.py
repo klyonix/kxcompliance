@@ -483,8 +483,8 @@ class TestNilReturns(IntegrationTestCase):
 		# Moved to QRMP from October: September's monthly GSTR-3B is still to file.
 		september = filing_of("GSTR-3B (Monthly)", "2026-09-30", "2026-10-20")
 		quarter = filing_of("GSTR-3B (QRMP, 22nd)", "2026-12-31", "2027-01-22", is_nil=1)
-		# GSTR-1 is another return, so its open month does not count.
-		filing_of("GSTR-1 (Monthly)", "2026-09-30", "2026-10-11")
+		# GSTR-1 is another return, so its open month does not count for the order.
+		filing_of("GSTR-1 (Monthly)", "2026-08-31", "2026-09-11")
 		with self.assertRaisesRegex(
 			frappe.ValidationError, re.escape(f"{september.name} (GSTR-3B (Monthly), 2026-09)")
 		):
@@ -494,6 +494,34 @@ class TestNilReturns(IntegrationTestCase):
 		quarter.reload()
 		self.ready(quarter)
 		self.assertEqual(quarter.status, "Ready for Review")
+
+	def test_gstr_3b_waits_for_the_same_periods_gstr_1(self):
+		gstr1 = filing_of("GSTR-1 (Monthly)", "2026-10-31", "2026-11-11")
+		gstr3b = filing_of("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20")
+		# Another GSTIN's GSTR-1, and a GSTR-1 set aside, do not hold it back.
+		filing_of("GSTR-1 (Monthly)", "2026-10-31", "2026-11-11", registration="27GST")
+		other = filing_of("GSTR-1 (Monthly)", "2026-10-31", "2026-11-11", registration="29OTHER")
+		other.update({"status": "Not Applicable", "remarks": "Surrendered."})
+		other.save()
+		with self.assertRaisesRegex(
+			frappe.ValidationError, re.escape(f"{gstr1.name} (GSTR-1 (Monthly), 2026-10) must be filed first")
+		):
+			self.ready(gstr3b)
+		self.ready(gstr1)
+		gstr3b.reload()
+		self.ready(gstr3b)
+		self.assertEqual(gstr3b.status, "Ready for Review")
+
+	def test_a_quarterly_gstr_3b_waits_for_the_quarters_gstr_1(self):
+		quarter = {"period_start": "2026-10-01"}
+		gstr1 = filing_of("GSTR-1 (QRMP)", "2026-12-31", "2027-01-13", is_nil=1, **quarter)
+		gstr3b = filing_of("GSTR-3B (QRMP, 22nd)", "2026-12-31", "2027-01-22", is_nil=1, **quarter)
+		with self.assertRaisesRegex(frappe.ValidationError, re.escape(f"{gstr1.name} (GSTR-1 (QRMP)")):
+			self.ready(gstr3b)
+		self.ready(gstr1)
+		gstr3b.reload()
+		self.ready(gstr3b)
+		self.assertEqual(gstr3b.status, "Ready for Review")
 
 	def test_an_earlier_period_set_aside_does_not_block_the_next(self):
 		october = filing_of("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20")

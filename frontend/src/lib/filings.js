@@ -3,7 +3,13 @@
 import { formatDate } from "@/lib/format";
 import { relativeDue, timeBarDue } from "@/pages/myWork";
 
-export const CLOSED_STATUSES = ["Filed", "Filed Late", "Not Applicable", "Cancelled"];
+export const CLOSED_STATUSES = [
+	"Filed",
+	"Filed Late",
+	"Time-barred",
+	"Not Applicable",
+	"Cancelled",
+];
 const FILED_STATUSES = ["Filed", "Filed Late"];
 const APPROVER_ROLES = ["Compliance Manager", "System Manager"];
 
@@ -79,7 +85,7 @@ export const FILING_FIELDS = [
 ];
 
 export function taskTheme(status, overdue) {
-	if (overdue) return "red";
+	if (overdue || status === "Time-barred") return "red";
 	if (status === "Filed") return "green";
 	if (["Ready for Review", "Filed Late"].includes(status)) return "amber";
 	if (status === "In Progress") return "blue";

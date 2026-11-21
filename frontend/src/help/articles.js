@@ -215,9 +215,10 @@ export const ARTICLES = [
 		steps: [
 			"A GST return can be filed only within three years of its due date. From 90 days before that last day the filing says so in red, and its preparer, reviewer and the managers are told once.",
 			"File it on the portal before that day, and record it as usual.",
-			"Once the day has passed the filing is marked Time-barred: the portal no longer accepts it, and the app will not take a filing date after that day. Note what was done in Remarks.",
+			"Once the day has passed the filing is marked Time-barred: the portal no longer accepts it, and the app will not take a filing date after that day.",
+			'A manager then closes it: open the menu at the top right, choose "Close as time-barred" and say why it was not filed in time.',
 		],
-		tip: "This applies to GSTR-1, GSTR-3B, GSTR-4, GSTR-9 and GSTR-9C. A time-barred filing takes 15 points off the compliance score.",
+		tip: "This applies to GSTR-1, GSTR-3B, GSTR-4, GSTR-9 and GSTR-9C. A time-barred filing takes 15 points off the compliance score, and still does for a year after it is closed.",
 		page: "Filings",
 	},
 	{

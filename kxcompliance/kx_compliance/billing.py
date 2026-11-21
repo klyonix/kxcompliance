@@ -22,6 +22,7 @@ from frappe.utils.caching import request_cache
 from kxcompliance import scoped
 from kxcompliance.kx_compliance.onboarding import make_company
 from kxcompliance.kx_compliance.register import (
+	TIME_BARRED,
 	client_title,
 	client_titles,
 	get_settings,
@@ -1615,7 +1616,7 @@ def client_billing(client: str, own: bool) -> dict:
 
 
 # Filings that will not be done, so are not expected to be billed.
-NOT_EXPECTED = ("Not Applicable", "Cancelled")
+NOT_EXPECTED = ("Not Applicable", "Cancelled", TIME_BARRED)
 
 
 def client_summary(client: str) -> dict:

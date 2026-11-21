@@ -83,6 +83,7 @@ export const REPORTS = [
 				"Ready for Review",
 				"Filed",
 				"Filed Late",
+				"Time-barred",
 				"Not Applicable",
 				"Cancelled",
 			]),

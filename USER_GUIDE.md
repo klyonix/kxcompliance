@@ -211,9 +211,10 @@ When a filing shows its last day to file, or is marked Time-barred.
 
 1. A GST return can be filed only within three years of its due date. From 90 days before that last day the filing says so in red, and its preparer, reviewer and the managers are told once.
 2. File it on the portal before that day, and record it as usual.
-3. Once the day has passed the filing is marked Time-barred: the portal no longer accepts it, and the app will not take a filing date after that day. Note what was done in Remarks.
+3. Once the day has passed the filing is marked Time-barred: the portal no longer accepts it, and the app will not take a filing date after that day.
+4. A manager then closes it: open the menu at the top right, choose "Close as time-barred" and say why it was not filed in time.
 
-> **Tip.** This applies to GSTR-1, GSTR-3B, GSTR-4, GSTR-9 and GSTR-9C. A time-barred filing takes 15 points off the compliance score.
+> **Tip.** This applies to GSTR-1, GSTR-3B, GSTR-4, GSTR-9 and GSTR-9C. A time-barred filing takes 15 points off the compliance score, and still does for a year after it is closed.
 
 ### How do I ask a client for a document?
 

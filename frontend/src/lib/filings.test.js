@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	CLOSED_STATUSES,
 	returnGroups,
 	changedValues,
 	filingSteps,
@@ -193,6 +194,20 @@ describe("a time-barred filing in the list", () => {
 		expect(taskRow({ ...task, status: "Not Applicable", is_time_barred: 0 }).due.text).toBe(
 			""
 		);
+	});
+
+	it("shows one closed as time-barred in red, as done", () => {
+		const closed = taskRow({
+			name: "CT-OLD",
+			obligation_template: "GSTR-1 (Monthly)",
+			status: "Time-barred",
+			is_overdue: 0,
+			is_time_barred: 0,
+			effective_due_date: "2023-11-11",
+		});
+		expect(closed.theme).toBe("red");
+		expect(closed.due.text).toBe("");
+		expect(CLOSED_STATUSES).toContain("Time-barred");
 	});
 });
 

@@ -7,7 +7,12 @@ from frappe.model.document import Document
 from frappe.utils import add_years, cint, flt, getdate, nowdate
 
 from kxcompliance import scoped
-from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, check_reassignment, is_approver
+from kxcompliance.kx_compliance.register import (
+	CLOSED_TASK_STATUSES,
+	TIME_BARRED,
+	check_reassignment,
+	is_approver,
+)
 
 FILED_STATUSES = ("Filed", "Filed Late")
 # Statuses of a filing not yet made on the portal: an earlier one blocks filing in period order.
@@ -68,6 +73,23 @@ class ComplianceTask(Document):
 			is_time_barred(self.last_filing_date, self.status, self.filed_on, getdate(nowdate()))
 		)
 
+	def check_closing_as_time_barred(self, previous: str | None):
+		"""A manager closes a filing the portal no longer accepts, saying why; only one past its last day."""
+		if not is_approver():
+			frappe.throw(
+				_("Only a Compliance Manager can close {0} as time-barred.").format(self.name),
+				frappe.PermissionError,
+			)
+		if not is_time_barred(self.last_filing_date, previous or "Open", self.filed_on, getdate(nowdate())):
+			frappe.throw(
+				_("{0} is not time-barred: it can still be filed until {1}.").format(
+					self.name,
+					frappe.format(self.last_filing_date, "Date") if self.last_filing_date else _("any time"),
+				)
+			)
+		if not (self.remarks or "").strip():
+			frappe.throw(_("Say in Remarks why {0} was not filed in time.").format(self.name))
+
 	def check_time_bar(self):
 		if (
 			self.last_filing_date
@@ -119,6 +141,8 @@ class ComplianceTask(Document):
 				self.check_period_order(rules)
 		if self.status in FILED_STATUSES:
 			self.mark_filed(rules)
+		if self.status == TIME_BARRED:
+			self.check_closing_as_time_barred(previous)
 		if self.status == "Not Applicable" and not (self.remarks or "").strip():
 			frappe.throw(_("Say in Remarks why {0} does not apply.").format(self.name))
 		if self.status == "Cancelled" and not is_approver():

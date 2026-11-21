@@ -8,6 +8,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from kxcompliance.kx_compliance.report.compliance_calendar.compliance_calendar import execute
+from kxcompliance.kx_compliance.report.on_time_filing.on_time_filing import execute as on_time_filing
 from kxcompliance.kx_compliance.statutory import (
 	generate_tasks,
 	refresh_overdue,
@@ -619,3 +620,39 @@ class TestGstTimeBar(IntegrationTestCase):
 			set_gst_time_bar()
 		values = frappe.db.get_value("Compliance Task", task.name, ["last_filing_date", "is_time_barred"])
 		self.assertEqual((str(values[0]), values[1]), ("2026-11-20", 1))
+
+	def test_a_manager_closes_a_time_barred_filing_with_a_reason(self):
+		with self.freeze_time("2026-11-21"):
+			task = filing_of("GSTR-3B (Monthly)", "2023-10-31", "2023-11-20")
+			task.status = "Time-barred"
+			with self.set_user(HOLDER), self.assertRaises(frappe.PermissionError):
+				task.save()
+			task.reload()
+			task.status = "Time-barred"
+			with self.set_user(MANAGER), self.assertRaisesRegex(frappe.ValidationError, "Say in Remarks"):
+				task.save()
+			task.reload()
+			task.update({"status": "Time-barred", "remarks": "Records were not received from the client."})
+			with self.set_user(MANAGER):
+				task.save()
+		self.assertEqual(task.status, "Time-barred")
+		self.assertFalse(task.is_time_barred)
+		self.assertFalse(task.is_overdue)
+
+	def test_a_filing_still_in_time_cannot_be_closed_as_time_barred(self):
+		with self.freeze_time("2026-11-21"):
+			task = filing_of("GSTR-3B (Monthly)", "2023-11-30", "2023-12-20")
+			task.update({"status": "Time-barred", "remarks": "Gave up."})
+			with self.set_user(MANAGER), self.assertRaisesRegex(frappe.ValidationError, "not time-barred"):
+				task.save()
+
+	def test_a_closed_time_barred_filing_counts_as_missed_in_the_on_time_report(self):
+		with self.freeze_time("2026-11-21"):
+			task = filing_of("GSTR-3B (Monthly)", "2023-10-31", "2023-11-20")
+			task.update({"status": "Time-barred", "remarks": "Not filed in time."})
+			with self.set_user(MANAGER):
+				task.save()
+		rows = on_time_filing({"company": TEST_COMPANY, "from_date": "2023-11-01", "to_date": "2023-11-30"})[
+			1
+		]
+		self.assertEqual([(row.on_time, row.late, row.overdue) for row in rows], [(0, 0, 1)])

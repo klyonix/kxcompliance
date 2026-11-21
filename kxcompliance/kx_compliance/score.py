@@ -26,7 +26,7 @@ from kxcompliance.kx_compliance.overview import OPEN_CASE_STATUSES, PARTY_HOLDER
 from kxcompliance.kx_compliance.penalty_figures import firm_figures
 from kxcompliance.kx_compliance.penalty_library import FIELDS as PENALTY_FIELDS
 from kxcompliance.kx_compliance.penalty_library import NIL_FIELDS
-from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES
+from kxcompliance.kx_compliance.register import CLOSED_TASK_STATUSES, TIME_BARRED
 
 FULL_SCORE = 100
 POINTS = {
@@ -166,6 +166,19 @@ def company_scores(companies: list[str], today: str | None = None) -> dict[str, 
 		group_by="company",
 	):
 		counts[row.company]["filed_late"] = row["count"]
+
+	# Closed as time-barred: it still counts, at the same weight, for twelve months from its last day.
+	for row in scoped.get_all(
+		"Compliance Task",
+		filters={
+			"company": ("in", companies),
+			"status": TIME_BARRED,
+			"last_filing_date": ("between", [add_months(today, -12), today]),
+		},
+		fields=["company", COUNT],
+		group_by="company",
+	):
+		counts[row.company]["time_barred"] += row["count"]
 
 	for row in scoped.get_all(
 		"Compliance Item",

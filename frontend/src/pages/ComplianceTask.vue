@@ -565,7 +565,9 @@ const footerShown = computed(
 	() => editable.value && (formShown.value || !inReview.value || Boolean(primary.value))
 );
 const steps = computed(() => filingSteps(task.value, rules.value));
-const showSteps = computed(() => !["Not Applicable", "Cancelled"].includes(task.value.status));
+const showSteps = computed(
+	() => !["Time-barred", "Not Applicable", "Cancelled"].includes(task.value.status)
+);
 const stepDone = (index) =>
 	index < steps.value.current ||
 	(index === steps.value.current && CLOSED_STATUSES.includes(task.value.status));
@@ -732,6 +734,9 @@ const menu = computed(() => [
 		: []),
 	...(editable.value
 		? [{ label: "Does not apply", icon: "lucide-circle-slash", onClick: notApplicable }]
+		: []),
+	...(task.value?.is_time_barred && isManager() && !isClientLogin()
+		? [{ label: "Close as time-barred", icon: "lucide-calendar-x", onClick: closeTimeBarred }]
 		: []),
 ]);
 
@@ -916,6 +921,29 @@ function sendBack() {
 				},
 				"back"
 			);
+		},
+	});
+}
+
+// A manager closes a filing the portal no longer accepts, saying why it was not filed in time.
+function closeTimeBarred() {
+	dialog.prompt({
+		title: "Close as time-barred",
+		message: `The portal accepted this return only until ${formatDate(
+			task.value.last_filing_date
+		)}. The filing is closed as time-barred with your reason, and still counts in the compliance score for a year.`,
+		confirmLabel: "Close filing",
+		fields: [
+			{
+				name: "remarks",
+				label: "Why it was not filed in time",
+				type: "textarea",
+				required: true,
+				defaultValue: form.remarks,
+			},
+		],
+		onConfirm: async ({ values }) => {
+			await send({ remarks: values.remarks, status: "Time-barred" }, "barred");
 		},
 	});
 }

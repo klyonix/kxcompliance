@@ -40,6 +40,7 @@ frappe.query_reports["Compliance Calendar"] = {
 				"Ready for Review",
 				"Filed",
 				"Filed Late",
+				"Time-barred",
 				"Not Applicable",
 				"Cancelled",
 			],

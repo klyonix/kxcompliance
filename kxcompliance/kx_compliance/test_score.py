@@ -122,6 +122,16 @@ class TestComplianceScore(IntegrationTestCase):
 		self.assertEqual(result["score"], 85)
 		self.assertEqual([reason["key"] for reason in result["reasons"]], ["time_barred"])
 
+	def test_a_closed_time_barred_filing_still_costs_15_points_for_a_year(self):
+		closed = task(TEST_COMPANY)
+		frappe.db.set_value(
+			"Compliance Task", closed, {"status": "Time-barred", "last_filing_date": "2026-11-20"}
+		)
+		with self.freeze_time("2026-12-02"):
+			self.assertEqual(company_scores([TEST_COMPANY])[TEST_COMPANY]["score"], 85)
+		with self.freeze_time("2027-11-21"):
+			self.assertEqual(company_scores([TEST_COMPANY])[TEST_COMPANY]["score"], 100)
+
 	def test_a_clean_company_scores_full_and_never_below_zero(self):
 		self.assertEqual(company_scores([TEST_COMPANY])[TEST_COMPANY]["score"], 100)
 		for _number in range(12):

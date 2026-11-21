@@ -89,6 +89,22 @@ class TestComplianceScore(IntegrationTestCase):
 		)
 		self.assertEqual(result["late_fees_so_far"], 600)
 
+	def test_a_late_nil_return_costs_the_nil_fee_and_fewer_points(self):
+		late = task(TEST_COMPANY)  # GSTR-3B (Monthly), due 20 Nov 2026
+		frappe.db.set_value("Compliance Task", late, {"is_nil": 1, "is_overdue": 1})
+		with self.freeze_time("2026-12-02"):
+			penalty = filing_penalty(late)
+			result = company_scores([TEST_COMPANY])[TEST_COMPANY]
+		# ₹20 a day for 12 days, and no interest on a nil tax.
+		self.assertEqual((penalty["late_fee"], penalty["late_fee_in_a_week"]), (240, 380))
+		self.assertEqual(penalty["interest_percent"], 0)
+		self.assertTrue(penalty["nil"])
+		self.assertEqual(result["score"], 97)
+		self.assertEqual([reason["key"] for reason in result["reasons"]], ["overdue_nil"])
+		self.assertEqual(result["late_fees_so_far"], 240)
+		with self.freeze_time("2027-06-01"):
+			self.assertEqual(filing_penalty(late)["late_fee"], 500)  # the cap for a NIL return
+
 	def test_a_clean_company_scores_full_and_never_below_zero(self):
 		self.assertEqual(company_scores([TEST_COMPANY])[TEST_COMPANY]["score"], 100)
 		for _number in range(12):

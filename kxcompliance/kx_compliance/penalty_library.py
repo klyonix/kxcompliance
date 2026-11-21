@@ -13,9 +13,9 @@ differently keeps its own figures apart (penalty_figures.py), so updates never t
 
 GST_RETURN = (
 	"Late fee under s.47 of the CGST Act and the matching SGST Act: ₹50 a day (₹20 for a nil "
-	"return), capped by the previous year's turnover at ₹2,000, ₹5,000 or ₹10,000 "
-	"(Notifications 19/2021 and 20/2021-Central Tax). The estimate uses ₹50 a day and the "
-	"highest cap."
+	"return), capped by the previous year's turnover at ₹2,000, ₹5,000 or ₹10,000, and at ₹500 "
+	"for a nil return (Notifications 19/2021 and 20/2021-Central Tax). The estimate uses ₹50 a "
+	"day and the highest cap, or ₹20 a day and ₹500 for a filing marked NIL."
 )
 GST_INTEREST = "Interest at 18% a year on tax paid late, under s.50 of the CGST Act."
 TDS_RETURN = (
@@ -159,6 +159,19 @@ PENALTIES = {
 	"Integrated Filing (Financial)": dict(late_fee_per_day=5000, penalty_rule=LODR.format("₹5,000")),
 	"Annual Secretarial Compliance Report": dict(late_fee_per_day=2000, penalty_rule=LODR.format("₹2,000")),
 }
+# A late NIL return: ₹20 a day (₹10 CGST and ₹10 SGST, Notification 76/2018-Central Tax), at most
+# ₹500 a return (Notifications 19/2021, 20/2021 and 21/2021-Central Tax). Returns not listed cost
+# nothing when NIL: no fee is set for them, or it is capped at the tax, which is nil.
+NIL_GST = dict(nil_late_fee_per_day=20, nil_late_fee_cap=500)
+NIL_PENALTIES = {
+	"GSTR-1 (Monthly)": NIL_GST,
+	"GSTR-1 (QRMP)": NIL_GST,
+	"GSTR-3B (Monthly)": NIL_GST,
+	"GSTR-3B (QRMP, 22nd)": NIL_GST,
+	"GSTR-3B (QRMP, 24th)": NIL_GST,
+	"GSTR-4 (Composition Annual Return)": NIL_GST,
+}
+NIL_FIELDS = ("nil_late_fee_flat", "nil_late_fee_per_day", "nil_late_fee_cap")
 # Event forms, state taxes and the rest share these words when they have no figures of their own.
 EVENT_FORM_RULE = ROC_SLAB
 FIELDS = (
@@ -182,3 +195,9 @@ def penalty_of(template: dict) -> dict:
 		else:
 			figures = {}
 	return {field: figures.get(field, 0 if field != "penalty_rule" else None) for field in FIELDS}
+
+
+def nil_penalty_of(template: dict) -> dict:
+	"""What filing a NIL return late costs, for a standard template; nothing where no figure is set."""
+	figures = NIL_PENALTIES.get(template["template_name"], {})
+	return {field: figures.get(field, 0) for field in NIL_FIELDS}

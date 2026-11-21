@@ -3,6 +3,9 @@
 
 import frappe
 from frappe import _
+
+# The NIL filter's choices, and the value of is_nil each keeps to.
+NIL_CHOICES = {"NIL only": 1, "Not NIL": 0}
 from frappe.utils import get_first_day, get_last_day, getdate, nowdate
 
 
@@ -40,6 +43,7 @@ def get_columns():
 		{"label": _("Registration"), "fieldname": "registration_number", "fieldtype": "Data", "width": 140},
 		{"label": _("Status"), "fieldname": "status", "fieldtype": "Data", "width": 120},
 		{"label": _("Overdue"), "fieldname": "is_overdue", "fieldtype": "Check", "width": 80},
+		{"label": _("NIL"), "fieldname": "is_nil", "fieldtype": "Check", "width": 60},
 		{"label": _("Filed On"), "fieldname": "filed_on", "fieldtype": "Date", "width": 100},
 		{
 			"label": _("Acknowledgement"),
@@ -63,6 +67,8 @@ def get_data(filters: frappe._dict):
 	for field in ("company", "law", "status", "responsible"):
 		if filters.get(field):
 			conditions[field] = filters[field]
+	if filters.get("nil") in NIL_CHOICES:
+		conditions["is_nil"] = NIL_CHOICES[filters.nil]
 	return frappe.get_list(
 		"Compliance Task",
 		filters=conditions,

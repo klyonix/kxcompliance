@@ -44,6 +44,12 @@ frappe.query_reports["Compliance Calendar"] = {
 				"Cancelled",
 			],
 		},
+		{
+			fieldname: "nil",
+			label: __("NIL Returns"),
+			fieldtype: "Select",
+			options: ["", "NIL only", "Not NIL"],
+		},
 		{ fieldname: "responsible", label: __("Responsible"), fieldtype: "Link", options: "User" },
 	],
 };

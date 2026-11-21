@@ -6,6 +6,7 @@ import {
 	formValues,
 	hasFilingDetails,
 	missingDetails,
+	nilDeclared,
 	showFilingForm,
 	taskActions,
 	taskRow,
@@ -133,6 +134,31 @@ describe("filings in the app", () => {
 		expect(
 			missingDetails({ filed_on: "2026-11-18", acknowledgement_number: "AA2911" }, {})
 		).toEqual([]);
+	});
+
+	it("asks only for the date of a NIL period that gives no acknowledgement", () => {
+		const tds = { allows_nil: 1, nil_needs_acknowledgement: 0, requires_proof: 1 };
+		const gst = { allows_nil: 1, nil_needs_acknowledgement: 1, requires_proof: 1 };
+		expect(nilDeclared({ is_nil: 1 }, tds)).toBe(true);
+		expect(nilDeclared({ is_nil: 0 }, tds)).toBe(false);
+		expect(nilDeclared({ is_nil: 1 }, gst)).toBe(false);
+		expect(missingDetails({ is_nil: true }, tds)).toEqual(["Filed on"]);
+		expect(missingDetails({ is_nil: true, filed_on: "2026-11-18" }, tds)).toEqual([]);
+		expect(missingDetails({ is_nil: true, filed_on: "2026-11-18" }, gst)).toEqual([
+			"Acknowledgement number",
+			"Proof",
+		]);
+	});
+
+	it("sends the NIL tick as 0 or 1, and only when it changed", () => {
+		const saved = { is_nil: 0, filed_on: "" };
+		const form = formValues(saved);
+		expect(form.is_nil).toBe(false);
+		expect(changedValues(form, saved)).toEqual({});
+		expect(changedValues({ ...form, is_nil: true }, saved)).toEqual({ is_nil: 1 });
+		expect(
+			changedValues({ ...formValues({ is_nil: 1 }), is_nil: false }, { is_nil: 1 })
+		).toEqual({ is_nil: 0 });
 	});
 
 	it("sends only the details that changed, and an emptied one as empty", () => {

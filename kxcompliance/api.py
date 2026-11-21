@@ -137,6 +137,7 @@ EDITABLE_FIELDS = {
 	),
 	"Compliance Task": (
 		"status",
+		"is_nil",
 		"filed_on",
 		"acknowledgement_number",
 		"proof",
@@ -1609,6 +1610,26 @@ def bulk_filing_choices(companies: str | None = None) -> list[dict]:
 		}
 		for row in rows
 	]
+
+
+@frappe.whitelist(methods=["GET"])
+def nil_filing_choices(companies: str | None = None) -> list[dict]:
+	"""The companies with NIL returns still to file, the longest waiting first, for filing them
+	together; `companies` (the client filter, as for the overview) keeps to one client's."""
+	check_app_access()
+	filters = {"status": ("in", BULK_STATUSES), "is_nil": 1}
+	chosen = company_list(companies)
+	if chosen is not None:
+		filters["company"] = ("in", chosen or [""])
+	rows = frappe.get_list(
+		"Compliance Task",
+		filters=filters,
+		fields=["company", {"MIN": "effective_due_date", "as": "due"}, {"COUNT": "*", "as": "filings"}],
+		group_by="company",
+		order_by="due asc",
+		limit=BULK_CHOICES_LIMIT,
+	)
+	return [{"company": row.company, "due": str(row.due), "filings": row.filings} for row in rows]
 
 
 def bulk_filings_of(obligation_template: str, period_end: str, companies: str | None) -> list[dict]:

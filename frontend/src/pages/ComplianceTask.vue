@@ -34,6 +34,7 @@
 			<section class="flex flex-col gap-2">
 				<div class="flex flex-wrap items-center gap-2">
 					<Badge :label="task.status" :theme="row.theme" size="md" />
+					<Badge v-if="task.is_nil" label="NIL" theme="gray" size="md" />
 					<span
 						class="text-base"
 						:class="row.due.late ? 'font-medium text-ink-red-4' : 'text-ink-gray-6'"
@@ -41,7 +42,7 @@
 						{{ dueLine }}
 					</span>
 				</div>
-				<p class="text-base text-ink-gray-6">{{ row.detail }}</p>
+				<p class="text-base text-ink-gray-6">{{ pageDetail }}</p>
 				<ol
 					v-if="showSteps"
 					data-tour="filing-steps"
@@ -107,6 +108,13 @@
 				<h2 id="filing-heading" class="text-base font-semibold text-ink-gray-8">Filing</h2>
 
 				<template v-if="formShown">
+					<FormControl
+						v-if="rules?.allows_nil"
+						v-model="form.is_nil"
+						type="checkbox"
+						label="NIL return: nothing to report or pay this period"
+						@update:model-value="clearNilAmounts"
+					/>
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<FormControl
 							v-model="form.filed_on"
@@ -118,15 +126,19 @@
 						/>
 						<FormControl
 							v-model="form.acknowledgement_number"
-							label="Acknowledgement number"
-							placeholder="ARN, challan or SRN"
+							:label="declared ? 'Reference (optional)' : 'Acknowledgement number'"
+							:placeholder="
+								declared ? 'Request number or email' : 'ARN, challan or SRN'
+							"
 							:error="fieldError('Acknowledgement number')"
 						/>
 					</div>
 
 					<div class="flex flex-col gap-1.5">
 						<span class="text-xs text-ink-gray-5">
-							Proof<template v-if="rules?.requires_proof"> (needed)</template>
+							Proof<template v-if="rules?.requires_proof && !declared">
+								(needed)</template
+							>
 						</span>
 						<div
 							class="flex items-center gap-3 rounded-lg bg-surface-gray-1 px-3 py-3"
@@ -174,12 +186,14 @@
 
 					<div v-if="showAmounts" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 						<FormControl
+							v-if="!form.is_nil"
 							v-model="form.amount_paid"
 							type="number"
 							label="Amount paid"
 							placeholder="0.00"
 						/>
 						<FormControl
+							v-if="!form.is_nil"
 							v-model="form.interest"
 							type="number"
 							label="Interest"
@@ -411,7 +425,9 @@ import {
 	changedValues,
 	filingSteps,
 	formValues,
+	NIL_ZERO_FIELDS,
 	missingDetails,
+	nilDeclared,
 	showFilingForm,
 	taskActions,
 	taskRow,
@@ -502,6 +518,10 @@ const isMobile = useIsMobile();
 const buttonSize = computed(() => (isMobile.value ? "md" : "sm"));
 
 const row = computed(() => taskRow(task.value));
+// The badge already says NIL on this page.
+const pageDetail = computed(() =>
+	[task.value.period_label, task.value.company].filter(Boolean).join(" · ")
+);
 const actions = computed(() => taskActions(task.value, rules.value, boot));
 const editable = computed(() => actions.value.edit);
 const inReview = computed(() => task.value?.status === "Ready for Review");
@@ -530,8 +550,22 @@ function stepIcon(index) {
 	if (stepDone(index)) return "lucide-circle-check";
 	return index === steps.value.current ? "lucide-circle-dot" : "lucide-circle";
 }
+// A NIL period that gives no acknowledgement: the form asks only for the date.
+const declared = computed(() => nilDeclared(form, rules.value));
+function clearNilAmounts(nil) {
+	if (nil) for (const field of NIL_ZERO_FIELDS) form[field] = "";
+}
 const howTo = computed(() => {
 	const rule = rules.value || {};
+	const due = formatDate(task.value.effective_due_date);
+	if (task.value.is_nil && nilDeclared(task.value, rule)) {
+		return `Nothing to report this period. Declare it on the portal (for TDS, the declaration for non-filing on TRACES) by ${due}, then record the date here.`;
+	}
+	if (task.value.is_nil) {
+		return `Nothing to report this period: file ${
+			rule.form || task.value.obligation_template
+		} as a NIL return by ${due}, then record the date and acknowledgement number here.`;
+	}
 	const where = rule.authority ? ` with the ${rule.authority}` : "";
 	const what = [
 		"the date",
@@ -555,6 +589,7 @@ const dirty = computed(
 );
 const showAmounts = computed(
 	() =>
+		// A NIL return still shows its late fee: one filed late pays it.
 		Boolean(rules.value?.requires_payment) ||
 		["amount_paid", "interest", "late_fee"].some((field) => Number(task.value?.[field]))
 );
@@ -602,6 +637,7 @@ const proofLabel = computed(() => {
 
 const filingFacts = computed(() =>
 	[
+		["Return", task.value.is_nil ? "NIL: nothing to report or pay" : ""],
 		["Filed on", formatDate(task.value.filed_on)],
 		["Acknowledgement number", task.value.acknowledgement_number],
 		[
@@ -650,10 +686,35 @@ const mayReassign = computed(() => isManager() && !isClientLogin());
 
 const menu = computed(() => [
 	...deskActions("Compliance Task", props.name),
+	...(editable.value && rules.value?.allows_nil
+		? [
+				task.value.is_nil
+					? {
+							label: "Not NIL after all",
+							icon: "lucide-undo-2",
+							onClick: () => setNil(0),
+					  }
+					: {
+							label: "Mark NIL, file later",
+							icon: "lucide-circle-dashed",
+							onClick: () => setNil(1),
+					  },
+		  ]
+		: []),
 	...(editable.value
 		? [{ label: "Does not apply", icon: "lucide-circle-slash", onClick: notApplicable }]
 		: []),
 ]);
+
+// Nothing to report this period: the filing stays open, due date and late fee and all, as a NIL
+// return to file later (alone, or with others on the NIL page).
+function setNil(nil) {
+	const values = { is_nil: nil };
+	if (nil) {
+		for (const field of NIL_ZERO_FIELDS) if (Number(task.value[field])) values[field] = 0;
+	}
+	return send(values, "nil");
+}
 
 const missing = computed(() =>
 	checking.value && task.value
@@ -779,7 +840,7 @@ async function send(values, busyKey) {
 				{ "Ready for Review": "Sent for review", Filed: "Marked filed" }[values.status] ||
 					"Saved"
 			);
-			await load();
+			await Promise.all([load(), loadPenalty()]);
 		}
 		return true;
 	} catch (err) {

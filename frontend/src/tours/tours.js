@@ -279,6 +279,33 @@ export const TOURS = [
 		],
 	},
 	{
+		id: "nil-filing",
+		title: "Filing NIL returns together",
+		route: "NilFiling",
+		steps: [
+			{
+				target: ["nil-choose"],
+				title: "Pick a company",
+				text: "Companies with filings marked NIL and still to file, the longest waiting first.",
+			},
+			{
+				target: ["nil-date"],
+				title: "One date for all",
+				text: "The date they were filed on, for every row without its own.",
+			},
+			{
+				target: ["nil-rows"],
+				title: "Each period, oldest first",
+				text: "Add each acknowledgement number. A TDS quarter declared on TRACES needs none. GST periods are saved in order, as the portal files them.",
+			},
+			{
+				target: ["nil-save"],
+				title: "Save them together",
+				text: "Each row is saved on its own. If a GST period cannot be saved, the later ones of that return wait.",
+			},
+		],
+	},
+	{
 		id: "extensions",
 		title: "Due-date extensions",
 		route: "Extensions",

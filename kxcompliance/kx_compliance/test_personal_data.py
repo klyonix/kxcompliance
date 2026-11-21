@@ -1,19 +1,37 @@
 # Copyright (c) 2026, KlyONIX Tech Consulting Pvt Ltd and contributors
 # For license information, please see license.txt
 
+from contextlib import ExitStack
 from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, nowdate
 
-from kxcompliance.api import erase_privacy_requester, my_personal_data, privacy_request_data
+from kxcompliance.api import (
+	erase_privacy_requester,
+	my_personal_data,
+	privacy_request_data,
+	send_erase_code,
+)
 from kxcompliance.kx_compliance import personal_data, privacy
 from kxcompliance.kx_compliance.doctype.signatory.test_signatory import signatory
 from kxcompliance.kx_compliance.test_bulk_filing import filing
 from kxcompliance.kx_compliance.test_utils import MANAGER, OTHER_HOLDER, make_company, make_user, make_users
 
 LEAVER = "leaving-person@example.com"
+CODE = "123456"
+
+
+def emailed_code():
+	"""Codes sent while this is open are CODE, by an app that can send email."""
+	stack = ExitStack()
+	stack.enter_context(patch("kxcompliance.kx_compliance.email_code.outgoing_email", return_value=True))
+	stack.enter_context(
+		patch("kxcompliance.kx_compliance.email_code.secrets.randbelow", return_value=int(CODE))
+	)
+	sent = stack.enter_context(patch("kxcompliance.kx_compliance.email_code.frappe.sendmail"))
+	return stack, sent
 
 
 def privacy_request(user: str, request_type: str) -> str:
@@ -62,19 +80,68 @@ class TestPersonalData(IntegrationTestCase):
 
 	def test_erasing_is_checked_before_it_starts(self):
 		request = privacy_request(LEAVER, "Erase my data")
-		with self.set_user(MANAGER):
+		stack, _sent = emailed_code()
+		with stack, self.set_user(MANAGER):
+			send_erase_code(request)
 			self.assertRaises(
-				frappe.ValidationError, erase_privacy_requester, request, OTHER_HOLDER, "someone@else.com"
+				frappe.ValidationError,
+				erase_privacy_requester,
+				request,
+				OTHER_HOLDER,
+				"someone@else.com",
+				CODE,
 			)
-			self.assertRaises(frappe.ValidationError, erase_privacy_requester, request, LEAVER, LEAVER)
+			self.assertRaises(frappe.ValidationError, erase_privacy_requester, request, LEAVER, LEAVER, CODE)
 			self.assertRaises(
-				frappe.ValidationError, erase_privacy_requester, request, "nobody@example.com", LEAVER
+				frappe.ValidationError, erase_privacy_requester, request, "nobody@example.com", LEAVER, CODE
 			)
 		with self.set_user(OTHER_HOLDER), self.assertRaises(frappe.PermissionError):
-			erase_privacy_requester(request, MANAGER, LEAVER)
+			erase_privacy_requester(request, MANAGER, LEAVER, CODE)
 		own = privacy_request(MANAGER, "Erase my data")
 		with self.set_user(MANAGER), self.assertRaises(frappe.ValidationError):
-			erase_privacy_requester(own, OTHER_HOLDER, MANAGER)
+			send_erase_code(own)
+
+	def test_erasing_needs_the_code_emailed_to_the_manager_once(self):
+		request = privacy_request(LEAVER, "Erase my data")
+		with self.set_user(MANAGER):
+			# Without a way to send email there is no code, so no erasing.
+			with patch("kxcompliance.kx_compliance.email_code.outgoing_email", return_value=False):
+				self.assertRaises(frappe.ValidationError, send_erase_code, request)
+			self.assertRaises(
+				frappe.ValidationError, erase_privacy_requester, request, OTHER_HOLDER, LEAVER, CODE
+			)
+		stack, sent = emailed_code()
+		with stack, self.set_user(MANAGER):
+			result = send_erase_code(request)
+			self.assertEqual(sent.call_args.kwargs["recipients"], [MANAGER])
+			self.assertIn(CODE, sent.call_args.kwargs["message"])
+			self.assertNotEqual(result["sent_to"], MANAGER)
+			self.assertRaises(
+				frappe.ValidationError, erase_privacy_requester, request, OTHER_HOLDER, LEAVER, "000000"
+			)
+		# Another manager's code is not this one's.
+		other = make_user("second-manager@example.com", ("Compliance Manager",))
+		with self.set_user(other):
+			self.assertRaises(
+				frappe.ValidationError, erase_privacy_requester, request, OTHER_HOLDER, LEAVER, CODE
+			)
+		with self.set_user(MANAGER):
+			self.assertTrue(erase_privacy_requester(request, OTHER_HOLDER, LEAVER, CODE)["started"])
+
+	def test_a_code_is_good_once_and_for_a_few_tries(self):
+		from kxcompliance.kx_compliance import email_code
+
+		stack, _sent = emailed_code()
+		with stack, self.set_user(MANAGER):
+			email_code.send("test", "one", "a test")
+			self.assertRaises(frappe.ValidationError, email_code.check, "test", "two", CODE)
+			email_code.check("test", "one", CODE)
+			self.assertRaises(frappe.ValidationError, email_code.check, "test", "one", CODE)
+
+			email_code.send("test", "one", "a test")
+			for _try in range(email_code.MAX_TRIES):
+				self.assertRaises(frappe.ValidationError, email_code.check, "test", "one", "999999")
+			self.assertRaises(frappe.ValidationError, email_code.check, "test", "one", CODE)
 
 	def test_erasing_hands_over_the_work_and_keeps_the_records_without_the_person(self):
 		task = filing("GSTR-3B (Monthly)", "2026-10-31", "2026-11-20", responsible=LEAVER)
@@ -91,8 +158,10 @@ class TestPersonalData(IntegrationTestCase):
 			}
 		).insert(ignore_permissions=True)
 
-		with self.set_user(MANAGER):
-			erase_privacy_requester(request, OTHER_HOLDER, LEAVER)
+		stack, _sent = emailed_code()
+		with stack, self.set_user(MANAGER):
+			send_erase_code(request)
+			erase_privacy_requester(request, OTHER_HOLDER, LEAVER, CODE)
 		self.assertEqual(frappe.db.get_value("Privacy Request", request, "status"), "In Progress")
 		# The job commits as it goes; here the test's own transaction stays open.
 		with patch("frappe.db.commit"):

@@ -10,6 +10,7 @@ from frappe import _
 from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
 from frappe.handler import ALLOWED_MIMETYPES
 from frappe.query_builder.functions import Count
+from frappe.rate_limiter import rate_limit
 from frappe.utils import add_days, cint, get_datetime, getdate, now_datetime, nowdate
 
 from kxcompliance import scoped
@@ -1464,11 +1465,19 @@ def privacy_request_data(request: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
-def erase_privacy_requester(request: str, hand_to: str, confirm: str) -> dict:
-	"""For a manager answering an "Erase my data" request: hand over the person's open work and
-	erase them, in the background."""
+@rate_limit(limit=5, seconds=60 * 60)
+def send_erase_code(request: str) -> dict:
+	"""Email the manager their own one-time code to confirm erasing who asked."""
 	check_manager_access(_("Only a Compliance Manager answers privacy requests."))
-	return personal_data.start_erasing(request, hand_to, confirm)
+	return personal_data.send_erase_code(request)
+
+
+@frappe.whitelist(methods=["POST"])
+def erase_privacy_requester(request: str, hand_to: str, confirm: str, code: str) -> dict:
+	"""For a manager answering an "Erase my data" request: hand over the person's open work and
+	erase them, in the background, with the code emailed to them."""
+	check_manager_access(_("Only a Compliance Manager answers privacy requests."))
+	return personal_data.start_erasing(request, hand_to, confirm, code)
 
 
 # The languages the app is translated into (frontend/src/locales).

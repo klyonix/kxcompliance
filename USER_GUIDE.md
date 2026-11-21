@@ -589,7 +589,7 @@ When the Overview shows privacy requests to answer.
 1. Open Settings, then "Privacy requests", and the request.
 2. Mark it In Progress while you work on it; the page says what each kind of request needs.
 3. For "See my data", press "Show their data" and send it with your answer.
-4. For "Erase my data", press "Erase…", choose who takes their open work and type their email. It runs in the background, answers them, then removes what identifies them; filings keep the work, as done by an erased person.
+4. For "Erase my data", press "Erase…", choose who takes their open work, type their email, press "Email me a code" and enter the code sent to your own email. It runs in the background, answers them, then removes what identifies them; filings keep the work, as done by an erased person.
 5. When it is done or declined, write the response and save. They are told at once.
 6. Answer within 30 days; the law allows 90 at most. Managers are reminded a week before, on the day and every week after.
 

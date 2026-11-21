@@ -24,6 +24,7 @@ from pypika.functions import Replace
 
 from kxcompliance import scoped
 from kxcompliance.install import CLIENT_ROLE, ROLES
+from kxcompliance.kx_compliance import email_code
 from kxcompliance.kx_compliance.onboarding import firm_people
 from kxcompliance.kx_compliance.people import PROTECTED
 
@@ -31,6 +32,7 @@ REQUEST = "Privacy Request"
 ERASE = "Erase my data"
 SEE = "See my data"
 ERASED_DOMAIN = "erased.invalid"
+ERASE_CODE = "erase-person"
 # The records that name a person, by the field that does: what they hold or review.
 NAMED_IN = (
 	("Filings", "Compliance Task", ("responsible", "reviewer", "filed_by")),
@@ -138,8 +140,8 @@ def summary_for_request(name: str) -> dict:
 # --- Erase -------------------------------------------------------------------------------------
 
 
-def start_erasing(name: str, hand_to: str, confirm: str) -> dict:
-	"""The grievance officer erases the person who asked, in the background."""
+def erasable(name: str):
+	"""The request, if its person may be erased by the manager asking."""
 	request = request_of(name)
 	person = request.requested_by
 	if request.request_type != ERASE:
@@ -148,11 +150,28 @@ def start_erasing(name: str, hand_to: str, confirm: str) -> dict:
 		frappe.throw(_("Request {0} is already {1}.").format(name, _(request.status).lower()))
 	if person in PROTECTED or person == frappe.session.user:
 		frappe.throw(_("Another manager erases your own data."))
+	return request
+
+
+def send_erase_code(name: str) -> dict:
+	"""The manager's own one-time code, emailed to them, to confirm erasing (email_code.py)."""
+	request = erasable(name)
+	return email_code.send(
+		ERASE_CODE, name, _("erase {0}").format(request.requester_name or request.requested_by)
+	)
+
+
+def start_erasing(name: str, hand_to: str, confirm: str, code: str) -> dict:
+	"""The grievance officer erases the person who asked, in the background, once they have
+	typed the person's email and the code emailed to them."""
+	request = erasable(name)
+	person = request.requested_by
 	if (confirm or "").strip().casefold() != person.casefold():
 		frappe.throw(_("Type {0} exactly to confirm.").format(person))
 	team = {row.name for row in firm_people()}
 	if hand_to == person or hand_to not in team:
 		frappe.throw(_("Choose someone on the team, other than {0}, to take their open work.").format(person))
+	email_code.check(ERASE_CODE, name, code)
 	request.status = "In Progress"
 	request.save()
 	frappe.enqueue(

@@ -171,6 +171,26 @@
 				:label="`Type ${request?.requested_by} to confirm`"
 				autocomplete="off"
 			/>
+			<div class="flex flex-col gap-2">
+				<div class="flex flex-wrap items-center gap-2">
+					<Button
+						:label="codeSentTo ? 'Send a new code' : 'Email me a code'"
+						icon-left="lucide-mail"
+						:loading="sendingCode"
+						@click="sendCode"
+					/>
+					<span v-if="codeSentTo" class="text-sm text-ink-gray-6">
+						Sent to {{ codeSentTo }}. It works once, for {{ codeMinutes }} minutes.
+					</span>
+				</div>
+				<FormControl
+					v-model="eraseForm.code"
+					label="Code from the email"
+					inputmode="numeric"
+					autocomplete="one-time-code"
+					maxlength="6"
+				/>
+			</div>
 			<p class="text-sm text-ink-gray-5">This cannot be undone.</p>
 			<p v-if="eraseError" role="alert" class="text-sm text-ink-red-4">{{ eraseError }}</p>
 		</form>
@@ -263,7 +283,29 @@ async function showTheirData() {
 const confirming = ref(false);
 const erasing = ref(false);
 const eraseError = ref("");
-const eraseForm = reactive({ handTo: "", confirm: "" });
+const eraseForm = reactive({ handTo: "", confirm: "", code: "" });
+const codeSentTo = ref("");
+const codeMinutes = ref(10);
+const sendingCode = ref(false);
+
+// The manager's own one-time code, emailed to them: erasing cannot be undone.
+async function sendCode() {
+	eraseError.value = "";
+	sendingCode.value = true;
+	try {
+		const sent = await call(
+			"kxcompliance.api.send_erase_code",
+			{ request: props.name },
+			{ httpMethod: "POST" }
+		);
+		codeSentTo.value = sent.sent_to;
+		codeMinutes.value = sent.minutes;
+	} catch (err) {
+		eraseError.value = err.message;
+	} finally {
+		sendingCode.value = false;
+	}
+}
 const people = ref([]);
 const handToOptions = computed(() =>
 	personOptions(people.value.filter((person) => person.name !== request.value?.requested_by))
@@ -283,7 +325,12 @@ async function erase(close) {
 	try {
 		await call(
 			"kxcompliance.api.erase_privacy_requester",
-			{ request: props.name, hand_to: eraseForm.handTo, confirm: eraseForm.confirm },
+			{
+				request: props.name,
+				hand_to: eraseForm.handTo,
+				confirm: eraseForm.confirm,
+				code: eraseForm.code,
+			},
 			{ httpMethod: "POST" }
 		);
 		close();

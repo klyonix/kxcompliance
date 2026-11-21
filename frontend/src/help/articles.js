@@ -197,14 +197,14 @@ export const ARTICLES = [
 	{
 		id: "gst-period-order",
 		area: "Filings",
-		title: "An earlier period must be filed first. Why?",
-		when: "When marking a GST return filed is refused because an earlier period of the same return and GSTIN is still open.",
+		title: "Another GST filing must be filed first. Why?",
+		when: "When marking a GST return filed is refused: an earlier period of the same return and GSTIN is still open, or, for GSTR-3B, the same period's GSTR-1 is.",
 		steps: [
-			"The message names the earlier filing. Open it.",
+			"The message names the filing that must go first. Open it.",
 			'File it, or, if it never applied (say the company moved to quarterly filing), choose "Does not apply" and say why.',
-			"Then file the later period.",
+			"Then file the one you started with.",
 		],
-		tip: "The GST portal refuses a period while an earlier one is unfiled, so the app does too. Monthly and quarterly GSTR-1 count as one return, and so do monthly and quarterly GSTR-3B.",
+		tip: "The GST portal refuses a period while an earlier one is unfiled, and GSTR-3B until that period's GSTR-1 is filed, so the app does too. Monthly and quarterly GSTR-1 count as one return, and so do monthly and quarterly GSTR-3B.",
 		page: "Filings",
 	},
 	{

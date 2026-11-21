@@ -86,6 +86,8 @@ class ComplianceTask(Document):
 			self.validate_filing_details(rules)
 			if rules.files_in_order:
 				self.check_period_order(rules)
+			if rules.filed_after_form:
+				self.check_filed_after(rules)
 		if self.status in FILED_STATUSES:
 			self.mark_filed(rules)
 		if self.status == "Not Applicable" and not (self.remarks or "").strip():
@@ -143,6 +145,51 @@ class ComplianceTask(Document):
 					_(self.status),
 				),
 				title=_("Earlier period to file"),
+			)
+
+	def check_filed_after(self, rules):
+		"""Refuse this period while the same period's other return, which must go first, is still to file.
+
+		For GSTR-3B that is GSTR-1, monthly or quarterly: any of its periods within this one counts.
+		"""
+		if not (self.period_start and self.period_end):
+			return
+		first = scoped.get_all(
+			"Compliance Obligation Template",
+			filters={"law": rules.law, "form": rules.filed_after_form},
+			pluck="name",
+		)
+		if not first:
+			return
+		pending = scoped.get_all(
+			"Compliance Task",
+			filters={
+				"obligation_template": ("in", first),
+				"company": self.company,
+				"registration_number": self.registration_number or ("is", "not set"),
+				"period_end": ("between", [self.period_start, self.period_end]),
+				"status": ("in", NOT_YET_FILED),
+				"name": ("!=", self.name),
+			},
+			fields=["name", "obligation_template", "period_label"],
+			order_by="period_end asc",
+			limit=1,
+		)
+		if pending:
+			frappe.throw(
+				_(
+					"{0} ({1}, {2}) must be filed first: {3} is filed only after the same period's {4}, "
+					"so {5} cannot move to {6}."
+				).format(
+					pending[0].name,
+					pending[0].obligation_template,
+					pending[0].period_label,
+					rules.form or self.obligation_template,
+					rules.filed_after_form,
+					self.name,
+					_(self.status),
+				),
+				title=_("{0} to file first").format(rules.filed_after_form),
 			)
 
 	def checks_own_filing(self, user: str) -> bool:

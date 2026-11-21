@@ -59,6 +59,7 @@ def obligation(name, law, form, frequency, months_after=None, day=None, **extra)
 		"allows_nil": extra.pop("nil", 0),
 		"nil_needs_acknowledgement": extra.pop("nil_ack", 1),
 		"files_in_order": extra.pop("in_order", 0),
+		"filed_after_form": extra.pop("after_form", None),
 		"reminders": [
 			{"days_before": days}
 			for days in extra.pop(
@@ -171,6 +172,8 @@ LIBRARY = [
 		**GST,
 		**NIL_IN_ORDER,
 	),
+	# GSTR-3B for a period cannot be filed until that period's GSTR-1 is (CGST Act s.39(10), as
+	# amended by the Finance Act 2022); the portal enforces it.
 	obligation(
 		"GSTR-3B (Monthly)",
 		"GST",
@@ -181,6 +184,7 @@ LIBRARY = [
 		payment=1,
 		source="CGST Act s.39, rule 61",
 		**GST,
+		after_form="GSTR-1",
 		**NIL_IN_ORDER,
 	),
 	obligation(
@@ -195,6 +199,7 @@ LIBRARY = [
 		states=QRMP_22_STATES,
 		source="CGST rule 61, QRMP scheme",
 		**GST,
+		after_form="GSTR-1",
 		**NIL_IN_ORDER,
 	),
 	obligation(
@@ -209,6 +214,7 @@ LIBRARY = [
 		states=QRMP_24_STATES,
 		source="CGST rule 61, QRMP scheme",
 		**GST,
+		after_form="GSTR-1",
 		**NIL_IN_ORDER,
 	),
 	# QRMP: tax for the first two months of a quarter is paid by the 25th of the next month; the

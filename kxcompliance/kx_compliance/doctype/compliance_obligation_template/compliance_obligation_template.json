@@ -39,6 +39,7 @@
   "allows_nil",
   "nil_needs_acknowledgement",
   "files_in_order",
+  "filed_after_form",
   "section_reminders",
   "reminders",
   "section_penalty",
@@ -270,6 +271,13 @@
    "description": "A period cannot be filed while an earlier one for the same registration is still to file (as for GST returns)."
   },
   {
+   "depends_on": "form",
+   "fieldname": "filed_after_form",
+   "fieldtype": "Data",
+   "label": "Filed After",
+   "description": "A form under the same law that must be filed first for the same period and registration, as GSTR-1 before GSTR-3B (CGST Act s.39(10))."
+  },
+  {
    "fieldname": "section_reminders",
    "fieldtype": "Section Break",
    "label": "Reminders"
@@ -380,7 +388,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-21 12:00:00.000000",
+ "modified": "2026-11-21 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "KX Compliance",
  "name": "Compliance Obligation Template",

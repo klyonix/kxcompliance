@@ -84,7 +84,8 @@ export function rowValues(row, sharedDate, rules) {
 }
 
 // A company's NIL filings in the order they must be saved: each return's periods oldest first for
-// each registration (GSTIN, TAN), since GST refuses a period while an earlier one is unfiled.
+// each registration (GSTIN, TAN), since GST refuses a period while an earlier one is unfiled. By name,
+// GSTR-1 comes before GSTR-3B, which the portal files only after the same period's GSTR-1.
 export function nilOrder(rows) {
 	return [...rows].sort(
 		(a, b) =>

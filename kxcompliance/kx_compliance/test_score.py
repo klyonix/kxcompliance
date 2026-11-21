@@ -105,14 +105,21 @@ class TestComplianceScore(IntegrationTestCase):
 		with self.freeze_time("2027-06-01"):
 			self.assertEqual(filing_penalty(late)["late_fee"], 500)  # the cap for a NIL return
 
-	def test_maharashtra_professional_tax_charges_its_fee_nil_or_not(self):
+	def test_state_professional_tax_fees_nil_or_not(self):
 		pt = rules_for(["Professional Tax - Maharashtra"])["Professional Tax - Maharashtra"]
 		self.assertEqual(late_fee(fee_figures(pt), 40), 1000)
 		self.assertEqual(late_fee(fee_figures(pt, is_nil=True), 40), 1000)
 		self.assertEqual(late_fee(fee_figures(pt, is_nil=True), 0), 0)
-		# Elsewhere a state's figures are left to the firm, so a NIL return costs nothing here.
+		# Karnataka charges ₹250 a statement, NIL or not; Assam ₹100 a day up to ₹5,000.
 		karnataka = rules_for(["Professional Tax - Karnataka"])["Professional Tax - Karnataka"]
-		self.assertEqual(late_fee(fee_figures(karnataka, is_nil=True), 40), 0)
+		self.assertEqual(late_fee(fee_figures(karnataka, is_nil=True), 40), 250)
+		assam = rules_for(["Professional Tax - Assam"])["Professional Tax - Assam"]
+		self.assertEqual(late_fee(fee_figures(assam, is_nil=True), 30), 3000)
+		self.assertEqual(late_fee(fee_figures(assam, is_nil=True), 90), 5000)
+		# Where the state's penalty is up to the authority, or not known, nothing is counted.
+		for state in ("Telangana", "Tamil Nadu"):
+			name = f"Professional Tax - {state}"
+			self.assertEqual(late_fee(fee_figures(rules_for([name])[name], is_nil=True), 40), 0)
 
 	def test_a_clean_company_scores_full_and_never_below_zero(self):
 		self.assertEqual(company_scores([TEST_COMPANY])[TEST_COMPANY]["score"], 100)
